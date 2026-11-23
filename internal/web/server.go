@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/AaronFilson/kilnscrub/pkg/model"
@@ -27,12 +28,16 @@ const (
 var faviconSVG = []byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f97316"/><stop offset="0.6" stop-color="#06b6d4"/><stop offset="1" stop-color="#10b981"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="url(#g)"/><text x="32" y="43" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="30" font-weight="800" letter-spacing="-1.5" fill="#081018">KS</text></svg>`)
 
 // Server serves the embedded kilnscrub engineering dashboard and JSON/CAD HTTP API.
-// It is decoupled from solver and CAD implementations via model.Designer and model.CADExporter.
+// It is decoupled from solver, CAD, and control implementations via model.Designer,
+// model.CADExporter, and ControlBackend.
 type Server struct {
-	designer  model.Designer
-	exporter  model.CADExporter
-	indexHTML []byte
-	mux       *http.ServeMux
+	designer             model.Designer
+	exporter             model.CADExporter
+	indexHTML            []byte
+	mux                  *http.ServeMux
+	ctrlMu               sync.RWMutex
+	control              ControlBackend
+	sseKeepaliveInterval time.Duration
 }
 
 // NewServer creates a new Server backed by the provided Designer and CADExporter.
@@ -44,10 +49,11 @@ func NewServer(designer model.Designer, exporter model.CADExporter) *Server {
 	}
 
 	s := &Server{
-		designer:  designer,
-		exporter:  exporter,
-		indexHTML: htmlBytes,
-		mux:       http.NewServeMux(),
+		designer:             designer,
+		exporter:             exporter,
+		indexHTML:            htmlBytes,
+		mux:                  http.NewServeMux(),
+		sseKeepaliveInterval: defaultSSEKeepaliveInterval,
 	}
 
 	s.mux.HandleFunc("/", s.handleIndex)
@@ -56,8 +62,57 @@ func NewServer(designer model.Designer, exporter model.CADExporter) *Server {
 	s.mux.HandleFunc("/api/defaults", s.handleDefaults)
 	s.mux.HandleFunc("/api/size", s.handleSize)
 	s.mux.HandleFunc("/api/export", s.handleExport)
+	s.mux.HandleFunc("/api/control/status", s.handleControlStatus)
+	s.mux.HandleFunc("/api/control/stream", s.handleControlStream)
+	s.mux.HandleFunc("/api/control/reset", s.handleControlReset)
+	s.mux.HandleFunc("/api/control/setpoint", s.handleControlSetpoint)
+	s.mux.HandleFunc("/api/control/fault", s.handleControlFault)
 
 	return s
+}
+
+// NewServerWithControl creates a Server with an attached live ControlBackend.
+func NewServerWithControl(designer model.Designer, exporter model.CADExporter, backend ControlBackend) *Server {
+	s := NewServer(designer, exporter)
+	s.SetControlBackend(backend)
+	return s
+}
+
+// SetControlBackend attaches or clears the live control & telemetry backend.
+// It is safe to call concurrently with active HTTP requests.
+func (s *Server) SetControlBackend(b ControlBackend) {
+	s.ctrlMu.Lock()
+	s.control = b
+	s.ctrlMu.Unlock()
+}
+
+func (s *Server) getControlBackend() ControlBackend {
+	s.ctrlMu.RLock()
+	b := s.control
+	s.ctrlMu.RUnlock()
+	return b
+}
+
+// SetSSEKeepaliveInterval overrides the periodic ": ping" keepalive interval on /api/control/stream.
+// Values <= 0 restore the default 15s interval.
+func (s *Server) SetSSEKeepaliveInterval(d time.Duration) {
+	s.ctrlMu.Lock()
+	if d <= 0 {
+		s.sseKeepaliveInterval = defaultSSEKeepaliveInterval
+	} else {
+		s.sseKeepaliveInterval = d
+	}
+	s.ctrlMu.Unlock()
+}
+
+func (s *Server) getSSEKeepaliveInterval() time.Duration {
+	s.ctrlMu.RLock()
+	d := s.sseKeepaliveInterval
+	s.ctrlMu.RUnlock()
+	if d <= 0 {
+		return defaultSSEKeepaliveInterval
+	}
+	return d
 }
 
 // Handler returns the HTTP handler for the web dashboard and API routes.
@@ -75,6 +130,7 @@ func (s *Server) ListenAndServe(ctx context.Context, addr string) error {
 
 	httpSrv := &http.Server{
 		Handler:           s.Handler(),
+		BaseContext:       func(net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      60 * time.Second,
