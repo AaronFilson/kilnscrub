@@ -15,18 +15,23 @@ import (
 )
 
 // StudioEvaluation is the unified studio-kit output combining engineering physics,
-// COTS component snapping & BOM, urban neighbor readiness, and tailored Markdown guides.
+// COTS component snapping & BOM, urban neighbor readiness, Phase 7 architecture options,
+// closed-loop recirculation chemistry, structured in-browser shop plan, and Markdown guides.
 type StudioEvaluation struct {
-	Project               StudioProject        `json:"project"`
-	Design                model.ScrubberDesign `json:"design"`
-	COTS                  COTSSummary          `json:"cots"`
-	Urban                 UrbanAssessment      `json:"urban"`
-	BuildGuideMD          string               `json:"build_guide_md"`
-	OperationsChecklistMD string               `json:"operations_checklist_md"`
+	Project               StudioProject             `json:"project"`
+	Design                model.ScrubberDesign      `json:"design"`
+	COTS                  COTSSummary               `json:"cots"`
+	Urban                 UrbanAssessment           `json:"urban"`
+	ArchitectureOptions   ArchitectureOptionsResult `json:"architecture_options"`
+	Recirculation         RecirculationPlan         `json:"recirculation"`
+	ShopPlan              ShopPlan                  `json:"shop_plan"`
+	BuildGuideMD          string                    `json:"build_guide_md"`
+	OperationsChecklistMD string                    `json:"operations_checklist_md"`
 }
 
 // Evaluator orchestrates scrubber design, COTS mapping, urban site readiness,
-// build/firing guide generation, and downloadable Build Packet (.zip) bundling.
+// Phase 7 selectable options, recirculation, shop plan generation, build/firing guides,
+// and downloadable Build Packet (.zip) bundling.
 type Evaluator struct {
 	designer model.Designer
 	exporter model.CADExporter
@@ -48,11 +53,13 @@ func NewEvaluator(designer model.Designer, exporter model.CADExporter) *Evaluato
 }
 
 // Evaluate validates project, solves the 4-stage scrubber physics, maps COTS hardware,
-// computes urban readiness checks, and generates tailored build & firing Markdown guides.
+// computes urban readiness checks, Phase 7 selectable options, closed-loop recirculation,
+// structured shop plans, and generates tailored build & firing Markdown guides.
 func (e *Evaluator) Evaluate(project StudioProject) (StudioEvaluation, error) {
 	if err := project.Validate(); err != nil {
 		return StudioEvaluation{}, fmt.Errorf("studio evaluate: %w", err)
 	}
+	project = project.Normalize()
 
 	effectiveInput := project.EffectiveDesignInput()
 	design, err := e.designer.Design(effectiveInput)
@@ -61,13 +68,19 @@ func (e *Evaluator) Evaluate(project StudioProject) (StudioEvaluation, error) {
 	}
 
 	cots := BuildCOTSSummary(project, design)
+	archOpts := EvaluateArchitectureOptions(project, design, cots)
+	recirc := BuildRecirculationPlan(project, design, cots)
 	urban := AssessUrban(project, design, cots)
+	shopPlan := BuildShopPlan(project, design, cots, urban, archOpts)
 
 	eval := StudioEvaluation{
-		Project: project,
-		Design:  design,
-		COTS:    cots,
-		Urban:   urban,
+		Project:             project,
+		Design:              design,
+		COTS:                cots,
+		Urban:               urban,
+		ArchitectureOptions: archOpts,
+		Recirculation:       recirc,
+		ShopPlan:            shopPlan,
 	}
 	eval.BuildGuideMD = GenerateBuildGuide(eval)
 	eval.OperationsChecklistMD = GenerateOperationsChecklist(eval)
@@ -235,37 +248,44 @@ func buildPacketReadme(eval StudioEvaluation) []byte {
 	fmt.Fprintf(&b, "KILNSCRUB COMPLETE BUILD PACKET — %s\n", eval.Project.StudioName)
 	b.WriteString(strings.Repeat("=", 72) + "\n\n")
 	fmt.Fprintf(&b, "Preset ID:        %s\n", eval.Project.PresetID)
-	fmt.Fprintf(&b, "Kiln Volume:      %.1f cu.ft. (%s / %.0f F peak, %.0f hr firing)\n",
+	fmt.Fprintf(&b, "Kiln Volume:      %.1f cu.ft. (%s / %.0f F peak, %.0f hr firing, %.1f hr salting)\n",
 		eval.Design.Input.KilnVolumeCuFt, eval.Project.FiringCone,
-		eval.Design.Input.PeakExitTempF, eval.Project.FiringDurationHours)
+		eval.Design.Input.PeakExitTempF, eval.Project.FiringDurationHours, eval.Project.EffectiveSaltingHours())
 	fmt.Fprintf(&b, "Vapor Glaze Mode: %s | Build Path: %s | Corrosion Tier: %s\n",
-		eval.Project.VaporGlazeMode, eval.Project.BuildPath, eval.Project.CorrosionTier)
+		eval.Project.VaporGlazeMode, eval.Project.BuildPath, CorrosionTierLabel(eval.Project.CorrosionTier))
+	fmt.Fprintf(&b, "Stage Options:    %s | %s | %s | U-Turn=%v | SharedSump=%v | Controls=%s\n",
+		eval.Project.StageAlignment, eval.Project.PackedBedLayout, eval.Project.VenturiLayout,
+		eval.Project.CompactFootprint, eval.Project.SharedBaffledSump, eval.Project.ControlTier)
 	fmt.Fprintf(&b, "Urban Readiness:  %s\n", strings.ToUpper(eval.Urban.OverallStatus))
-	fmt.Fprintf(&b, "Estimated COTS:   $%.2f USD (Packed Column %.1f\" ID @ %.1f%% of flood)\n",
-		eval.COTS.EstimatedTotalUSD, eval.COTS.PackedColumn.NominalIn, eval.COTS.ActualPercentOfFlood)
+	fmt.Fprintf(&b, "Estimated COTS:   $%.2f USD (Delta %+.2f USD vs baseline | %.1f%% of flood)\n",
+		eval.COTS.EstimatedTotalUSD, eval.ArchitectureOptions.CostDeltaUSD, eval.COTS.ActualPercentOfFlood)
+	fmt.Fprintf(&b, "Footprint:        %.1f ft x %.1f ft (%.1f sq.ft., %.1f%% length savings)\n",
+		eval.ArchitectureOptions.FootprintLengthFt, eval.ArchitectureOptions.FootprintWidthFt,
+		eval.ArchitectureOptions.FootprintAreaSqFt, eval.ArchitectureOptions.FootprintSavingsPct)
 	fmt.Fprintf(&b, "Electrical:       %s (%.1f A)\n", eval.Urban.Electrical.CircuitLabel, eval.Urban.Electrical.RequiredAmps)
-	fmt.Fprintf(&b, "Water:            %.2f GPM peak spray (~%.0f gal per firing)\n",
-		eval.Urban.Water.RequiredGPM, eval.Urban.Water.TotalFiringGallons)
+	fmt.Fprintf(&b, "Water & Recirc:   %.2f GPM peak spray | Closed-loop saves %.1f%% water (dump every %d firing(s) / SG >= %.3f)\n",
+		eval.Urban.Water.RequiredGPM, eval.Recirculation.WaterSavedPct,
+		eval.Recirculation.FiringsBeforeFullDump, eval.Recirculation.DumpSpecificGravity)
 	fmt.Fprintf(&b, "Neighbor Noise:   %.1f dBA at %.0f ft property line (limit %.0f dBA)\n",
 		eval.Urban.Noise.PropertyLineDBA, eval.Urban.Noise.PropertyLineFt, eval.Urban.Noise.UrbanLimitDBA)
 	fmt.Fprintf(&b, "Winter Plume:     ~%.0f ft bare -> ~%.0f ft with %.0f CFM squirrel-cage HV diluter (reheat for 0 ft: %.1f kW)\n",
 		eval.Urban.Plume.BarePlumeLengthFt, eval.Urban.Plume.DilutedPlumeLengthFt,
 		eval.Urban.Plume.DilutionCFMNeeded, eval.Urban.Plume.DilutionReheatKW)
-	fmt.Fprintf(&b, "Baking Soda:      %.1f lbs (%d x 4-lb boxes per firing)\n\n",
-		eval.Urban.Drain.BakingSodaLbsPerFiring, eval.Urban.Drain.BakingSoda4LbBoxes)
+	fmt.Fprintf(&b, "Bulk Baking Soda: %s\n\n", eval.Urban.Drain.BulkPackagingLabel)
 
 	b.WriteString("FILES INCLUDED IN THIS PACKET\n")
 	b.WriteString("-----------------------------\n")
 	b.WriteString("1.  BUILD_GUIDE.md          Step-by-step fabrication, assembly & cold-water commissioning guide\n")
-	b.WriteString("2.  OPERATIONS_CHECKLIST.md Firing-day safety, draft, pH & drain neutralization checklist\n")
+	b.WriteString("2.  OPERATIONS_CHECKLIST.md Firing-day safety, draft, recirculation & drain neutralization checklist\n")
 	b.WriteString("3.  bom_cots.md             Off-the-shelf (COTS) hardware shopping list (Markdown)\n")
 	b.WriteString("4.  bom_cots.csv            Off-the-shelf (COTS) hardware shopping list (Spreadsheet CSV)\n")
 	b.WriteString("5.  bom_engineered.csv      Sheet-metal fabrication BOM (Spreadsheet CSV)\n")
 	b.WriteString("6.  scrubber.stl            3D assembly model (millimeters) for visual review & layout\n")
 	b.WriteString("7.  scrubber.dxf            2D AutoCAD R12 flat-pattern cut sheets (millimeters) for CNC/fab\n")
-	b.WriteString("8.  project.json            Saved studio project settings (re-import into kilnscrub UI/CLI)\n")
-	b.WriteString("9.  daemon.json             Pre-tuned kilnscrub control daemon config (sim or Modbus RS-485)\n")
-	b.WriteString("10. README_PACKET.txt       This overview file\n\n")
+	b.WriteString("8.  shop_plan.json          Structured in-browser Complete Plan Viewer parts, cut sheets & clearances\n")
+	b.WriteString("9.  project.json            Saved studio project settings (re-import into kilnscrub UI/CLI)\n")
+	b.WriteString("10. daemon.json             Pre-tuned kilnscrub control daemon config (sim or Modbus RS-485)\n")
+	b.WriteString("11. README_PACKET.txt       This overview file\n\n")
 	b.WriteString("SAFETY REMINDER (NFPA 86 / IPC 608 / NEC 430): Always install and test the\n")
 	b.WriteString("independent hardwired 200 F snap-disc + 24VDC de-energize-to-trip safety relay\n")
 	b.WriteString("driving the spring-return fail-open hot-gas bypass damper (ahead of the 210 F /\n")
@@ -274,8 +294,8 @@ func buildPacketReadme(eval StudioEvaluation) []byte {
 	return []byte(b.String())
 }
 
-// BuildPacketZip evaluates the project and packages all 10 fabrication, shopping,
-// guide, CAD, and control configuration files into an in-memory standard .zip archive.
+// BuildPacketZip evaluates the project and packages all 11 fabrication, shopping,
+// guide, CAD, structured shop plan, and control configuration files into an in-memory .zip archive.
 func (e *Evaluator) BuildPacketZip(project StudioProject) ([]byte, StudioEvaluation, error) {
 	eval, err := e.Evaluate(project)
 	if err != nil {
@@ -306,6 +326,12 @@ func (e *Evaluator) BuildPacketZip(project StudioProject) ([]byte, StudioEvaluat
 	if err != nil {
 		return nil, StudioEvaluation{}, fmt.Errorf("packet format engineered BOM CSV: %w", err)
 	}
+	shopPlanJSON, err := json.MarshalIndent(eval.ShopPlan, "", "  ")
+	if err != nil {
+		return nil, StudioEvaluation{}, fmt.Errorf("packet marshal shop_plan.json: %w", err)
+	}
+	shopPlanJSON = append(shopPlanJSON, '\n')
+
 	projectJSON, err := json.MarshalIndent(eval.Project, "", "  ")
 	if err != nil {
 		return nil, StudioEvaluation{}, fmt.Errorf("packet marshal project.json: %w", err)
@@ -324,6 +350,7 @@ func (e *Evaluator) BuildPacketZip(project StudioProject) ([]byte, StudioEvaluat
 	entries := []packetEntry{
 		{name: "scrubber.stl", data: stlBytes},
 		{name: "scrubber.dxf", data: dxfBytes},
+		{name: "shop_plan.json", data: shopPlanJSON},
 		{name: "bom_cots.csv", data: bomCOTSCSV},
 		{name: "bom_cots.md", data: bomCOTSMD},
 		{name: "bom_engineered.csv", data: bomEngCSV},
