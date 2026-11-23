@@ -403,6 +403,8 @@ func TestRunErrorCases(t *testing.T) {
 		{name: "guide invalid parallel pipe size", args: []string{"guide", "--parallel-pipe-in", "6"}},
 		{name: "guide invalid packing media", args: []string{"guide", "--packing-media", "bogus"}},
 		{name: "guide invalid compressor scfm", args: []string{"guide", "--compressor-scfm", "-5"}},
+		{name: "guide invalid build path", args: []string{"guide", "--build-path", "bogus"}},
+		{name: "guide empty build path", args: []string{"guide", "--build-path", ""}},
 		{name: "packet unknown preset", args: []string{"packet", "--preset", "nonexistent"}},
 		{name: "packet empty out path", args: []string{"packet", "--out", "   "}},
 		{name: "packet invalid alignment", args: []string{"packet", "--alignment", "bogus"}},
@@ -411,6 +413,7 @@ func TestRunErrorCases(t *testing.T) {
 		{name: "packet invalid parallel pipe size", args: []string{"packet", "--parallel-pipe-in", "5"}},
 		{name: "packet invalid packing media", args: []string{"packet", "--packing-media", "bogus"}},
 		{name: "packet invalid compressor scfm", args: []string{"packet", "--compressor-scfm", "250"}},
+		{name: "packet invalid build path", args: []string{"packet", "--build-path", "bogus"}},
 		{name: "design unknown preset", args: []string{"design", "--preset", "nonexistent"}},
 		{name: "export unknown preset", args: []string{"export", "--preset", "nonexistent"}},
 	}
@@ -639,6 +642,40 @@ func TestRunGuideStdoutAndOutDirAndProject(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("phase9_custom_fab_deluxe_flag", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		err := run(context.Background(), []string{
+			"guide",
+			"--preset", "wood_salt_24",
+			"--build-path", "custom_fab_deluxe",
+		}, &stdout, &stderr)
+		if err != nil {
+			t.Fatalf("guide --build-path custom_fab_deluxe failed: %v (stderr: %s)", err, stderr.String())
+		}
+		out := stdout.String()
+		for _, want := range []string{
+			"path=custom_fab_deluxe",
+			"Build Path / Deluxe : custom_fab_deluxe",
+			"delta=+",
+			"dBA @ 3ft",
+			"Shop Plan Systems :",
+			"electrical circuits",
+			"plumbing lines",
+			"bracing members",
+			"acoustic zones",
+			`NEC 110.26 36"x30" panel zone`,
+		} {
+			if !strings.Contains(out, want) {
+				t.Errorf("phase 9 guide stdout missing %q;\n%s", want, out)
+			}
+		}
+		for _, bad := range []string{"4-lb", "Hobby 316L"} {
+			if strings.Contains(out, bad) {
+				t.Errorf("phase 9 guide stdout must not contain deprecated string %q", bad)
+			}
+		}
+	})
 }
 
 func TestRunPacketCreatesValid11FileZip(t *testing.T) {
@@ -745,6 +782,61 @@ func TestRunPacketCreatesValid11FileZip(t *testing.T) {
 			proj.ShopCompressorSCFM != 15.0 ||
 			proj.ControlTier != studio.ControlTierElectromechanicalOnly {
 			t.Errorf("project.json did not preserve Phase 8 CLI flags: %+v", proj)
+		}
+	})
+
+	t.Run("phase9_custom_fab_deluxe_propagates_to_packet", func(t *testing.T) {
+		optZip := filepath.Join(t.TempDir(), "phase9-deluxe-packet.zip")
+		var oStdout, oStderr bytes.Buffer
+		err := run(context.Background(), []string{
+			"packet",
+			"--preset", "wood_salt_24",
+			"--build-path", "custom_fab_deluxe",
+			"--out", optZip,
+		}, &oStdout, &oStderr)
+		if err != nil {
+			t.Fatalf("packet --build-path custom_fab_deluxe failed: %v (stderr: %s)", err, oStderr.String())
+		}
+		data, err := os.ReadFile(optZip)
+		if err != nil {
+			t.Fatalf("read zip %s: %v", optZip, err)
+		}
+		files := assertValid11FilePacketZip(t, data)
+
+		var proj studio.StudioProject
+		if err := json.Unmarshal(files["project.json"], &proj); err != nil {
+			t.Fatalf("unmarshal project.json: %v", err)
+		}
+		if proj.BuildPath != studio.BuildPathCustomFabDeluxe {
+			t.Errorf("project.json BuildPath = %q, want %q", proj.BuildPath, studio.BuildPathCustomFabDeluxe)
+		}
+
+		var rawPlan map[string]json.RawMessage
+		if err := json.Unmarshal(files["shop_plan.json"], &rawPlan); err != nil {
+			t.Fatalf("unmarshal raw shop_plan.json: %v", err)
+		}
+		for _, key := range []string{"is_deluxe", "electrical", "plumbing", "bracing", "acoustics", "deluxe_spec"} {
+			if _, ok := rawPlan[key]; !ok {
+				t.Errorf("shop_plan.json missing required Phase 9 key %q", key)
+			}
+		}
+
+		var plan studio.ShopPlan
+		if err := json.Unmarshal(files["shop_plan.json"], &plan); err != nil {
+			t.Fatalf("unmarshal shop_plan.json: %v", err)
+		}
+		if !plan.IsDeluxe ||
+			plan.BuildPath != studio.BuildPathCustomFabDeluxe ||
+			len(plan.Electrical) == 0 ||
+			len(plan.Plumbing) == 0 ||
+			len(plan.Bracing) == 0 ||
+			len(plan.Acoustics) == 0 ||
+			plan.DeluxeSpec == nil ||
+			!plan.DeluxeSpec.Enabled ||
+			plan.DeluxeSpec.CostDeltaUSD <= 0 ||
+			plan.Clearances.NECPanelDepthIn != 36.0 ||
+			plan.Clearances.NECPanelWidthIn != 30.0 {
+			t.Errorf("shop_plan.json did not reflect Phase 9 Custom Fab Deluxe systems: %+v", plan)
 		}
 	})
 }

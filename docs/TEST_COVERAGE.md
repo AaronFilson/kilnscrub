@@ -6,29 +6,29 @@ Generated automatically by [`scripts/branch_coverage.go`](../scripts/branch_cove
 
 | Metric | Covered | Total | Coverage |
 | :--- | ---: | ---: | ---: |
-| **Statements** (matches `go tool cover -func`) | 5112 | 5543 | **92.2%** |
-| **Executable Lines** (token-mapped) | 7547 | 7981 | **94.6%** |
-| **AST Control-Flow Branches** (C1 decision) | 2133 | 2543 | **83.9%** |
+| **Statements** (matches `go tool cover -func`) | 5521 | 5955 | **92.7%** |
+| **Executable Lines** (token-mapped) | 8397 | 8834 | **95.1%** |
+| **AST Control-Flow Branches** (C1 decision) | 2302 | 2716 | **84.8%** |
 
 ## Per-Package Coverage Summary
 
 | Package | Statements | Statement % | Exec Lines | Line % | AST Branches | Branch % | Status (≥85% Line / ≥80% Branch) |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | :---: |
-| `cmd/kilnscrub` | 434 / 471 | 92.1% | 536 / 573 | 93.5% | 201 / 239 | 84.1% | PASS |
+| `cmd/kilnscrub` | 440 / 477 | 92.2% | 548 / 585 | 93.7% | 205 / 243 | 84.4% | PASS |
 | `internal/control` | 870 / 1033 | 84.2% | 1065 / 1231 | 86.5% | 405 / 532 | 76.1% | Below Branch |
 | `internal/web` | 409 / 459 | 89.1% | 421 / 471 | 89.4% | 169 / 210 | 80.5% | PASS |
 | `pkg/cad` | 734 / 761 | 96.5% | 1126 / 1153 | 97.7% | 251 / 280 | 89.6% | PASS |
 | `pkg/model` | 168 / 170 | 98.8% | 223 / 225 | 99.1% | 102 / 104 | 98.1% | PASS |
 | `pkg/scrubber` | 379 / 418 | 90.7% | 527 / 566 | 93.1% | 140 / 177 | 79.1% | Below Branch |
-| `pkg/studio` | 1788 / 1883 | 95.0% | 3281 / 3376 | 97.2% | 718 / 833 | 86.2% | PASS |
+| `pkg/studio` | 2191 / 2289 | 95.7% | 4119 / 4217 | 97.7% | 883 / 1002 | 88.1% | PASS |
 | `pkg/thermo` | 330 / 348 | 94.8% | 368 / 386 | 95.3% | 147 / 168 | 87.5% | PASS |
-| **TOTAL** | **5112 / 5543** | **92.2%** | **7547 / 7981** | **94.6%** | **2133 / 2543** | **83.9%** | — |
+| **TOTAL** | **5521 / 5955** | **92.7%** | **8397 / 8834** | **95.1%** | **2302 / 2716** | **84.8%** | — |
 
 ## Per-File Breakdown
 
 | File | Statements | Exec Lines | AST Branches |
 | :--- | ---: | ---: | ---: |
-| `cmd/kilnscrub/main.go` | 434/471 (92.1%) | 536/573 (93.5%) | 201/239 (84.1%) |
+| `cmd/kilnscrub/main.go` | 440/477 (92.2%) | 548/585 (93.7%) | 205/243 (84.4%) |
 | `internal/control/config.go` | 48/48 (100.0%) | 52/52 (100.0%) | 40/40 (100.0%) |
 | `internal/control/controller.go` | 96/109 (88.1%) | 150/163 (92.0%) | 31/44 (70.5%) |
 | `internal/control/daemon.go` | 78/81 (96.3%) | 83/86 (96.5%) | 31/36 (86.1%) |
@@ -52,14 +52,14 @@ Generated automatically by [`scripts/branch_coverage.go`](../scripts/branch_cove
 | `pkg/scrubber/packedbed.go` | 104/116 (89.7%) | 139/151 (92.1%) | 31/40 (77.5%) |
 | `pkg/scrubber/scrubber.go` | 68/78 (87.2%) | 102/112 (91.1%) | 31/41 (75.6%) |
 | `pkg/scrubber/venturi.go` | 138/153 (90.2%) | 176/191 (92.1%) | 55/70 (78.6%) |
-| `pkg/studio/cots.go` | 299/307 (97.4%) | 689/697 (98.9%) | 120/129 (93.0%) |
-| `pkg/studio/guide.go` | 197/198 (99.5%) | 269/270 (99.6%) | 67/68 (98.5%) |
-| `pkg/studio/options.go` | 541/590 (91.7%) | 914/963 (94.9%) | 205/259 (79.2%) |
+| `pkg/studio/cots.go` | 400/409 (97.8%) | 877/886 (99.0%) | 163/173 (94.2%) |
+| `pkg/studio/guide.go` | 232/233 (99.6%) | 305/306 (99.7%) | 75/77 (97.4%) |
+| `pkg/studio/options.go` | 543/592 (91.7%) | 916/965 (94.9%) | 207/261 (79.3%) |
 | `pkg/studio/packet.go` | 116/135 (85.9%) | 201/220 (91.4%) | 36/53 (67.9%) |
-| `pkg/studio/plan.go` | 116/116 (100.0%) | 352/352 (100.0%) | 44/44 (100.0%) |
-| `pkg/studio/presets.go` | 156/164 (95.1%) | 332/340 (97.6%) | 98/108 (90.7%) |
-| `pkg/studio/recirc.go` | 67/72 (93.1%) | 118/123 (95.9%) | 26/32 (81.2%) |
-| `pkg/studio/urban.go` | 296/301 (98.3%) | 406/411 (98.8%) | 122/140 (87.1%) |
+| `pkg/studio/plan.go` | 370/372 (99.5%) | 952/954 (99.8%) | 149/151 (98.7%) |
+| `pkg/studio/presets.go` | 157/165 (95.2%) | 333/341 (97.7%) | 98/108 (90.7%) |
+| `pkg/studio/recirc.go` | 70/75 (93.3%) | 121/126 (96.0%) | 29/35 (82.9%) |
+| `pkg/studio/urban.go` | 303/308 (98.4%) | 414/419 (98.8%) | 126/144 (87.5%) |
 | `pkg/thermo/quench.go` | 148/160 (92.5%) | 174/186 (93.5%) | 58/72 (80.6%) |
 | `pkg/thermo/shomate.go` | 182/188 (96.8%) | 194/200 (97.0%) | 89/96 (92.7%) |
 
@@ -69,17 +69,17 @@ Generated automatically by [`scripts/branch_coverage.go`](../scripts/branch_cove
 | :--- | ---: | ---: | ---: |
 | `for-body` | 28 | 30 | 93.3% |
 | `for-exit` | 27 | 28 | 96.4% |
-| `if-else` | 71 | 73 | 97.3% |
-| `if-else-if` | 19 | 19 | 100.0% |
-| `if-implicit-else` | 915 | 982 | 93.2% |
-| `if-then` | 764 | 1074 | 71.1% |
-| `range-body` | 52 | 52 | 100.0% |
-| `range-exit` | 47 | 52 | 90.4% |
+| `if-else` | 77 | 79 | 97.5% |
+| `if-else-if` | 23 | 23 | 100.0% |
+| `if-implicit-else` | 973 | 1042 | 93.4% |
+| `if-then` | 832 | 1144 | 72.7% |
+| `range-body` | 53 | 53 | 100.0% |
+| `range-exit` | 48 | 53 | 90.6% |
 | `select-case` | 9 | 10 | 90.0% |
 | `select-default` | 2 | 3 | 66.7% |
-| `switch-case` | 146 | 161 | 90.7% |
-| `switch-default` | 46 | 49 | 93.9% |
-| `switch-implicit-default` | 4 | 7 | 57.1% |
+| `switch-case` | 171 | 186 | 91.9% |
+| `switch-default` | 50 | 53 | 94.3% |
+| `switch-implicit-default` | 6 | 9 | 66.7% |
 | `type-switch-case` | 2 | 2 | 100.0% |
 | `type-switch-implicit-default` | 1 | 1 | 100.0% |
 
@@ -144,7 +144,7 @@ Packages below the **85% executable line** or **80% AST branch** target are list
 
 *...and 29 additional uncovered branches in `internal/web` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
 
-### `cmd/kilnscrub` (Line 93.5%, Branch 84.1%, 38 uncovered branches)
+### `cmd/kilnscrub` (Line 93.7%, Branch 84.4%, 38 uncovered branches)
 
 | Location | Construct | Function | Condition / Arm |
 | :--- | :--- | :--- | :--- |
@@ -162,25 +162,6 @@ Packages below the **85% executable line** or **80% AST branch** target are list
 | `cmd/kilnscrub/main.go:394` | `if-then` | `runPresets` | `err != nil` |
 
 *...and 26 additional uncovered branches in `cmd/kilnscrub` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
-
-### `pkg/studio` (Line 97.2%, Branch 86.2%, 115 uncovered branches)
-
-| Location | Construct | Function | Condition / Arm |
-| :--- | :--- | :--- | :--- |
-| `pkg/studio/options.go:210` | `switch-case` | `mediumPressureAirAtomizeBlowerCost` | `case hp <= 2.0` |
-| `pkg/studio/options.go:841` | `switch-case` | `eductorEntrainmentRatio` | `case dpInWC <= 4.0` |
-| `pkg/studio/recirc.go:42` | `switch-case` | `workingSumpVolumeGal` | `case "USPLASTIC-100T"` |
-| `pkg/studio/recirc.go:44` | `switch-default` | `workingSumpVolumeGal` | `default` |
-| `pkg/studio/urban.go:286` | `switch-case` | `assessElectrical` | `case reqAmps <= 50.0` |
-| `pkg/studio/guide.go:105` | `if-else` | `GenerateBuildGuide` | `else of (p.CorrosionTier == CorrosionTierHeavyC276FRP)` |
-| `pkg/studio/options.go:897` | `if-else` | `analyzeCompressor` | `else of (err == nil)` |
-| `pkg/studio/cots.go:108` | `range-exit` | `snapPipe` | `exit/skip (range catalog)` |
-| `pkg/studio/cots.go:301` | `range-exit` | `snapPipeByNominal` | `exit/skip (range catalog)` |
-| `pkg/studio/options.go:369` | `range-exit` | `analyzeEductor` | `exit/skip (range catalog)` |
-| `pkg/studio/options.go:619` | `for-body` | `analyzeParallelBed` | `(qGas/(float64(pipeCount)*pipeAreaM2))/vFlood*100.0 > 75.0` |
-| `pkg/studio/presets.go:338` | `range-exit` | `PresetByID` | `exit/skip (range Presets())` |
-
-*...and 103 additional uncovered branches in `pkg/studio` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
 
 ### `pkg/thermo` (Line 95.3%, Branch 87.5%, 21 uncovered branches)
 
@@ -200,6 +181,25 @@ Packages below the **85% executable line** or **80% AST branch** target are list
 | `pkg/thermo/quench.go:273` | `if-then` | `SolveAdiabaticQuench` | `nozzleCount < minQuenchNozzleCount` |
 
 *...and 9 additional uncovered branches in `pkg/thermo` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
+
+### `pkg/studio` (Line 97.7%, Branch 88.1%, 119 uncovered branches)
+
+| Location | Construct | Function | Condition / Arm |
+| :--- | :--- | :--- | :--- |
+| `pkg/studio/options.go:210` | `switch-case` | `mediumPressureAirAtomizeBlowerCost` | `case hp <= 2.0` |
+| `pkg/studio/options.go:841` | `switch-case` | `eductorEntrainmentRatio` | `case dpInWC <= 4.0` |
+| `pkg/studio/recirc.go:42` | `switch-case` | `workingSumpVolumeGal` | `case "USPLASTIC-100T"` |
+| `pkg/studio/recirc.go:50` | `switch-default` | `workingSumpVolumeGal` | `default` |
+| `pkg/studio/urban.go:286` | `switch-case` | `assessElectrical` | `case reqAmps <= 50.0` |
+| `pkg/studio/guide.go:118` | `if-else` | `GenerateBuildGuide` | `else of (p.CorrosionTier == CorrosionTierHeavyC276FRP)` |
+| `pkg/studio/options.go:897` | `if-else` | `analyzeCompressor` | `else of (err == nil)` |
+| `pkg/studio/cots.go:108` | `range-exit` | `snapPipe` | `exit/skip (range catalog)` |
+| `pkg/studio/cots.go:394` | `range-exit` | `snapPipeByNominal` | `exit/skip (range catalog)` |
+| `pkg/studio/options.go:369` | `range-exit` | `analyzeEductor` | `exit/skip (range catalog)` |
+| `pkg/studio/options.go:619` | `for-body` | `analyzeParallelBed` | `(qGas/(float64(pipeCount)*pipeAreaM2))/vFlood*100.0 > 75.0` |
+| `pkg/studio/presets.go:339` | `range-exit` | `PresetByID` | `exit/skip (range Presets())` |
+
+*...and 107 additional uncovered branches in `pkg/studio` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
 
 ### `pkg/cad` (Line 97.7%, Branch 89.6%, 29 uncovered branches)
 

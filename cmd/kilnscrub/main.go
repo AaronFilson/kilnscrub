@@ -410,6 +410,7 @@ func runPresets(args []string, stdout, stderr io.Writer) error {
 }
 
 type studioOptionFlags struct {
+	buildPath      *string
 	saltingHours   *float64
 	alignment      *string
 	bedLayout      *string
@@ -424,6 +425,7 @@ type studioOptionFlags struct {
 
 func bindStudioOptionFlags(fs *flag.FlagSet) studioOptionFlags {
 	return studioOptionFlags{
+		buildPath:      fs.String("build-path", "", "Fabrication build path: cots_no_weld, welded_dxf, or custom_fab_deluxe"),
 		saltingHours:   fs.Float64("salting-hours", 0, "Active peak salting window in hours (e.g. 2-4 hrs for salt mode)"),
 		alignment:      fs.String("alignment", "", "Stage alignment: inline_id_blower or eductor_dry_fan"),
 		bedLayout:      fs.String("bed-layout", "", "Stage 3 packed-bed layout: single_column or parallel_manifold"),
@@ -439,6 +441,9 @@ func bindStudioOptionFlags(fs *flag.FlagSet) studioOptionFlags {
 
 func (f studioOptionFlags) applyExplicit(base studio.StudioProject, setFlags map[string]bool) studio.StudioProject {
 	proj := base
+	if setFlags["build-path"] {
+		proj.BuildPath = strings.ToLower(strings.TrimSpace(*f.buildPath))
+	}
 	if setFlags["salting-hours"] {
 		proj.SaltingHours = *f.saltingHours
 	}
@@ -541,6 +546,7 @@ func printStudioSummary(w io.Writer, eval studio.StudioEvaluation) {
 	u := eval.Urban
 	a := eval.ArchitectureOptions
 	r := eval.Recirculation
+	sp := eval.ShopPlan
 	fmt.Fprintf(w, "Kiln Scrub Studio Readiness & COTS Summary\n")
 	fmt.Fprintf(w, "==========================================\n")
 	fmt.Fprintf(w, "Studio          : %s (preset=%s)\n", p.StudioName, p.PresetID)
@@ -548,6 +554,12 @@ func printStudioSummary(w io.Writer, eval studio.StudioEvaluation) {
 		eval.Design.Input.KilnVolumeCuFt, p.FiringCone, eval.Design.Input.PeakExitTempF, p.FiringDurationHours, p.EffectiveSaltingHours(), p.VaporGlazeMode)
 	fmt.Fprintf(w, "Build & Alloy   : path=%s | tier=%s (%s) | snap_to_cots=%v\n",
 		p.BuildPath, p.CorrosionTier, studio.CorrosionTierLabel(p.CorrosionTier), c.Snapped)
+	if p.IsDeluxe() && sp.DeluxeSpec != nil {
+		fmt.Fprintf(w, "Build Path / Deluxe : %s | delta=%+.2f USD | acoustic %.1f -> %.1f dBA @ 3ft (%.1f dBA @ %.0f ft)\n",
+			p.BuildPath, sp.DeluxeSpec.CostDeltaUSD,
+			sp.AcousticSummary.BareDBA3Ft, sp.AcousticSummary.TreatedDBA3Ft,
+			sp.AcousticSummary.PropertyLineDBA, sp.AcousticSummary.PropertyLineFt)
+	}
 	fmt.Fprintf(w, "Stage Options   : alignment=%s | bed=%s (%.0f\" pipe) | venturi=%s | compact=%v | controls=%s | delta=%+.2f USD\n",
 		a.StageAlignment, a.PackedBedLayout, a.ParallelBed.PipeNominalIn, a.VenturiLayout, a.CompactFootprint, a.ControlTier, a.CostDeltaUSD)
 	fmt.Fprintf(w, "Blower Drive    : %s (%s) | %.1f inWC | $%.2f (%+.2f USD) | feasible=%v\n",
@@ -562,8 +574,11 @@ func printStudioSummary(w io.Writer, eval studio.StudioEvaluation) {
 	fmt.Fprintf(w, "Recirculation   : %.1f%% water saved | dump every %d firing(s) (SG >= %.3f)\n",
 		r.WaterSavedPct, r.FiringsBeforeFullDump, r.DumpSpecificGravity)
 	fmt.Fprintf(w, "Shop Plan       : %d parts, %d cut-sheet items (%.1f\" L x %.1f\" W x %.1f\" H)\n",
-		len(eval.ShopPlan.Parts), len(eval.ShopPlan.CutList),
-		eval.ShopPlan.OverallLengthIn, eval.ShopPlan.OverallWidthIn, eval.ShopPlan.OverallHeightIn)
+		len(sp.Parts), len(sp.CutList),
+		sp.OverallLengthIn, sp.OverallWidthIn, sp.OverallHeightIn)
+	fmt.Fprintf(w, "Shop Plan Systems : %d electrical circuits, %d plumbing lines, %d bracing members, %d acoustic zones, NEC 110.26 %.0f\"x%.0f\" panel zone\n",
+		len(sp.Electrical), len(sp.Plumbing), len(sp.Bracing), len(sp.Acoustics),
+		sp.Clearances.NECPanelDepthIn, sp.Clearances.NECPanelWidthIn)
 	fmt.Fprintf(w, "Urban Readiness : %s\n", strings.ToUpper(u.OverallStatus))
 	fmt.Fprintf(w, "  Electrical    : [%s] %s (~%.1f A)\n", u.Electrical.Status, u.Electrical.CircuitLabel, u.Electrical.RequiredAmps)
 	fmt.Fprintf(w, "  Water         : [%s] %.2f GPM peak (~%.0f gal/firing)\n", u.Water.Status, u.Water.RequiredGPM, u.Water.TotalFiringGallons)
