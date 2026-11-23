@@ -3713,9 +3713,44 @@
       /* ===================== 2D CANVAS CUTAWAY FALLBACK ===================== */
 
       const p2d = {
-        particles: Array.from({ length: 48 }, (_, i) => ({ t: i / 48, jitter: (Math.sin(i * 12.9898) * 0.5) })),
+        particles: Array.from({ length: 56 }, (_, i) => ({ t: i / 56, jitter: (Math.sin(i * 12.9898) * 0.5) })),
         lastTime: 0,
       };
+
+      function sample2DPolyline(pts, t) {
+        if (!pts || pts.length < 2) return [0, 0];
+        let total = 0;
+        const cum = [0];
+        for (let i = 1; i < pts.length; i++) {
+          total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+          cum.push(total);
+        }
+        const target = Math.max(0, Math.min(1, t)) * total;
+        let idx = 0;
+        while (idx < cum.length - 2 && cum[idx + 1] < target) idx++;
+        const segLen = Math.max(1e-6, cum[idx + 1] - cum[idx]);
+        const frac = (target - cum[idx]) / segLen;
+        return [
+          pts[idx][0] + (pts[idx + 1][0] - pts[idx][0]) * frac,
+          pts[idx][1] + (pts[idx + 1][1] - pts[idx][1]) * frac,
+        ];
+      }
+
+      function draw2DFlange(ctx, x, y, len, vertical, color = "#cbd5e1") {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        if (vertical) {
+          ctx.moveTo(x, y - len * 0.5);
+          ctx.lineTo(x, y + len * 0.5);
+        } else {
+          ctx.moveTo(x - len * 0.5, y);
+          ctx.lineTo(x + len * 0.5, y);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
 
       function draw2DSchematic(ts = 0) {
         const canvas = el("viewport-2d");
@@ -3751,35 +3786,45 @@
         }
 
         const q = d.quench, v = d.venturi, p = d.packed_bed, b = d.blower;
+        const hasDiluter = !!(el("in-include-plume-diluter")?.checked);
         const floorY = h - 42;
         const maxH = Math.max(q.tower_height_m || 1.2, p.column_height_m || 2.2, 1.5);
-        const scale = Math.min((h - 110) / maxH, (w - 330) / 3.4);
+        const scale = Math.min((h - 130) / maxH, (w - 340) / 3.8);
 
-        const qW = Math.max(46, (q.tower_diameter_m || 0.4) * scale);
-        const qH = Math.max(95, (q.tower_height_m || 1.2) * scale);
-        const pW = Math.max(58, (p.column_diameter_m || 0.5) * scale);
+        const qW = Math.max(46, (q.tower_diameter_m || 0.45) * scale);
+        const qH = Math.max(96, (q.tower_height_m || 1.2) * scale);
+        const pW = Math.max(58, (p.column_diameter_m || 0.52) * scale);
         const pH = Math.max(150, (p.column_height_m || 2.2) * scale);
-        const bR = Math.max(24, ((b.wheel_diameter_m || 0.35) * scale) * 0.8);
+        const bR = Math.max(24, ((b.wheel_diameter_m || 0.38) * scale) * 0.72);
+        const ductW = Math.max(10, Math.min(18, ((d.envelope?.duct_diameter_m || 0.2) * scale) * 0.65));
 
-        const qX = Math.max(84, w * 0.14);
-        const vX = qX + qW + 42;
-        const vLen = Math.max(95, ((v.converging_length_m || 0.25) + (v.throat_length_m || 0.15) + (v.diverging_length_m || 0.45)) * scale);
+        const qX = Math.max(76, w * 0.11);
+        const vX = qX + qW + 34;
+        const vLen = Math.max(92, ((v.converging_length_m || 0.25) + (v.throat_length_m || 0.15) + (v.diverging_length_m || 0.45)) * scale);
         const pX = vX + vLen + 26;
-        const bX = Math.min(w - 290, pX + pW + 70);
+        const bX = Math.min(w - 280, pX + pW + Math.max(78, bR * 2.5));
+        const bY = floorY - bR * 1.55 - 10;
 
         const hi = (stage) => state.selectedStage === "all" || state.selectedStage === stage;
 
+        // Floor datum
         ctx.strokeStyle = "#334663";
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(24, floorY); ctx.lineTo(w - 24, floorY); ctx.stroke();
 
+        // Kiln flue inlet pipe with flanges
+        const qInY = floorY - qH + 26;
         ctx.strokeStyle = "#f97316";
-        ctx.lineWidth = 10;
+        ctx.lineWidth = ductW;
+        ctx.lineCap = "butt";
         ctx.beginPath();
-        ctx.moveTo(26, floorY - qH + 26);
-        ctx.lineTo(qX, floorY - qH + 26);
+        ctx.moveTo(24, qInY);
+        ctx.lineTo(qX, qInY);
         ctx.stroke();
+        draw2DFlange(ctx, 26, qInY, ductW + 8, true, "#fdba74");
+        draw2DFlange(ctx, qX - 2, qInY, ductW + 8, true, "#fdba74");
 
+        // Stage 1: Quench Tower
         ctx.save();
         ctx.globalAlpha = hi("quench") ? 1.0 : 0.35;
         ctx.fillStyle = state.cutaway ? "rgba(249, 115, 22, 0.12)" : "#7c8ea4";
@@ -3810,20 +3855,24 @@
         ctx.fillText(`Ø${fmt(mToMm(q.tower_diameter_m), 0)}mm`, qX, floorY + 29);
         ctx.restore();
 
-        const vY = floorY - 46;
-        const inR = Math.max(14, (v.inlet_diameter_m || 0.2) * scale * 0.45);
-        const thR = Math.max(6, (v.throat_diameter_m || 0.08) * scale * 0.45);
-        const outR = Math.max(15, (v.outlet_diameter_m || 0.22) * scale * 0.45);
+        // Stage 2: Wet Venturi (aligned cleanly above Stage 3 sump)
+        const sumpH = Math.max(20, pH * 0.14);
+        const inR = Math.max(12, (v.inlet_diameter_m || 0.22) * scale * 0.42);
+        const thR = Math.max(5.5, (v.throat_diameter_m || 0.085) * scale * 0.42);
+        const outR = Math.max(13, (v.outlet_diameter_m || 0.24) * scale * 0.42);
+        const vY = floorY - sumpH - outR - 10;
         const cL = vLen * 0.30, tL = vLen * 0.22, dL = vLen * 0.48;
 
         ctx.save();
         ctx.globalAlpha = hi("venturi") ? 1.0 : 0.35;
         ctx.strokeStyle = "#94a3b8";
-        ctx.lineWidth = 8;
+        ctx.lineWidth = inR * 1.4;
         ctx.beginPath();
         ctx.moveTo(qX + qW, vY);
         ctx.lineTo(vX, vY);
         ctx.stroke();
+        draw2DFlange(ctx, qX + qW + 2, vY, inR * 2.1, true, "#cbd5e1");
+        draw2DFlange(ctx, vX, vY, inR * 2.2, true, "#cbd5e1");
 
         ctx.fillStyle = state.cutaway ? "rgba(148, 163, 184, 0.16)" : "#94a3b8";
         ctx.strokeStyle = "#cbd5e1";
@@ -3845,6 +3894,7 @@
           ctx.fillStyle = "rgba(56, 189, 248, 0.45)";
           ctx.fillRect(vX + cL, vY - thR + 1, tL, thR * 2 - 2);
         }
+        draw2DFlange(ctx, vX + vLen, vY, outR * 2.2, true, "#67e8f9");
         ctx.fillStyle = "#e2e8f0";
         ctx.font = "bold 11px monospace";
         ctx.fillText("2. VENTURI", vX + 6, floorY + 16);
@@ -3853,29 +3903,49 @@
         ctx.fillText(`Øt=${fmt(mToMm(v.throat_diameter_m), 0)}mm`, vX + 6, floorY + 29);
         ctx.restore();
 
+        // Venturi -> Packed Bed flanged spool
         ctx.strokeStyle = "#06b6d4";
-        ctx.lineWidth = 8;
+        ctx.lineWidth = outR * 1.4;
         ctx.beginPath();
         ctx.moveTo(vX + vLen, vY);
         ctx.lineTo(pX, vY);
         ctx.stroke();
+        draw2DFlange(ctx, pX - 2, vY, outR * 2.1, true, "#67e8f9");
 
+        // Stage 3: Packed Bed Absorber with conical top frustum
+        const coneH = Math.max(18, Math.min(28, pW * 0.42));
+        const pTopY = floorY - pH;
+        const neckY = pTopY - coneH;
         ctx.save();
         ctx.globalAlpha = hi("packed") ? 1.0 : 0.35;
         ctx.fillStyle = state.cutaway ? "rgba(6, 182, 212, 0.11)" : "#286e8a";
         ctx.strokeStyle = "#06b6d4";
         ctx.lineWidth = state.selectedStage === "packed" ? 3 : 2;
-        ctx.fillRect(pX, floorY - pH, pW, pH);
-        ctx.strokeRect(pX, floorY - pH, pW, pH);
+        ctx.fillRect(pX, pTopY, pW, pH);
+        ctx.strokeRect(pX, pTopY, pW, pH);
+
+        // Conical frustum top reducer (tapers smoothly to ductW)
+        ctx.beginPath();
+        ctx.moveTo(pX, pTopY);
+        ctx.lineTo(pX + pW * 0.5 - ductW * 0.5, neckY);
+        ctx.lineTo(pX + pW * 0.5 + ductW * 0.5, neckY);
+        ctx.lineTo(pX + pW, pTopY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        draw2DFlange(ctx, pX + pW * 0.5, pTopY, pW + 8, false, "#67e8f9");
+        draw2DFlange(ctx, pX + pW * 0.5, neckY, ductW + 8, false, "#67e8f9");
 
         if (state.cutaway) {
-          const sumpH = Math.max(22, pH * 0.16);
-          ctx.fillStyle = "rgba(14, 165, 233, 0.32)";
+          ctx.fillStyle = "rgba(14, 165, 233, 0.34)";
           ctx.fillRect(pX + 2, floorY - sumpH, pW - 4, sumpH - 2);
 
-          const packRatio = Math.min(0.55, Math.max(0.24, (p.packing_height_m || 1.0) / Math.max(1.0, p.column_height_m || 2.2)));
-          const packH = pH * packRatio;
-          const packTop = floorY - sumpH - 22 - packH;
+          const packBaseY = vY - outR - 10;
+          const demH = Math.max(12, pH * 0.08);
+          const demTop = pTopY + 14;
+          const availPack = Math.max(24, packBaseY - (demTop + demH + 14));
+          const packH = Math.min(availPack, Math.max(24, pH * 0.42));
+          const packTop = packBaseY - packH;
           ctx.fillStyle = "rgba(20, 184, 166, 0.28)";
           ctx.fillRect(pX + 3, packTop, pW - 6, packH);
           ctx.strokeStyle = "rgba(45, 212, 191, 0.65)";
@@ -3884,8 +3954,6 @@
             ctx.beginPath(); ctx.moveTo(pX + 4, yy); ctx.lineTo(pX + pW - 4, yy + 4); ctx.stroke();
           }
 
-          const demH = Math.max(14, pH * 0.08);
-          const demTop = floorY - pH + 18;
           ctx.fillStyle = "rgba(125, 211, 252, 0.3)";
           ctx.fillRect(pX + 3, demTop, pW - 6, demH);
           ctx.strokeStyle = "#7dd3fc";
@@ -3900,40 +3968,163 @@
         ctx.fillText(`Ø${fmt(mToMm(p.column_diameter_m), 0)}×${fmt(p.column_height_m, 2)}m`, pX - 4, floorY + 29);
         ctx.restore();
 
-        const bY = floorY - bR - 14;
-        ctx.strokeStyle = "#10b981";
-        ctx.lineWidth = 7;
-        ctx.beginPath();
-        ctx.moveTo(pX + pW / 2, floorY - pH);
-        ctx.lineTo(pX + pW / 2, floorY - pH - 18);
-        ctx.lineTo(bX, floorY - pH - 18);
-        ctx.lineTo(bX, bY);
-        ctx.stroke();
+        // Stage 3 -> Stage 4 Smooth Swept Curved Duct into Axial Suction Eye
+        const s3TopX = pX + pW * 0.5;
+        const dropX = pX + pW + Math.max(20, (bX - bR * 1.45 - (pX + pW)) * 0.5);
+        const topRunY = Math.max(26, neckY - 22);
+        const rBend1 = Math.min(18, Math.max(10, (dropX - s3TopX) * 0.38));
+        const rBend2 = Math.min(18, Math.max(10, (bX - dropX) * 0.35));
+
+        const ductPath2D = new Path2D();
+        ductPath2D.moveTo(s3TopX, neckY);
+        ductPath2D.lineTo(s3TopX, topRunY + rBend1);
+        ductPath2D.quadraticCurveTo(s3TopX, topRunY, s3TopX + rBend1, topRunY);
+        ductPath2D.lineTo(dropX - rBend1, topRunY);
+        ductPath2D.quadraticCurveTo(dropX, topRunY, dropX, topRunY + rBend1);
+        ductPath2D.lineTo(dropX, bY - rBend2);
+        ductPath2D.quadraticCurveTo(dropX, bY, dropX + rBend2, bY);
+        ductPath2D.lineTo(bX - bR * 0.52, bY);
+
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = "#0891b2";
+        ctx.lineWidth = ductW + 2;
+        ctx.stroke(ductPath2D);
+        ctx.strokeStyle = "#164e63";
+        ctx.lineWidth = Math.max(4, ductW - 3);
+        ctx.stroke(ductPath2D);
+        draw2DFlange(ctx, (s3TopX + dropX) * 0.5, topRunY, ductW + 7, true, "#67e8f9");
+        draw2DFlange(ctx, dropX, (topRunY + bY) * 0.5, ductW + 7, false, "#67e8f9");
+        ctx.restore();
+
+        // Stage 4: Centrifugal Scroll (Volute) Blower + Tangential Upward Exhaust Stack
+        const r0 = bR * 1.12;
+        const rMax = Math.max(bR * 1.64, bR * 0.88 + ductW * 1.45);
+        const xIn = bR * 0.86;
+        const yDis = bR * 1.32;
+        const stackX = bX + (xIn + rMax) * 0.5;
+        const disW = rMax - xIn;
+        const stackW = Math.max(10, ductW * 0.95);
+        const transH = Math.max(14, bR * 0.55);
+        const stackTopY = Math.max(24, bY - yDis - transH - Math.max(54, bR * 1.9));
 
         ctx.save();
         ctx.globalAlpha = hi("blower") ? 1.0 : 0.35;
-        ctx.fillStyle = state.cutaway ? "rgba(16, 185, 129, 0.16)" : "#15803d";
+
+        // Pedestal seated on floor
+        ctx.fillStyle = "#1e293b";
+        ctx.strokeStyle = "#475569";
+        ctx.lineWidth = 1.5;
+        ctx.fillRect(bX - bR * 0.72, bY + bR * 1.15, bR * 1.44, floorY - (bY + bR * 1.15));
+        ctx.strokeRect(bX - bR * 0.72, bY + bR * 1.15, bR * 1.44, floorY - (bY + bR * 1.15));
+
+        // Spiral volute housing (CCW in screen space: top -> left -> bottom -> right -> UP)
+        const phi0 = 0.36 * Math.PI;
+        ctx.fillStyle = state.cutaway ? "rgba(16, 185, 129, 0.14)" : "#15803d";
         ctx.strokeStyle = "#10b981";
         ctx.lineWidth = state.selectedStage === "blower" ? 3 : 2;
         ctx.beginPath();
-        ctx.arc(bX, bY, bR, 0, Math.PI * 2);
+        ctx.moveTo(bX + xIn, bY - yDis);
+        ctx.lineTo(bX + xIn, bY - bR * 0.82);
+        ctx.quadraticCurveTo(bX + bR * 0.70, bY - bR * 0.96, bX + r0 * Math.cos(phi0), bY - r0 * Math.sin(phi0));
+        const spiralSteps = 44;
+        for (let s = 1; s <= spiralSteps; s++) {
+          const frac = s / spiralSteps;
+          const phi = phi0 + frac * (Math.PI * 2 - phi0);
+          const rr = r0 + (rMax - r0) * (1 - Math.pow(1 - frac, 1.35));
+          ctx.lineTo(bX + rr * Math.cos(phi), bY - rr * Math.sin(phi));
+        }
+        ctx.lineTo(bX + rMax, bY - yDis);
+        ctx.closePath();
         ctx.fill();
         ctx.stroke();
-        ctx.fillRect(bX + bR * 0.35, bY - bR * 2.1, bR * 0.65, bR * 1.4);
-        ctx.strokeRect(bX + bR * 0.35, bY - bR * 2.1, bR * 0.65, bR * 1.4);
 
+        // Tangential square-to-round transition + vertical exhaust stack (never touches wheel!)
+        ctx.fillStyle = state.cutaway ? "rgba(16, 185, 129, 0.18)" : "#0f766e";
+        ctx.strokeStyle = "#34d399";
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(bX + xIn, bY - yDis);
+        ctx.lineTo(stackX - stackW * 0.5, bY - yDis - transH);
+        ctx.lineTo(stackX + stackW * 0.5, bY - yDis - transH);
+        ctx.lineTo(bX + rMax, bY - yDis);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        draw2DFlange(ctx, stackX, bY - yDis, disW + 8, false, "#6ee7b7");
+        draw2DFlange(ctx, stackX, bY - yDis - transH, stackW + 8, false, "#6ee7b7");
+
+        // Vertical exhaust stack
+        const stackBaseY = bY - yDis - transH;
+        ctx.fillRect(stackX - stackW * 0.5, stackTopY, stackW, stackBaseY - stackTopY);
+        ctx.strokeRect(stackX - stackW * 0.5, stackTopY, stackW, stackBaseY - stackTopY);
+
+        if (hasDiluter) {
+          // Optional 120V squirrel-cage dilution tee + tapered HV cone
+          const teeY = (stackBaseY + stackTopY) * 0.55;
+          ctx.fillStyle = "rgba(56, 189, 248, 0.22)";
+          ctx.strokeStyle = "#38bdf8";
+          ctx.fillRect(stackX + stackW * 0.5, teeY - 5, 18, 10);
+          ctx.strokeRect(stackX + stackW * 0.5, teeY - 5, 18, 10);
+          ctx.beginPath();
+          ctx.arc(stackX + stackW * 0.5 + 24, teeY, 9, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          // Tapered HV exit cone
+          ctx.beginPath();
+          ctx.moveTo(stackX - stackW * 0.5, stackTopY);
+          ctx.lineTo(stackX - stackW * 0.34, Math.max(10, stackTopY - 14));
+          ctx.lineTo(stackX + stackW * 0.34, Math.max(10, stackTopY - 14));
+          ctx.lineTo(stackX + stackW * 0.5, stackTopY);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        // CCW spinning backward-curved impeller wheel inside scroll
         if (state.cutaway) {
-          const rot = (ts || 0) * 0.006;
-          ctx.strokeStyle = "#6ee7b7";
-          ctx.lineWidth = 1.6;
-          for (let k = 0; k < 6; k++) {
-            const a = rot + (k * Math.PI) / 3;
+          // Outer shroud ring
+          ctx.strokeStyle = "rgba(110, 231, 183, 0.55)";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(bX, bY, bR * 0.90, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Negative angle delta = CCW in canvas (+Y down), pushing air UP on the right side!
+          const rot = -((ts || 0) * 0.0042);
+          ctx.strokeStyle = "#a7f3d0";
+          ctx.lineWidth = 1.8;
+          for (let k = 0; k < 8; k++) {
+            const a0 = rot + (k * Math.PI * 2) / 8;
+            const aMid = a0 + 0.16;
+            const aTip = a0 + 0.42; // curves backward against CCW (-a) rotation
             ctx.beginPath();
-            ctx.moveTo(bX, bY);
-            ctx.lineTo(bX + Math.cos(a) * (bR * 0.72), bY + Math.sin(a) * (bR * 0.72));
+            ctx.moveTo(bX + Math.cos(a0) * (bR * 0.30), bY + Math.sin(a0) * (bR * 0.30));
+            ctx.quadraticCurveTo(
+              bX + Math.cos(aMid) * (bR * 0.62), bY + Math.sin(aMid) * (bR * 0.62),
+              bX + Math.cos(aTip) * (bR * 0.88), bY + Math.sin(aTip) * (bR * 0.88)
+            );
             ctx.stroke();
           }
         }
+
+        // Axial suction eye bell (translucent when cutaway is on so hub & blades stay clear)
+        ctx.save();
+        ctx.strokeStyle = state.cutaway ? "rgba(103, 232, 249, 0.72)" : "#06b6d4";
+        ctx.fillStyle = state.cutaway ? "rgba(14, 116, 144, 0.25)" : "#0e7490";
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(bX, bY, Math.max(7, ductW * 0.58), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        // Central hub bolt
+        ctx.fillStyle = "#e2e8f0";
+        ctx.beginPath();
+        ctx.arc(bX, bY, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
         ctx.fillStyle = "#6ee7b7";
         ctx.font = "bold 11px monospace";
         ctx.fillText("4. BLOWER", bX - 24, floorY + 16);
@@ -3945,28 +4136,35 @@
         if (state.particles) {
           const dt = p2d.lastTime ? Math.min(0.05, (ts - p2d.lastTime) / 1000) : 0.016;
           p2d.lastTime = ts;
-          const waypoints = [
-            [26, floorY - qH + 26],
-            [qX + qW / 2, floorY - qH + 26],
-            [qX + qW / 2, vY],
-            [vX + cL + tL / 2, vY],
-            [pX + pW / 2, vY],
-            [pX + pW / 2, floorY - pH],
-            [pX + pW / 2, floorY - pH - 18],
-            [bX, floorY - pH - 18],
+          // Smooth curved polyline path matching actual duct + CCW volute + tangential stack
+          const pts = [
+            [24, qInY],
+            [qX + qW * 0.5, qInY],
+            [qX + qW * 0.5, vY],
+            [vX + cL + tL * 0.5, vY],
+            [pX + pW * 0.5, vY],
+            [pX + pW * 0.5, neckY],
+            [s3TopX, topRunY + rBend1 * 0.4],
+            [s3TopX + rBend1 * 0.7, topRunY],
+            [dropX - rBend1 * 0.7, topRunY],
+            [dropX, topRunY + rBend1 * 0.7],
+            [dropX, bY - rBend2 * 0.7],
+            [dropX + rBend2 * 0.7, bY],
             [bX, bY],
-            [bX + bR * 0.67, bY - bR * 2.3],
+            // CCW spiral inside volute: down -> bottom-right -> right tangent -> UP out stack
+            [bX + bR * 0.15, bY + bR * 0.65],
+            [bX + bR * 0.85, bY + bR * 0.78],
+            [stackX, bY + bR * 0.10],
+            [stackX, bY - yDis],
+            [stackX, stackTopY - 12],
           ];
           for (const pt of p2d.particles) {
-            pt.t = (pt.t + dt * 0.16) % 1.0;
-            const segF = pt.t * (waypoints.length - 1);
-            const idx = Math.min(waypoints.length - 2, Math.floor(segF));
-            const frac = segF - idx;
-            const x = waypoints[idx][0] + (waypoints[idx + 1][0] - waypoints[idx][0]) * frac + pt.jitter * 6;
-            const y = waypoints[idx][1] + (waypoints[idx + 1][1] - waypoints[idx][1]) * frac;
-            ctx.fillStyle = pt.t < 0.25 ? "#fb923c" : pt.t < 0.55 ? "#38bdf8" : "#6ee7b7";
+            pt.t = (pt.t + dt * 0.15) % 1.0;
+            const [x, y] = sample2DPolyline(pts, pt.t);
+            const jAmp = (pt.t > 0.25 && pt.t < 0.36) ? 2.0 : 3.5;
+            ctx.fillStyle = pt.t < 0.22 ? "#fb923c" : pt.t < 0.58 ? "#38bdf8" : "#6ee7b7";
             ctx.beginPath();
-            ctx.arc(x, y, 2.6, 0, Math.PI * 2);
+            ctx.arc(x + pt.jitter * jAmp, y + pt.jitter * 2.0, 2.5, 0, Math.PI * 2);
             ctx.fill();
           }
         }
@@ -5012,8 +5210,8 @@
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0x0d1420);
 
-      const camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.05, 60);
-      camera.position.set(1.6, 2.3, 4.6);
+      const camera = new THREE.PerspectiveCamera(39, 16 / 9, 0.05, 60);
+      camera.position.set(0.85, 2.25, 5.45);
 
       let renderer;
       try {
@@ -5024,32 +5222,35 @@
       }
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.15;
+      renderer.toneMappingExposure = 1.16;
       container.innerHTML = "";
       container.appendChild(renderer.domElement);
 
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.07;
-      controls.target.set(0.2, 1.0, 0);
+      controls.target.set(0.10, 1.28, 0);
 
-      scene.add(new THREE.AmbientLight(0xbcd4f0, 0.7));
-      const hemi = new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 0.65);
+      scene.add(new THREE.AmbientLight(0xc2d8f4, 0.72));
+      const hemi = new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 0.68);
       scene.add(hemi);
-      const key = new THREE.DirectionalLight(0xffffff, 1.35);
-      key.position.set(4, 7, 5);
+      const key = new THREE.DirectionalLight(0xffffff, 1.38);
+      key.position.set(4.5, 7.5, 5.5);
       scene.add(key);
+      const fill = new THREE.DirectionalLight(0x93c5fd, 0.42);
+      fill.position.set(-4.5, 2.5, 4.5);
+      scene.add(fill);
       const rim = new THREE.DirectionalLight(0x38bdf8, 0.55);
       rim.position.set(-5, 3, -4);
       scene.add(rim);
 
-      const grid = new THREE.GridHelper(8, 24, 0x2a3b55, 0x182334);
+      const grid = new THREE.GridHelper(9, 28, 0x2a3b55, 0x182334);
       scene.add(grid);
 
       const assemblyGroup = new THREE.Group();
       scene.add(assemblyGroup);
 
-      const particleCount = 120;
+      const particleCount = 150;
       const particleGeo = new THREE.BufferGeometry();
       const particlePos = new Float32Array(particleCount * 3);
       const particleCol = new Float32Array(particleCount * 3);
@@ -5058,39 +5259,248 @@
       particleGeo.setAttribute("position", new THREE.BufferAttribute(particlePos, 3));
       particleGeo.setAttribute("color", new THREE.BufferAttribute(particleCol, 3));
       const particleMat = new THREE.PointsMaterial({
-        size: 0.055,
+        size: 0.052,
         vertexColors: true,
         transparent: true,
-        opacity: 0.92,
+        opacity: 0.94,
       });
       const particlePoints = new THREE.Points(particleGeo, particleMat);
       scene.add(particlePoints);
 
-      let flowWaypoints = [];
+      let flowSamples = [];
       let impellerMesh = null;
       let stageCenters = {
-        all: new THREE.Vector3(0.2, 1.1, 0),
-        quench: new THREE.Vector3(-1.3, 0.8, 0),
-        venturi: new THREE.Vector3(-0.3, 0.45, 0),
-        packed: new THREE.Vector3(0.85, 1.2, 0),
-        blower: new THREE.Vector3(1.85, 0.7, 0),
+        all: new THREE.Vector3(0.15, 1.15, 0),
+        quench: new THREE.Vector3(-1.4, 0.8, 0),
+        venturi: new THREE.Vector3(-0.3, 0.48, 0),
+        packed: new THREE.Vector3(0.75, 1.25, 0),
+        blower: new THREE.Vector3(1.85, 0.8, 0),
       };
       let camGoal = null;
       let targetGoal = null;
 
       function clearAssembly() {
+        const geos = new Set();
+        const mats = new Set();
         while (assemblyGroup.children.length > 0) {
           const child = assemblyGroup.children[0];
           child.traverse((obj) => {
-            if (obj.geometry) obj.geometry.dispose();
+            if (obj.geometry) geos.add(obj.geometry);
             if (obj.material) {
-              if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
-              else obj.material.dispose();
+              if (Array.isArray(obj.material)) obj.material.forEach((m) => mats.add(m));
+              else mats.add(obj.material);
             }
           });
           assemblyGroup.remove(child);
         }
+        geos.forEach((g) => g.dispose());
+        mats.forEach((m) => m.dispose());
         impellerMesh = null;
+      }
+
+      // Bolted pipe flange ring aligned along "x", "y", or "z"
+      function addBoltedFlange(parent, x, y, z, axis, pipeR, matFlange, matBolt, boltCount = 8) {
+        const flangeR = pipeR + Math.max(0.026, pipeR * 0.28);
+        const thick = 0.024;
+        const g = new THREE.Group();
+        g.position.set(x, y, z);
+
+        const ringShape = new THREE.Shape();
+        ringShape.absarc(0, 0, flangeR, 0, Math.PI * 2, false);
+        const hole = new THREE.Path();
+        hole.absarc(0, 0, Math.max(0.01, pipeR * 0.96), 0, Math.PI * 2, true);
+        ringShape.holes.push(hole);
+        const ringGeo = new THREE.ExtrudeGeometry(ringShape, { depth: thick, bevelEnabled: false, curveSegments: 24 });
+        ringGeo.translate(0, 0, -thick * 0.5);
+        const ringMesh = new THREE.Mesh(ringGeo, matFlange);
+        g.add(ringMesh);
+
+        const boltCircleR = pipeR + (flangeR - pipeR) * 0.56;
+        const boltR = Math.max(0.0055, (flangeR - pipeR) * 0.20);
+        const boltGeo = new THREE.CylinderGeometry(boltR, boltR, thick + 0.016, 6);
+        boltGeo.rotateX(Math.PI / 2);
+        for (let i = 0; i < boltCount; i++) {
+          const a = (i / boltCount) * Math.PI * 2;
+          const b = new THREE.Mesh(boltGeo, matBolt);
+          b.position.set(Math.cos(a) * boltCircleR, Math.sin(a) * boltCircleR, 0);
+          g.add(b);
+        }
+
+        if (axis === "x") g.rotation.y = Math.PI / 2;
+        else if (axis === "y") g.rotation.x = Math.PI / 2;
+        parent.add(g);
+        return g;
+      }
+
+      // Smooth 90-degree circular-arc cubic Bezier elbow (kappa = 0.55228475)
+      function makeArc90Bezier(start, dirIn, dirOut, radius) {
+        const k = 0.55228475 * radius;
+        const p0 = start.clone();
+        const p1 = start.clone().addScaledVector(dirIn, k);
+        const p3 = start.clone().addScaledVector(dirIn, radius).addScaledVector(dirOut, radius);
+        const p2 = p3.clone().addScaledVector(dirOut, -k);
+        return new THREE.CubicBezierCurve3(p0, p1, p2, p3);
+      }
+
+      // True lofted rectangular-to-round sheet-metal transition (y = 0 rect -> y = h circle)
+      function buildRectToRoundGeometry(w, d, r, h, segs = 36) {
+        const positions = [];
+        const indices = [];
+        const hw = w * 0.5;
+        const hd = d * 0.5;
+        for (let i = 0; i <= segs; i++) {
+          const a = (i / segs) * Math.PI * 2;
+          const ca = Math.cos(a);
+          const sa = Math.sin(a);
+          const s = 1.0 / Math.max(Math.abs(ca) / hw, Math.abs(sa) / hd);
+          positions.push(ca * s, 0, sa * s);
+          positions.push(ca * r, h, sa * r);
+        }
+        for (let i = 0; i < segs; i++) {
+          const b0 = i * 2;
+          const t0 = b0 + 1;
+          const b1 = b0 + 2;
+          const t1 = b0 + 3;
+          indices.push(b0, t0, b1);
+          indices.push(b1, t0, t1);
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+        geo.setIndex(indices);
+        geo.computeVertexNormals();
+        return geo;
+      }
+
+      // Build spiral volute 2D point lists (CCW around origin, vertical tangential upward discharge on +X)
+      function computeVoluteProfiles(wheelR, ductR, wallT) {
+        const phi0 = 0.36 * Math.PI;
+        const r0 = wheelR * 1.12;
+        const xIn = wheelR * 0.88;
+        const yTongue = wheelR * 0.82;
+        const yDis = Math.max(wheelR * 1.32, yTongue + 0.14);
+        const rMax = Math.max(wheelR * 1.66, xIn + ductR * 2.04);
+        const spiralSteps = 56;
+
+        const rAt = (frac) => r0 + (rMax - r0) * (1.0 - Math.pow(1.0 - frac, 1.35));
+
+        const innerPts = [];
+        innerPts.push(new THREE.Vector2(xIn, yDis));
+        innerPts.push(new THREE.Vector2(xIn, yTongue));
+        // Smooth rounded cutoff tongue bridging inner discharge wall to spiral start
+        const tongueCurveIn = new THREE.QuadraticBezierCurve(
+          new THREE.Vector2(xIn, yTongue),
+          new THREE.Vector2(wheelR * 0.72, wheelR * 0.96),
+          new THREE.Vector2(r0 * Math.cos(phi0), r0 * Math.sin(phi0))
+        );
+        for (let i = 1; i <= 8; i++) innerPts.push(tongueCurveIn.getPoint(i / 8));
+        for (let s = 1; s <= spiralSteps; s++) {
+          const frac = s / spiralSteps;
+          const phi = phi0 + frac * (Math.PI * 2 - phi0);
+          const rr = rAt(frac);
+          innerPts.push(new THREE.Vector2(rr * Math.cos(phi), rr * Math.sin(phi)));
+        }
+        innerPts.push(new THREE.Vector2(rMax, yDis));
+
+        const outerPts = [];
+        outerPts.push(new THREE.Vector2(xIn - wallT, yDis));
+        outerPts.push(new THREE.Vector2(xIn - wallT, yTongue + wallT * 1.1));
+        const r0Out = r0 + wallT;
+        const tongueCurveOut = new THREE.QuadraticBezierCurve(
+          new THREE.Vector2(xIn - wallT, yTongue + wallT * 1.1),
+          new THREE.Vector2(wheelR * 0.72 - wallT * 0.7, wheelR * 0.96 + wallT * 0.9),
+          new THREE.Vector2(r0Out * Math.cos(phi0), r0Out * Math.sin(phi0))
+        );
+        for (let i = 1; i <= 8; i++) outerPts.push(tongueCurveOut.getPoint(i / 8));
+        for (let s = 1; s <= spiralSteps; s++) {
+          const frac = s / spiralSteps;
+          const phi = phi0 + frac * (Math.PI * 2 - phi0);
+          const rr = rAt(frac) + wallT;
+          outerPts.push(new THREE.Vector2(rr * Math.cos(phi), rr * Math.sin(phi)));
+        }
+        outerPts.push(new THREE.Vector2(rMax + wallT, yDis));
+
+        const rLeft = rAt((Math.PI - phi0) / (Math.PI * 2 - phi0)) + wallT;
+        const rBottom = rAt((1.5 * Math.PI - phi0) / (Math.PI * 2 - phi0)) + wallT;
+
+        return { innerPts, outerPts, xIn, rMax, yDis, rLeft, rBottom, disW: rMax - xIn };
+      }
+
+      // Build backward-curved 9-blade centrifugal impeller rotating cleanly around +Z (CCW)
+      function buildImpellerGroup(wheelR, scrollW, matHub, matBlade, matBackplate, matShroud) {
+        const impGroup = new THREE.Group();
+        const bladeDepth = scrollW * 0.62;
+        const backZ = -scrollW * 0.34;
+
+        // Solid backplate disc
+        const backplate = new THREE.Mesh(new THREE.CylinderGeometry(wheelR * 0.94, wheelR * 0.94, 0.016, 36), matBackplate);
+        backplate.rotation.x = Math.PI / 2;
+        backplate.position.z = backZ - 0.008;
+        impGroup.add(backplate);
+
+        // Central hub + front hex locknut
+        const hub = new THREE.Mesh(new THREE.CylinderGeometry(wheelR * 0.16, wheelR * 0.23, scrollW * 0.56, 20), matHub);
+        hub.rotation.x = Math.PI / 2;
+        hub.position.z = -scrollW * 0.06;
+        impGroup.add(hub);
+
+        const noseNut = new THREE.Mesh(new THREE.CylinderGeometry(wheelR * 0.09, wheelR * 0.09, 0.032, 6), matBlade);
+        noseNut.rotation.x = Math.PI / 2;
+        noseNut.position.z = scrollW * 0.24;
+        impGroup.add(noseNut);
+
+        // 9 backward-curved extruded metallic vanes (tips trail behind CCW +Z rotation)
+        const rIn = wheelR * 0.30;
+        const rOut = wheelR * 0.92;
+        const bladeCount = 9;
+        const halfT = Math.max(0.006, wheelR * 0.024);
+
+        const bladeShape = new THREE.Shape();
+        const ptsFwd = [];
+        const ptsRev = [];
+        const segs = 10;
+        for (let i = 0; i <= segs; i++) {
+          const u = i / segs;
+          const r = rIn + (rOut - rIn) * u;
+          // Backward curve: outer tip lags in -theta relative to +theta (CCW) motion
+          const ang = -0.46 * Math.pow(u, 1.25);
+          const cx = r * Math.cos(ang);
+          const cy = r * Math.sin(ang);
+          // Normal perpendicular to blade centerline
+          const rNext = rIn + (rOut - rIn) * Math.min(1, u + 0.02);
+          const angNext = -0.46 * Math.pow(Math.min(1, u + 0.02), 1.25);
+          const tx = rNext * Math.cos(angNext) - cx;
+          const ty = rNext * Math.sin(angNext) - cy;
+          const tl = Math.hypot(tx, ty) || 1;
+          const nx = -ty / tl;
+          const ny = tx / tl;
+          ptsFwd.push(new THREE.Vector2(cx + nx * halfT, cy + ny * halfT));
+          ptsRev.push(new THREE.Vector2(cx - nx * halfT, cy - ny * halfT));
+        }
+        bladeShape.moveTo(ptsFwd[0].x, ptsFwd[0].y);
+        for (let i = 1; i < ptsFwd.length; i++) bladeShape.lineTo(ptsFwd[i].x, ptsFwd[i].y);
+        for (let i = ptsRev.length - 1; i >= 0; i--) bladeShape.lineTo(ptsRev[i].x, ptsRev[i].y);
+        bladeShape.closePath();
+
+        const bladeGeo = new THREE.ExtrudeGeometry(bladeShape, { depth: bladeDepth, bevelEnabled: false });
+        bladeGeo.translate(0, 0, backZ);
+
+        for (let k = 0; k < bladeCount; k++) {
+          const vane = new THREE.Mesh(bladeGeo, matBlade);
+          vane.rotation.z = (k * Math.PI * 2) / bladeCount;
+          impGroup.add(vane);
+        }
+
+        // Front outer shroud ring tying blade tips together while leaving blades wide open to view
+        const shroudShape = new THREE.Shape();
+        shroudShape.absarc(0, 0, wheelR * 0.94, 0, Math.PI * 2, false);
+        const shroudHole = new THREE.Path();
+        shroudHole.absarc(0, 0, wheelR * 0.80, 0, Math.PI * 2, true);
+        shroudShape.holes.push(shroudHole);
+        const shroudGeo = new THREE.ExtrudeGeometry(shroudShape, { depth: 0.012, bevelEnabled: false, curveSegments: 36 });
+        shroudGeo.translate(0, 0, backZ + bladeDepth);
+        impGroup.add(new THREE.Mesh(shroudGeo, matShroud));
+
+        return impGroup;
       }
 
       function buildAssembly(d) {
@@ -5099,67 +5509,112 @@
 
         const q = d.quench, v = d.venturi, p = d.packed_bed, b = d.blower, env = d.envelope;
         const cut = state.cutaway;
+        const hasDiluter = !!(document.getElementById("in-include-plume-diluter")?.checked);
         const thetaStart = cut ? Math.PI * 0.5 : 0;
         const thetaLen = cut ? Math.PI : Math.PI * 2;
         const side = cut ? THREE.DoubleSide : THREE.FrontSide;
 
-        const matSS = new THREE.MeshStandardMaterial({ color: 0xb8c5d4, metalness: 0.72, roughness: 0.30, side });
-        const matHot = new THREE.MeshStandardMaterial({ color: 0xf97316, metalness: 0.45, roughness: 0.38, emissive: 0x3b1305, side });
-        const matCPVC = new THREE.MeshStandardMaterial({ color: 0x337fa0, metalness: 0.15, roughness: 0.42, side });
-        const matPacking = new THREE.MeshStandardMaterial({ color: 0x14b8a6, metalness: 0.1, roughness: 0.75, wireframe: false });
-        const matDemister = new THREE.MeshStandardMaterial({ color: 0x7dd3fc, metalness: 0.5, roughness: 0.35, transparent: true, opacity: 0.82 });
-        const matSump = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, metalness: 0.1, roughness: 0.15, transparent: true, opacity: 0.55 });
-        const matBlower = new THREE.MeshStandardMaterial({ color: 0x10b981, metalness: 0.45, roughness: 0.36, side });
-        const matDark = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.55, roughness: 0.45 });
-        const matSpray = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.28, side: THREE.DoubleSide });
+        const matSS = new THREE.MeshStandardMaterial({ color: 0xb8c5d4, metalness: 0.72, roughness: 0.28, side });
+        const matFlange = new THREE.MeshStandardMaterial({ color: 0x9fb0c4, metalness: 0.74, roughness: 0.30, side: THREE.DoubleSide });
+        const matBolt = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.85, roughness: 0.22 });
+        const matHot = new THREE.MeshStandardMaterial({ color: 0xf97316, metalness: 0.45, roughness: 0.36, emissive: 0x3b1305, side });
+        const matCPVC = new THREE.MeshStandardMaterial({ color: 0x2e7fa3, metalness: 0.16, roughness: 0.38, side });
+        const matCPVCSolid = new THREE.MeshStandardMaterial({ color: 0x2e7fa3, metalness: 0.18, roughness: 0.36, side: THREE.DoubleSide });
+        const matCPVCFlange = new THREE.MeshStandardMaterial({ color: 0x3f95ba, metalness: 0.22, roughness: 0.34, side: THREE.DoubleSide });
+        const matCutGlass = new THREE.MeshStandardMaterial({
+          color: 0x67e8f9, metalness: 0.15, roughness: 0.18, transparent: true, opacity: 0.26, depthWrite: false, side: THREE.DoubleSide,
+        });
+        const matPacking = new THREE.MeshStandardMaterial({ color: 0x14b8a6, metalness: 0.1, roughness: 0.72 });
+        const matDemister = new THREE.MeshStandardMaterial({ color: 0x7dd3fc, metalness: 0.5, roughness: 0.34, transparent: true, opacity: 0.82 });
+        const matSump = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, metalness: 0.1, roughness: 0.16, transparent: true, opacity: 0.55 });
+        const matBlower = new THREE.MeshStandardMaterial({ color: 0x10b981, metalness: 0.40, roughness: 0.34, side: THREE.DoubleSide });
+        const matBlowerFlange = new THREE.MeshStandardMaterial({ color: 0x34d399, metalness: 0.48, roughness: 0.30, side: THREE.DoubleSide });
+        const matBlowerDark = new THREE.MeshStandardMaterial({ color: 0x1f2f40, metalness: 0.65, roughness: 0.34 });
+        const matBlade = new THREE.MeshStandardMaterial({ color: 0xe2edf8, metalness: 0.82, roughness: 0.20 });
+        const matShroud = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.72, roughness: 0.26 });
+        const matDark = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.58, roughness: 0.42 });
+        const matMotor = new THREE.MeshStandardMaterial({ color: 0x243447, metalness: 0.52, roughness: 0.38 });
+        const matSpray = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.26, side: THREE.DoubleSide, depthWrite: false });
+        const matDiluter = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.45, roughness: 0.34, side: THREE.DoubleSide });
 
         const clamp = (val, lo, hi) => Math.max(lo, Math.min(hi, val || lo));
-        const ductR = clamp((env.duct_diameter_m || 0.2) * 0.5, 0.06, 0.22);
+        const ductR = clamp((env.duct_diameter_m || 0.20) * 0.5, 0.055, 0.15);
 
-        const qR = clamp((q.tower_diameter_m || 0.45) * 0.5, 0.14, 0.75);
-        const qH = clamp(q.tower_height_m || 1.35, 0.7, 3.2);
-        const qX = -1.35;
+        // Stage 1: Quench Tower dimensions
+        const qR = clamp((q.tower_diameter_m || 0.45) * 0.5, 0.15, 0.65);
+        const qH = clamp(q.tower_height_m || 1.35, 0.90, 3.0);
+        const qX = -1.65;
 
+        // Stage 2: Venturi dimensions
+        const vInR = clamp((v.inlet_diameter_m || 0.22) * 0.5, 0.065, 0.22);
+        const vThR = clamp((v.throat_diameter_m || 0.085) * 0.5, 0.032, vInR * 0.72);
+        const vOutR = clamp((v.outlet_diameter_m || 0.24) * 0.5, 0.07, 0.24);
+        const vConvL = clamp(v.converging_length_m || 0.28, 0.18, 0.65);
+        const vThL = clamp(v.throat_length_m || 0.18, 0.12, 0.38);
+        const vDivL = clamp(v.diverging_length_m || 0.55, 0.28, 0.95);
+
+        // Stage 3: Packed Bed dimensions
+        const pR = clamp((p.column_diameter_m || 0.52) * 0.5, 0.20, 0.78);
+        const pH = clamp(p.column_height_m || 2.35, 1.40, 4.0);
+        const packH = clamp(p.packing_height_m || 1.0, 0.35, pH * 0.54);
+        const demH = clamp(p.demister_height_m || 0.18, 0.08, 0.32);
+
+        // Keep Stage 2 centerline cleanly ABOVE Stage 3 sump liquid and BELOW Stage 1 upper hot inlet
+        const sumpH = Math.min(0.28, Math.max(0.16, pH * 0.12));
+        const vYMin = sumpH + vOutR + 0.07;
+        const vYRaw = Math.max(vYMin, 0.44);
+        const vY = Math.max(vYMin, Math.min(vYRaw, qH - ductR * 2.1 - vInR - 0.08));
+        const inletY = Math.min(qH - ductR - 0.05, Math.max(vY + vInR + ductR + 0.12, qH - ductR * 1.35 - 0.08));
+
+        const spool1Len = 0.22;
+        const vStartX = qX + qR + spool1Len;
+        const vEndX = vStartX + vConvL + vThL + vDivL;
+        const spool2Len = 0.22;
+        const pX = vEndX + spool2Len + pR;
+
+        // ---------- STAGE 1: ADIABATIC QUENCH ----------
         const qGroup = new THREE.Group();
-        const qShell = new THREE.Mesh(new THREE.CylinderGeometry(qR, qR, qH, 32, 1, cut, thetaStart, thetaLen), matSS);
+        const qShell = new THREE.Mesh(new THREE.CylinderGeometry(qR, qR, qH, 36, 1, cut, thetaStart, thetaLen), matSS);
         qShell.position.set(qX, qH * 0.5, 0);
         qGroup.add(qShell);
 
-        const inletY = qH - ductR * 1.4;
-        const inletLen = 0.55;
-        const inletDuct = new THREE.Mesh(new THREE.CylinderGeometry(ductR, ductR, inletLen, 20), matHot);
+        // Kiln flue hot inlet pipe seated cleanly into a bolted nozzle collar on Stage 1 wall
+        const inletLen = 0.52;
+        const inletEmbed = 0.04;
+        const inletDuct = new THREE.Mesh(new THREE.CylinderGeometry(ductR, ductR, inletLen + inletEmbed, 24), matHot);
         inletDuct.rotation.z = Math.PI / 2;
-        inletDuct.position.set(qX - qR - inletLen * 0.45, inletY, 0);
+        inletDuct.position.set(qX - qR - inletLen * 0.5 + inletEmbed * 0.5, inletY, 0);
         qGroup.add(inletDuct);
+        addBoltedFlange(qGroup, qX - qR - inletLen + 0.015, inletY, 0, "x", ductR, matFlange, matBolt, 8);
+        addBoltedFlange(qGroup, qX - qR - 0.015, inletY, 0, "x", ductR, matFlange, matBolt, 8);
 
-        const qTop = new THREE.Mesh(new THREE.CylinderGeometry(qR * 1.07, qR * 1.07, 0.04, 32), matSS);
+        // Top bolted cover flange + base plinth
+        const qTop = new THREE.Mesh(new THREE.CylinderGeometry(qR * 1.09, qR * 1.09, 0.04, 36), matFlange);
         qTop.position.set(qX, qH + 0.02, 0);
         qGroup.add(qTop);
-        const qBase = new THREE.Mesh(new THREE.CylinderGeometry(qR * 1.08, qR * 1.08, 0.05, 32), matDark);
-        qBase.position.set(qX, 0.025, 0);
+        const qBase = new THREE.Mesh(new THREE.CylinderGeometry(qR * 1.10, qR * 1.12, 0.06, 36), matDark);
+        qBase.position.set(qX, 0.03, 0);
         qGroup.add(qBase);
 
-        const lance = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.28, 12), matDark);
-        lance.position.set(qX, qH - 0.14, 0);
+        // Internal spray lance + mist cone
+        const lance = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.30, 12), matDark);
+        lance.position.set(qX, qH - 0.13, 0);
         qGroup.add(lance);
-        const mistCone = new THREE.Mesh(new THREE.ConeGeometry(qR * 0.82, qH * 0.68, 24, 1, true), matSpray);
-        mistCone.position.set(qX, qH * 0.46, 0);
+        const nozzleTip = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.018, 0.04, 12), matBolt);
+        nozzleTip.position.set(qX, qH - 0.29, 0);
+        qGroup.add(nozzleTip);
+        const mistCone = new THREE.Mesh(new THREE.ConeGeometry(qR * 0.80, Math.max(0.35, qH - 0.42), 24, 1, true), matSpray);
+        mistCone.position.set(qX, (qH - 0.28) * 0.5 + 0.08, 0);
         qGroup.add(mistCone);
         assemblyGroup.add(qGroup);
 
-        const vInR = clamp((v.inlet_diameter_m || 0.22) * 0.5, 0.07, 0.35);
-        const vThR = clamp((v.throat_diameter_m || 0.09) * 0.5, 0.032, 0.22);
-        const vOutR = clamp((v.outlet_diameter_m || 0.24) * 0.5, 0.07, 0.38);
-        const vConvL = clamp(v.converging_length_m || 0.28, 0.15, 0.7);
-        const vThL = clamp(v.throat_length_m || 0.18, 0.10, 0.45);
-        const vDivL = clamp(v.diverging_length_m || 0.52, 0.25, 1.1);
-        const vY = Math.max(0.32, vOutR + 0.16);
-        const vStartX = qX + qR + 0.18;
-
-        const conn1 = new THREE.Mesh(new THREE.CylinderGeometry(vInR, vInR, 0.22, 20), matSS);
+        // ---------- STAGE 1 -> STAGE 2 FLANGED TRANSITION & WET VENTURI ----------
+        const conn1 = new THREE.Mesh(new THREE.CylinderGeometry(vInR, vInR, spool1Len + 0.06, 24), matSS);
         conn1.rotation.z = Math.PI / 2;
-        conn1.position.set(qX + qR + 0.09, vY, 0);
+        conn1.position.set(qX + qR + spool1Len * 0.5 - 0.02, vY, 0);
         assemblyGroup.add(conn1);
+        addBoltedFlange(assemblyGroup, qX + qR + 0.015, vY, 0, "x", vInR, matFlange, matBolt, 8);
+        addBoltedFlange(assemblyGroup, vStartX, vY, 0, "x", vInR, matFlange, matBolt, 8);
 
         const vConv = new THREE.Mesh(new THREE.CylinderGeometry(vThR, vInR, vConvL, 28, 1, cut, thetaStart, thetaLen), matSS);
         vConv.rotation.z = -Math.PI / 2;
@@ -5171,143 +5626,439 @@
         vTh.position.set(vStartX + vConvL + vThL * 0.5, vY, 0);
         assemblyGroup.add(vTh);
 
+        // Venturi throat spray ring manifold
+        const throatRing = new THREE.Mesh(new THREE.TorusGeometry(vThR + 0.022, 0.011, 10, 24), matFlange);
+        throatRing.rotation.y = Math.PI / 2;
+        throatRing.position.set(vStartX + vConvL + vThL * 0.5, vY, 0);
+        assemblyGroup.add(throatRing);
+
         const vDiv = new THREE.Mesh(new THREE.CylinderGeometry(vOutR, vThR, vDivL, 28, 1, cut, thetaStart, thetaLen), matSS);
         vDiv.rotation.z = -Math.PI / 2;
         vDiv.position.set(vStartX + vConvL + vThL + vDivL * 0.5, vY, 0);
         assemblyGroup.add(vDiv);
 
-        const vEndX = vStartX + vConvL + vThL + vDivL;
-
-        const pR = clamp((p.column_diameter_m || 0.55) * 0.5, 0.18, 0.9);
-        const pH = clamp(p.column_height_m || 2.3, 1.2, 4.4);
-        const packH = clamp(p.packing_height_m || 1.0, 0.35, pH * 0.58);
-        const demH = clamp(p.demister_height_m || 0.18, 0.08, 0.35);
-        const pX = vEndX + pR + 0.18;
-
-        const conn2 = new THREE.Mesh(new THREE.CylinderGeometry(vOutR, vOutR, 0.22, 20), matCPVC);
+        // ---------- STAGE 2 -> STAGE 3 FLANGED ENTRY & PACKED BED ABSORBER ----------
+        const conn2 = new THREE.Mesh(new THREE.CylinderGeometry(vOutR, vOutR, spool2Len + 0.06, 24), matCPVCSolid);
         conn2.rotation.z = Math.PI / 2;
-        conn2.position.set(vEndX + 0.09, vY, 0);
+        conn2.position.set(vEndX + spool2Len * 0.5 + 0.02, vY, 0);
         assemblyGroup.add(conn2);
+        addBoltedFlange(assemblyGroup, vEndX, vY, 0, "x", vOutR, matFlange, matBolt, 8);
+        addBoltedFlange(assemblyGroup, pX - pR - 0.015, vY, 0, "x", vOutR, matCPVCFlange, matBolt, 8);
 
         const pShell = new THREE.Mesh(new THREE.CylinderGeometry(pR, pR, pH, 36, 1, cut, thetaStart, thetaLen), matCPVC);
         pShell.position.set(pX, pH * 0.5, 0);
         assemblyGroup.add(pShell);
 
-        const sumpH = Math.min(0.45, Math.max(0.22, pH * 0.15));
+        // Sump liquid below lower gas plenum
         const sumpMesh = new THREE.Mesh(new THREE.CylinderGeometry(pR * 0.94, pR * 0.94, sumpH, 28), matSump);
-        sumpMesh.position.set(pX, sumpH * 0.5 + 0.02, 0);
+        sumpMesh.position.set(pX, sumpH * 0.5 + 0.04, 0);
         assemblyGroup.add(sumpMesh);
 
-        const packBaseY = Math.max(sumpH + vOutR + 0.14, pH * 0.28);
-        const clampedPackH = Math.min(packH, pH - packBaseY - demH - 0.28);
-        const packMesh = new THREE.Mesh(new THREE.CylinderGeometry(pR * 0.92, pR * 0.92, Math.max(0.22, clampedPackH), 28), matPacking);
-        packMesh.position.set(pX, packBaseY + Math.max(0.22, clampedPackH) * 0.5, 0);
+        // Perforated support plate + packing bed + liquid distributor + demister
+        const packBaseY = Math.max(vY + vOutR + 0.10, pH * 0.30);
+        const clampedPackH = Math.max(0.22, Math.min(packH, pH - packBaseY - demH - 0.28));
+        const supportPlate = new THREE.Mesh(new THREE.CylinderGeometry(pR * 0.94, pR * 0.94, 0.022, 28), matDark);
+        supportPlate.position.set(pX, packBaseY - 0.012, 0);
+        assemblyGroup.add(supportPlate);
+
+        const packMesh = new THREE.Mesh(new THREE.CylinderGeometry(pR * 0.92, pR * 0.92, clampedPackH, 28), matPacking);
+        packMesh.position.set(pX, packBaseY + clampedPackH * 0.5, 0);
         assemblyGroup.add(packMesh);
 
         const distRing = new THREE.Mesh(new THREE.TorusGeometry(pR * 0.65, 0.02, 10, 24), matDark);
         distRing.rotation.x = Math.PI / 2;
-        distRing.position.set(pX, packBaseY + Math.max(0.22, clampedPackH) + 0.10, 0);
+        distRing.position.set(pX, packBaseY + clampedPackH + 0.09, 0);
         assemblyGroup.add(distRing);
 
-        const demY = pH - demH * 0.5 - 0.18;
+        const demY = pH - demH * 0.5 - 0.14;
         const demMesh = new THREE.Mesh(new THREE.CylinderGeometry(pR * 0.93, pR * 0.93, demH, 28), matDemister);
         demMesh.position.set(pX, demY, 0);
         assemblyGroup.add(demMesh);
 
-        const topConeH = 0.26;
-        const pCap = new THREE.Mesh(new THREE.ConeGeometry(pR, topConeH, 32, 1, false), matCPVC);
-        pCap.position.set(pX, pH + topConeH * 0.5, 0);
-        assemblyGroup.add(pCap);
-        const pBase = new THREE.Mesh(new THREE.CylinderGeometry(pR * 1.07, pR * 1.07, 0.05, 32), matDark);
-        pBase.position.set(pX, 0.025, 0);
+        // Stage 3 base plinth + top vessel flange + smooth conical frustum reducer (pR -> ductR)
+        const pBase = new THREE.Mesh(new THREE.CylinderGeometry(pR * 1.09, pR * 1.11, 0.06, 36), matDark);
+        pBase.position.set(pX, 0.03, 0);
         assemblyGroup.add(pBase);
 
-        const wheelR = clamp((b.wheel_diameter_m || 0.36) * 0.65, 0.16, 0.45);
-        const bX = pX + pR + wheelR + 0.48;
-        const bY = wheelR + 0.26;
+        addBoltedFlange(assemblyGroup, pX, pH, 0, "y", pR, matCPVCFlange, matBolt, 12);
+        const topConeH = clamp(pR * 0.96, 0.22, 0.36);
+        const pReducer = new THREE.Mesh(
+          new THREE.CylinderGeometry(ductR, pR, topConeH, 36, 1, cut, thetaStart, thetaLen),
+          matCPVC
+        );
+        pReducer.position.set(pX, pH + topConeH * 0.5, 0);
+        assemblyGroup.add(pReducer);
+        const topNeckY = pH + topConeH;
+        addBoltedFlange(assemblyGroup, pX, topNeckY, 0, "y", ductR, matCPVCFlange, matBolt, 8);
 
-        const topDuctY = pH + topConeH + 0.12;
-        const vertUp = new THREE.Mesh(new THREE.CylinderGeometry(ductR, ductR, 0.22, 20), matCPVC);
-        vertUp.position.set(pX, pH + topConeH + 0.02, 0);
-        assemblyGroup.add(vertUp);
+        // ---------- STAGE 4: CENTRIFUGAL SCROLL (VOLUTE) BLOWER ----------
+        const wheelR = clamp(Math.max((b.wheel_diameter_m || 0.38) * 0.72, ductR * 2.4), 0.22, 0.42);
+        const scrollW = Math.max(wheelR * 0.72, ductR * 1.95);
+        const wallT = 0.018;
+        const vol = computeVoluteProfiles(wheelR, ductR, wallT);
 
-        const horizLen = bX - pX;
-        const horizDuct = new THREE.Mesh(new THREE.CylinderGeometry(ductR, ductR, horizLen, 20), matCPVC);
-        horizDuct.rotation.z = Math.PI / 2;
-        horizDuct.position.set(pX + horizLen * 0.5, topDuctY, 0);
-        assemblyGroup.add(horizDuct);
+        // Position blower cleanly to the right of Stage 3 with space for smooth curved duct drop
+        const gapS3S4 = Math.max(ductR * 3.4, 0.40);
+        const dropX = pX + pR + gapS3S4 * 0.5;
+        const bX = pX + pR + gapS3S4 + vol.rLeft;
+        const bY = vol.rBottom + 0.18;
+        const eyeZ = scrollW * 0.5 + wallT + 0.025;
 
-        const downLen = topDuctY - bY;
-        const downDuct = new THREE.Mesh(new THREE.CylinderGeometry(ductR, ductR, downLen, 20), matCPVC);
-        downDuct.position.set(bX, bY + downLen * 0.5, 0);
-        assemblyGroup.add(downDuct);
+        const blowerGroup = new THREE.Group();
+        blowerGroup.position.set(bX, bY, 0);
 
-        const volute = new THREE.Mesh(new THREE.CylinderGeometry(wheelR, wheelR, wheelR * 0.72, 32, 1, cut, thetaStart, thetaLen), matBlower);
-        volute.rotation.x = Math.PI / 2;
-        volute.position.set(bX, bY, 0);
-        assemblyGroup.add(volute);
+        // 1. Hollow thick-walled extruded spiral volute wrapper (open at top tangential discharge!)
+        const wrapperShape = new THREE.Shape();
+        wrapperShape.moveTo(vol.outerPts[0].x, vol.outerPts[0].y);
+        for (let i = 1; i < vol.outerPts.length; i++) wrapperShape.lineTo(vol.outerPts[i].x, vol.outerPts[i].y);
+        for (let i = vol.innerPts.length - 1; i >= 0; i--) wrapperShape.lineTo(vol.innerPts[i].x, vol.innerPts[i].y);
+        wrapperShape.closePath();
+        const wrapperGeo = new THREE.ExtrudeGeometry(wrapperShape, { depth: scrollW, bevelEnabled: false });
+        wrapperGeo.translate(0, 0, -scrollW * 0.5);
+        blowerGroup.add(new THREE.Mesh(wrapperGeo, matBlower));
 
-        const impGroup = new THREE.Group();
-        impGroup.position.set(bX, bY, 0);
-        const hub = new THREE.Mesh(new THREE.CylinderGeometry(wheelR * 0.2, wheelR * 0.2, wheelR * 0.45, 16), matDark);
-        hub.rotation.x = Math.PI / 2;
-        impGroup.add(hub);
-        for (let k = 0; k < 6; k++) {
-          const blade = new THREE.Mesh(new THREE.BoxGeometry(wheelR * 0.72, 0.025, wheelR * 0.36), matSS);
-          const angle = (k * Math.PI) / 3;
-          blade.position.set(Math.cos(angle) * wheelR * 0.36, Math.sin(angle) * wheelR * 0.36, 0);
-          blade.rotation.z = angle;
-          impGroup.add(blade);
+        // 2. Solid scroll backplate (z = -scrollW/2 - wallT .. -scrollW/2)
+        const plateShape = new THREE.Shape();
+        plateShape.moveTo(vol.outerPts[0].x, vol.outerPts[0].y);
+        for (let i = 1; i < vol.outerPts.length; i++) plateShape.lineTo(vol.outerPts[i].x, vol.outerPts[i].y);
+        plateShape.closePath();
+        const backPlateGeo = new THREE.ExtrudeGeometry(plateShape, { depth: wallT, bevelEnabled: false });
+        backPlateGeo.translate(0, 0, -scrollW * 0.5 - wallT);
+        blowerGroup.add(new THREE.Mesh(backPlateGeo, matBlower));
+
+        // 3. Front scroll wall: large clean inspection window when Cutaway: ON, or circular suction eye when OFF
+        const frontShape = new THREE.Shape();
+        frontShape.moveTo(vol.outerPts[0].x, vol.outerPts[0].y);
+        for (let i = 1; i < vol.outerPts.length; i++) frontShape.lineTo(vol.outerPts[i].x, vol.outerPts[i].y);
+        frontShape.closePath();
+        const frontHoleR = cut ? wheelR * 1.02 : ductR * 1.02;
+        const frontHole = new THREE.Path();
+        frontHole.absarc(0, 0, frontHoleR, 0, Math.PI * 2, true);
+        frontShape.holes.push(frontHole);
+        const frontPlateGeo = new THREE.ExtrudeGeometry(frontShape, { depth: wallT, bevelEnabled: false, curveSegments: 36 });
+        frontPlateGeo.translate(0, 0, scrollW * 0.5);
+        blowerGroup.add(new THREE.Mesh(frontPlateGeo, matBlower));
+
+        // Clean metallic cutaway bezel ring framing the open window when Cutaway: ON
+        if (cut) {
+          const bezel = new THREE.Mesh(new THREE.TorusGeometry(frontHoleR, 0.010, 10, 40), matBlowerFlange);
+          bezel.position.z = scrollW * 0.5 + wallT;
+          blowerGroup.add(bezel);
         }
-        assemblyGroup.add(impGroup);
+
+        // Suction bell flange seated centered on the impeller hub axis (+Z front face)
+        addBoltedFlange(blowerGroup, 0, 0, eyeZ, "z", ductR, matCPVCFlange, matBolt, 8);
+        const bellMat = cut ? matCutGlass : matCPVCSolid;
+        const bellLen = wallT + 0.032;
+        const suctionBell = new THREE.Mesh(new THREE.CylinderGeometry(ductR, ductR * 1.16, bellLen, 28, 1, true), bellMat);
+        suctionBell.rotation.x = Math.PI / 2;
+        suctionBell.position.z = scrollW * 0.5 + bellLen * 0.5 - 0.005;
+        blowerGroup.add(suctionBell);
+
+        // 4. Backward-curved 9-blade impeller wheel (rotates strictly CCW around +Z shaft axis!)
+        const impGroup = buildImpellerGroup(wheelR, scrollW, matBlowerDark, matBlade, matBlowerDark, matShroud);
+        blowerGroup.add(impGroup);
         impellerMesh = impGroup;
 
-        const stackH = 0.85;
-        const stack = new THREE.Mesh(new THREE.CylinderGeometry(ductR * 0.9, ductR * 0.95, stackH, 20), matBlower);
-        stack.position.set(bX + wheelR * 0.65, bY + stackH * 0.5, 0);
-        assemblyGroup.add(stack);
+        // 5. Rear drive shaft, bearing housing, TEFC electric motor & floor-mounted steel pedestal (-Z axis)
+        const motorLen = wheelR * 1.12;
+        const motorR = wheelR * 0.44;
+        const shaftGap = wheelR * 0.42;
+        const motorCenterZ = -scrollW * 0.5 - wallT - shaftGap - motorLen * 0.5;
 
-        const motor = new THREE.Mesh(new THREE.CylinderGeometry(wheelR * 0.45, wheelR * 0.45, wheelR * 0.95, 20), matDark);
-        motor.rotation.x = Math.PI / 2;
-        motor.position.set(bX, bY, -wheelR * 0.85);
-        assemblyGroup.add(motor);
+        const shaftLen = scrollW * 0.5 + wallT + shaftGap + 0.08;
+        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(wheelR * 0.085, wheelR * 0.085, shaftLen, 16), matBlade);
+        shaft.rotation.x = Math.PI / 2;
+        shaft.position.z = -shaftLen * 0.5;
+        blowerGroup.add(shaft);
 
-        const pedestal = new THREE.Mesh(new THREE.BoxGeometry(wheelR * 1.4, bY - wheelR * 0.5, wheelR * 1.4), matDark);
-        pedestal.position.set(bX, (bY - wheelR * 0.5) * 0.5, -wheelR * 0.3);
-        assemblyGroup.add(pedestal);
+        // Shaft seal & pillow-block bearing between scroll backplate and motor
+        const sealCollar = new THREE.Mesh(new THREE.CylinderGeometry(wheelR * 0.18, wheelR * 0.18, 0.04, 20), matDark);
+        sealCollar.rotation.x = Math.PI / 2;
+        sealCollar.position.z = -scrollW * 0.5 - wallT - 0.02;
+        blowerGroup.add(sealCollar);
 
-        const centerOffset = -(qX + bX) * 0.5;
+        const bearingZ = -scrollW * 0.5 - wallT - shaftGap * 0.52;
+        const pillowBlock = new THREE.Mesh(new THREE.BoxGeometry(wheelR * 0.44, wheelR * 0.42, wheelR * 0.24), matDark);
+        pillowBlock.position.set(0, -wheelR * 0.06, bearingZ);
+        blowerGroup.add(pillowBlock);
+
+        // TEFC Electric Motor with cooling ribs & top junction box
+        const motorBody = new THREE.Mesh(new THREE.CylinderGeometry(motorR, motorR, motorLen, 24), matMotor);
+        motorBody.rotation.x = Math.PI / 2;
+        motorBody.position.z = motorCenterZ;
+        blowerGroup.add(motorBody);
+        const motorCap = new THREE.Mesh(new THREE.CylinderGeometry(motorR * 0.92, motorR * 0.98, motorLen * 0.20, 24), matDark);
+        motorCap.rotation.x = Math.PI / 2;
+        motorCap.position.z = motorCenterZ - motorLen * 0.55;
+        blowerGroup.add(motorCap);
+        for (let rIdx = -2; rIdx <= 2; rIdx++) {
+          const fin = new THREE.Mesh(new THREE.TorusGeometry(motorR * 1.01, 0.008, 6, 24), matDark);
+          fin.position.z = motorCenterZ + rIdx * (motorLen * 0.14);
+          blowerGroup.add(fin);
+        }
+        const jBox = new THREE.Mesh(new THREE.BoxGeometry(motorR * 0.52, motorR * 0.36, motorR * 0.52), matDark);
+        jBox.position.set(0, motorR + motorR * 0.14, motorCenterZ + motorLen * 0.08);
+        blowerGroup.add(jBox);
+
+        // Steel pedestal & base skid seated firmly on floor y = 0 (relative y = -bY)
+        const basePlateY = -bY + 0.025;
+        const skidDepth = scrollW + shaftGap + motorLen + 0.18;
+        const skidCenterZ = (scrollW * 0.5 + (motorCenterZ - motorLen * 0.5)) * 0.5;
+        const baseSkid = new THREE.Mesh(new THREE.BoxGeometry(wheelR * 2.15, 0.05, skidDepth), matDark);
+        baseSkid.position.set(wheelR * 0.15, basePlateY, skidCenterZ);
+        blowerGroup.add(baseSkid);
+
+        // Scroll support cradle from base skid up to scroll bottom
+        const cradleH = Math.max(0.08, bY - vol.rBottom - 0.03);
+        const scrollCradle = new THREE.Mesh(new THREE.BoxGeometry(wheelR * 1.10, cradleH, scrollW + 0.04), matBlowerDark);
+        scrollCradle.position.set(0, -bY + 0.05 + cradleH * 0.5, 0);
+        blowerGroup.add(scrollCradle);
+
+        // Motor & bearing riser pedestal from base skid up to motor bottom
+        const riserTopY = -motorR + 0.02;
+        const riserH = Math.max(0.08, bY + riserTopY - 0.05);
+        const motorRiser = new THREE.Mesh(
+          new THREE.BoxGeometry(motorR * 1.65, riserH, shaftGap + motorLen * 0.92),
+          matBlowerDark
+        );
+        motorRiser.position.set(0, -bY + 0.05 + riserH * 0.5, (bearingZ + motorCenterZ) * 0.5 - 0.04);
+        blowerGroup.add(motorRiser);
+
+        // 6. True Tangential Discharge Flange -> Lofted Square-to-Round Adapter -> Vertical Exhaust Stack
+        const stackLocalX = (vol.xIn + vol.rMax) * 0.5;
+        const stackX = bX + stackLocalX;
+        const stackR = ductR * 0.96;
+        const transH = 0.22;
+
+        // Bolted rectangular discharge flange right on the volute chute outlet
+        const rectFlange = new THREE.Mesh(
+          new THREE.BoxGeometry(vol.disW + 0.075, 0.026, scrollW + 0.075),
+          matBlowerFlange
+        );
+        rectFlange.position.set(stackLocalX, vol.yDis, 0);
+        blowerGroup.add(rectFlange);
+
+        const rectBoltGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.042, 6);
+        const rbx = (vol.disW + 0.042) * 0.5;
+        const rbz = (scrollW + 0.042) * 0.5;
+        for (const sx of [-1, 0, 1]) {
+          for (const sz of [-1, 1]) {
+            const bt = new THREE.Mesh(rectBoltGeo, matBolt);
+            bt.position.set(stackLocalX + sx * rbx, vol.yDis, sz * rbz);
+            blowerGroup.add(bt);
+          }
+        }
+
+        // Lofted square-to-round adapter emerging smoothly from tangential discharge
+        const sqToRoundGeo = buildRectToRoundGeometry(vol.disW, scrollW, stackR, transH, 36);
+        const sqToRound = new THREE.Mesh(sqToRoundGeo, matBlower);
+        sqToRound.position.set(stackLocalX, vol.yDis + 0.012, 0);
+        blowerGroup.add(sqToRound);
+
+        const stackBaseLocalY = vol.yDis + 0.012 + transH;
+        addBoltedFlange(blowerGroup, stackLocalX, stackBaseLocalY, 0, "y", stackR, matBlowerFlange, matBolt, 8);
+
+        // Vertical circular exhaust stack (completely clear of impeller hub and blades!)
+        const stackH = Math.max(0.88, pH - (bY + stackBaseLocalY) + 0.35);
+        const stackMesh = new THREE.Mesh(new THREE.CylinderGeometry(stackR, stackR, stackH, 28, 1, false), matBlower);
+        stackMesh.position.set(stackLocalX, stackBaseLocalY + stackH * 0.5, 0);
+        blowerGroup.add(stackMesh);
+
+        // Top discharge rim or optional 120V squirrel-cage plume diluter tee + tapered HV nozzle cone
+        let stackExitWorldY = bY + stackBaseLocalY + stackH;
+        if (hasDiluter) {
+          const teeLocalY = stackBaseLocalY + stackH * 0.48;
+          const dilR = stackR * 0.72;
+          const teeLen = stackR + 0.24;
+          const teeStub = new THREE.Mesh(new THREE.CylinderGeometry(dilR, dilR, teeLen, 20), matDiluter);
+          teeStub.rotation.z = Math.PI / 2;
+          teeStub.position.set(stackLocalX + teeLen * 0.5, teeLocalY, 0);
+          blowerGroup.add(teeStub);
+          addBoltedFlange(blowerGroup, stackLocalX + stackR + 0.04, teeLocalY, 0, "x", dilR, matFlange, matBolt, 6);
+          addBoltedFlange(blowerGroup, stackLocalX + teeLen - 0.02, teeLocalY, 0, "x", dilR, matFlange, matBolt, 6);
+
+          // Compact 120V squirrel-cage dilution blower on right side of mixing tee
+          const sqR = Math.max(0.11, dilR * 1.55);
+          const sqHousing = new THREE.Mesh(new THREE.CylinderGeometry(sqR, sqR, dilR * 1.7, 24), matDiluter);
+          sqHousing.rotation.x = Math.PI / 2;
+          sqHousing.position.set(stackLocalX + teeLen + sqR * 0.75, teeLocalY - sqR * 0.15, 0);
+          blowerGroup.add(sqHousing);
+          const sqIntake = new THREE.Mesh(new THREE.TorusGeometry(sqR * 0.56, 0.012, 8, 20), matDark);
+          sqIntake.position.set(stackLocalX + teeLen + sqR * 0.75, teeLocalY - sqR * 0.15, dilR * 0.88);
+          blowerGroup.add(sqIntake);
+
+          // Tapered High-Velocity (HV) nozzle cone on top of stack
+          const hvH = 0.28;
+          addBoltedFlange(blowerGroup, stackLocalX, stackBaseLocalY + stackH, 0, "y", stackR, matBlowerFlange, matBolt, 8);
+          const hvCone = new THREE.Mesh(new THREE.CylinderGeometry(stackR * 0.64, stackR, hvH, 28, 1, false), matDiluter);
+          hvCone.position.set(stackLocalX, stackBaseLocalY + stackH + hvH * 0.5, 0);
+          blowerGroup.add(hvCone);
+          stackExitWorldY += hvH;
+        } else {
+          const exitLip = new THREE.Mesh(new THREE.TorusGeometry(stackR, 0.012, 10, 28), matBlowerFlange);
+          exitLip.rotation.x = Math.PI / 2;
+          exitLip.position.set(stackLocalX, stackBaseLocalY + stackH, 0);
+          blowerGroup.add(exitLip);
+        }
+
+        assemblyGroup.add(blowerGroup);
+
+        // ---------- STAGE 3 -> STAGE 4 SMOOTH SWEPT CURVED DUCT (NO BLOCKY 90° STUBS!) ----------
+        const R1 = Math.min(clamp(ductR * 2.0, 0.15, 0.26), (dropX - pX) * 0.44);
+        const R2 = R1;
+        const R3 = Math.min(clamp(ductR * 1.85, 0.14, 0.24), (bX - dropX) * 0.36);
+        const R4 = Math.min(clamp(ductR * 1.85, 0.14, 0.24), (bX - dropX) * 0.36);
+        const frontZ = eyeZ + R4;
+        const topDuctY = Math.max(topNeckY + R1 + 0.06, bY + R2 + R3 + 0.28);
+
+        const vUp = new THREE.Vector3(0, 1, 0);
+        const vDn = new THREE.Vector3(0, -1, 0);
+        const vRight = new THREE.Vector3(1, 0, 0);
+        const vBack = new THREE.Vector3(0, 0, -1);
+
+        // Main swept duct from Stage 3 conical neck flange to lower horizontal union flange before suction elbow
+        const mainDuctPath = new THREE.CurvePath();
+        const pNeck = new THREE.Vector3(pX, topNeckY, 0);
+        const pE1Start = new THREE.Vector3(pX, topDuctY - R1, 0);
+        if (pE1Start.y > pNeck.y + 0.005) {
+          mainDuctPath.add(new THREE.LineCurve3(pNeck, pE1Start));
+        }
+        const elbow1 = makeArc90Bezier(pE1Start, vUp, vRight, R1);
+        mainDuctPath.add(elbow1);
+
+        const pE1End = elbow1.getPoint(1);
+        const pE2Start = new THREE.Vector3(dropX - R2, topDuctY, 0);
+        if (pE2Start.x > pE1End.x + 0.005) {
+          mainDuctPath.add(new THREE.LineCurve3(pE1End, pE2Start));
+        }
+        const elbow2 = makeArc90Bezier(pE2Start, vRight, vDn, R2);
+        mainDuctPath.add(elbow2);
+
+        // Smooth S-curve vertical drop shifting gently forward from z = 0 to z = frontZ in the open aisle
+        const pDropStart = elbow2.getPoint(1);
+        const pDropEnd = new THREE.Vector3(dropX, bY + R3, frontZ);
+        const dropSpan = Math.max(0.18, pDropStart.y - pDropEnd.y);
+        const dropSCurve = new THREE.CubicBezierCurve3(
+          pDropStart,
+          new THREE.Vector3(dropX, pDropStart.y - dropSpan * 0.44, 0),
+          new THREE.Vector3(dropX, pDropEnd.y + dropSpan * 0.44, frontZ),
+          pDropEnd
+        );
+        mainDuctPath.add(dropSCurve);
+
+        // Smooth 90° lower elbow turning from -Y to +X at blower hub elevation bY
+        const elbow3 = makeArc90Bezier(pDropEnd, vDn, vRight, R3);
+        mainDuctPath.add(elbow3);
+
+        const pE3End = elbow3.getPoint(1);
+        const pE4Start = new THREE.Vector3(bX - R4, bY, frontZ);
+        if (pE4Start.x > pE3End.x + 0.005) {
+          mainDuctPath.add(new THREE.LineCurve3(pE3End, pE4Start));
+        }
+
+        const mainDuctGeo = new THREE.TubeGeometry(mainDuctPath, 88, ductR, 24, false);
+        assemblyGroup.add(new THREE.Mesh(mainDuctGeo, matCPVCSolid));
+
+        // Intermediate bolted flanges on smooth duct runs
+        addBoltedFlange(assemblyGroup, (pE1End.x + pE2Start.x) * 0.5, topDuctY, 0, "x", ductR, matCPVCFlange, matBolt, 8);
+        addBoltedFlange(assemblyGroup, pE4Start.x, bY, frontZ, "x", ductR, matCPVCFlange, matBolt, 8);
+
+        // Final smooth 90° axial suction elbow turning from +X directly into -Z center eye of blower!
+        // Translucent glass-tint when Cutaway: ON so spinning impeller hub & blades remain 100% unobstructed!
+        const elbow4 = makeArc90Bezier(pE4Start, vRight, vBack, R4);
+        const eyePath = new THREE.CurvePath();
+        eyePath.add(elbow4);
+        const eyeElbowGeo = new THREE.TubeGeometry(eyePath, 28, ductR, 24, false);
+        assemblyGroup.add(new THREE.Mesh(eyeElbowGeo, cut ? matCutGlass : matCPVCSolid));
+
+        // Center assembly horizontally in the viewport
+        const centerOffset = -((qX - qR - inletLen) + (stackX + stackR)) * 0.5;
         assemblyGroup.position.x = centerOffset;
 
         stageCenters = {
-          all: new THREE.Vector3(0, pH * 0.48, 0),
-          quench: new THREE.Vector3(qX + centerOffset, qH * 0.5, 0),
+          all: new THREE.Vector3(0.05, Math.max(pH * 0.52, 1.15), 0),
+          quench: new THREE.Vector3(qX + centerOffset, qH * 0.52, 0),
           venturi: new THREE.Vector3((vStartX + vEndX) * 0.5 + centerOffset, vY, 0),
-          packed: new THREE.Vector3(pX + centerOffset, pH * 0.5, 0),
-          blower: new THREE.Vector3(bX + centerOffset, bY + 0.15, 0),
+          packed: new THREE.Vector3(pX + centerOffset, pH * 0.52, 0),
+          blower: new THREE.Vector3(bX + wheelR * 0.35 + centerOffset, bY + wheelR * 0.45, 0),
         };
 
-        flowWaypoints = [
-          new THREE.Vector3(qX - qR - inletLen + centerOffset, inletY, 0),
-          new THREE.Vector3(qX + centerOffset, inletY, 0),
-          new THREE.Vector3(qX + centerOffset, vY, 0),
-          new THREE.Vector3(vStartX + vConvL + vThL * 0.5 + centerOffset, vY, 0),
-          new THREE.Vector3(pX + centerOffset, vY, 0),
-          new THREE.Vector3(pX + centerOffset, pH + topConeH * 0.6, 0),
-          new THREE.Vector3(pX + centerOffset, topDuctY, 0),
-          new THREE.Vector3(bX + centerOffset, topDuctY, 0),
-          new THREE.Vector3(bX + centerOffset, bY, 0),
-          new THREE.Vector3(bX + wheelR * 0.65 + centerOffset, bY + stackH + 0.15, 0),
-        ];
+        // ---------- TRUE SMOOTH 3D FLOW PARTICLE PATH ----------
+        // Sample exact world-space points along Stages 1 -> 2 -> 3 -> curved duct -> CCW volute -> tangential stack
+        const ox = centerOffset;
+        const fullFlow = new THREE.CurvePath();
+        // Stage 1: kiln flue -> quench downward wash -> venturi entry
+        const qInStart = new THREE.Vector3(qX - qR - inletLen + ox, inletY, 0);
+        const qInTurn = new THREE.Vector3(qX - 0.10 + ox, inletY, 0);
+        const qDropTop = new THREE.Vector3(qX + ox, inletY - 0.14, 0);
+        const qDropBot = new THREE.Vector3(qX + ox, vY + 0.12, 0);
+        const qOutTurn = new THREE.Vector3(qX + 0.12 + ox, vY, 0);
+        fullFlow.add(new THREE.LineCurve3(qInStart, qInTurn));
+        fullFlow.add(new THREE.QuadraticBezierCurve3(qInTurn, new THREE.Vector3(qX + ox, inletY, 0), qDropTop));
+        fullFlow.add(new THREE.LineCurve3(qDropTop, qDropBot));
+        fullFlow.add(new THREE.QuadraticBezierCurve3(qDropBot, new THREE.Vector3(qX + ox, vY, 0), qOutTurn));
+
+        // Stage 2: through venturi throat -> Stage 3 lower plenum
+        const pPlenumIn = new THREE.Vector3(pX - 0.14 + ox, vY, 0);
+        const pRiseStart = new THREE.Vector3(pX + ox, vY + 0.14, 0);
+        fullFlow.add(new THREE.LineCurve3(qOutTurn, pPlenumIn));
+        fullFlow.add(new THREE.QuadraticBezierCurve3(pPlenumIn, new THREE.Vector3(pX + ox, vY, 0), pRiseStart));
+
+        // Stage 3: straight up through packing bed & demister to conical neck
+        fullFlow.add(new THREE.LineCurve3(pRiseStart, new THREE.Vector3(pX + ox, topNeckY, 0)));
+
+        // Stage 3 -> Stage 4 smooth swept duct (exact match to TubeGeometry!)
+        const shiftedDuctPts = [
+          ...mainDuctPath.getSpacedPoints(48),
+          ...elbow4.getPoints(16).slice(1),
+        ].map((pt) => new THREE.Vector3(pt.x + ox, pt.y, pt.z));
+        for (let i = 1; i < shiftedDuctPts.length; i++) {
+          fullFlow.add(new THREE.LineCurve3(shiftedDuctPts[i - 1], shiftedDuctPts[i]));
+        }
+
+        // Stage 4: enter axial eye -> spiral CCW outward inside volute -> shoot UP out tangential stack
+        const eyeEntry = new THREE.Vector3(bX + ox, bY, eyeZ);
+        const eyeCore = new THREE.Vector3(bX + ox, bY, 0);
+        fullFlow.add(new THREE.LineCurve3(eyeEntry, eyeCore));
+
+        const swirlPts = [eyeCore];
+        const swirlN = 20;
+        for (let k = 1; k <= swirlN; k++) {
+          const u = k / swirlN;
+          // CCW sweep from -1.15*PI (upper-left) -> -PI/2 (bottom) -> 0 (right tangent)
+          const ang = -1.15 * Math.PI + u * (1.15 * Math.PI);
+          const rr = wheelR * 0.12 + u * (stackLocalX - wheelR * 0.12);
+          swirlPts.push(new THREE.Vector3(bX + ox + Math.cos(ang) * rr, bY + Math.sin(ang) * rr, 0));
+        }
+        for (let i = 1; i < swirlPts.length; i++) {
+          fullFlow.add(new THREE.LineCurve3(swirlPts[i - 1], swirlPts[i]));
+        }
+
+        // Tangential discharge straight UP through adapter & stack + exit plume
+        fullFlow.add(new THREE.LineCurve3(
+          swirlPts[swirlPts.length - 1],
+          new THREE.Vector3(stackX + ox, stackExitWorldY + 0.22, 0)
+        ));
+
+        const rawSamples = fullFlow.getSpacedPoints(220);
+        flowSamples = rawSamples.map((pt, idx) => {
+          const u = idx / (rawSamples.length - 1);
+          // Tighter swirl inside narrow pipes/venturi/stack, wider inside open Stage 1 & 3 towers
+          const inTower = (u > 0.05 && u < 0.18) || (u > 0.30 && u < 0.50);
+          return { pt, swirl: inTower ? 0.048 : 0.015 };
+        });
       }
 
       function focusStage(stage) {
         const tgt = stageCenters[stage] || stageCenters.all;
         targetGoal = tgt.clone();
         if (stage === "all") {
-          camGoal = new THREE.Vector3(tgt.x + 0.4, tgt.y + 1.1, 4.8);
+          camGoal = new THREE.Vector3(tgt.x + 1.0, tgt.y + 1.0, 5.25);
+        } else if (stage === "blower") {
+          camGoal = new THREE.Vector3(tgt.x + 0.35, tgt.y + 0.45, 2.25);
         } else {
-          camGoal = new THREE.Vector3(tgt.x + 0.25, tgt.y + 0.55, 2.35);
+          camGoal = new THREE.Vector3(tgt.x + 0.28, tgt.y + 0.55, 2.45);
         }
       }
 
@@ -5336,34 +6087,35 @@
           }
         }
 
+        // Physically accurate CCW rotation around true Z shaft axis (scoops air from eye -> UP right tangent!)
         if (impellerMesh) {
-          impellerMesh.rotation.z -= dt * 7.5;
+          impellerMesh.rotation.z += dt * 4.2;
         }
 
-        particlePoints.visible = state.particles && flowWaypoints.length > 1;
+        particlePoints.visible = state.particles && flowSamples.length > 1;
         if (particlePoints.visible) {
           const posAttr = particleGeo.attributes.position;
           const colAttr = particleGeo.attributes.color;
-          const nSeg = flowWaypoints.length - 1;
+          const maxIdx = flowSamples.length - 1;
           for (let i = 0; i < particleCount; i++) {
-            particlePhase[i] = (particlePhase[i] + dt * 0.18) % 1.0;
+            particlePhase[i] = (particlePhase[i] + dt * 0.14) % 1.0;
             const t = particlePhase[i];
-            const segF = t * nSeg;
-            const idx = Math.min(nSeg - 1, Math.floor(segF));
-            const frac = segF - idx;
-            const a = flowWaypoints[idx];
-            const b = flowWaypoints[idx + 1];
-            const swirl = 0.035;
-            const ang = t * 28.0 + i * 1.7;
+            const fIdx = t * maxIdx;
+            const i0 = Math.min(maxIdx - 1, Math.floor(fIdx));
+            const frac = fIdx - i0;
+            const s0 = flowSamples[i0];
+            const s1 = flowSamples[i0 + 1];
+            const sw = s0.swirl;
+            const ang = t * 32.0 + i * 1.9;
             posAttr.setXYZ(
               i,
-              a.x + (b.x - a.x) * frac + Math.cos(ang) * swirl,
-              a.y + (b.y - a.y) * frac + Math.sin(ang) * swirl * 0.6,
-              Math.sin(ang) * swirl
+              s0.pt.x + (s1.pt.x - s0.pt.x) * frac + Math.cos(ang) * sw,
+              s0.pt.y + (s1.pt.y - s0.pt.y) * frac + Math.sin(ang) * sw * 0.55,
+              s0.pt.z + (s1.pt.z - s0.pt.z) * frac + Math.sin(ang) * sw
             );
-            if (t < 0.25) colAttr.setXYZ(i, 0.98, 0.48, 0.15);
-            else if (t < 0.58) colAttr.setXYZ(i, 0.12, 0.78, 0.95);
-            else colAttr.setXYZ(i, 0.30, 0.90, 0.65);
+            if (t < 0.20) colAttr.setXYZ(i, 0.98, 0.48, 0.15);
+            else if (t < 0.56) colAttr.setXYZ(i, 0.14, 0.78, 0.95);
+            else colAttr.setXYZ(i, 0.28, 0.92, 0.64);
           }
           posAttr.needsUpdate = true;
           colAttr.needsUpdate = true;

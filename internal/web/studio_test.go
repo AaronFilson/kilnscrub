@@ -426,6 +426,13 @@ func TestEmbeddedHTMLStudioUXAndJSIntegrity(t *testing.T) {
 		`<span class="unit-literal">pH</span>`,
 		`<span class="unit-literal">inWC</span>`,
 		`<span class="unit-literal">GPM</span>`,
+		"TubeGeometry",
+		"CurvePath",
+		"ExtrudeGeometry",
+		"computeVoluteProfiles",
+		"buildRectToRoundGeometry",
+		"buildImpellerGroup",
+		"addBoltedFlange",
 	}
 	for _, needle := range requiredMarkers {
 		if !strings.Contains(body, needle) {
