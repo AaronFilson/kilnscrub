@@ -268,6 +268,43 @@ func (c *Controller) Config() model.ControlConfig {
 	return c.cfg
 }
 
+// SetTargetDraftInWC updates the closed-loop kiln draft setpoint (in inWC, negative = suction)
+// after validating it against ControlConfig rules.
+func (c *Controller) SetTargetDraftInWC(inwc float64) error {
+	_, err := c.SetSetpoints(&inwc, nil)
+	return err
+}
+
+// SetQuenchSetpointF updates the closed-loop quench outlet temperature setpoint (in degrees F)
+// after validating it against ControlConfig rules and MaxQuenchOutletTemp.
+func (c *Controller) SetQuenchSetpointF(tempF float64) error {
+	_, err := c.SetSetpoints(nil, &tempF)
+	return err
+}
+
+// SetSetpoints atomically validates and applies optional runtime updates to TargetDraftInWC
+// and/or QuenchSetpoint (specified in degrees Fahrenheit), returning the updated ControlConfig.
+func (c *Controller) SetSetpoints(targetDraftInWC *float64, quenchSetpointF *float64) (model.ControlConfig, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	next := c.cfg
+	if targetDraftInWC != nil {
+		next.SetTargetDraftInWC(*targetDraftInWC)
+	}
+	if quenchSetpointF != nil {
+		if !isFinite(*quenchSetpointF) {
+			return c.cfg, fmt.Errorf("quench_setpoint_f must be finite, got %v", *quenchSetpointF)
+		}
+		next.QuenchSetpoint = model.FahrenheitToKelvin(*quenchSetpointF)
+	}
+	if err := next.Validate(); err != nil {
+		return c.cfg, fmt.Errorf("invalid setpoint update: %w", err)
+	}
+	c.cfg = next
+	return c.cfg, nil
+}
+
 func clampOutput(val, minOut, maxOut, fallback float64) float64 {
 	if !isFinite(val) {
 		val = fallback

@@ -2,7 +2,10 @@ package control
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,39 +15,39 @@ import (
 // SimHALConfig parameterizes the simulated studio kiln + 4-stage scrubber plant dynamics.
 type SimHALConfig struct {
 	// NominalInletTemp is the baseline kiln exhaust gas temperature entering the quench tower.
-	NominalInletTemp model.Kelvin
+	NominalInletTemp model.Kelvin `json:"nominal_inlet_temp_k"`
 	// BaselineQuenchTemp is the adiabatic saturation equilibrium outlet temp at nominal load & flow.
-	BaselineQuenchTemp model.Kelvin
+	BaselineQuenchTemp model.Kelvin `json:"baseline_quench_temp_k"`
 	// MaxWaterFlowGPM is the full-open (valve=1.0) quench spray water capacity in GPM.
-	MaxWaterFlowGPM float64
+	MaxWaterFlowGPM float64 `json:"max_water_flow_gpm"`
 	// NominalWaterFlowGPM is the steady-state spray flow at NominalInletTemp that maintains BaselineQuenchTemp.
-	NominalWaterFlowGPM float64
+	NominalWaterFlowGPM float64 `json:"nominal_water_flow_gpm"`
 	// BlowerMaxSuctionPa is the positive suction magnitude produced at BlowerVFD = 1.0.
-	BlowerMaxSuctionPa float64
+	BlowerMaxSuctionPa float64 `json:"blower_max_suction_pa"`
 	// BlowerTimeConst is the first-order VFD + blower inertia time constant.
-	BlowerTimeConst time.Duration
+	BlowerTimeConst time.Duration `json:"blower_time_const_ns"`
 	// DraftTimeConst is the first-order kiln/duct pressure lag time constant.
-	DraftTimeConst time.Duration
+	DraftTimeConst time.Duration `json:"draft_time_const_ns"`
 	// ValveTimeConst is the first-order quench spray valve actuator time constant.
-	ValveTimeConst time.Duration
+	ValveTimeConst time.Duration `json:"valve_time_const_ns"`
 	// QuenchTimeConst is the first-order thermal time constant of the quench outlet gas.
-	QuenchTimeConst time.Duration
+	QuenchTimeConst time.Duration `json:"quench_time_const_ns"`
 	// HeatSensitivityK is the open-loop quench outlet temperature rise per unit normalized inlet heat load increase.
-	HeatSensitivityK float64
+	HeatSensitivityK float64 `json:"heat_sensitivity_k"`
 	// CoolingGainKPerGPM is the quench outlet cooling sensitivity in K per GPM of spray water.
-	CoolingGainKPerGPM float64
+	CoolingGainKPerGPM float64 `json:"cooling_gain_k_per_gpm"`
 	// DryGasOutletTemp is the equilibrium quench outlet temperature when spray water flow is lost.
-	DryGasOutletTemp model.Kelvin
+	DryGasOutletTemp model.Kelvin `json:"dry_gas_outlet_temp_k"`
 	// InitialSumpPH is the starting scrubber sump pH (typically ~8.0 with NaHCO3).
-	InitialSumpPH float64
+	InitialSumpPH float64 `json:"initial_sump_ph"`
 	// DraftNoiseAmplitudePa adds deterministic high-frequency sensor flutter to DraftPa when > 0.
-	DraftNoiseAmplitudePa float64
+	DraftNoiseAmplitudePa float64 `json:"draft_noise_amplitude_pa"`
 	// DraftNoiseFreqHz is the sinusoidal noise frequency in Hz used when DraftNoiseAmplitudePa > 0.
-	DraftNoiseFreqHz float64
+	DraftNoiseFreqHz float64 `json:"draft_noise_freq_hz"`
 	// AutoStepInterval, when > 0, causes ApplyCommands to advance the plant physics automatically
 	// by this fixed step (useful for real-time Daemon operation). When 0, ApplyCommands uses
 	// elapsed wall clock since the last update (clamped) unless Step(dt) is driven explicitly.
-	AutoStepInterval time.Duration
+	AutoStepInterval time.Duration `json:"auto_step_interval_ns"`
 }
 
 // DefaultSimHALConfig returns physically calibrated dynamics matching model.DefaultControlConfig().
@@ -265,6 +268,84 @@ func (s *SimHAL) SetDraftPa(p model.Pascal) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.draftPa = p
+}
+
+// ClearAllFaults resets all active simulated faults and disturbances back to healthy operating
+// values so an operator can cleanly reset a tripped interlock after recovery.
+func (s *SimHAL) ClearAllFaults() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.heatSpikeDeltaK = 0
+	s.draftDisturbancePa = 0
+	s.spikePermanent = false
+	s.spikeRemaining = 0
+	s.waterLossActive = false
+	restoredFlow := s.sprayValvePos * s.cfg.MaxWaterFlowGPM
+	if restoredFlow < s.cfg.NominalWaterFlowGPM {
+		restoredFlow = s.cfg.NominalWaterFlowGPM
+	}
+	s.waterFlowGPM = restoredFlow
+	s.sensorErr = nil
+	s.forceNaN = false
+	s.staleAge = 0
+	s.sumpPH = s.cfg.InitialSumpPH
+	if s.quenchOutletTemp >= model.FahrenheitToKelvin(205.0) {
+		s.quenchOutletTemp = s.cfg.BaselineQuenchTemp
+	}
+}
+
+// InjectFault executes a named interactive simulation fault action for live UI/API control.
+// Supported actions:
+//   - "heat_spike": injects a wood-stoking thermal + positive-draft pulse (optional value in delta deg F)
+//   - "clear_heat_spike": clears an active heat spike
+//   - "water_loss": simulates quench water supply loss
+//   - "clear_water_loss": restores quench water supply
+//   - "sensor_fault": injects a simulated sensor communication error
+//   - "clear_sensor_fault": clears sensor communication, NaN, and stale-timestamp faults
+//   - "sump_ph": sets simulated sump pH (defaults to 5.8 if value <= 0)
+//   - "clear_all": clears all active faults and restores healthy nominal sensor values
+func (s *SimHAL) InjectFault(action string, value float64) error {
+	switch strings.ToLower(strings.TrimSpace(action)) {
+	case "heat_spike":
+		deltaK := model.Kelvin(333.33) // ~600 F wood-stoking inlet surge
+		if isFinite(value) && value > 0 {
+			deltaK = model.Kelvin(clampFloat(value*5.0/9.0, 50.0, 800.0))
+		}
+		s.InjectHeatSpike(deltaK, model.Pascal(8.0), 15*time.Second)
+		return nil
+	case "clear_heat_spike":
+		s.ClearHeatSpike()
+		return nil
+	case "water_loss":
+		s.InjectWaterLoss(true)
+		return nil
+	case "clear_water_loss":
+		s.InjectWaterLoss(false)
+		return nil
+	case "sensor_fault":
+		s.InjectSensorError(errors.New("simulated sensor communication fault"))
+		return nil
+	case "clear_sensor_fault":
+		s.InjectSensorError(nil)
+		s.InjectNaNReading(false)
+		s.InjectStaleTimestamp(0)
+		return nil
+	case "sump_ph":
+		ph := value
+		if ph == 0 {
+			ph = 5.8
+		}
+		if !isFinite(ph) || ph < 0 || ph > 14.0 {
+			return fmt.Errorf("sump_ph value must be finite and in [0, 14], got %v", value)
+		}
+		s.SetSumpPH(ph)
+		return nil
+	case "clear_all":
+		s.ClearAllFaults()
+		return nil
+	default:
+		return fmt.Errorf("unknown fault injection action %q", action)
+	}
 }
 
 // LastCommands returns the most recent ActuatorCommands applied to SimHAL.
