@@ -273,6 +273,12 @@ func TestIndexAndEmbeddedHTMLSanity(t *testing.T) {
 		"percent_of_flood",
 		"hcl_removal_efficiency",
 		"target_kiln_draft_in_wc",
+		`rel="icon"`,
+		`data:image/svg+xml,`,
+		`<span class="unit-literal">µm</span>`,
+		`<span class="unit-literal">HCl</span>`,
+		`<span class="unit-literal">NaCl</span>`,
+		`<span class="unit-literal">d₅₀</span>`,
 	}
 	for _, needle := range requiredSnippets {
 		if !strings.Contains(body, needle) {
@@ -292,6 +298,47 @@ func TestIndexAndEmbeddedHTMLSanity(t *testing.T) {
 	srv.Handler().ServeHTTP(rec405, httptest.NewRequest(http.MethodPost, "/", nil))
 	if rec405.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("POST / status = %d, want 405", rec405.Code)
+	}
+}
+
+func TestFaviconEndpoint(t *testing.T) {
+	srv := web.NewServer(&mockDesigner{}, newMockExporter())
+
+	// GET /favicon.ico returns 200 OK with SVG payload and caching headers.
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/favicon.ico", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /favicon.ico status = %d, want 200", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.Contains(ct, "image/svg+xml") {
+		t.Fatalf("GET /favicon.ico Content-Type = %q, want image/svg+xml", ct)
+	}
+	if cc := rec.Header().Get("Cache-Control"); cc == "" {
+		t.Fatalf("GET /favicon.ico missing Cache-Control header")
+	}
+	if nosniff := rec.Header().Get("X-Content-Type-Options"); nosniff != "nosniff" {
+		t.Fatalf("GET /favicon.ico X-Content-Type-Options = %q, want nosniff", nosniff)
+	}
+	body := rec.Body.String()
+	if !strings.HasPrefix(body, "<svg") || !strings.HasSuffix(body, "</svg>") {
+		t.Fatalf("GET /favicon.ico body is not valid SVG: %q", body)
+	}
+
+	// HEAD /favicon.ico returns 200 OK with empty body.
+	recHead := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(recHead, httptest.NewRequest(http.MethodHead, "/favicon.ico", nil))
+	if recHead.Code != http.StatusOK {
+		t.Fatalf("HEAD /favicon.ico status = %d, want 200", recHead.Code)
+	}
+	if recHead.Body.Len() != 0 {
+		t.Fatalf("HEAD /favicon.ico body length = %d, want 0", recHead.Body.Len())
+	}
+
+	// POST /favicon.ico returns 405 Method Not Allowed.
+	rec405 := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec405, httptest.NewRequest(http.MethodPost, "/favicon.ico", nil))
+	if rec405.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("POST /favicon.ico status = %d, want 405", rec405.Code)
 	}
 }
 

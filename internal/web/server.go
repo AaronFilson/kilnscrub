@@ -24,6 +24,8 @@ const (
 	indexHTMLPath       = "static/index.html"
 )
 
+var faviconSVG = []byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f97316"/><stop offset="0.6" stop-color="#06b6d4"/><stop offset="1" stop-color="#10b981"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="url(#g)"/><text x="32" y="43" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="30" font-weight="800" letter-spacing="-1.5" fill="#081018">KS</text></svg>`)
+
 // Server serves the embedded kilnscrub engineering dashboard and JSON/CAD HTTP API.
 // It is decoupled from solver and CAD implementations via model.Designer and model.CADExporter.
 type Server struct {
@@ -49,6 +51,7 @@ func NewServer(designer model.Designer, exporter model.CADExporter) *Server {
 	}
 
 	s.mux.HandleFunc("/", s.handleIndex)
+	s.mux.HandleFunc("/favicon.ico", s.handleFavicon)
 	s.mux.HandleFunc("/api/health", s.handleHealth)
 	s.mux.HandleFunc("/api/defaults", s.handleDefaults)
 	s.mux.HandleFunc("/api/size", s.handleSize)
@@ -121,6 +124,22 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	if r.Method == http.MethodGet {
 		_, _ = w.Write(s.indexHTML)
+	}
+}
+
+func (s *Server) handleFavicon(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Set("Allow", "GET, HEAD")
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	w.Header().Set("Content-Type", "image/svg+xml")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	w.WriteHeader(http.StatusOK)
+	if r.Method == http.MethodGet {
+		_, _ = w.Write(faviconSVG)
 	}
 }
 
