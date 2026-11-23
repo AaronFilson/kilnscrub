@@ -344,9 +344,10 @@ func assessWater(project StudioProject, design model.ScrubberDesign) WaterAssess
 
 func assessNoise(project StudioProject, design model.ScrubberDesign) NoiseAssessment {
 	const (
-		refDistFt       = 3.0
-		urbanLimitDBA   = 60.0
-		silencerDropDBA = 13.0
+		refDistFt              = 3.0
+		urbanLimitDBA          = 60.0
+		silencerDropDBA        = 13.0
+		deluxeAcousticBonusDBA = 9.0 // extra attenuation from Deluxe 2" Rockwool baffle box + cooling labyrinth + tuned stack silencer + vibration boots
 	)
 	shaftHP := math.Max(0.15, design.Blower.ShaftPowerHP)
 	spInWC := math.Max(1.0, design.Blower.TotalStaticPressureInWC)
@@ -362,14 +363,21 @@ func assessNoise(project StudioProject, design model.ScrubberDesign) NoiseAssess
 	if project.BlowerDriveOption == BlowerDriveDualBypassBlowers && bare3Ft < 83.5 {
 		bare3Ft = 83.5 // high-RPM (~18,000 RPM) tangential bypass blowers need acoustic box for urban yards
 	}
-	silenced3Ft := round1(bare3Ft - silencerDropDBA)
+
+	isDeluxe := project.IsDeluxe()
+	totalDropDBA := silencerDropDBA
+	if isDeluxe {
+		totalDropDBA += deluxeAcousticBonusDBA
+	}
+	silenced3Ft := round1(bare3Ft - totalDropDBA)
 
 	d2 := math.Max(refDistFt, project.PropertyLineFt)
 	atten := 20.0 * math.Log10(d2/refDistFt)
 	bareAtLine := bare3Ft - atten
 
+	silencingActive := project.IncludeSilencer || isDeluxe
 	sourceDBA := bare3Ft
-	if project.IncludeSilencer {
+	if silencingActive {
 		sourceDBA = silenced3Ft
 	}
 	propDBA := round1(math.Max(25.0, sourceDBA-atten))
@@ -380,8 +388,8 @@ func assessNoise(project StudioProject, design model.ScrubberDesign) NoiseAssess
 	switch {
 	case propDBA > urbanLimitDBA:
 		status = StatusActionNeeded
-		if !project.IncludeSilencer {
-			summary = fmt.Sprintf("Unsilenced blower reaches %.1f dBA at %.0f ft property line (above %.0f dBA residential daytime limit / 50-55 dBA nighttime ordinances). Enable the acoustic discharge silencer/box to drop ~13 dBA.", propDBA, d2, urbanLimitDBA)
+		if !silencingActive {
+			summary = fmt.Sprintf("Unsilenced blower reaches %.1f dBA at %.0f ft property line (above %.0f dBA residential daytime limit / 50-55 dBA nighttime ordinances). Enable the acoustic discharge silencer/box to drop ~13 dBA (or ~22 dBA in Custom Fab Deluxe).", propDBA, d2, urbanLimitDBA)
 		} else {
 			summary = fmt.Sprintf("Even silenced, blower reaches %.1f dBA at %.0f ft (above %.0f dBA limit). Relocate blower indoors/behind a masonry wall or increase setback.", propDBA, d2, urbanLimitDBA)
 		}
@@ -391,13 +399,15 @@ func assessNoise(project StudioProject, design model.ScrubberDesign) NoiseAssess
 	default:
 		status = StatusOK
 		modeLabel := "with acoustic silencer"
-		if !project.IncludeSilencer {
+		if isDeluxe {
+			modeLabel = "with Deluxe 2\" Rockwool acoustic baffle box + tuned stack silencer (-22 dBA)"
+		} else if !project.IncludeSilencer {
 			modeLabel = "bare (no silencer)"
 		}
 		summary = fmt.Sprintf("Quiet backyard operation: %.1f dBA at %.0f ft property line (%s) — comfortably under the %.0f dBA daytime limit (verify 50-55 dBA overnight local ordinance).", propDBA, d2, modeLabel, urbanLimitDBA)
 	}
 
-	if !project.IncludeSilencer && bare3Ft >= 78.0 {
+	if !silencingActive && bare3Ft >= 78.0 {
 		summary += fmt.Sprintf(" OSHA 29 CFR 1910.95 HEARING WARNING: unsilenced near-field blower (%.1f dBA at 3 ft, rising >=85 dBA near reflective walls) can exceed the 85 dBA 8-hr TWA action level — wear hearing protection or install the acoustic enclosure.", bare3Ft)
 	}
 

@@ -1485,6 +1485,9 @@ func EvaluateArchitectureOptions(project StudioProject, design model.ScrubberDes
 		savings = append(savings, fmt.Sprintf("Electromechanical Safety Only: saves $%.0f vs Raspberry Pi Modbus (retains mandatory NFPA 86 hardwired 200 F snap-disc, 0.25 GPM flow switch, latching safety relay & spring-return bypass damper + analog Magnehelic & manual VFD dial).",
 			math.Abs(controlDelta)))
 	}
+	if p.IsDeluxe() {
+		savings = append(savings, "Custom Fabrication Deluxe Mode active: TIG-welded heavy-gauge 316L/C-276 quench & venturi w/ ANSI B16.5 Class 150 flanges, filament-wound Derakane FRP column w/ bolted manway & demister cassette, welded 2\"×2\"×3/16\" steel forklift skid + K-bracing, UL 508A NEMA 4X panel, and 2\" Rockwool acoustic baffle box + tuned silencer (-22 dBA).")
+	}
 	if len(savings) == 0 {
 		savings = append(savings, "Standard baseline inline configuration active (toggle budget blower drive, shell-less 4\" parallel bundle, DIY ceramic rings, U-turn skid, or electromechanical controls to compare savings).")
 	}

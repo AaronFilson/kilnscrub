@@ -41,6 +41,12 @@ func workingSumpVolumeGal(cots COTSSummary, design model.ScrubberDesign) float64
 		return 45.0 // 55-gal drum working fill
 	case "USPLASTIC-100T":
 		return 85.0 // 100-gal tank working fill
+	case "DLX-SUMP-SLOPED-35":
+		return 28.0 // 35-gal Deluxe sloped-bottom baffled sump working fill
+	case "DLX-SUMP-SLOPED-60":
+		return 48.0 // 60-gal Deluxe sloped-bottom baffled sump working fill
+	case "DLX-SUMP-SLOPED-110":
+		return 90.0 // 110-gal Deluxe sloped-bottom baffled sump working fill
 	default:
 		gal := float64(design.PackedBed.SumpVolume) / model.CubicMetersPerUSGallon
 		return round1(math.Max(25.0, gal))

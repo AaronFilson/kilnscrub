@@ -1512,6 +1512,11 @@
       border-color: rgba(239, 68, 68, 0.55);
       background: rgba(239, 68, 68, 0.10);
     }
+    .combo-btn-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
     .btn-budget-combo {
       width: 100%;
       justify-content: space-between;
@@ -1538,6 +1543,89 @@
       border: 1px solid rgba(134, 239, 172, 0.45);
       color: #86efac;
       white-space: nowrap;
+    }
+    .btn-deluxe-combo {
+      width: 100%;
+      justify-content: space-between;
+      padding: 8px 11px;
+      border-radius: 7px;
+      border: 1px solid rgba(245, 158, 11, 0.62);
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.20) 0%, rgba(129, 140, 248, 0.22) 100%);
+      color: #fef3c7;
+      font-weight: 700;
+      font-size: 12px;
+      box-shadow: 0 2px 10px rgba(245, 158, 11, 0.14);
+    }
+    .btn-deluxe-combo:hover {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.32) 0%, rgba(129, 140, 248, 0.32) 100%);
+      border-color: #fcd34d;
+    }
+    .deluxe-combo-tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(245, 158, 11, 0.22);
+      border: 1px solid rgba(252, 211, 77, 0.5);
+      color: #fde68a;
+      white-space: nowrap;
+    }
+    .deluxe-spec-banner {
+      border: 1px solid rgba(245, 158, 11, 0.52);
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.11) 0%, rgba(99, 102, 241, 0.11) 100%);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .deluxe-spec-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .deluxe-spec-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #fde68a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .deluxe-spec-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+    }
+    @media (max-width: 1280px) {
+      .deluxe-spec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .deluxe-spec-chip {
+      padding: 5px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(251, 191, 36, 0.25);
+      background: rgba(12, 17, 24, 0.65);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .deluxe-spec-k {
+      font-size: 9.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #fcd34d;
+    }
+    .deluxe-spec-v {
+      font-size: 11px;
+      color: #e2e8f0;
+      line-height: 1.3;
     }
     .compressor-highlight {
       padding: 7px 9px;
@@ -1852,10 +1940,171 @@
       color: #081018;
     }
 
+    /* Phase 9: Plan Systems Overlay Toolbar & Schedules */
+    .plan-overlay-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px 12px;
+      padding: 9px 14px;
+      background: linear-gradient(135deg, rgba(15, 25, 40, 0.96) 0%, rgba(20, 32, 48, 0.96) 100%);
+      border: 1px solid var(--border-hi);
+      border-radius: 10px;
+    }
+    .plan-layer-pills {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+    .layer-pill {
+      appearance: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(12, 17, 24, 0.78);
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.14s;
+    }
+    .layer-pill:hover {
+      border-color: var(--border-hi);
+      color: var(--text);
+    }
+    .layer-pill.active {
+      color: #f8fafc;
+      background: rgba(30, 48, 72, 0.92);
+      border-color: var(--layer-color, #38bdf8);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+    }
+    .layer-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--layer-color, #38bdf8);
+      opacity: 0.45;
+      flex-shrink: 0;
+    }
+    .layer-pill.active .layer-dot {
+      opacity: 1;
+      box-shadow: 0 0 7px var(--layer-color, #38bdf8);
+    }
+    .btn-systems-master {
+      border-color: rgba(56, 189, 248, 0.55);
+      background: rgba(14, 165, 233, 0.14);
+      color: #bae6fd;
+    }
+    .btn-systems-master.active {
+      border-color: rgba(34, 197, 94, 0.65);
+      background: rgba(16, 185, 129, 0.22);
+      color: #a7f3d0;
+    }
+    .sched-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 10px 14px;
+      background: rgba(12, 17, 24, 0.6);
+      border-bottom: 1px solid var(--border);
+    }
+    .sched-tab-btn {
+      appearance: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 11px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.14s;
+    }
+    .sched-tab-btn:hover { color: var(--text); border-color: var(--border-hi); }
+    .sched-tab-btn.active {
+      background: rgba(56, 189, 248, 0.16);
+      border-color: rgba(56, 189, 248, 0.65);
+      color: #e0f2fe;
+    }
+    .sched-summary-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(12, 22, 36, 0.72);
+      border-bottom: 1px solid var(--border);
+    }
+    @media (max-width: 980px) {
+      .sched-summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .sched-kpi {
+      padding: 7px 10px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: rgba(19, 26, 36, 0.85);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .sched-kpi-k {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+    .sched-kpi-v {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #e0f2fe;
+    }
+    .sched-kpi-s {
+      font-size: 10.5px;
+      color: var(--muted);
+    }
+    .safety-loop-badge {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(239, 68, 68, 0.22);
+      border: 1px solid rgba(239, 68, 68, 0.6);
+      color: #fca5a5;
+      font-family: var(--mono);
+      font-size: 9.5px;
+      font-weight: 700;
+      margin-left: 5px;
+      white-space: nowrap;
+    }
+    .sched-id-badge {
+      display: inline-grid;
+      place-items: center;
+      min-width: 28px;
+      height: 21px;
+      padding: 0 6px;
+      border-radius: 5px;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 800;
+      border: 1px solid var(--border-hi);
+      background: rgba(30, 48, 72, 0.8);
+      color: #e0f2fe;
+    }
+
     @media print {
       body { background: #ffffff; color: #111827; }
-      .topbar, .guide-hero-actions, .doc-toolbar .ctrl-btn-row, .plans-toolbar, .plan-hud-br, .toast { display: none !important; }
-      .panel, .urban-card, .cots-part-card, .guide-hero, .p7-mini-card, .recirc-kpi, .arch-sub-card, .budget-role-card, .trigger-box {
+      .topbar, .guide-hero-actions, .doc-toolbar .ctrl-btn-row, .plans-toolbar, .plan-overlay-bar, .plan-hud-br, .toast { display: none !important; }
+      .panel, .urban-card, .cots-part-card, .guide-hero, .p7-mini-card, .recirc-kpi, .arch-sub-card, .budget-role-card, .trigger-box, .deluxe-spec-banner, .sched-kpi {
         background: #ffffff !important;
         color: #111827 !important;
         border-color: #cbd5e1 !important;
@@ -2028,6 +2277,7 @@
             <div class="seg-group" role="group" aria-label="Build Path">
               <button class="seg-btn active" type="button" data-build-path="cots_no_weld">No-Weld COTS<span class="seg-sub">Clamps &amp; Pipe</span></button>
               <button class="seg-btn" type="button" data-build-path="welded_dxf">Welded Sheet Metal<span class="seg-sub">Shop DXF</span></button>
+              <button class="seg-btn" type="button" data-build-path="custom_fab_deluxe">Custom Fab Deluxe<span class="seg-sub">TIG / FRP / Acoustic Skid</span></button>
             </div>
           </div>
 
@@ -2101,10 +2351,16 @@
           <span class="control-sub" id="options-delta-badge">Baseline</span>
         </div>
         <div class="param-section">
-          <button id="btn-apply-budget-combo" class="btn btn-budget-combo" type="button" title="Selects Shell-Less 4 in Parallel Manifold, DIY Kiln-Fired Ceramic Rings, Shop Compressor Air-Atomize + Low-dP Fan, Compact U-Turn, and Electromechanical Safety Only">
-            <span>Apply Budget Studio Combo</span>
-            <span class="budget-combo-tag">1-Click Savings</span>
-          </button>
+          <div class="combo-btn-stack">
+            <button id="btn-apply-budget-combo" class="btn btn-budget-combo" type="button" title="Selects Shell-Less 4 in Parallel Manifold, DIY Kiln-Fired Ceramic Rings, Shop Compressor Air-Atomize + Low-dP Fan, Compact U-Turn, and Electromechanical Safety Only">
+              <span>Apply Budget Studio Combo</span>
+              <span class="budget-combo-tag">1-Click Savings</span>
+            </button>
+            <button id="btn-apply-deluxe-fab" class="btn btn-deluxe-combo" type="button" title="Selects Custom Fab Deluxe: TIG-welded heavy-gauge vessels, ANSI Class 150 flanges, sight glasses, NFPA 91 cleanout hatches, steel forklift skid, UL 508A NEMA 4X panel, mag-drive pump, and 2 in Rockwool acoustic baffle box + tuned stack silencer">
+              <span>Apply Custom Fab Deluxe</span>
+              <span class="deluxe-combo-tag">TIG · FRP · Acoustic Skid</span>
+            </button>
+          </div>
 
           <div class="control">
             <div class="control-row">
@@ -2361,6 +2617,18 @@
             <div class="p7-mini-sub" id="design-recirc-sub">Hydrometer SG &ge; 1.105 · <span class="unit-literal">pH</span> &lt; 7.0 · Cool &le; 140°F before drain</div>
           </div>
         </div>
+        <!-- Phase 9: Custom Fabrication Deluxe Spec Banner -->
+        <div id="deluxe-spec-banner" class="deluxe-spec-banner hidden" role="region" aria-label="Custom Fabrication Deluxe Specification">
+          <div class="deluxe-spec-head">
+            <span class="deluxe-spec-title">&#9733; Custom Fabrication Deluxe Spec — TIG / FRP / Acoustic Skid</span>
+            <div class="preset-actions">
+              <span id="deluxe-spec-cost-pill" class="pill warn">Deluxe Upgrade: +$—</span>
+              <span id="deluxe-spec-dba-pill" class="pill ok">Acoustic Baffle: — dBA</span>
+            </div>
+          </div>
+          <div id="deluxe-spec-summary" class="control-hint" style="color:#fde68a;">TIG-welded heavy-gauge vessels, ANSI Class 150 flanges, sight glasses, NFPA 91 cleanout hatches, forklift skid, UL 508A NEMA 4X panel, magnetic-drive pump, and 2" Rockwool acoustic blower enclosure.</div>
+          <div id="deluxe-spec-grid" class="deluxe-spec-grid"></div>
+        </div>
       </section>
 
       <!-- KPI Strip -->
@@ -2419,6 +2687,7 @@
             <button class="stage-pill" data-stage="blower"><span id="pill-blower-label">4: ID Blower</span></button>
           </div>
           <div class="viewer-actions">
+            <button id="btn-systems-3d" class="toggle-btn" type="button" title="Toggle 3D structural skid frame, Stage 3 K-bracing, sump and magnetic-drive pump hoses, NEMA 4X control panel, acoustic blower baffle box, and stack silencer">Skid, Pump &amp; Baffling: OFF</button>
             <button id="btn-cutaway" class="toggle-btn active" type="button">Cutaway: ON</button>
             <button id="btn-particles" class="toggle-btn active" type="button">Flow Particles: ON</button>
             <button id="btn-view-mode" class="toggle-btn" type="button">View: 2D Schematic</button>
@@ -2848,6 +3117,7 @@
         <span class="panel-title" id="plan-sheet-title" style="color:#f8fafc;">Shop Plan Blueprint</span>
         <span id="plan-envelope-pill" class="pill">Overall: —</span>
         <span id="plan-alignment-pill" class="pill ok">Inline ID Blower</span>
+        <span id="plan-deluxe-pill" class="pill warn hidden">Custom Fab Deluxe</span>
       </div>
 
       <div class="plans-toolbar-group" role="group" aria-label="Blueprint View Selector">
@@ -2866,8 +3136,23 @@
         <span id="plan-zoom-label" class="control-val" style="min-width:44px;text-align:center;">100%</span>
         <button id="btn-plan-zoom-in" class="btn btn-sm" type="button" title="Zoom in blueprint">+</button>
         <button id="btn-plan-zoom-reset" class="btn btn-sm btn-ghost" type="button" title="Reset pan and zoom">Reset View</button>
-        <button id="btn-plan-download-svg" class="btn btn-sm btn-primary" type="button" title="Download standalone engineering plan SVG">Download SVG</button>
-        <button id="btn-plan-print" class="btn btn-sm" type="button" title="Print shop plans and parts legend">Print Plan</button>
+        <button id="btn-plan-download-svg" class="btn btn-sm btn-primary" type="button" title="Download standalone engineering plan SVG (includes active systems layers)">Download SVG</button>
+        <button id="btn-plan-print" class="btn btn-sm" type="button" title="Print shop plans, active systems layers, and installation schedules">Print Plan</button>
+      </div>
+    </section>
+
+    <!-- Phase 9: Plan Overlay Mode Toolbar (Full Systems Installation Layers) -->
+    <section id="plan-overlay-toolbar" class="plan-overlay-bar" aria-label="Full Systems Plan Overlay Layers">
+      <div class="plans-toolbar-group">
+        <button id="btn-plan-full-systems" class="btn btn-sm btn-systems-master active" type="button" title="Toggle all 5 mechanical, electrical, plumbing, clearance, and acoustic systems layers on the blueprint">Full Systems Mode: ON</button>
+        <span id="plan-acoustic-pill" class="pill ok" title="Acoustic attenuation budget (bare vs treated at 3 ft and property line)">Acoustic: — dBA</span>
+      </div>
+      <div class="plan-layer-pills" role="group" aria-label="Individual Systems Overlay Layers">
+        <button id="btn-layer-electrical" class="layer-pill active" type="button" data-plan-layer="electrical" style="--layer-color:#f59e0b" title="NEC 430.102 disconnect, NEMA 4X VFD panel, blower/pump circuits, red-dashed 24VDC NFPA 86 safety loop, and Modbus RS-485 conduit"><span class="layer-dot"></span>Electrical &amp; Wiring</button>
+        <button id="btn-layer-plumbing" class="layer-pill active" type="button" data-plan-layer="plumbing" style="--layer-color:#06b6d4" title="Recirculation pump station, Y-strainer, IPC 608 RPZ/Air Gap, braided supply hoses, gravity returns, and IPC 702.5 drain"><span class="layer-dot"></span>Pumps &amp; Hosing</button>
+        <button id="btn-layer-bracing" class="layer-pill active" type="button" data-plan-layer="bracing" style="--layer-color:#818cf8" title="Structural base skid perimeter, anchor bolt-down pads, Stage 3 K-bracing frame, duct hangers, and flexible vibration boots"><span class="layer-dot"></span>Bracing &amp; Mounting</button>
+        <button id="btn-layer-clearances" class="layer-pill active" type="button" data-plan-layer="clearances" style="--layer-color:#22c55e" title="NEC 110.26 36 in x 30 in electrical working clearance, NFPA 211 36 in hot-flue clearance, 24 in pump/cleanout clearances, 36 in aisle, and IMC 510 setbacks"><span class="layer-dot"></span>Clearances &amp; Codes</button>
+        <button id="btn-layer-acoustics" class="layer-pill active" type="button" data-plan-layer="acoustics" style="--layer-color:#a855f7" title="2 in Rockwool acoustic blower baffle enclosure, tuned absorptive stack silencer, vibration pads, and dBA callout badge"><span class="layer-dot"></span>Sound Baffling</button>
       </div>
     </section>
 
@@ -2928,6 +3213,115 @@
         </table>
       </div>
     </section>
+
+    <!-- Phase 9: Tabbed Installation & Systems Schedules Panel -->
+    <section class="panel" id="plan-schedules-panel" aria-label="Installation and Systems Schedules">
+      <div class="panel-header">
+        <span class="panel-title">Installation &amp; Systems Schedules — Electrical, Plumbing, Structural Bracing &amp; Sound Baffling</span>
+        <span class="control-sub" id="plan-schedules-meta">NEC · IPC 608 / 702.5 · NFPA 86 / 91 / 211</span>
+      </div>
+      <div class="sched-tabs" role="tablist" aria-label="Systems Schedule Category">
+        <button id="sched-tab-electrical" class="sched-tab-btn active" type="button" role="tab" aria-selected="true" data-sched-tab="electrical"><span class="layer-dot" style="background:#f59e0b;opacity:1"></span>Electrical &amp; Wiring</button>
+        <button id="sched-tab-plumbing" class="sched-tab-btn" type="button" role="tab" aria-selected="false" data-sched-tab="plumbing"><span class="layer-dot" style="background:#06b6d4;opacity:1"></span>Pump, Plumbing &amp; Hosing</button>
+        <button id="sched-tab-bracing" class="sched-tab-btn" type="button" role="tab" aria-selected="false" data-sched-tab="bracing"><span class="layer-dot" style="background:#818cf8;opacity:1"></span>Structural Bracing &amp; Anchors</button>
+        <button id="sched-tab-acoustics" class="sched-tab-btn" type="button" role="tab" aria-selected="false" data-sched-tab="acoustics"><span class="layer-dot" style="background:#a855f7;opacity:1"></span>Sound Baffling &amp; dBA Budget</button>
+      </div>
+
+      <!-- Pane 1: Electrical & Wiring Schedule -->
+      <div id="sched-pane-electrical" role="tabpanel" aria-labelledby="sched-tab-electrical">
+        <div id="plan-elec-access-note" class="plan-selected-bar" style="background:rgba(245,158,11,0.08);color:#fde68a;">NEC 110.26: Maintain 36" clear depth × 30" clear width in front of NEMA 4X Panel &amp; Lockable Sight Disconnect.</div>
+        <div class="table-wrap">
+          <table class="bom-table" aria-label="Electrical and Wiring Schedule">
+            <thead>
+              <tr>
+                <th>Circuit</th>
+                <th>Description &amp; Safety Loop</th>
+                <th>From &rarr; To</th>
+                <th class="num">V / A</th>
+                <th class="num">Breaker</th>
+                <th>Wire <span class="unit-literal">AWG</span></th>
+                <th>Conduit</th>
+                <th>Code Ref</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="plan-elec-tbody">
+              <tr><td colspan="9" style="color:var(--muted)">Loading electrical schedule...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Pane 2: Pump, Plumbing & Hosing Schedule -->
+      <div id="sched-pane-plumbing" class="hidden" role="tabpanel" aria-labelledby="sched-tab-plumbing">
+        <div id="plan-pump-summary" class="sched-summary-strip"></div>
+        <div class="table-wrap">
+          <table class="bom-table" aria-label="Pump, Plumbing and Hosing Schedule">
+            <thead>
+              <tr>
+                <th>Line</th>
+                <th>Description</th>
+                <th>Fluid</th>
+                <th>From &rarr; To</th>
+                <th>Size</th>
+                <th>Material</th>
+                <th class="num">Flow / PSI</th>
+                <th>Valves &amp; Fittings</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="plan-plumb-tbody">
+              <tr><td colspan="9" style="color:var(--muted)">Loading plumbing schedule...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Pane 3: Structural Bracing & Anchors Schedule -->
+      <div id="sched-pane-bracing" class="hidden" role="tabpanel" aria-labelledby="sched-tab-bracing">
+        <div class="table-wrap">
+          <table class="bom-table" aria-label="Structural Bracing and Anchors Schedule">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Component</th>
+                <th>Member Spec</th>
+                <th>Mounting</th>
+                <th class="num">Wet Load (<span class="unit-literal">lbs</span>)</th>
+                <th>Concrete Anchor Spec</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="plan-bracing-tbody">
+              <tr><td colspan="7" style="color:var(--muted)">Loading bracing schedule...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Pane 4: Sound Baffling & dBA Budget -->
+      <div id="sched-pane-acoustics" class="hidden" role="tabpanel" aria-labelledby="sched-tab-acoustics">
+        <div id="plan-acoustic-summary" class="sched-summary-strip"></div>
+        <div class="table-wrap">
+          <table class="bom-table" aria-label="Sound Baffling and Acoustic Attenuation Schedule">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Location</th>
+                <th>Acoustic Treatment</th>
+                <th>Material</th>
+                <th class="num">Thickness</th>
+                <th class="num">Reduction (<span class="unit-literal">dBA</span>)</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="plan-acoustics-tbody">
+              <tr><td colspan="7" style="color:var(--muted)">Loading acoustic schedule...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -2951,6 +3345,7 @@
         selectedStage: "all",
         cutaway: true,
         particles: true,
+        showSystems3D: false,
         viewMode: "2d", // "3d" once Three.js + WebGL succeeds
         threeReady: false,
         threeFailedReason: "",
@@ -2996,7 +3391,36 @@
         dragStartY: 0,
         dragOriginPanX: 0,
         dragOriginPanY: 0,
+        layers: {
+          electrical: true,
+          plumbing: true,
+          bracing: true,
+          clearances: true,
+          acoustics: true,
+        },
+        activeScheduleTab: "electrical",
       };
+
+      function normalizeBuildPath(raw) {
+        const s = String(raw || "").trim().toLowerCase();
+        if (s === "welded_dxf" || s === "custom_fab_deluxe") return s;
+        return "cots_no_weld";
+      }
+
+      function buildPathLabel(raw) {
+        switch (normalizeBuildPath(raw)) {
+          case "custom_fab_deluxe": return "Custom Fab Deluxe (TIG / FRP / Acoustic Skid)";
+          case "welded_dxf": return "Welded Sheet Metal (DXF)";
+          default: return "No-Weld COTS Hardware";
+        }
+      }
+
+      function syncSystems3DButton() {
+        const b = el("btn-systems-3d");
+        if (!b) return;
+        b.textContent = `Skid, Pump & Baffling: ${state.showSystems3D ? "ON" : "OFF"}`;
+        b.classList.toggle("active", !!state.showSystems3D);
+      }
 
       function normalizeCorrosionTier(raw) {
         const s = String(raw || "").trim().toLowerCase();
@@ -3342,7 +3766,11 @@
         el("in-salting-hours").value = Math.max(1.0, Math.min(12.0, saltingHrs));
         if (saltingHrs > 0) studioState.lastSaltingHours = saltingHrs;
 
-        studioState.buildPath = proj.build_path || "cots_no_weld";
+        studioState.buildPath = normalizeBuildPath(proj.build_path);
+        if (studioState.buildPath === "custom_fab_deluxe") {
+          state.showSystems3D = true;
+          syncSystems3DButton();
+        }
         studioState.corrosionTier = normalizeCorrosionTier(proj.corrosion_tier);
         studioState.stageAlignment = proj.stage_alignment === "eductor_dry_fan" ? "eductor_dry_fan" : "inline_id_blower";
         studioState.packedBedLayout = proj.packed_bed_layout === "parallel_manifold" ? "parallel_manifold" : "single_column";
@@ -3672,7 +4100,9 @@
         const pill = el("readiness-overall-pill");
         pill.className = "pill " + statusToPillClass(overall);
         el("readiness-overall-text").textContent = statusLabel(overall);
-        el("readiness-cost-pill").textContent = `Est. COTS: ${fmtUSD(c.estimated_total_usd)}`;
+        const isDeluxeMode = normalizeBuildPath(ev.project?.build_path || studioState.buildPath) === "custom_fab_deluxe" || !!ev.shop_plan?.is_deluxe;
+        el("readiness-cost-pill").textContent = `${isDeluxeMode ? "Est. Deluxe Fab" : "Est. COTS"}: ${fmtUSD(c.estimated_total_usd)}`;
+        renderDeluxeSpecBanner(ev);
 
         const gDot = el("tab-guide-dot");
         if (gDot) {
@@ -3772,6 +4202,53 @@
         setReadinessChip("readiness-soda", "ok", formatBulkSodaShort(lbs), saltHrs > 0 ? `${fmt(saltHrs, 1)} hr salting` : "Zero HCl load");
         setReadinessChip("readiness-plume", "caution", `${fmt(kToF(q.outlet_temp_k || 360), 0)}°F sat. mist`, "Clean water vapor");
         setReadinessChip("readiness-corrosion", (proj?.vapor_glaze_mode === "salt") ? "caution" : "ok", normalizeCorrosionTier(proj?.corrosion_tier) === "heavy_c276_frp" ? "C-276 / FRP" : "Standard 316L SS", proj?.vapor_glaze_mode === "salt" ? "Buffered pH 8 flush" : "Zero HCl acid load");
+        renderDeluxeSpecBanner(null);
+      }
+
+      function renderDeluxeSpecBanner(ev) {
+        const banner = el("deluxe-spec-banner");
+        if (!banner) return;
+        const bp = normalizeBuildPath(ev?.project?.build_path || studioState.buildPath);
+        const plan = getEffectiveShopPlan();
+        const isDeluxe = bp === "custom_fab_deluxe" || !!plan?.is_deluxe || !!plan?.deluxe_spec?.enabled;
+        banner.classList.toggle("hidden", !isDeluxe);
+        if (!isDeluxe) return;
+
+        const spec = plan.deluxe_spec || {};
+        const ac = plan.acoustic_summary || {};
+        const costDelta = Number.isFinite(spec.cost_delta_usd) ? spec.cost_delta_usd : 3450;
+        if (el("deluxe-spec-cost-pill")) {
+          el("deluxe-spec-cost-pill").textContent = `Deluxe Hardware: +${fmtUSD(costDelta)} vs COTS`;
+        }
+        if (el("deluxe-spec-dba-pill")) {
+          const bare = Number.isFinite(ac.bare_dba_3ft) ? ac.bare_dba_3ft : 86;
+          const treated = Number.isFinite(ac.treated_dba_3ft) ? ac.treated_dba_3ft : 64;
+          const prop = Number.isFinite(ac.property_line_dba) ? ac.property_line_dba : 41;
+          const propFt = Number.isFinite(ac.property_line_ft) ? ac.property_line_ft : (studioState.project?.property_line_ft || 35);
+          el("deluxe-spec-dba-pill").textContent = `Baffled: ${Math.round(bare)} → ${Math.round(treated)} dBA @ 3 ft (${Math.round(prop)} dBA @ ${Math.round(propFt)} ft)`;
+        }
+        if (el("deluxe-spec-summary")) {
+          el("deluxe-spec-summary").textContent = spec.summary || "TIG-welded heavy-gauge vessels, ANSI Class 150 lap-joint flanges, borosilicate sight glasses, NFPA 91 cleanout hatches, forklift skid, UL 508A NEMA 4X panel, mag-drive pump, and 2\" Rockwool acoustic blower enclosure.";
+        }
+        const grid = el("deluxe-spec-grid");
+        if (grid) {
+          const items = [
+            ["Vessel Metallurgy", spec.vessel_material || "Heavy-gauge TIG-welded 316L SS / Derakane Vinyl-Ester FRP"],
+            ["Flanges & Gaskets", spec.flange_standard || "ANSI/ASME B16.5 Class 150 lap-joint + PTFE envelope gaskets"],
+            ["Sight Glasses", spec.sight_glasses || "2× Borosilicate sight-glass ports (quench spray + packing bed)"],
+            ["NFPA 91 Cleanouts", spec.cleanout_hatches || "2× Bolted NFPA 91 quick-release cleanout hatches + 1\" flue jacket"],
+            ["Structural Skid", spec.skid_frame || "Welded 2\"×2\"×3/16\" powder-coated steel forklift skid + K-bracing"],
+            ["UL 508A Panel", spec.panel_standard || "UL 508A NEMA 4X SS panel + NEC 430.102 disconnect + 200°F FM limit"],
+            ["Pump Upgrade", spec.pump_upgrade || "Sealless magnetic-drive chemical pump + Y-strainer + sloped sump"],
+            ["Acoustic Baffling", `2" Rockwool labyrinth blower box + tuned stack silencer (−${Math.round(ac.total_reduction_dba || 22)} dBA)`],
+          ];
+          grid.innerHTML = items.map(([k, v]) => `
+            <div class="deluxe-spec-chip">
+              <span class="deluxe-spec-k">${escapeHtml(k)}</span>
+              <span class="deluxe-spec-v">${escapeHtml(v)}</span>
+            </div>
+          `).join("");
+        }
       }
 
       /* ===================== PHASE 7 & 8: ARCHITECTURE, BUDGET DRIVES & RECIRCULATION PANELS ===================== */
@@ -4398,7 +4875,7 @@
         const overall = urban.overall_status || "ok";
 
         el("guide-project-title").textContent = `${proj.studio_name || "Studio Kiln Scrubber"} — Build & Firing Kit`;
-        const pathLabel = proj.build_path === "welded_dxf" ? "Welded Sheet Metal (DXF)" : "No-Weld COTS Hardware";
+        const pathLabel = buildPathLabel(proj.build_path || studioState.buildPath);
         const tierLabel = corrosionTierLabel(proj.corrosion_tier);
         const alignLabel = (proj.stage_alignment || studioState.stageAlignment) === "eductor_dry_fan"
           ? "Dry-Fan Downflow Eductor"
@@ -4409,7 +4886,8 @@
         const gPill = el("guide-overall-pill");
         gPill.className = "pill " + statusToPillClass(overall);
         el("guide-overall-text").textContent = statusLabel(overall);
-        el("guide-cost-pill").textContent = `Est. COTS Hardware: ${fmtUSD(cots.estimated_total_usd)}`;
+        const isDeluxeGuide = normalizeBuildPath(proj.build_path || studioState.buildPath) === "custom_fab_deluxe";
+        el("guide-cost-pill").textContent = `${isDeluxeGuide ? "Est. Deluxe Fab Hardware" : "Est. COTS Hardware"}: ${fmtUSD(cots.estimated_total_usd)}`;
 
         const floodVal = Number.isFinite(cots.actual_percent_of_flood)
           ? cots.actual_percent_of_flood
@@ -5252,6 +5730,255 @@
         return `${inches.toFixed(1)}"`;
       }
 
+      function enrichShopPlanSystems(basePlan, ev, d, proj, arch) {
+        const bp = normalizeBuildPath(basePlan.build_path || proj.build_path || studioState.buildPath);
+        const isDeluxe = typeof basePlan.is_deluxe === "boolean" ? basePlan.is_deluxe : (bp === "custom_fab_deluxe");
+        const isEductor = (basePlan.stage_alignment || arch.align) === "eductor_dry_fan";
+        const isParallelBed = (basePlan.packed_bed_layout || arch.bedLayout) === "parallel_manifold";
+        const isAirAtomize = arch.blowerDriveOption === "compressor_air_atomize";
+        const hasDiluter = !!(proj.include_plume_diluter ?? el("in-include-plume-diluter")?.checked);
+        const hasSilencer = (proj.include_silencer ?? el("in-include-silencer")?.checked) !== false;
+        const isHeavy = normalizeCorrosionTier(proj.corrosion_tier) === "heavy_c276_frp";
+        const u = (ev && ev.urban) || {};
+        const uElec = u.electrical || {};
+        const uNoise = u.noise || {};
+        const q = d.quench || {};
+        const b = d.blower || {};
+
+        const reqV = Number.isFinite(uElec.required_voltage) && uElec.required_voltage > 0 ? uElec.required_voltage : ((b.recommended_motor_hp || 2.0) <= 1.0 ? 120 : 240);
+        const reqA = Number.isFinite(uElec.required_amps) && uElec.required_amps > 0 ? uElec.required_amps : (reqV === 240 ? 12.5 : 14.8);
+        const breakerA = reqA <= 15 ? 20 : (reqA <= 22 ? 30 : 40);
+        const awg = breakerA <= 20 ? "12 AWG THWN-2" : (breakerA <= 30 ? "10 AWG THWN-2" : "8 AWG THWN-2");
+        const sprayGpm = Math.max(1.2, Number(q.total_spray_water_gpm || 2.4));
+        const recircGpm = Number((sprayGpm * 1.65 + 2.5).toFixed(1));
+        const propFt = Number.isFinite(uNoise.property_line_ft) ? uNoise.property_line_ft : (proj.property_line_ft || 35);
+        const bareDba = Number.isFinite(uNoise.bare_dba_3ft) && uNoise.bare_dba_3ft > 0 ? uNoise.bare_dba_3ft : 86;
+        const defaultAtten = (hasSilencer ? 13 : 0) + (isDeluxe ? 9 : 4);
+        const treatedDba = Number.isFinite(uNoise.silenced_dba_3ft) && uNoise.silenced_dba_3ft > 0
+          ? uNoise.silenced_dba_3ft
+          : Math.max(54, bareDba - defaultAtten);
+        const propDba = Number.isFinite(uNoise.property_line_dba) && uNoise.property_line_dba > 0
+          ? uNoise.property_line_dba
+          : Math.max(32, Math.round(treatedDba - 20 * Math.log10(Math.max(3, propFt) / 3)));
+
+        const baseCl = basePlan.clearances || {};
+        const clearances = {
+          flue_to_combustibles_in: Number.isFinite(baseCl.flue_to_combustibles_in) ? baseCl.flue_to_combustibles_in : 36,
+          property_line_min_ft: Number.isFinite(baseCl.property_line_min_ft) ? baseCl.property_line_min_ft : (proj.vapor_glaze_mode === "salt" ? 30 : 10),
+          stack_above_roof_ft: Number.isFinite(baseCl.stack_above_roof_ft) ? baseCl.stack_above_roof_ft : 6,
+          service_aisle_in: Number.isFinite(baseCl.service_aisle_in) ? baseCl.service_aisle_in : 36,
+          nec_panel_depth_in: Number.isFinite(baseCl.nec_panel_depth_in) ? baseCl.nec_panel_depth_in : 36,
+          nec_panel_width_in: Number.isFinite(baseCl.nec_panel_width_in) ? baseCl.nec_panel_width_in : 30,
+          pump_service_in: Number.isFinite(baseCl.pump_service_in) ? baseCl.pump_service_in : 24,
+          cleanout_swing_in: Number.isFinite(baseCl.cleanout_swing_in) ? baseCl.cleanout_swing_in : 24,
+          hose_bend_radius_in: Number.isFinite(baseCl.hose_bend_radius_in) ? baseCl.hose_bend_radius_in : 6,
+          wiring_access_note: baseCl.wiring_access_note || "NEC 110.26: Keep 36\" depth × 30\" width completely clear in front of NEMA 4X Panel & NEC 430.102 Lockable Sight Disconnect; maintain 6\" min hose bend radius.",
+        };
+
+        const electrical = (Array.isArray(basePlan.electrical) && basePlan.electrical.length > 0) ? basePlan.electrical : [
+          {
+            id: "E1", label: "Main Studio Feeder & Sight Disconnect", from: "Main Studio Panel", to: "NEC 430.102 Disconnect → NEMA 4X VFD Panel",
+            voltage: `${reqV}V 1Ø`, amps: Number(reqA.toFixed(1)), breaker_amps: breakerA, wire_gauge: awg, conduit: "3/4\" LFMC / EMT Wet-Loc",
+            nec_ref: "NEC 430.102 / 430.122", is_safety_loop: false,
+            notes: isDeluxe ? "UL 508A NEMA 4X SS panel w/ through-door lockable disconnect & 3% line reactor" : "Lockable disconnect within sight (<= 50 ft) of blower motor",
+          },
+          {
+            id: "E2", label: isEductor ? "VFD Output → Dry Ambient Motive Fan" : "VFD Output → Stage 4 Blower Motor",
+            from: "NEMA 4X VFD Panel", to: isEductor ? "Elevated Dry Motive Fan" : "Stage 4 ID Blower TEFC Motor",
+            voltage: `${reqV}V 3Ø VFD`, amps: Number((reqA * 0.72).toFixed(1)), breaker_amps: breakerA, wire_gauge: "12 AWG Shielded VFD", conduit: "3/4\" LFMC (Grounded Shield)",
+            nec_ref: "NEC 430.122 / 250", is_safety_loop: false,
+            notes: "360° braided shield ground at VFD & motor peckerhead to eliminate EMI",
+          },
+          {
+            id: "E3", label: "Hardwired 24VDC Safety Interlock Loop", from: "200°F Snap-Disc + 0.25 GPM Flow + E-Stop", to: "Safety Relay → Belimo Fail-Open Bypass Damper & VFD Enable",
+            voltage: "24VDC Class 2", amps: 1.5, breaker_amps: 5, wire_gauge: "16 AWG Red Jacket", conduit: "1/2\" Dedicated LFMC",
+            nec_ref: "NFPA 86 / NEC 725", is_safety_loop: true,
+            notes: "Series NC hardwired loop — bypasses software/RPi; opens damper immediately on >200°F or water loss",
+          },
+          {
+            id: "E4", label: "Recirculation Pump GFCI Circuit", from: "NEMA 4X Panel / Subpanel", to: "Mag-Drive Recirculation Pump",
+            voltage: "120V 1Ø", amps: 3.8, breaker_amps: 15, wire_gauge: "14 AWG THWN-2", conduit: "1/2\" LFMC Wet-Loc",
+            nec_ref: "NEC 210.8(F)", is_safety_loop: false,
+            notes: "Dedicated 120V GFCI receptacle / starter interlocked with sump low-level float",
+          },
+          {
+            id: "E5", label: "Sensors & Modbus RS-485 Conduit", from: "Kiln ΔP Tap + Type-K TC + Sump pH", to: "NEMA 4X Control Panel",
+            voltage: "24VDC / RS-485", amps: 0.4, breaker_amps: 2, wire_gauge: "18 AWG Shielded Twisted-Pair", conduit: "1/2\" Separate PVC/EMT",
+            nec_ref: "NEC 725.136", is_safety_loop: false,
+            notes: "Route >= 12\" away from VFD output conduit; cross power runs at 90° only",
+          },
+          ...(hasDiluter ? [{
+            id: "E6", label: "Plume Dilution Squirrel-Cage Fan", from: "NEMA 4X Panel", to: "Stack Mixing Tee 120V Diluter Fan",
+            voltage: "120V 1Ø", amps: 4.5, breaker_amps: 15, wire_gauge: "14 AWG THWN-2", conduit: "1/2\" LFMC",
+            nec_ref: "NEC 210.8", is_safety_loop: false,
+            notes: "Interlocked with blower run signal for winter condensation plume suppression",
+          }] : []),
+        ];
+
+        const pump_station = (basePlan.pump_station && basePlan.pump_station.pump_type) ? basePlan.pump_station : {
+          location: "Skid Front-Left next to Baffled Sump (24\" front service clearance)",
+          pump_type: isDeluxe ? "Sealless Magnetic-Drive Chemical Pump (PVDF / Ryton)" : "Chemical-Duty Mag-Drive Recirculation Pump (PP/Viton)",
+          flow_gpm: recircGpm,
+          head_ft: 34,
+          hp: 0.33,
+          voltage: "120V 1Ø GFCI",
+          suction_size_in: 1.0,
+          discharge_size_in: 0.75,
+          strainer: "1\" CPVC Y-Strainer (40-mesh 316L screen) + Union Ball Valve",
+          backflow_preventer: "IPC 608 ASSE 1013 RPZ / 2\" Vertical Air Gap",
+          drain_spec: "2\" Full-Port Ball Valve → Cool <= 140°F & pH 6.5–8.5 (IPC 702.5)",
+        };
+
+        const plumbing = (Array.isArray(basePlan.plumbing) && basePlan.plumbing.length > 0) ? basePlan.plumbing : [
+          {
+            id: "P1", label: "Potable Makeup Water Supply", fluid: "Potable Cold Water", from: "Studio Hose Bib / Line", to: "IPC 608 RPZ / Air Gap → Sump Float Valve",
+            size_in: 0.75, material: "Braided Hose / PEX + Brass RPZ", flow_gpm: Number(sprayGpm.toFixed(1)), pressure_psi: 45,
+            valves_fittings: "ASSE 1013 RPZ + Isolation Ball Valve + Float Valve", notes: "Mandatory IPC 608 backflow protection prevents brine siphon",
+          },
+          {
+            id: "P2", label: "Sump Flooded Suction", fluid: "Buffered NaHCO₃ Liquor", from: "Baffled Sump Clean Chamber", to: "Y-Strainer → Recirculation Pump Inlet",
+            size_in: 1.0, material: "Sch 80 CPVC + EPDM Union", flow_gpm: recircGpm, pressure_psi: 2,
+            valves_fittings: "1\" Isolation Ball Valve + 40-Mesh Y-Strainer + True Union", notes: "Flooded suction >= 6\" below minimum sump waterline prevents cavitation",
+          },
+          {
+            id: "P3", label: "Stage 1 Quench Spray Feed", fluid: "Buffered Spray Water", from: "Pump Discharge Header", to: "Flow Switch (0.25 GPM) → Stage 1 Quench Lance",
+            size_in: 0.75, material: "Braided PTFE / EPDM Hose + 316L Lance", flow_gpm: Number((sprayGpm * 0.65).toFixed(1)), pressure_psi: 28,
+            valves_fittings: "0.25 GPM Safety Flow Switch + Check Valve + Pressure Gauge", notes: "Interlocked with E3 hardwired NFPA 86 safety loop",
+          },
+          {
+            id: "P4", label: "Stage 2 Venturi Throat Spray", fluid: "Recirc Scrubbing Liquor", from: "Pump Discharge Branch", to: "Stage 2 Venturi Throat Nozzles",
+            size_in: 0.5, material: "Braided EPDM Hose + 316L Fittings", flow_gpm: Number((sprayGpm * 0.45).toFixed(1)), pressure_psi: 22,
+            valves_fittings: "Needle Throttle Valve + Inline Strainer + Check Valve", notes: "Feeds fine mist at venturi throat for NaCl/ash impaction",
+          },
+          ...(isAirAtomize ? [{
+            id: "A1", label: "Shop Compressor Air-Atomize Line", fluid: "Clean Regulated Shop Air (5.0 SCFM @ 40 PSI)", from: "Studio Air Compressor", to: "Filter-Regulator → Twin-Fluid Venturi Nozzle",
+            size_in: 0.375, material: "3/8\" Braided Air Hose", flow_gpm: 0.0, pressure_psi: 40,
+            valves_fittings: "5 µm Coalescing Filter + 40 PSI Regulator + Solenoid", notes: "Delivers 5 SCFM @ 40 PSI for 25 µm droplet atomization",
+          }] : []),
+          {
+            id: "P5", label: isParallelBed ? "Stage 3 Parallel-Manifold Top Riser" : "Stage 3 Packed-Bed Top Distributor",
+            fluid: "Alkaline NaHCO₃ Solution", from: "Pump Discharge Riser", to: isParallelBed ? "Pressurized Parallel-Pipe Spray Header" : "Stage 3 Top Liquid Distributor Ring",
+            size_in: 0.75, material: "Sch 80 CPVC / Braided EPDM", flow_gpm: Number(Math.max(1.8, recircGpm * 0.55).toFixed(1)), pressure_psi: 18,
+            valves_fittings: "Rotameter Flow Meter + Throttle Ball Valve + Check Valve", notes: "Maintains uniform wetting across packing media for >=99% HCl capture",
+          },
+          {
+            id: "P6", label: "Gravity Return Drains (S1 + S3)", fluid: "Spent Brine + Settled Ash", from: "Stage 1 & Stage 3 Bottom Ports", to: "Baffled Sump Settling Chamber",
+            size_in: 2.0, material: "Sch 80 CPVC Gravity Drain", flow_gpm: recircGpm, pressure_psi: 0,
+            valves_fittings: isEductor ? ">= 8\" Deep U-Trap Liquid Seal + Cleanout Tee" : "Slope >= 1/4\"/ft + Cleanout Wye",
+            notes: isEductor ? "Deep liquid U-trap required to seal +5 inWC positive-pressure eductor bed" : "Drains first into ash-settling weir before pump suction bay",
+          },
+          {
+            id: "P7", label: "Sump Cool-Down & Neutralized Drain", fluid: "Neutralized Salt Brine (<=140°F)", from: "Sump Sloped Bottom Port", to: "pH Check Tee → Floor Drain",
+            size_in: 2.0, material: "Sch 80 CPVC + Full-Port Ball Valve", flow_gpm: 12.0, pressure_psi: 0,
+            valves_fittings: "2\" Full-Port Ball Valve + Sample Cock + Camlock Hose", notes: "IPC 702.5: Verify temp <= 140°F and pH 6.5–8.5 before draining",
+          },
+        ];
+
+        const ceramicExtraLbs = arch.packingMediaOption === "diy_ceramic_rings" ? 135 : 0;
+        const bracing = (Array.isArray(basePlan.bracing) && basePlan.bracing.length > 0) ? basePlan.bracing : [
+          {
+            id: "B1", component: "Base Structural Skid Frame",
+            member_spec: isDeluxe ? "2\"×2\"×3/16\" Welded Powder-Coated Steel Forklift Skid" : "1-5/8\" Galvanized Unistrut / PT Skid Frame",
+            mounting: "Full perimeter skid w/ 6× welded gusset anchor pads", load_lbs: 920 + ceramicExtraLbs,
+            anchor_spec: "6× 1/2\" × 4-1/4\" 316 SS Concrete Wedge Anchors", notes: "Level within 1/8\" across pad; forklift pockets included in Deluxe",
+          },
+          {
+            id: "B2", component: "Stage 1 Quench Standoffs & Thermal Saddle",
+            member_spec: "316L SS Adjustable Pipe Standoffs + Ceramic-Lined Flue Saddle",
+            mounting: "Bolted to skid baseplate w/ slotted thermal-expansion holes", load_lbs: 165,
+            anchor_spec: "4× 3/8\" 316 SS Anchor Bolts w/ Belleville Washers", notes: "Accommodates thermal expansion from 2400°F kiln flue collar",
+          },
+          {
+            id: "B3", component: isParallelBed ? "Stage 3 Parallel-Bundle Support Frame & K-Bracing" : "Stage 3 Tall-Column Frame & Diagonal K-Bracing",
+            member_spec: "2\"×2\"×1/8\" Steel Uprights + 1-1/2\" Diagonal K-Braces + Collar Ring",
+            mounting: "4-post vertical cage tied to skid + mid-height lateral clamp ring", load_lbs: 440 + ceramicExtraLbs,
+            anchor_spec: "4× 1/2\" 316 SS Concrete Wedge Anchors (Overturning Rated)", notes: ceramicExtraLbs > 0 ? "Sized for heavier wet DIY stoneware Raschig rings + wind load" : "Resists wet column operating load + 85 mph wind overturning",
+          },
+          {
+            id: "B4", component: isEductor ? "Dry-Fan Elevated Frame & Downflow Tee Support" : "Overhead Stage 3→4 Duct Hangers & Pipe Saddles",
+            member_spec: "Clevis Pipe Saddles + 3/8\" SS Threaded Rod / Cantilever Bracket",
+            mounting: isEductor ? "Steel column frame supporting elevated dry fan & tee" : "Suspended from Stage 3 frame to relieve flange bending moment",
+            load_lbs: 110, anchor_spec: "3/8\" 316 SS Locknuts & Fender Washers", notes: "Prevents CPVC duct sag and blower inlet flange stress",
+          },
+          {
+            id: "B5", component: "Blower Pedestal & Vibration Isolation Boots",
+            member_spec: "Heavy Steel Blower Pedestal + Flexible PTFE/EPDM Inlet & Outlet Boots",
+            mounting: "Neoprene shear-mount isolators between blower base & skid", load_lbs: 185,
+            anchor_spec: "4× 3/8\" Captive Isolator Studs + SS Hose Clamps", notes: "Decouples blower vibration from CPVC ductwork & exhaust stack",
+          },
+        ];
+
+        const acoustics = (Array.isArray(basePlan.acoustics) && basePlan.acoustics.length > 0) ? basePlan.acoustics : [
+          {
+            id: "S1", location: isEductor ? "Elevated Dry Motive Fan Enclosure" : "Stage 4 ID Blower Enclosure",
+            treatment: "Acoustic Blower Baffle Box w/ Baffled Cooling-Air Labyrinth",
+            material: "2\" Rockwool Safe'n'Sound Mineral Wool + Perforated Metal Liner",
+            thickness_in: 2.0, attenuation_dba: isDeluxe ? 11 : 7,
+            notes: "Removable front service lid; baffled intake/exhaust path keeps TEFC motor cool",
+          },
+          {
+            id: "S2", location: "Vertical Exhaust Stack (Above Blower Boot)",
+            treatment: "Tuned Absorptive Discharge Stack Silencer",
+            material: "Moisture-Resistant Fiberglass / Acoustic Foam Core in CPVC/FRP Jacket",
+            thickness_in: 2.0, attenuation_dba: hasSilencer ? (isDeluxe ? 10 : 8) : 0,
+            notes: "Suppresses tonal blade-pass whine radiating out the stack exit",
+          },
+          {
+            id: "S3", location: "Blower Pedestal & Recirculation Pump Baseplate",
+            treatment: "Elastomeric Vibration Isolation Pads & Flexible Duct Boots",
+            material: "1\" Ribbed Neoprene Pads + Flexible PTFE/EPDM Boots",
+            thickness_in: 1.0, attenuation_dba: 3,
+            notes: "Breaks structure-borne 60 Hz hum through concrete slab & rigid ductwork",
+          },
+          ...(hasDiluter ? [{
+            id: "S4", location: "120V Plume Diluter Fan Inlet Duct",
+            treatment: "Diluter Fan Inlet Acoustic Duct Liner",
+            material: "1\" Closed-Cell Acoustic Elastomeric Liner",
+            thickness_in: 1.0, attenuation_dba: 3,
+            notes: "Damps squirrel-cage inlet intake rush noise",
+          }] : []),
+        ];
+
+        const acRaw = basePlan.acoustic_summary || {};
+        const acoustic_summary = {
+          bare_dba_3ft: Number.isFinite(acRaw.bare_dba_3ft) && acRaw.bare_dba_3ft > 0 ? acRaw.bare_dba_3ft : bareDba,
+          treated_dba_3ft: Number.isFinite(acRaw.treated_dba_3ft) && acRaw.treated_dba_3ft > 0 ? acRaw.treated_dba_3ft : treatedDba,
+          property_line_dba: Number.isFinite(acRaw.property_line_dba) && acRaw.property_line_dba > 0 ? acRaw.property_line_dba : propDba,
+          property_line_ft: Number.isFinite(acRaw.property_line_ft) && acRaw.property_line_ft > 0 ? acRaw.property_line_ft : propFt,
+          total_reduction_dba: Number.isFinite(acRaw.total_reduction_dba) && acRaw.total_reduction_dba > 0
+            ? acRaw.total_reduction_dba
+            : Math.max(0, Math.round((Number.isFinite(acRaw.bare_dba_3ft) ? acRaw.bare_dba_3ft : bareDba) - (Number.isFinite(acRaw.treated_dba_3ft) ? acRaw.treated_dba_3ft : treatedDba))),
+        };
+
+        const dsRaw = basePlan.deluxe_spec || {};
+        const deluxe_spec = (isDeluxe || dsRaw.enabled) ? {
+          enabled: true,
+          vessel_material: dsRaw.vessel_material || (isHeavy ? "TIG-welded Alloy C-276 Quench/Venturi + Filament-Wound Derakane FRP Column" : "TIG-welded 12 ga 316L SS Quench/Venturi + Derakane Vinyl-Ester FRP Column"),
+          flange_standard: dsRaw.flange_standard || "Machined ANSI/ASME B16.5 Class 150 Lap-Joint Flanges + PTFE Envelope Gaskets",
+          sight_glasses: dsRaw.sight_glasses || "2× Borosilicate Sight-Glass Ports (Stage 1 Quench Spray + Stage 3 Packing Bed)",
+          cleanout_hatches: dsRaw.cleanout_hatches || "2× Bolted NFPA 91 Quick-Release Cleanout Doors + 1\" Ceramic/SS Flue Jacket",
+          skid_frame: dsRaw.skid_frame || "Welded 2\"×2\"×3/16\" Powder-Coated Steel Forklift Skid + K-Bracing + Wedge Anchors",
+          panel_standard: dsRaw.panel_standard || "UL 508A NEMA 4X SS Panel + NEC 430.102 Disconnect + 3% Reactor + FM 200°F Limit",
+          pump_upgrade: dsRaw.pump_upgrade || "Sealless Magnetic-Drive Chemical Pump + Sloped Settling Sump + 2\" Drain Valve",
+          cost_delta_usd: Number.isFinite(dsRaw.cost_delta_usd) ? dsRaw.cost_delta_usd : 3450,
+          summary: dsRaw.summary || "Custom Fabrication Deluxe: TIG-welded heavy-gauge vessels, ANSI Class 150 flanges, sight glasses, NFPA 91 cleanout hatches, forklift skid, UL 508A NEMA 4X panel, mag-drive pump, and 2\" Rockwool acoustic blower box.",
+          highlights: Array.isArray(dsRaw.highlights) ? dsRaw.highlights : [],
+        } : null;
+
+        return Object.assign({}, basePlan, {
+          build_path: bp,
+          is_deluxe: isDeluxe,
+          clearances,
+          electrical,
+          plumbing,
+          pump_station,
+          bracing,
+          acoustics,
+          acoustic_summary,
+          deluxe_spec,
+        });
+      }
+
       function getEffectiveShopPlan() {
         const ev = studioState.evaluation;
         const d = (ev && ev.design) || state.design || {};
@@ -5259,7 +5986,7 @@
         const arch = getEffectiveArchitectureData(ev);
 
         if (ev && ev.shop_plan && Array.isArray(ev.shop_plan.parts) && ev.shop_plan.parts.length > 0) {
-          return ev.shop_plan;
+          return enrichShopPlanSystems(ev.shop_plan, ev, d, proj, arch);
         }
 
         // Graceful fallback synthesis if studio backend is offline or omits shop_plan
@@ -5420,9 +6147,13 @@
           },
         ];
 
-        return {
+        return enrichShopPlanSystems({
           title: `${proj.studio_name || "Studio Kiln Scrubber"} — Complete Shop Plan`,
+          build_path: normalizeBuildPath(proj.build_path || studioState.buildPath),
+          is_deluxe: normalizeBuildPath(proj.build_path || studioState.buildPath) === "custom_fab_deluxe",
           stage_alignment: arch.align,
+          packed_bed_layout: arch.bedLayout,
+          venturi_layout: arch.ventLayout,
           compact_footprint: arch.compact,
           overall_length_in: overallL,
           overall_width_in: overallW,
@@ -5434,8 +6165,13 @@
             property_line_min_ft: proj.vapor_glaze_mode === "salt" ? 30 : 10,
             stack_above_roof_ft: 6,
             service_aisle_in: 36,
+            nec_panel_depth_in: 36,
+            nec_panel_width_in: 30,
+            pump_service_in: 24,
+            cleanout_swing_in: 24,
+            hose_bend_radius_in: 6,
           },
-        };
+        }, ev, d, proj, arch);
       }
 
       function applyPlanTransform() {
@@ -5504,8 +6240,13 @@
         const isParallelBed = (plan.packed_bed_layout || arch.bedLayout) === "parallel_manifold";
         const isParallelVent = (plan.venturi_layout || arch.ventLayout) === "parallel_mini_venturis";
         const isCompact = !!(plan.compact_footprint ?? arch.compact);
+        const isDeluxe = !!plan.is_deluxe || normalizeBuildPath(plan.build_path || studioState.buildPath) === "custom_fab_deluxe";
+        const isAirAtomize = arch.blowerDriveOption === "compressor_air_atomize";
         const hasDiluter = !!(el("in-include-plume-diluter")?.checked);
         const sel = planState.selectedPartNum;
+        const layers = planState.layers || { electrical: true, plumbing: true, bracing: true, clearances: true, acoustics: true };
+        const acSum = plan.acoustic_summary || { bare_dba_3ft: 86, treated_dba_3ft: 64, property_line_dba: 41, property_line_ft: 35, total_reduction_dba: 22 };
+        const acBadgeText = `${Math.round(acSum.bare_dba_3ft || 86)} → ${Math.round(acSum.treated_dba_3ft || 64)} dBA @ 3 ft · ${Math.round(acSum.property_line_dba || 41)} dBA @ ${Math.round(acSum.property_line_ft || 35)} ft`;
 
         // Map canonical part IDs to their actual callout numbers from plan.parts (supports [1]..[9])
         const partsList = Array.isArray(plan.parts) ? plan.parts : [];
@@ -5549,11 +6290,29 @@
             <pattern id="bp-nfpa-hatch" width="10" height="10" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
               <line x1="0" y1="0" x2="0" y2="10" stroke="#f97316" stroke-width="1.4" opacity="0.45"/>
             </pattern>
+            <pattern id="bp-nec-hatch" width="8" height="8" patternTransform="rotate(-45 0 0)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="8" stroke="#22c55e" stroke-width="1.4" opacity="0.5"/>
+            </pattern>
+            <pattern id="bp-service-hatch" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="8" stroke="#06b6d4" stroke-width="1.1" opacity="0.38"/>
+            </pattern>
+            <pattern id="bp-acoustic-hatch" width="7" height="7" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="7" stroke="#a855f7" stroke-width="1.6" opacity="0.55"/>
+            </pattern>
             <marker id="bp-arrow-end" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
               <path d="M 0 1 L 7 4 L 0 7 z" fill="#7dd3fc"/>
             </marker>
             <marker id="bp-arrow-start" viewBox="0 0 8 8" refX="1" refY="4" markerWidth="6" markerHeight="6" orient="auto">
               <path d="M 8 1 L 1 4 L 8 7 z" fill="#7dd3fc"/>
+            </marker>
+            <marker id="bp-arrow-water" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 0 1 L 7 4 L 0 7 z" fill="#06b6d4"/>
+            </marker>
+            <marker id="bp-arrow-elec" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 0 1 L 7 4 L 0 7 z" fill="#f59e0b"/>
+            </marker>
+            <marker id="bp-arrow-safety" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 0 1 L 7 4 L 0 7 z" fill="#ef4444"/>
             </marker>
           </defs>
           <rect x="0" y="0" width="${W}" height="${H}" fill="#081424"/>
@@ -5573,7 +6332,7 @@
           const baseX = ex + (showTop ? 92 : 170);
 
           out += `<rect x="${ex}" y="${ey}" width="${ew}" height="${eh}" fill="rgba(10, 24, 42, 0.55)" stroke="#234873" stroke-width="1"/>`;
-          out += `<text x="${ex + 14}" y="${ey + 22}" fill="#7dd3fc" font-family="monospace" font-size="12" font-weight="800">FRONT ELEVATION — ${escapeHtml(isEductor ? "DRY-FAN DOWNFLOW EDUCTOR" : "INLINE ID BLOWER")}${isParallelBed ? ` · SHELL-LESS ${arch.parallelBed.pipeNomIn}" UNISEAL BUNDLE` : ""}${isCompact ? " · U-TURN SKID" : ""}</text>`;
+          out += `<text x="${ex + 14}" y="${ey + 22}" fill="#7dd3fc" font-family="monospace" font-size="12" font-weight="800">FRONT ELEVATION — ${escapeHtml(isEductor ? "DRY-FAN DOWNFLOW EDUCTOR" : "INLINE ID BLOWER")}${isParallelBed ? ` · SHELL-LESS ${arch.parallelBed.pipeNomIn}" UNISEAL BUNDLE` : ""}${isCompact ? " · U-TURN SKID" : ""}${isDeluxe ? " · CUSTOM FAB DELUXE" : ""}</text>`;
 
           // Ground / skid datum line
           out += `<line x1="${ex + 24}" y1="${floorY}" x2="${ex + ew - 24}" y2="${floorY}" stroke="#47729e" stroke-width="2"/>`;
@@ -5585,11 +6344,26 @@
           const qH = 160;
           const qTopY = floorY - qH;
           const qInY = qTopY + 32;
+
+          // Clearances layer on Elevation (NFPA 211 36" hot-flue clearance + 24" cleanout/pump notes)
+          if (layers.clearances) {
+            out += `<g class="plan-layer-clearances">`;
+            out += `<rect x="${qX - 66}" y="${qInY - 38}" width="72" height="76" fill="url(#bp-nfpa-hatch)" stroke="#f97316" stroke-width="1.2" stroke-dasharray="5 3"/>`;
+            out += `<text x="${qX - 64}" y="${qInY - 43}" fill="#fdba74" font-family="monospace" font-size="8.5" font-weight="700">NFPA 211: ${fmtPlanLen(cl.flue_to_combustibles_in || 36)}</text>`;
+            out += `<text x="${ex + 30}" y="${ey + eh - 14}" fill="#86efac" font-family="monospace" font-size="8.8">CODES: NEC 110.26 ${fmtPlanLen(cl.nec_panel_depth_in || 36)}×${fmtPlanLen(cl.nec_panel_width_in || 30)} PANEL · ${fmtPlanLen(cl.pump_service_in || 24)} PUMP/CLEANOUT · IMC 510 STACK +${cl.stack_above_roof_ft || 6} FT ROOF</text>`;
+            out += `</g>`;
+          }
+
           out += `<g stroke="${sel === numQuench ? "#f97316" : "#fb923c"}" stroke-width="${sel === numQuench ? 2.6 : 1.6}" fill="rgba(249,115,22,0.10)">`;
           out += `<rect x="${qX}" y="${qTopY}" width="${qW}" height="${qH}"/>`;
           // Spray lance
           out += `<line x1="${qX + qW * 0.5}" y1="${qTopY}" x2="${qX + qW * 0.5}" y2="${qTopY + 34}" stroke="#38bdf8" stroke-width="2"/>`;
           out += `<path d="M ${qX + qW * 0.5} ${qTopY + 34} L ${qX + 10} ${floorY - 22} L ${qX + qW - 10} ${floorY - 22} Z" fill="rgba(56,189,248,0.14)" stroke="#38bdf8" stroke-dasharray="3 2" stroke-width="1"/>`;
+          if (isDeluxe) {
+            // Sight glass & NFPA 91 cleanout door symbols on Stage 1
+            out += `<circle cx="${qX + qW * 0.5}" cy="${qTopY + 72}" r="7" fill="rgba(125,211,252,0.28)" stroke="#fde68a" stroke-width="1.3"/>`;
+            out += `<rect x="${qX + 12}" y="${floorY - 36}" width="${qW - 24}" height="22" rx="2" fill="rgba(251,191,36,0.12)" stroke="#f59e0b" stroke-width="1.2"/>`;
+          }
           out += `</g>`;
           // Hot kiln flue inlet & bypass tee ([1])
           out += `<g stroke="${sel === numInlet ? "#f97316" : "#fb923c"}" stroke-width="${sel === numInlet ? 2.6 : 1.6}" fill="rgba(249,115,22,0.16)">`;
@@ -5622,20 +6396,28 @@
           out += `<g stroke="${sel === numControls ? "#f97316" : "#7dd3fc"}" stroke-width="${sel === numControls ? 2.4 : 1.3}" fill="rgba(56,189,248,0.10)">`;
           out += `<rect x="${ctrlBoxX}" y="${ctrlBoxY}" width="84" height="36" rx="3"/>`;
           out += `</g>`;
-          out += `<text x="${ctrlBoxX + 42}" y="${ctrlBoxY + 16}" text-anchor="middle" fill="#e0f2fe" font-family="monospace" font-size="8.5" font-weight="700">NEMA 4X</text>`;
-          out += `<text x="${ctrlBoxX + 42}" y="${ctrlBoxY + 28}" text-anchor="middle" fill="#94a3b8" font-family="monospace" font-size="8">${arch.ctrlTier === "electromechanical_only" ? "SAFETY" : "RPi+PID"}</text>`;
+          out += `<text x="${ctrlBoxX + 42}" y="${ctrlBoxY + 16}" text-anchor="middle" fill="#e0f2fe" font-family="monospace" font-size="8.5" font-weight="700">${isDeluxe ? "UL508A 4X" : "NEMA 4X"}</text>`;
+          out += `<text x="${ctrlBoxX + 42}" y="${ctrlBoxY + 28}" text-anchor="middle" fill="#94a3b8" font-family="monospace" font-size="8">${arch.ctrlTier === "electromechanical_only" ? "SAFETY" : "VFD+PID"}</text>`;
           out += svgCalloutBubble(numControls, ctrlBoxX, ctrlBoxY + 18, ctrlBoxX - 24, ctrlBoxY + 18, sel);
 
           const utilBoxY = ctrlBoxY + 48;
           out += `<g stroke="${sel === numUtil ? "#f97316" : "#a7f3d0"}" stroke-width="${sel === numUtil ? 2.4 : 1.3}" fill="rgba(16,185,129,0.10)">`;
           out += `<rect x="${ctrlBoxX}" y="${utilBoxY}" width="84" height="34" rx="3"/>`;
           out += `</g>`;
-          out += `<text x="${ctrlBoxX + 42}" y="${utilBoxY + 15}" text-anchor="middle" fill="#a7f3d0" font-family="monospace" font-size="8.5" font-weight="700">IPC608/NEC</text>`;
-          out += `<text x="${ctrlBoxX + 42}" y="${utilBoxY + 27}" text-anchor="middle" fill="#94a3b8" font-family="monospace" font-size="8">RPZ+DISC</text>`;
+          out += `<text x="${ctrlBoxX + 42}" y="${utilBoxY + 15}" text-anchor="middle" fill="#a7f3d0" font-family="monospace" font-size="8.5" font-weight="700">NEC 430.102</text>`;
+          out += `<text x="${ctrlBoxX + 42}" y="${utilBoxY + 27}" text-anchor="middle" fill="#94a3b8" font-family="monospace" font-size="8">DISC+RPZ</text>`;
           out += svgCalloutBubble(numUtil, ctrlBoxX, utilBoxY + 17, ctrlBoxX - 24, utilBoxY + 17, sel);
 
           let rightMostX = qX + qW;
           let topMostY = qTopY;
+          let elevGeom = {
+            qX, qW, qTopY, qInY, floorY, sumpX, sumpY, sumpW,
+            vMidX: qX + qW + 65 * xScale, vMidY: floorY - 58,
+            pX: 0, pW: 90, pTopY: floorY - 225, pH: 225,
+            bX: 0, bY: floorY - 72, bR: 36,
+            stX: 0, stTopY: 120, stBotY: 260,
+            ductY: 140,
+          };
 
           if (isEductor) {
             const teeX = qX + qW + 66 * xScale;
@@ -5648,6 +6430,15 @@
             const sweepY = floorY - 36;
             rightMostX = pX + pW + 36;
             topMostY = Math.min(fanY - 40, pTopY - 120);
+            const stX = pX + pW * 0.5;
+            const stTopY = pTopY - 102;
+            elevGeom = Object.assign(elevGeom, {
+              vMidX: teeX, vMidY: teeY + 70,
+              pX, pW, pTopY, pH,
+              bX: teeX - 14, bY: fanY, bR: 32,
+              stX, stTopY, stBotY: pTopY - 24,
+              ductY: teeY,
+            });
 
             out += `<g stroke="${sel === numVenturi ? "#f97316" : "#cbd5e1"}" stroke-width="${sel === numVenturi ? 2.5 : 1.5}" fill="rgba(148,163,184,0.14)">`;
             out += `<rect x="${qX + qW}" y="${teeY - 12}" width="${teeX - (qX + qW) - 16}" height="24"/>`;
@@ -5676,8 +6467,6 @@
             out += svgDimLine(pX + pW, pTopY, pX + pW, floorY, fmtPlanLen(pHIn), 22, true, "#67e8f9");
             out += svgCalloutBubble(numPacked, pX + pW * 0.5, pTopY + pH * 0.5, pX + pW + 52, pTopY + pH * 0.45, sel);
 
-            const stX = pX + pW * 0.5;
-            const stTopY = pTopY - 102;
             out += `<g stroke="${sel === numStack ? "#f97316" : "#34d399"}" stroke-width="${sel === numStack ? 2.5 : 1.6}" fill="rgba(16,185,129,0.14)">`;
             out += `<polygon points="${pX},${pTopY} ${stX - 14},${pTopY - 24} ${stX + 14},${pTopY - 24} ${pX + pW},${pTopY}"/>`;
             out += `<rect x="${stX - 14}" y="${stTopY}" width="28" height="${(pTopY - 24) - stTopY}"/>`;
@@ -5700,6 +6489,18 @@
             const bY = floorY - 72;
             rightMostX = bX + 66;
             topMostY = pTopY - 88;
+            const pMidX = pX + pW * 0.5;
+            const dropX = pX + pW + 26 * xScale;
+            const ductY = pTopY - 40;
+            const stX = bX + 26;
+            const stTopY = pTopY - 68;
+            elevGeom = Object.assign(elevGeom, {
+              vMidX: vX + vW * 0.45, vMidY: vY,
+              pX, pW, pTopY, pH,
+              bX, bY, bR: 36,
+              stX, stTopY, stBotY: bY - 24,
+              ductY, dropX,
+            });
 
             out += `<g stroke="${sel === numVenturi ? "#f97316" : "#cbd5e1"}" stroke-width="${sel === numVenturi ? 2.5 : 1.5}" fill="rgba(148,163,184,0.14)">`;
             out += `<line x1="${qX + qW}" y1="${vY}" x2="${vX}" y2="${vY}" stroke-width="14"/>`;
@@ -5719,9 +6520,6 @@
             out += svgDimLine(pX, pTopY, pX + pW, pTopY, `Ø${fmtPlanLen(pDIn)}`, -16, false, "#67e8f9");
             out += svgCalloutBubble(numPacked, pX + pW * 0.5, pTopY + pH * 0.42, pX + pW * 0.5, pTopY - 60, sel);
 
-            const pMidX = pX + pW * 0.5;
-            const dropX = pX + pW + 26 * xScale;
-            const ductY = pTopY - 40;
             out += `<path d="M ${pMidX} ${pTopY - 20} L ${pMidX} ${ductY + 14} Q ${pMidX} ${ductY} ${pMidX + 14} ${ductY} L ${dropX - 14} ${ductY} Q ${dropX} ${ductY} ${dropX} ${ductY + 14} L ${dropX} ${bY - 14} Q ${dropX} ${bY} ${dropX + 14} ${bY} L ${bX - 18} ${bY}" fill="none" stroke="#38bdf8" stroke-width="13" stroke-linecap="round"/>`;
             out += `<polygon points="${pX},${pTopY} ${pMidX - 11},${pTopY - 22} ${pMidX + 11},${pTopY - 22} ${pX + pW},${pTopY}" fill="rgba(6,182,212,0.16)" stroke="#06b6d4" stroke-width="1.5"/>`;
 
@@ -5732,8 +6530,6 @@
             out += `</g>`;
             out += svgCalloutBubble(numBlower, bX, bY + 14, bX - 18, floorY + 52, sel);
 
-            const stX = bX + 26;
-            const stTopY = pTopY - 68;
             out += `<g stroke="${sel === numStack ? "#f97316" : "#34d399"}" stroke-width="${sel === numStack ? 2.5 : 1.6}" fill="rgba(16,185,129,0.14)">`;
             out += `<rect x="${stX - 11}" y="${stTopY}" width="22" height="${bY - 24 - stTopY}"/>`;
             if (hasDiluter) {
@@ -5742,6 +6538,136 @@
             }
             out += `</g>`;
             out += svgCalloutBubble(numStack, stX + 11, stTopY + 24, stX + 48, stTopY + 18, sel);
+          }
+
+          // ---------- ELEVATION PHASE 9 SYSTEMS OVERLAYS ----------
+
+          // 3. BRACING & MOUNTING LAYER (Elevation)
+          if (layers.bracing) {
+            const skidL = qX - 18;
+            const skidR = Math.min(ex + ew - 30, rightMostX + 14);
+            out += `<g class="plan-layer-bracing">`;
+            // Structural steel base skid beam along floorY
+            out += `<rect x="${skidL}" y="${floorY - 6}" width="${skidR - skidL}" height="8" fill="rgba(129,140,248,0.22)" stroke="#818cf8" stroke-width="1.5"/>`;
+            // Concrete anchor bolt-down pad triangles (▲)
+            const anchorXs = [skidL + 12, qX + qW, elevGeom.pX - 8, elevGeom.pX + elevGeom.pW + 8, skidR - 14];
+            for (const ax of anchorXs) {
+              out += `<polygon points="${ax},${floorY + 2} ${ax - 6},${floorY + 12} ${ax + 6},${floorY + 12}" fill="#818cf8" stroke="#e0e7ff" stroke-width="0.9"/>`;
+            }
+            // Stage 3 tall-column vertical support frame & diagonal K-bracing
+            const fx1 = elevGeom.pX - 10;
+            const fx2 = elevGeom.pX + elevGeom.pW + 10;
+            const fTop = elevGeom.pTopY + 16;
+            const fMid = elevGeom.pTopY + elevGeom.pH * 0.52;
+            out += `<line x1="${fx1}" y1="${fTop}" x2="${fx1}" y2="${floorY - 6}" stroke="#818cf8" stroke-width="2.4"/>`;
+            out += `<line x1="${fx2}" y1="${fTop}" x2="${fx2}" y2="${floorY - 6}" stroke="#818cf8" stroke-width="2.4"/>`;
+            out += `<line x1="${fx1}" y1="${fMid}" x2="${fx2}" y2="${fMid}" stroke="#818cf8" stroke-width="1.5" stroke-dasharray="4 2"/>`;
+            // Diagonal K-braces on side bays
+            out += `<line x1="${fx1}" y1="${fTop}" x2="${fx1 - 12}" y2="${fMid}" stroke="#94a3b8" stroke-width="1.5"/>`;
+            out += `<line x1="${fx1 - 12}" y1="${fMid}" x2="${fx1}" y2="${floorY - 6}" stroke="#94a3b8" stroke-width="1.5"/>`;
+            out += `<line x1="${fx2}" y1="${fTop}" x2="${fx2 + 12}" y2="${fMid}" stroke="#94a3b8" stroke-width="1.5"/>`;
+            out += `<line x1="${fx2 + 12}" y1="${fMid}" x2="${fx2}" y2="${floorY - 6}" stroke="#94a3b8" stroke-width="1.5"/>`;
+            // Overhead duct pipe-saddle hanger (B4)
+            if (!isEductor && elevGeom.dropX) {
+              const hangX = (elevGeom.pX + elevGeom.pW * 0.5 + elevGeom.dropX) * 0.5;
+              out += `<line x1="${hangX}" y1="${elevGeom.ductY - 22}" x2="${hangX}" y2="${elevGeom.ductY - 5}" stroke="#a5b4fc" stroke-width="1.6"/>`;
+              out += `<path d="M ${hangX - 8} ${elevGeom.ductY + 4} A 8 8 0 0 0 ${hangX + 8} ${elevGeom.ductY + 4}" fill="none" stroke="#a5b4fc" stroke-width="2"/>`;
+              out += `<text x="${hangX}" y="${elevGeom.ductY - 25}" text-anchor="middle" fill="#c7d2fe" font-family="monospace" font-size="8">B4 SADDLE</text>`;
+            }
+            // Flexible vibration isolation boots at blower inlet & outlet (B5)
+            out += `<rect x="${elevGeom.bX - elevGeom.bR - 9}" y="${elevGeom.bY - 8}" width="8" height="16" fill="#312e81" stroke="#a5b4fc" stroke-width="1.2"/>`;
+            out += `<rect x="${elevGeom.stX - 13}" y="${elevGeom.stBotY - 6}" width="26" height="7" fill="#312e81" stroke="#a5b4fc" stroke-width="1.2"/>`;
+            out += `<text x="${fx2 + 15}" y="${fMid + 3}" fill="#c7d2fe" font-family="monospace" font-size="8" font-weight="700">B3 K-BRACE</text>`;
+            out += `<text x="${skidL + 6}" y="${floorY - 10}" fill="#c7d2fe" font-family="monospace" font-size="8">B1 SKID + ▲ ANCHORS</text>`;
+            out += `</g>`;
+          }
+
+          // 5. SOUND BAFFLING LAYER (Elevation)
+          if (layers.acoustics) {
+            out += `<g class="plan-layer-acoustics">`;
+            // Acoustic Blower Baffle Box around Stage 4 / dry eductor blower (S1)
+            const abX = elevGeom.bX - elevGeom.bR - 14;
+            const abY = elevGeom.bY - elevGeom.bR - 14;
+            const abW = (elevGeom.bR + 14) * 2;
+            const abH = (elevGeom.bR + 14) * 2;
+            out += `<rect x="${abX}" y="${abY}" width="${abW}" height="${abH}" rx="4" fill="url(#bp-acoustic-hatch)" stroke="#a855f7" stroke-width="2" stroke-dasharray="6 3"/>`;
+            // Cooling-air labyrinth baffle ribs on enclosure side
+            out += `<path d="M ${abX + abW} ${abY + 12} L ${abX + abW + 10} ${abY + 12} L ${abX + abW + 10} ${abY + 26} L ${abX + abW} ${abY + 26}" fill="none" stroke="#c084fc" stroke-width="1.6"/>`;
+            out += `<text x="${abX + abW * 0.5}" y="${abY - 5}" text-anchor="middle" fill="#d8b4fe" font-family="monospace" font-size="8.2" font-weight="700">S1 2" ROCKWOOL BAFFLE BOX</text>`;
+            // Tuned Absorptive Stack Silencer on exhaust stack (S2)
+            const silH = Math.max(36, (elevGeom.stBotY - elevGeom.stTopY) * 0.42);
+            const silY = elevGeom.stBotY - silH - 12;
+            out += `<rect x="${elevGeom.stX - 18}" y="${silY}" width="36" height="${silH}" rx="3" fill="url(#bp-acoustic-hatch)" stroke="#a855f7" stroke-width="1.8"/>`;
+            out += `<text x="${elevGeom.stX - 22}" y="${silY + silH * 0.5 + 3}" text-anchor="end" fill="#d8b4fe" font-family="monospace" font-size="8" font-weight="700">S2 SILENCER</text>`;
+            // Elastomeric vibration pads under blower pedestal & pump (S3)
+            out += `<rect x="${elevGeom.bX - 28}" y="${floorY - 4}" width="56" height="5" fill="#2dd4bf" stroke="#a855f7" stroke-width="1"/>`;
+            // Live dBA Attenuation Callout Badge
+            const badgeX = ex + 14;
+            const badgeY = ey + 34;
+            out += `<rect x="${badgeX}" y="${badgeY}" width="268" height="22" rx="4" fill="rgba(88,28,135,0.68)" stroke="#c084fc" stroke-width="1.3"/>`;
+            out += `<text x="${badgeX + 8}" y="${badgeY + 14.5}" fill="#f3e8ff" font-family="monospace" font-size="9" font-weight="700">ACOUSTIC: ${escapeHtml(acBadgeText)}</text>`;
+            out += `</g>`;
+          }
+
+          // 2. PUMPS & HOSING LAYER (Elevation)
+          if (layers.plumbing) {
+            const pumpX = sumpX + sumpW + 64;
+            const pumpY = sumpY + 8;
+            const headerY = floorY + 14;
+            out += `<g class="plan-layer-plumbing">`;
+            // Recirculation Pump Station next to Sump + Y-Strainer + Valves (P2)
+            out += `<rect x="${pumpX}" y="${pumpY}" width="44" height="26" rx="4" fill="rgba(6,182,212,0.22)" stroke="#06b6d4" stroke-width="1.7"/>`;
+            out += `<circle cx="${pumpX + 14}" cy="${pumpY + 13}" r="8" fill="#081424" stroke="#38bdf8" stroke-width="1.4"/>`;
+            out += `<text x="${pumpX + 22}" y="${pumpY + 37}" text-anchor="middle" fill="#67e8f9" font-family="monospace" font-size="8" font-weight="700">PUMP + Y-STR</text>`;
+            // Suction line from sump to pump
+            out += `<line x1="${sumpX + sumpW}" y1="${pumpY + 13}" x2="${pumpX}" y2="${pumpY + 13}" stroke="#06b6d4" stroke-width="2.2" marker-end="url(#bp-arrow-water)"/>`;
+            // IPC 608 RPZ / Air Gap potable supply into sump (P1)
+            out += `<path d="M ${sumpX - 36} ${sumpY + 10} L ${sumpX} ${sumpY + 10}" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="4 2" marker-end="url(#bp-arrow-water)"/>`;
+            out += `<text x="${sumpX - 38}" y="${sumpY + 6}" text-anchor="end" fill="#7dd3fc" font-family="monospace" font-size="7.8" font-weight="700">P1 IPC 608 RPZ</text>`;
+            // IPC 702.5 <=140F sump drain valve (P7)
+            out += `<path d="M ${sumpX + 24} ${sumpY + 40} L ${sumpX + 24} ${sumpY + 56} L ${sumpX - 18} ${sumpY + 56}" fill="none" stroke="#06b6d4" stroke-width="1.8" marker-end="url(#bp-arrow-water)"/>`;
+            out += `<text x="${sumpX + 30}" y="${sumpY + 58}" fill="#67e8f9" font-family="monospace" font-size="7.8">P7 DRAIN <=140°F (IPC 702.5)</text>`;
+            // Supply header rising from pump to Stage 1 Quench (P3), Stage 2 Venturi (P4), and Stage 3 Packed Bed top (P5)
+            out += `<path d="M ${pumpX + 14} ${pumpY} L ${pumpX + 14} ${headerY} L ${qX + qW * 0.5} ${headerY} L ${qX + qW * 0.5} ${qTopY - 2}" fill="none" stroke="#06b6d4" stroke-width="1.9" marker-end="url(#bp-arrow-water)"/>`;
+            out += `<path d="M ${elevGeom.vMidX} ${headerY} L ${elevGeom.vMidX} ${elevGeom.vMidY + 12}" fill="none" stroke="#38bdf8" stroke-width="1.7" marker-end="url(#bp-arrow-water)"/>`;
+            out += `<path d="M ${elevGeom.pX - 4} ${headerY} L ${elevGeom.pX - 4} ${elevGeom.pTopY + 34} L ${elevGeom.pX + 14} ${elevGeom.pTopY + 34}" fill="none" stroke="#06b6d4" stroke-width="1.9" marker-end="url(#bp-arrow-water)"/>`;
+            // Gravity return drains (P6)
+            out += `<line x1="${qX + qW * 0.35}" y1="${floorY}" x2="${qX + qW * 0.35}" y2="${sumpY}" stroke="#38bdf8" stroke-width="2" stroke-dasharray="3 2" marker-end="url(#bp-arrow-water)"/>`;
+            out += `<line x1="${elevGeom.pX + 20}" y1="${floorY}" x2="${Math.min(sumpX + sumpW - 20, elevGeom.pX + 20)}" y2="${sumpY}" stroke="#38bdf8" stroke-width="2" stroke-dasharray="3 2" marker-end="url(#bp-arrow-water)"/>`;
+            // Air-Atomize line (A1) if compressor air-atomize enabled
+            if (isAirAtomize) {
+              out += `<path d="M ${elevGeom.vMidX + 16} ${floorY + 6} L ${elevGeom.vMidX + 16} ${elevGeom.vMidY + 14}" fill="none" stroke="#7dd3fc" stroke-width="1.6" stroke-dasharray="2 2" marker-end="url(#bp-arrow-water)"/>`;
+              out += `<text x="${elevGeom.vMidX + 20}" y="${elevGeom.vMidY + 26}" fill="#bae6fd" font-family="monospace" font-size="7.5" font-weight="700">A1 40 PSI AIR</text>`;
+            }
+            out += `<text x="${elevGeom.pX - 8}" y="${elevGeom.pTopY + 28}" text-anchor="end" fill="#67e8f9" font-family="monospace" font-size="7.8">P5 RISER</text>`;
+            out += `</g>`;
+          }
+
+          // 1. ELECTRICAL & WIRING LAYER (Elevation)
+          if (layers.electrical) {
+            const discY = utilBoxY + 17;
+            const panelX = ctrlBoxX;
+            const panelY = ctrlBoxY + 18;
+            out += `<g class="plan-layer-electrical">`;
+            // Main Panel -> Lockable Sight Disconnect -> NEMA 4X VFD Panel (E1)
+            out += `<line x1="${ctrlBoxX + 42}" y1="${utilBoxY + 34}" x2="${ctrlBoxX + 42}" y2="${utilBoxY + 52}" stroke="#f59e0b" stroke-width="2.2"/>`;
+            out += `<text x="${ctrlBoxX + 42}" y="${utilBoxY + 62}" text-anchor="middle" fill="#fcd34d" font-family="monospace" font-size="7.8" font-weight="700">E1 MAIN FEED</text>`;
+            out += `<line x1="${ctrlBoxX + 42}" y1="${utilBoxY}" x2="${ctrlBoxX + 42}" y2="${ctrlBoxY + 36}" stroke="#f59e0b" stroke-width="2.2" marker-end="url(#bp-arrow-elec)"/>`;
+            // VFD Shielded Conduit to Stage 4 Blower Motor (E2)
+            out += `<path d="M ${panelX} ${panelY + 8} L ${elevGeom.bX + 16} ${panelY + 8} L ${elevGeom.bX + 16} ${elevGeom.bY - elevGeom.bR}" fill="none" stroke="#f59e0b" stroke-width="2" marker-end="url(#bp-arrow-elec)"/>`;
+            out += `<text x="${(panelX + elevGeom.bX) * 0.5}" y="${panelY + 4}" text-anchor="middle" fill="#fcd34d" font-family="monospace" font-size="7.8" font-weight="700">E2 SHIELDED VFD</text>`;
+            // Dedicated Red-Dashed 24VDC Hardwired NFPA 86 Safety Interlock Loop (E3)
+            out += `<path d="M ${qX - 27} ${qInY - 26} L ${qX - 27} ${ey + 36} L ${panelX} ${ey + 36} L ${panelX} ${panelY - 6}" fill="none" stroke="#ef4444" stroke-width="1.9" stroke-dasharray="6 3" marker-end="url(#bp-arrow-safety)"/>`;
+            out += `<circle cx="${qX + qW}" cy="${qTopY + 18}" r="4.5" fill="#ef4444" stroke="#fecaca" stroke-width="1"/>`;
+            out += `<line x1="${qX + qW}" y1="${qTopY + 18}" x2="${qX + qW}" y2="${ey + 36}" stroke="#ef4444" stroke-width="1.4" stroke-dasharray="4 2"/>`;
+            out += `<text x="${qX + qW + 8}" y="${ey + 47}" fill="#fca5a5" font-family="monospace" font-size="8" font-weight="700">E3 24VDC NFPA 86 SAFETY LOOP (200°F + FLOW + E-STOP → DAMPER)</text>`;
+            // Pump 120V GFCI line (E4) + Modbus RS-485 sensor conduit (E5)
+            const pumpTargetX = sumpX + sumpW + 86;
+            out += `<path d="M ${ctrlBoxX + 76} ${ctrlBoxY + 36} L ${ctrlBoxX + 76} ${floorY + 46} L ${pumpTargetX} ${floorY + 46}" fill="none" stroke="#f59e0b" stroke-width="1.6" stroke-dasharray="3 2" marker-end="url(#bp-arrow-elec)"/>`;
+            out += `<text x="${ctrlBoxX + 18}" y="${floorY + 42}" fill="#fcd34d" font-family="monospace" font-size="7.6">E4 120V GFCI PUMP</text>`;
+            out += `<path d="M ${sumpX + sumpW * 0.5} ${sumpY + 40} L ${sumpX + sumpW * 0.5} ${sumpY + 52} L ${ctrlBoxX + 64} ${sumpY + 52} L ${ctrlBoxX + 64} ${ctrlBoxY + 36}" fill="none" stroke="#fbbf24" stroke-width="1.2" stroke-dasharray="2 3"/>`;
+            out += `<text x="${ctrlBoxX - 4}" y="${sumpY + 62}" text-anchor="end" fill="#fde68a" font-family="monospace" font-size="7.5">E5 RS-485 SENSORS</text>`;
+            out += `</g>`;
           }
 
           // Overall length & height dimension lines on Front Elevation
@@ -5757,46 +6683,71 @@
           const th = 442;
 
           out += `<rect x="${tx}" y="${ty}" width="${tw}" height="${th}" fill="rgba(10, 24, 42, 0.55)" stroke="#234873" stroke-width="1"/>`;
-          out += `<text x="${tx + 14}" y="${ty + 22}" fill="#7dd3fc" font-family="monospace" font-size="12" font-weight="800">TOP / FOOTPRINT PLAN — ${isCompact ? "COMPACT U-TURN SKID" : "LINEAR PAD"}</text>`;
+          out += `<text x="${tx + 14}" y="${ty + 22}" fill="#7dd3fc" font-family="monospace" font-size="12" font-weight="800">TOP / FOOTPRINT PLAN — ${isCompact ? "COMPACT U-TURN SKID" : "LINEAR PAD"}${isDeluxe ? " (DELUXE SKID)" : ""}</text>`;
 
           // Pad dimensions mapped cleanly inside top-view box
-          const padW = isCompact ? Math.min(tw - 170, 220) : Math.min(tw - 140, 290);
+          const padW = isCompact ? Math.min(tw - 190, 220) : Math.min(tw - 160, 286);
           const padH = isCompact ? 156 : 106;
-          const padX = tx + Math.round((tw - padW) * 0.54);
-          const padY = ty + 118;
+          const padX = tx + Math.round((tw - padW) * 0.46);
+          const padY = ty + 108;
 
-          // NFPA 211 36" Hot-Flue Clearance Zone (left/top around Stage 1 hot flue)
-          const clPx = 44;
-          out += `<rect x="${padX - clPx}" y="${padY - clPx}" width="${106 + clPx}" height="${padH * (isCompact ? 0.56 : 1.0) + clPx * 1.4}" fill="url(#bp-nfpa-hatch)" stroke="#f97316" stroke-width="1.3" stroke-dasharray="6 3"/>`;
-          out += `<text x="${padX - clPx + 6}" y="${padY - clPx - 6}" fill="#fdba74" font-family="monospace" font-size="9.5" font-weight="700">NFPA 211: ${fmtPlanLen(cl.flue_to_combustibles_in || 36)} HOT-FLUE CLEARANCE</text>`;
-
-          // 36" Service Aisle along front side
-          const aisleH = 44;
-          out += `<rect x="${padX}" y="${padY + padH + 6}" width="${padW}" height="${aisleH}" fill="rgba(56,189,248,0.07)" stroke="#38bdf8" stroke-width="1.1" stroke-dasharray="5 4"/>`;
-          out += `<text x="${padX + padW * 0.5}" y="${padY + padH + 31}" text-anchor="middle" fill="#7dd3fc" font-family="monospace" font-size="10" font-weight="700">${fmtPlanLen(cl.service_aisle_in || 36)} FRONT SERVICE &amp; MAINTENANCE AISLE</text>`;
+          // 4. CLEARANCES & CODES LAYER (Top Footprint)
+          if (layers.clearances) {
+            out += `<g class="plan-layer-clearances">`;
+            // NFPA 211 36" Hot-Flue Clearance Zone
+            const clPx = 40;
+            out += `<rect x="${padX - clPx}" y="${padY - clPx}" width="${104 + clPx}" height="${padH * (isCompact ? 0.56 : 1.0) + clPx * 1.35}" fill="url(#bp-nfpa-hatch)" stroke="#f97316" stroke-width="1.3" stroke-dasharray="6 3"/>`;
+            out += `<text x="${padX - clPx + 4}" y="${padY - clPx - 5}" fill="#fdba74" font-family="monospace" font-size="9" font-weight="700">NFPA 211: ${fmtPlanLen(cl.flue_to_combustibles_in || 36)} HOT-FLUE</text>`;
+            // 36" Front Service & Maintenance Aisle
+            const aisleH = 40;
+            out += `<rect x="${padX}" y="${padY + padH + 6}" width="${padW}" height="${aisleH}" fill="rgba(56,189,248,0.07)" stroke="#38bdf8" stroke-width="1.1" stroke-dasharray="5 4"/>`;
+            out += `<text x="${padX + padW * 0.5}" y="${padY + padH + 30}" text-anchor="middle" fill="#7dd3fc" font-family="monospace" font-size="9.5" font-weight="700">${fmtPlanLen(cl.service_aisle_in || 36)} SERVICE AISLE</text>`;
+            // 24" Pump & Cleanout Hatch Service Clearance Zone
+            out += `<rect x="${padX + 12}" y="${padY + padH + 48}" width="112" height="30" fill="url(#bp-service-hatch)" stroke="#06b6d4" stroke-width="1.1" stroke-dasharray="4 3"/>`;
+            out += `<text x="${padX + 68}" y="${padY + padH + 66}" text-anchor="middle" fill="#67e8f9" font-family="monospace" font-size="8.2" font-weight="700">${fmtPlanLen(cl.pump_service_in || 24)} PUMP &amp; CLEANOUT</text>`;
+            // NEC 110.26 36" x 30" Electrical Working Clearance Box in front of NEMA 4X Panel
+            const necBoxX = padX + padW + 16;
+            const necBoxY = padY + 46;
+            out += `<rect x="${necBoxX}" y="${necBoxY}" width="54" height="62" fill="url(#bp-nec-hatch)" stroke="#22c55e" stroke-width="1.4" stroke-dasharray="5 3"/>`;
+            out += `<text x="${necBoxX + 27}" y="${necBoxY + 28}" text-anchor="middle" fill="#86efac" font-family="monospace" font-size="7.8" font-weight="800">NEC 110.26</text>`;
+            out += `<text x="${necBoxX + 27}" y="${necBoxY + 40}" text-anchor="middle" fill="#86efac" font-family="monospace" font-size="7.5">${fmtPlanLen(cl.nec_panel_depth_in || 36)}×${fmtPlanLen(cl.nec_panel_width_in || 30)}</text>`;
+            out += `</g>`;
+          }
 
           // Equipment Pad outline
           out += `<rect x="${padX}" y="${padY}" width="${padW}" height="${padH}" fill="rgba(15, 36, 62, 0.72)" stroke="#67e8f9" stroke-width="1.8" rx="4"/>`;
 
+          // 3. BRACING & MOUNTING LAYER (Top Footprint: skid perimeter + ▲ corner anchor bolt pads)
+          if (layers.bracing) {
+            out += `<g class="plan-layer-bracing">`;
+            out += `<rect x="${padX - 4}" y="${padY - 4}" width="${padW + 8}" height="${padH + 8}" fill="none" stroke="#818cf8" stroke-width="2" stroke-dasharray="8 3" rx="5"/>`;
+            const corners = [
+              [padX - 4, padY - 4], [padX + padW * 0.5, padY - 4], [padX + padW + 4, padY - 4],
+              [padX - 4, padY + padH + 4], [padX + padW * 0.5, padY + padH + 4], [padX + padW + 4, padY + padH + 4],
+            ];
+            for (const [cx, cy] of corners) {
+              out += `<polygon points="${cx},${cy - 5} ${cx - 5},${cy + 4} ${cx + 5},${cy + 4}" fill="#818cf8" stroke="#e0e7ff" stroke-width="0.9"/>`;
+            }
+            out += `</g>`;
+          }
+
+          let topCoords = { s1X: padX + 42, s1Y: padY + padH * 0.5, vX: padX + 114, vY: padY + padH * 0.5, s3X: padX + 186, s3Y: padY + padH * 0.5, s4X: padX + padW - 40, s4Y: padY + padH * 0.5 };
+
           if (isCompact) {
-            // Compact U-Turn Skid top-down layout: Rear row (Stage 1 -> U-turn Venturi) folds forward into Front row (Stage 3 -> Blower/Stack)
             const r1Y = padY + 42;
             const r2Y = padY + padH - 42;
             const s1X = padX + 46;
             const uX = padX + padW - 44;
             const s3X = padX + 116;
             const s4X = padX + 44;
+            topCoords = { s1X, s1Y: r1Y, vX: uX, vY: (r1Y + r2Y) * 0.5, s3X, s3Y: r2Y, s4X: isEductor ? uX : s4X, s4Y: isEductor ? r1Y : r2Y };
 
-            // Hot inlet
             out += `<line x1="${padX - 34}" y1="${r1Y}" x2="${s1X - 20}" y2="${r1Y}" stroke="#f97316" stroke-width="8"/>`;
-            // Stage 1 Quench (rear-left)
             out += `<circle cx="${s1X}" cy="${r1Y}" r="22" fill="rgba(249,115,22,0.22)" stroke="#fb923c" stroke-width="1.8"/>`;
             out += `<text x="${s1X}" y="${r1Y + 4}" text-anchor="middle" fill="#fed7aa" font-family="monospace" font-size="10" font-weight="700">${numQuench}</text>`;
-            // U-turn venturi/eductor loop on right
             out += `<path d="M ${s1X + 22} ${r1Y} L ${uX - 12} ${r1Y} C ${uX + 24} ${r1Y} ${uX + 24} ${r2Y} ${uX - 12} ${r2Y} L ${s3X + 26} ${r2Y}" fill="none" stroke="#cbd5e1" stroke-width="10"/>`;
             out += `<circle cx="${uX}" cy="${(r1Y + r2Y) * 0.5}" r="14" fill="rgba(148,163,184,0.26)" stroke="#e2e8f0" stroke-width="1.4"/>`;
             out += `<text x="${uX}" y="${(r1Y + r2Y) * 0.5 + 4}" text-anchor="middle" fill="#f8fafc" font-family="monospace" font-size="9.5" font-weight="700">${numVenturi}</text>`;
-            // Stage 3 Packed Bed (front-right)
             out += drawPlanTopPackedBedSVG(s3X, r2Y, 26, isParallelBed, arch.parallelBed.pipeNomIn);
             out += `<text x="${s3X}" y="${r2Y + 4}" text-anchor="middle" fill="#e0f2fe" font-family="monospace" font-size="10" font-weight="700">${numPacked}</text>`;
             if (!isEductor) {
@@ -5808,12 +6759,12 @@
               out += `<text x="${uX}" y="${r1Y + 4}" text-anchor="middle" fill="#a7f3d0" font-family="monospace" font-size="9.5" font-weight="700">${numBlower}</text>`;
             }
           } else {
-            // Linear pad top-down layout
             const midY = padY + padH * 0.5;
             const s1X = padX + 40;
             const vMidX = padX + 114;
             const s3X = padX + (isEductor ? padW - 62 : 186);
             const s4X = padX + padW - 42;
+            topCoords = { s1X, s1Y: midY, vX: vMidX, vY: midY, s3X, s3Y: midY, s4X: isEductor ? vMidX : s4X, s4Y: isEductor ? midY - 26 : midY };
 
             out += `<line x1="${padX - 32}" y1="${midY}" x2="${s1X - 22}" y2="${midY}" stroke="#f97316" stroke-width="8"/>`;
             out += `<circle cx="${s1X}" cy="${midY}" r="22" fill="rgba(249,115,22,0.22)" stroke="#fb923c" stroke-width="1.8"/>`;
@@ -5837,12 +6788,58 @@
             }
           }
 
+          // 5. SOUND BAFFLING LAYER (Top Footprint)
+          if (layers.acoustics) {
+            out += `<g class="plan-layer-acoustics">`;
+            out += `<rect x="${topCoords.s4X - 28}" y="${topCoords.s4Y - 26}" width="56" height="52" rx="4" fill="url(#bp-acoustic-hatch)" stroke="#a855f7" stroke-width="1.8" stroke-dasharray="5 2"/>`;
+            out += `<text x="${topCoords.s4X}" y="${topCoords.s4Y - 30}" text-anchor="middle" fill="#d8b4fe" font-family="monospace" font-size="7.8" font-weight="700">S1 BAFFLE BOX</text>`;
+            out += `</g>`;
+          }
+
+          // 2. PUMPS & HOSING LAYER (Top Footprint)
+          if (layers.plumbing) {
+            const sumpTopX = padX + 46;
+            const sumpTopY = padY + padH - 18;
+            const pumpTopX = padX + 102;
+            const pumpTopY = padY + padH - 16;
+            out += `<g class="plan-layer-plumbing">`;
+            out += `<rect x="${sumpTopX - 20}" y="${sumpTopY - 10}" width="40" height="20" rx="3" fill="rgba(6,182,212,0.24)" stroke="#06b6d4" stroke-width="1.4"/>`;
+            out += `<text x="${sumpTopX}" y="${sumpTopY + 3}" text-anchor="middle" fill="#e0f2fe" font-family="monospace" font-size="7.5" font-weight="700">SUMP</text>`;
+            out += `<rect x="${pumpTopX - 16}" y="${pumpTopY - 9}" width="32" height="18" rx="3" fill="rgba(56,189,248,0.24)" stroke="#38bdf8" stroke-width="1.4"/>`;
+            out += `<text x="${pumpTopX}" y="${pumpTopY + 3}" text-anchor="middle" fill="#e0f2fe" font-family="monospace" font-size="7.2" font-weight="700">PUMP</text>`;
+            // Hoses from pump to S1, S2, S3
+            out += `<path d="M ${pumpTopX} ${pumpTopY - 9} L ${topCoords.s1X} ${topCoords.s1Y + 20}" fill="none" stroke="#06b6d4" stroke-width="1.5" marker-end="url(#bp-arrow-water)"/>`;
+            out += `<path d="M ${pumpTopX + 8} ${pumpTopY - 9} L ${topCoords.vX} ${topCoords.vY + 12}" fill="none" stroke="#38bdf8" stroke-width="1.4" marker-end="url(#bp-arrow-water)"/>`;
+            out += `<path d="M ${pumpTopX + 16} ${pumpTopY - 5} L ${topCoords.s3X} ${topCoords.s3Y + 24}" fill="none" stroke="#06b6d4" stroke-width="1.5" marker-end="url(#bp-arrow-water)"/>`;
+            // IPC 608 RPZ supply stub
+            out += `<line x1="${sumpTopX - 38}" y1="${sumpTopY}" x2="${sumpTopX - 20}" y2="${sumpTopY}" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3 2" marker-end="url(#bp-arrow-water)"/>`;
+            out += `</g>`;
+          }
+
+          // 1. ELECTRICAL & WIRING LAYER (Top Footprint)
+          if (layers.electrical) {
+            const pBoxX = padX + padW + 16;
+            const pBoxY = padY + 14;
+            out += `<g class="plan-layer-electrical">`;
+            // NEMA 4X Panel + Disconnect on side of pad (aligned above NEC 110.26 box)
+            out += `<rect x="${pBoxX}" y="${pBoxY}" width="54" height="28" rx="3" fill="rgba(245,158,11,0.18)" stroke="#f59e0b" stroke-width="1.6"/>`;
+            out += `<text x="${pBoxX + 27}" y="${pBoxY + 12}" text-anchor="middle" fill="#fde68a" font-family="monospace" font-size="7.5" font-weight="800">NEMA 4X</text>`;
+            out += `<text x="${pBoxX + 27}" y="${pBoxY + 22}" text-anchor="middle" fill="#fcd34d" font-family="monospace" font-size="7">DISC+VFD</text>`;
+            // Amber conduit to blower
+            out += `<path d="M ${pBoxX} ${pBoxY + 14} L ${topCoords.s4X + 14} ${pBoxY + 14} L ${topCoords.s4X + 14} ${topCoords.s4Y}" fill="none" stroke="#f59e0b" stroke-width="1.7" marker-end="url(#bp-arrow-elec)"/>`;
+            // Red-dashed NFPA 86 safety loop to hot-flue damper
+            out += `<path d="M ${pBoxX + 20} ${pBoxY} L ${pBoxX + 20} ${padY - 18} L ${padX - 18} ${padY - 18} L ${padX - 18} ${topCoords.s1Y}" fill="none" stroke="#ef4444" stroke-width="1.6" stroke-dasharray="5 3" marker-end="url(#bp-arrow-safety)"/>`;
+            // Pump GFCI line
+            out += `<path d="M ${pBoxX} ${pBoxY + 24} L ${padX + 118} ${padY + padH - 16}" fill="none" stroke="#f59e0b" stroke-width="1.3" stroke-dasharray="3 2"/>`;
+            out += `</g>`;
+          }
+
           // Pad L x W dimensions
           out += svgDimLine(padX, padY, padX + padW, padY, `PAD L: ${fmtPlanLen(lenIn, true)}`, -18, false, "#38bdf8");
           out += svgDimLine(padX + padW, padY, padX + padW, padY + padH, `W: ${fmtPlanLen(widIn, true)}`, 24, true, "#38bdf8");
 
           // Setback footer notes inside Top Plan
-          out += `<text x="${tx + 14}" y="${ty + th - 26}" fill="#cbd5e1" font-family="monospace" font-size="10">IMC 501.3.1 Min Property Line Setback: >= ${cl.property_line_min_ft || 30} ft · Stack Above Roof: >= ${cl.stack_above_roof_ft || 6} ft</text>`;
+          out += `<text x="${tx + 14}" y="${ty + th - 26}" fill="#cbd5e1" font-family="monospace" font-size="10">IMC 510 / 501.3.1 Setback: >= ${cl.property_line_min_ft || 30} ft · Stack Above Roof: >= ${cl.stack_above_roof_ft || 6} ft</text>`;
           if (isEductor) {
             out += `<text x="${tx + 14}" y="${ty + th - 10}" fill="#fcd34d" font-family="monospace" font-size="10" font-weight="700">WARNING: POSITIVE-PRESSURE PACKED BED — OUTDOOR SITING ONLY</text>`;
           } else {
@@ -5851,6 +6848,14 @@
         }
 
         // ---------- ENGINEERING TITLE BLOCK (Lower Right) ----------
+        const activeLayerTags = [
+          layers.electrical ? "ELEC" : "",
+          layers.plumbing ? "PLUMB" : "",
+          layers.bracing ? "BRACE" : "",
+          layers.clearances ? "CODE" : "",
+          layers.acoustics ? "ACOUSTIC" : "",
+        ].filter(Boolean).join("+") || "BASE MECH ONLY";
+
         const tbX = showElev && showTop ? 778 : W - 494;
         const tbY = 480;
         const tbW = 476;
@@ -5860,13 +6865,13 @@
         out += `<line x1="${tbX}" y1="${tbY + 34}" x2="${tbX + tbW}" y2="${tbY + 34}" stroke="#234873" stroke-width="1"/>`;
         out += `<line x1="${tbX}" y1="${tbY + 74}" x2="${tbX + tbW}" y2="${tbY + 74}" stroke="#234873" stroke-width="1"/>`;
         out += `<line x1="${tbX + 240}" y1="${tbY + 34}" x2="${tbX + 240}" y2="${tbY + tbH}" stroke="#234873" stroke-width="1"/>`;
-        out += `<text x="${tbX + 12}" y="${tbY + 22}" fill="#f8fafc" font-family="monospace" font-size="12.5" font-weight="800">${escapeHtml(plan.title || "KILNSCRUB COMPLETE SHOP PLAN")}</text>`;
-        out += `<text x="${tbX + 12}" y="${tbY + 51}" fill="#7dd3fc" font-family="monospace" font-size="10">ALIGNMENT: ${escapeHtml(isEductor ? "DRY-FAN EDUCTOR" : "INLINE ID BLOWER")}</text>`;
-        out += `<text x="${tbX + 12}" y="${tbY + 66}" fill="#cbd5e1" font-family="monospace" font-size="10">BED: ${escapeHtml(isParallelBed ? `SHELL-LESS ${arch.parallelBed.pipeCount}×${arch.parallelBed.pipeNomIn}" UNISEAL` : "SINGLE COLUMN")}</text>`;
-        out += `<text x="${tbX + 252}" y="${tbY + 51}" fill="#7dd3fc" font-family="monospace" font-size="10">ENVELOPE: ${escapeHtml(fmtPlanLen(lenIn, true))} × ${escapeHtml(fmtPlanLen(widIn, true))}</text>`;
-        out += `<text x="${tbX + 252}" y="${tbY + 66}" fill="#cbd5e1" font-family="monospace" font-size="10">HEIGHT: ${escapeHtml(fmtPlanLen(hgtIn, true))} · UNITS: ${planState.unit.toUpperCase()}</text>`;
-        out += `<text x="${tbX + 12}" y="${tbY + 98}" fill="#94a3b8" font-family="monospace" font-size="10">KILNSCRUB PHASE 8 SHOP BLUEPRINT</text>`;
-        out += `<text x="${tbX + 252}" y="${tbY + 98}" fill="#86efac" font-family="monospace" font-size="10">ZERO CAD REQUIRED · READY TO PRINT</text>`;
+        out += `<text x="${tbX + 12}" y="${tbY + 22}" fill="#f8fafc" font-family="monospace" font-size="12" font-weight="800">${escapeHtml(plan.title || "KILNSCRUB FULL SYSTEMS SHOP PLAN")}</text>`;
+        out += `<text x="${tbX + 12}" y="${tbY + 51}" fill="#7dd3fc" font-family="monospace" font-size="9.5">BUILD: ${escapeHtml(isDeluxe ? "CUSTOM FAB DELUXE" : (normalizeBuildPath(plan.build_path) === "welded_dxf" ? "WELDED DXF" : "NO-WELD COTS"))}</text>`;
+        out += `<text x="${tbX + 12}" y="${tbY + 66}" fill="#cbd5e1" font-family="monospace" font-size="9.5">BED: ${escapeHtml(isParallelBed ? `SHELL-LESS ${arch.parallelBed.pipeCount}×${arch.parallelBed.pipeNomIn}" UNISEAL` : "SINGLE COLUMN")}</text>`;
+        out += `<text x="${tbX + 252}" y="${tbY + 51}" fill="#7dd3fc" font-family="monospace" font-size="9.5">ENVELOPE: ${escapeHtml(fmtPlanLen(lenIn, true))} × ${escapeHtml(fmtPlanLen(widIn, true))}</text>`;
+        out += `<text x="${tbX + 252}" y="${tbY + 66}" fill="#cbd5e1" font-family="monospace" font-size="9.5">LAYERS: ${escapeHtml(activeLayerTags)}</text>`;
+        out += `<text x="${tbX + 12}" y="${tbY + 98}" fill="#94a3b8" font-family="monospace" font-size="9.5">KILNSCRUB PHASE 9 FULL SYSTEMS PLAN</text>`;
+        out += `<text x="${tbX + 252}" y="${tbY + 98}" fill="#86efac" font-family="monospace" font-size="9.5">ZERO CAD REQUIRED · READY TO PRINT</text>`;
         out += `</g>`;
 
         out += `</g>`; // close plan-viewport-transform
@@ -6126,10 +7131,221 @@
         renderShopPlansTab();
       }
 
+      function syncPlanOverlayControls() {
+        const layers = planState.layers;
+        const allOn = Object.values(layers).every(Boolean);
+        const anyOn = Object.values(layers).some(Boolean);
+        const master = el("btn-plan-full-systems");
+        if (master) {
+          master.textContent = `Full Systems Mode: ${allOn ? "ON" : (anyOn ? "CUSTOM" : "OFF")}`;
+          master.classList.toggle("active", anyOn);
+        }
+        document.querySelectorAll("[data-plan-layer]").forEach((btn) => {
+          const key = btn.dataset.planLayer;
+          btn.classList.toggle("active", !!layers[key]);
+        });
+        document.querySelectorAll("[data-sched-tab]").forEach((btn) => {
+          const active = btn.dataset.schedTab === planState.activeScheduleTab;
+          btn.classList.toggle("active", active);
+          btn.setAttribute("aria-selected", String(active));
+        });
+        ["electrical", "plumbing", "bracing", "acoustics"].forEach((key) => {
+          const pane = el(`sched-pane-${key}`);
+          if (pane) pane.classList.toggle("hidden", planState.activeScheduleTab !== key);
+        });
+      }
+
+      function formatCircuitVoltage(v, isSafetyLoop) {
+        if (typeof v === "number" && Number.isFinite(v) && v > 0) {
+          return isSafetyLoop && v === 24 ? "24VDC" : `${Math.round(v)}V`;
+        }
+        const s = String(v || "").trim();
+        if (!s) return "—";
+        if (/^\d+(\.\d+)?$/.test(s)) return `${s}V`;
+        return s;
+      }
+
+      function formatPumpVoltage(v) {
+        if (typeof v === "number" && Number.isFinite(v) && v > 0) {
+          return `${Math.round(v)}V GFCI`;
+        }
+        const s = String(v || "").trim();
+        if (!s) return "120V GFCI";
+        if (/^\d+(\.\d+)?$/.test(s)) return `${s}V GFCI`;
+        return s;
+      }
+
+      function formatPlumbingFlow(ln) {
+        const isAir = String(ln?.id || "").toUpperCase().startsWith("A");
+        const gpm = Number(ln?.flow_gpm);
+        const psi = Number(ln?.pressure_psi);
+        const psiText = Number.isFinite(psi) ? `${fmt(psi, 0)} PSI` : "—";
+        if (isAir) {
+          if (Number.isFinite(gpm) && gpm > 0) {
+            return `${fmt(gpm, 1)} SCFM · ${psiText}`;
+          }
+          const m = String(ln?.fluid || "").match(/(\d+(?:\.\d+)?)\s*SCFM/i);
+          if (m) return `${m[1]} SCFM · ${psiText}`;
+          return `Air · ${psiText}`;
+        }
+        return `${fmt(gpm, 1)} GPM · ${psiText}`;
+      }
+
+      function renderPlanSchedules(plan) {
+        const cl = plan.clearances || {};
+        if (el("plan-elec-access-note")) {
+          el("plan-elec-access-note").textContent = cl.wiring_access_note ||
+            `NEC 110.26: Maintain ${fmtPlanLen(cl.nec_panel_depth_in || 36)} clear depth × ${fmtPlanLen(cl.nec_panel_width_in || 30)} clear width in front of NEMA 4X Panel & Lockable Sight Disconnect (min hose bend radius ${fmtPlanLen(cl.hose_bend_radius_in || 6)}).`;
+        }
+
+        // 1. Electrical & Wiring Schedule
+        const elecBody = el("plan-elec-tbody");
+        const elecList = Array.isArray(plan.electrical) ? plan.electrical : [];
+        if (elecBody) {
+          if (elecList.length === 0) {
+            elecBody.innerHTML = `<tr><td colspan="9" style="color:var(--muted)">No electrical circuits defined.</td></tr>`;
+          } else {
+            elecBody.innerHTML = elecList.map((c) => `
+              <tr>
+                <td><span class="sched-id-badge" style="border-color:${c.is_safety_loop ? "#ef4444" : "#f59e0b"};color:${c.is_safety_loop ? "#fca5a5" : "#fde68a"}">${escapeHtml(c.id || "—")}</span></td>
+                <td><strong>${escapeHtml(c.label || "—")}</strong>${c.is_safety_loop ? `<span class="safety-loop-badge">NFPA 86 SAFETY LOOP</span>` : ""}</td>
+                <td style="font-size:11px">${escapeHtml(c.from || "—")} &rarr; ${escapeHtml(c.to || "—")}</td>
+                <td class="num" style="font-family:var(--mono);font-size:11px">${escapeHtml(formatCircuitVoltage(c.voltage, !!c.is_safety_loop))} · ${fmt(c.amps, 1)}A</td>
+                <td class="num" style="font-family:var(--mono);font-size:11px">${Number.isFinite(c.breaker_amps) ? `${c.breaker_amps}A` : "—"}</td>
+                <td style="font-family:var(--mono);font-size:11px;color:#fcd34d">${escapeHtml(c.wire_gauge || "—")}</td>
+                <td style="font-family:var(--mono);font-size:11px">${escapeHtml(c.conduit || "—")}</td>
+                <td style="font-family:var(--mono);font-size:11px;color:#86efac">${escapeHtml(c.nec_ref || "—")}</td>
+                <td style="font-size:11px;color:var(--muted)">${escapeHtml(c.notes || "")}</td>
+              </tr>
+            `).join("");
+          }
+        }
+
+        // 2. Pump Station Summary + Plumbing & Hosing Schedule
+        const ps = plan.pump_station || {};
+        const pumpSum = el("plan-pump-summary");
+        if (pumpSum) {
+          pumpSum.innerHTML = `
+            <div class="sched-kpi">
+              <span class="sched-kpi-k">Recirculation Pump</span>
+              <span class="sched-kpi-v">${fmt(ps.flow_gpm, 1)} <span class="unit-literal">GPM</span> @ ${fmt(ps.head_ft, 0)} ft head</span>
+              <span class="sched-kpi-s">${escapeHtml(ps.pump_type || "Mag-Drive Chemical Pump")} (${fmt(ps.hp, 2)} HP · ${escapeHtml(formatPumpVoltage(ps.voltage))})</span>
+            </div>
+            <div class="sched-kpi">
+              <span class="sched-kpi-k">Suction &amp; Y-Strainer</span>
+              <span class="sched-kpi-v">${fmtPlanLen(ps.suction_size_in || 1.0)} in / ${fmtPlanLen(ps.discharge_size_in || 0.75)} out</span>
+              <span class="sched-kpi-s">${escapeHtml(ps.strainer || "40-mesh CPVC Y-strainer")}</span>
+            </div>
+            <div class="sched-kpi">
+              <span class="sched-kpi-k">IPC 608 Potable Isolation</span>
+              <span class="sched-kpi-v">RPZ / Air Gap</span>
+              <span class="sched-kpi-s">${escapeHtml(ps.backflow_preventer || "ASSE 1013 RPZ / 2\" Air Gap")}</span>
+            </div>
+            <div class="sched-kpi">
+              <span class="sched-kpi-k">IPC 702.5 Sump Drain</span>
+              <span class="sched-kpi-v">&le; 140°F · <span class="unit-literal">pH</span> 6.5–8.5</span>
+              <span class="sched-kpi-s">${escapeHtml(ps.drain_spec || "2\" Full-Port Ball Valve to Floor Drain")}</span>
+            </div>
+          `;
+        }
+
+        const plumbBody = el("plan-plumb-tbody");
+        const plumbList = Array.isArray(plan.plumbing) ? plan.plumbing : [];
+        if (plumbBody) {
+          if (plumbList.length === 0) {
+            plumbBody.innerHTML = `<tr><td colspan="9" style="color:var(--muted)">No plumbing lines defined.</td></tr>`;
+          } else {
+            plumbBody.innerHTML = plumbList.map((ln) => `
+              <tr>
+                <td><span class="sched-id-badge" style="border-color:#06b6d4;color:#67e8f9">${escapeHtml(ln.id || "—")}</span></td>
+                <td><strong>${escapeHtml(ln.label || "—")}</strong></td>
+                <td style="font-size:11px;color:#bae6fd">${escapeHtml(ln.fluid || "—")}</td>
+                <td style="font-size:11px">${escapeHtml(ln.from || "—")} &rarr; ${escapeHtml(ln.to || "—")}</td>
+                <td style="font-family:var(--mono);font-size:11px">${fmtPlanLen(ln.size_in || 0.75)}</td>
+                <td style="font-family:var(--mono);font-size:11px">${escapeHtml(ln.material || "—")}</td>
+                <td class="num" style="font-family:var(--mono);font-size:11px">${escapeHtml(formatPlumbingFlow(ln))}</td>
+                <td style="font-size:11px;color:#7dd3fc">${escapeHtml(ln.valves_fittings || "—")}</td>
+                <td style="font-size:11px;color:var(--muted)">${escapeHtml(ln.notes || "")}</td>
+              </tr>
+            `).join("");
+          }
+        }
+
+        // 3. Structural Bracing & Anchors Schedule
+        const brBody = el("plan-bracing-tbody");
+        const brList = Array.isArray(plan.bracing) ? plan.bracing : [];
+        if (brBody) {
+          if (brList.length === 0) {
+            brBody.innerHTML = `<tr><td colspan="7" style="color:var(--muted)">No structural bracing items defined.</td></tr>`;
+          } else {
+            brBody.innerHTML = brList.map((br) => `
+              <tr>
+                <td><span class="sched-id-badge" style="border-color:#818cf8;color:#c7d2fe">${escapeHtml(br.id || "—")}</span></td>
+                <td><strong>${escapeHtml(br.component || "—")}</strong></td>
+                <td style="font-family:var(--mono);font-size:11px">${escapeHtml(br.member_spec || "—")}</td>
+                <td style="font-size:11px">${escapeHtml(br.mounting || "—")}</td>
+                <td class="num" style="font-family:var(--mono);font-size:11px;color:#c7d2fe">${Number.isFinite(br.load_lbs) ? `${Math.round(br.load_lbs)} lbs` : "—"}</td>
+                <td style="font-family:var(--mono);font-size:11px;color:#86efac">${escapeHtml(br.anchor_spec || "—")}</td>
+                <td style="font-size:11px;color:var(--muted)">${escapeHtml(br.notes || "")}</td>
+              </tr>
+            `).join("");
+          }
+        }
+
+        // 4. Sound Baffling & dBA Budget Schedule
+        const acSum = plan.acoustic_summary || {};
+        const acSumEl = el("plan-acoustic-summary");
+        if (acSumEl) {
+          acSumEl.innerHTML = `
+            <div class="sched-kpi">
+              <span class="sched-kpi-k">Bare Blower @ 3 ft</span>
+              <span class="sched-kpi-v" style="color:#fca5a5">${fmt(acSum.bare_dba_3ft, 0)} dBA</span>
+              <span class="sched-kpi-s">Untreated radial blower</span>
+            </div>
+            <div class="sched-kpi">
+              <span class="sched-kpi-k">Treated @ 3 ft</span>
+              <span class="sched-kpi-v" style="color:#d8b4fe">${fmt(acSum.treated_dba_3ft, 0)} dBA</span>
+              <span class="sched-kpi-s">Baffle box + stack silencer</span>
+            </div>
+            <div class="sched-kpi">
+              <span class="sched-kpi-k">Total Reduction</span>
+              <span class="sched-kpi-v" style="color:#86efac">&minus;${fmt(acSum.total_reduction_dba, 0)} dBA</span>
+              <span class="sched-kpi-s">Combined acoustic &amp; isolation</span>
+            </div>
+            <div class="sched-kpi">
+              <span class="sched-kpi-k">Property Line @ ${fmt(acSum.property_line_ft, 0)} ft</span>
+              <span class="sched-kpi-v" style="color:${(acSum.property_line_dba || 45) <= 60 ? "#86efac" : "#fcd34d"}">${fmt(acSum.property_line_dba, 0)} dBA</span>
+              <span class="sched-kpi-s">Urban residential limit: 60 dBA</span>
+            </div>
+          `;
+        }
+
+        const acBody = el("plan-acoustics-tbody");
+        const acList = Array.isArray(plan.acoustics) ? plan.acoustics : [];
+        if (acBody) {
+          if (acList.length === 0) {
+            acBody.innerHTML = `<tr><td colspan="7" style="color:var(--muted)">No acoustic baffling zones defined.</td></tr>`;
+          } else {
+            acBody.innerHTML = acList.map((az) => `
+              <tr>
+                <td><span class="sched-id-badge" style="border-color:#a855f7;color:#d8b4fe">${escapeHtml(az.id || "—")}</span></td>
+                <td><strong>${escapeHtml(az.location || "—")}</strong></td>
+                <td>${escapeHtml(az.treatment || "—")}</td>
+                <td style="font-family:var(--mono);font-size:11px">${escapeHtml(az.material || "—")}</td>
+                <td class="num" style="font-family:var(--mono);font-size:11px">${fmtPlanLen(az.thickness_in || 2.0)}</td>
+                <td class="num" style="font-family:var(--mono);font-size:11px;color:#d8b4fe">&minus;${fmt(az.attenuation_dba, 0)} dBA</td>
+                <td style="font-size:11px;color:var(--muted)">${escapeHtml(az.notes || "")}</td>
+              </tr>
+            `).join("");
+          }
+        }
+      }
+
       function renderShopPlansTab() {
         const plan = getEffectiveShopPlan();
         const isEductor = (plan.stage_alignment || studioState.stageAlignment) === "eductor_dry_fan";
         const isCompact = !!(plan.compact_footprint ?? studioState.compactFootprint);
+        const isDeluxe = !!plan.is_deluxe || normalizeBuildPath(plan.build_path || studioState.buildPath) === "custom_fab_deluxe";
 
         if (el("plan-sheet-title")) el("plan-sheet-title").textContent = plan.title || "Shop Plan Blueprint";
         if (el("plan-envelope-pill")) {
@@ -6140,9 +7356,18 @@
           aPill.className = "pill " + (isEductor ? "warn" : "ok");
           aPill.textContent = `${isEductor ? "Dry-Fan Downflow Eductor" : "Inline ID Blower"}${isCompact ? " · U-Turn" : ""}`;
         }
-        const cl = plan.clearances || { flue_to_combustibles_in: 36, service_aisle_in: 36 };
+        const dPill = el("plan-deluxe-pill");
+        if (dPill) {
+          dPill.classList.toggle("hidden", !isDeluxe);
+        }
+        const acSum = plan.acoustic_summary || {};
+        const acPill = el("plan-acoustic-pill");
+        if (acPill) {
+          acPill.textContent = `Acoustic: ${Math.round(acSum.bare_dba_3ft || 86)} → ${Math.round(acSum.treated_dba_3ft || 64)} dBA @ 3 ft · ${Math.round(acSum.property_line_dba || 41)} dBA @ ${Math.round(acSum.property_line_ft || 35)} ft`;
+        }
+        const cl = plan.clearances || { flue_to_combustibles_in: 36, service_aisle_in: 36, nec_panel_depth_in: 36, nec_panel_width_in: 30, pump_service_in: 24 };
         if (el("plan-clearance-summary")) {
-          el("plan-clearance-summary").textContent = `NFPA 211: ${fmtPlanLen(cl.flue_to_combustibles_in || 36)} Hot-Flue · ${fmtPlanLen(cl.service_aisle_in || 36)} Service Aisle`;
+          el("plan-clearance-summary").textContent = `NFPA 211: ${fmtPlanLen(cl.flue_to_combustibles_in || 36)} Flue · NEC 110.26: ${fmtPlanLen(cl.nec_panel_depth_in || 36)}×${fmtPlanLen(cl.nec_panel_width_in || 30)} Panel · ${fmtPlanLen(cl.pump_service_in || 24)} Pump/Hatch`;
         }
 
         // Toggle visibility based on view mode
@@ -6151,9 +7376,11 @@
         if (bpPanel) bpPanel.classList.toggle("hidden", planState.viewMode === "cutsheet");
         if (csPanel) csPanel.classList.toggle("hidden", planState.viewMode === "elevation" || planState.viewMode === "top");
 
+        syncPlanOverlayControls();
         renderBlueprintSVG(plan);
         renderCutSheetSVG(plan);
         renderPartsLegendTable(plan);
+        renderPlanSchedules(plan);
         applyPlanTransform();
       }
 
@@ -6972,6 +8199,7 @@
           }
           draw2DSchematic();
         }
+        renderDeluxeSpecBanner(studioState.evaluation);
         renderArchitecturePanels(studioState.evaluation);
         renderShopPlansTab();
       }
@@ -7070,11 +8298,16 @@
           });
         });
 
-        // Build Path buttons
+        // Build Path buttons (No-Weld COTS, Welded Sheet Metal, Custom Fab Deluxe)
         document.querySelectorAll("[data-build-path]").forEach((btn) => {
           btn.addEventListener("click", () => {
-            studioState.buildPath = btn.dataset.buildPath;
+            studioState.buildPath = normalizeBuildPath(btn.dataset.buildPath);
+            if (studioState.buildPath === "custom_fab_deluxe") {
+              state.showSystems3D = true;
+              syncSystems3DButton();
+            }
             syncSegmentedButtons();
+            refreshVisualGeometryImmediate();
             scheduleEvaluate();
           });
         });
@@ -7133,6 +8366,7 @@
         const budgetBtn = el("btn-apply-budget-combo");
         if (budgetBtn) {
           budgetBtn.addEventListener("click", () => {
+            studioState.buildPath = "cots_no_weld";
             studioState.packedBedLayout = "parallel_manifold";
             studioState.parallelPipeSizeIn = 4;
             studioState.packingMediaOption = "diy_ceramic_rings";
@@ -7150,7 +8384,31 @@
             updateControlLabels();
             refreshVisualGeometryImmediate();
             requestEvaluateOrSize();
-            showToast("Applied Budget Studio Combo: Shell-Less 4\" Bundle + DIY Ceramic Rings + Air-Atomize Fan + U-Turn + Hardwired Safety!");
+            showToast("Applied Budget Studio Combo: No-Weld COTS + Shell-Less 4\" Bundle + DIY Ceramic Rings + Air-Atomize Fan + U-Turn!");
+          });
+        }
+
+        // Phase 9: One-Click "Apply Custom Fab Deluxe" Button
+        const deluxeBtn = el("btn-apply-deluxe-fab");
+        if (deluxeBtn) {
+          deluxeBtn.addEventListener("click", () => {
+            studioState.buildPath = "custom_fab_deluxe";
+            studioState.stageAlignment = "inline_id_blower";
+            studioState.packedBedLayout = "single_column";
+            studioState.packingMediaOption = "pp_pall_rings";
+            studioState.blowerDriveOption = "industrial_radial_vfd";
+            studioState.venturiLayout = "single_throat";
+            studioState.sharedBaffledSump = true;
+            el("in-shared-baffled-sump").checked = true;
+            studioState.controlTier = "rpi_modbus";
+            el("in-include-silencer").checked = true;
+            state.showSystems3D = true;
+            syncSystems3DButton();
+            syncSegmentedButtons();
+            updateControlLabels();
+            refreshVisualGeometryImmediate();
+            requestEvaluateOrSize();
+            showToast("Applied Custom Fab Deluxe: TIG/FRP Vessels, ANSI Class 150 Flanges, Forklift Skid, UL 508A Panel & Acoustic Baffling!");
           });
         }
 
@@ -7260,6 +8518,15 @@
             }
             draw2DSchematic();
           });
+        });
+
+        el("btn-systems-3d").addEventListener("click", () => {
+          state.showSystems3D = !state.showSystems3D;
+          syncSystems3DButton();
+          if (window.__kiln3D && state.threeReady) {
+            window.__kiln3D.setSystemsOverlay(state.showSystems3D);
+          }
+          draw2DSchematic();
         });
 
         el("btn-cutaway").addEventListener("click", () => {
@@ -7969,6 +9236,34 @@
         el("btn-plan-print").addEventListener("click", () => window.print());
         el("btn-plan-clear-select").addEventListener("click", () => selectPlanPart(null));
 
+        // Phase 9: Full Systems Overlay Mode master toggle + individual 5 layer pills + schedule tabs
+        const fullSysBtn = el("btn-plan-full-systems");
+        if (fullSysBtn) {
+          fullSysBtn.addEventListener("click", () => {
+            const allOn = Object.values(planState.layers).every(Boolean);
+            const next = !allOn;
+            Object.keys(planState.layers).forEach((k) => { planState.layers[k] = next; });
+            renderShopPlansTab();
+          });
+        }
+
+        document.querySelectorAll("[data-plan-layer]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const key = btn.dataset.planLayer;
+            if (key && Object.prototype.hasOwnProperty.call(planState.layers, key)) {
+              planState.layers[key] = !planState.layers[key];
+              renderShopPlansTab();
+            }
+          });
+        });
+
+        document.querySelectorAll("[data-sched-tab]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            planState.activeScheduleTab = btn.dataset.schedTab || "electrical";
+            syncPlanOverlayControls();
+          });
+        });
+
         const stage = el("plan-blueprint-stage");
         if (stage) {
           stage.addEventListener("wheel", (ev) => {
@@ -8496,6 +9791,8 @@
         const isParallelVent = studio.venturiLayout === "parallel_mini_venturis";
         const isCompact = !!(document.getElementById("in-compact-footprint")?.checked ?? studio.compactFootprint);
         const hasDiluter = !!(document.getElementById("in-include-plume-diluter")?.checked);
+        const isDeluxe = String(studio.buildPath || "").toLowerCase() === "custom_fab_deluxe";
+        const showSystems = !!state.showSystems3D;
 
         const q = d.quench, v = d.venturi, p = d.packed_bed, b = d.blower, env = d.envelope;
         const cut = state.cutaway;
@@ -8528,6 +9825,309 @@
         const matMotorFin = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.42, roughness: 0.38 });
         const matSpray = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.26, side: THREE.DoubleSide, depthWrite: false });
         const matDiluter = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.45, roughness: 0.34, side: THREE.DoubleSide });
+        // Phase 9 Systems Overlay materials
+        const matSkidSteel = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.62, roughness: 0.36 });
+        const matBraceSteel = new THREE.MeshStandardMaterial({ color: 0x6366f1, metalness: 0.48, roughness: 0.38 });
+        const matHoseSupply = new THREE.MeshStandardMaterial({ color: 0x06b6d4, metalness: 0.22, roughness: 0.42 });
+        const matHoseReturn = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.20, roughness: 0.46 });
+        const matConduit = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.50, roughness: 0.36 });
+        const matPanelBox = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.46, roughness: 0.30 });
+        const matEStopRed = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.20, roughness: 0.32, emissive: 0x450a0a });
+        const matAcousticBox = new THREE.MeshStandardMaterial({
+          color: 0xa855f7, metalness: 0.14, roughness: 0.55, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide,
+        });
+        const matAcousticTrim = new THREE.MeshStandardMaterial({ color: 0x9333ea, metalness: 0.38, roughness: 0.42 });
+        const matSilencerBody = new THREE.MeshStandardMaterial({ color: 0x7e22ce, metalness: 0.42, roughness: 0.38, side: THREE.DoubleSide });
+        const matNecZone = new THREE.MeshStandardMaterial({
+          color: 0x22c55e, metalness: 0.05, roughness: 0.7, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide,
+        });
+        const matSightGlass = new THREE.MeshStandardMaterial({
+          color: 0xbae6fd, metalness: 0.25, roughness: 0.08, transparent: true, opacity: 0.72,
+        });
+
+        // Helper: Render Phase 9 3D Systems Overlay (Steel Skid + K-Bracing + Sump/Pump/Hoses + NEMA 4X Panel + Acoustic Baffle Box + Stack Silencer + Deluxe Ports)
+        function addSystemsOverlay3D(cfg) {
+          if (!showSystems) return;
+          const sysG = new THREE.Group();
+          const {
+            qX: sqX, qZ: sqZ, pX: spX, pZ: spZ, pR: spR, pH: spH,
+            vX: svX, vY: svY, vZ: svZ,
+            bX: sbX, bY: sbY, bZ: sbZ, bR: sbR, bDepth: sbDepth,
+            stX: sstX, stBaseY: sstBaseY, stH: sstH, stR: sstR, stZ: sstZ,
+            inletY: sInletY,
+          } = cfg;
+
+          // 1. Structural Steel Base Skid Frame + Corner Anchor Pads
+          const curBox = new THREE.Box3().setFromObject(assemblyGroup);
+          const skidMinX = curBox.min.x - 0.18;
+          const skidMaxX = curBox.max.x + 0.56; // extra bay for stand-mounted NEMA 4X panel
+          const skidMinZ = Math.min(curBox.min.z, -0.58) - 0.16;
+          const skidMaxZ = Math.max(curBox.max.z, 0.72) + 0.28; // room in front for sump & pump station
+          const skidW = skidMaxX - skidMinX;
+          const skidD = skidMaxZ - skidMinZ;
+          const skidCX = (skidMinX + skidMaxX) * 0.5;
+          const skidCZ = (skidMinZ + skidMaxZ) * 0.5;
+          const beamH = 0.065;
+          const beamW = 0.065;
+
+          const railFront = new THREE.Mesh(new THREE.BoxGeometry(skidW, beamH, beamW), matSkidSteel);
+          railFront.position.set(skidCX, beamH * 0.5, skidMaxZ - beamW * 0.5);
+          sysG.add(railFront);
+          const railBack = new THREE.Mesh(new THREE.BoxGeometry(skidW, beamH, beamW), matSkidSteel);
+          railBack.position.set(skidCX, beamH * 0.5, skidMinZ + beamW * 0.5);
+          sysG.add(railBack);
+          const railLeft = new THREE.Mesh(new THREE.BoxGeometry(beamW, beamH, skidD), matSkidSteel);
+          railLeft.position.set(skidMinX + beamW * 0.5, beamH * 0.5, skidCZ);
+          sysG.add(railLeft);
+          const railRight = new THREE.Mesh(new THREE.BoxGeometry(beamW, beamH, skidD), matSkidSteel);
+          railRight.position.set(skidMaxX - beamW * 0.5, beamH * 0.5, skidCZ);
+          sysG.add(railRight);
+
+          // Cross members + concrete wedge anchor bolt-down pads
+          for (const frac of [0.28, 0.54, 0.78]) {
+            const cx = skidMinX + skidW * frac;
+            const cross = new THREE.Mesh(new THREE.BoxGeometry(beamW * 0.9, beamH * 0.9, skidD - beamW), matSkidSteel);
+            cross.position.set(cx, beamH * 0.45, skidCZ);
+            sysG.add(cross);
+          }
+          const padPts = [
+            [skidMinX + 0.06, skidMinZ + 0.06], [skidCX, skidMinZ + 0.06], [skidMaxX - 0.06, skidMinZ + 0.06],
+            [skidMinX + 0.06, skidMaxZ - 0.06], [skidCX, skidMaxZ - 0.06], [skidMaxX - 0.06, skidMaxZ - 0.06],
+          ];
+          for (const [ax, az] of padPts) {
+            const pad = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.022, 0.14), matBraceSteel);
+            pad.position.set(ax, 0.011, az);
+            sysG.add(pad);
+            const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.06, 6), matBolt);
+            bolt.position.set(ax, 0.032, az);
+            sysG.add(bolt);
+          }
+
+          // 2. Stage 3 Vertical Support Posts & Diagonal K-Bracing (open on front +Z for cutaway view!)
+          const frameR = spR + 0.10;
+          const postH = spH * 0.88;
+          const postGeo = new THREE.CylinderGeometry(0.022, 0.022, postH, 10);
+          const postCorners = [
+            [-frameR, -frameR], [frameR, -frameR],
+            [-frameR, frameR], [frameR, frameR],
+          ];
+          for (const [dx, dz] of postCorners) {
+            const post = new THREE.Mesh(postGeo, matSkidSteel);
+            post.position.set(spX + dx, beamH + postH * 0.5, spZ + dz);
+            sysG.add(post);
+          }
+          // Upper & mid horizontal tie collars
+          for (const hFrac of [0.46, 0.92]) {
+            const ty = beamH + postH * hFrac;
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(frameR * 1.15, 0.018, 8, 24), matBraceSteel);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.set(spX, ty, spZ);
+            sysG.add(ring);
+          }
+          // Diagonal K-braces on left, right, and rear bays
+          const addStrut = (p1, p2) => {
+            const dir = new THREE.Vector3().subVectors(p2, p1);
+            const len = dir.length();
+            const m = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, len, 8), matBraceSteel);
+            m.position.copy(p1).addScaledVector(dir, 0.5);
+            m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+            sysG.add(m);
+          };
+          const y0 = beamH + 0.06, yMid = beamH + postH * 0.46, yTop = beamH + postH * 0.92;
+          // Rear bay K-bracing
+          addStrut(new THREE.Vector3(spX - frameR, y0, spZ - frameR), new THREE.Vector3(spX, yMid, spZ - frameR));
+          addStrut(new THREE.Vector3(spX + frameR, y0, spZ - frameR), new THREE.Vector3(spX, yMid, spZ - frameR));
+          addStrut(new THREE.Vector3(spX - frameR, yTop, spZ - frameR), new THREE.Vector3(spX, yMid, spZ - frameR));
+          addStrut(new THREE.Vector3(spX + frameR, yTop, spZ - frameR), new THREE.Vector3(spX, yMid, spZ - frameR));
+          // Left & right side diagonal braces
+          addStrut(new THREE.Vector3(spX - frameR, y0, spZ - frameR), new THREE.Vector3(spX - frameR, yMid, spZ + frameR));
+          addStrut(new THREE.Vector3(spX - frameR, yMid, spZ + frameR), new THREE.Vector3(spX - frameR, yTop, spZ - frameR));
+          addStrut(new THREE.Vector3(spX + frameR, y0, spZ - frameR), new THREE.Vector3(spX + frameR, yMid, spZ + frameR));
+          addStrut(new THREE.Vector3(spX + frameR, yMid, spZ + frameR), new THREE.Vector3(spX + frameR, yTop, spZ - frameR));
+
+          // 3. Sump Tank + Magnetic-Drive Recirculation Pump + Y-Strainer + Color-Coded Supply/Return Hoses
+          const sumpPosX = (sqX + spX) * 0.5 - 0.12;
+          const sumpPosZ = skidMaxZ - 0.30;
+          const sumpTankW = 0.72, sumpTankH = 0.44, sumpTankD = 0.40;
+          const sumpShell = new THREE.Mesh(new THREE.BoxGeometry(sumpTankW, sumpTankH, sumpTankD), matCPVCSolid);
+          sumpShell.position.set(sumpPosX, beamH + sumpTankH * 0.5, sumpPosZ);
+          sysG.add(sumpShell);
+          const sumpLiquid = new THREE.Mesh(new THREE.BoxGeometry(sumpTankW - 0.04, sumpTankH * 0.65, sumpTankD - 0.04), matSump);
+          sumpLiquid.position.set(sumpPosX, beamH + sumpTankH * 0.36, sumpPosZ);
+          sysG.add(sumpLiquid);
+
+          // Magnetic-drive pump + Y-strainer beside sump
+          const pumpPosX = sumpPosX + sumpTankW * 0.5 + 0.24;
+          const pumpPosZ = sumpPosZ;
+          const pumpPad = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.03, 0.22), matAcousticTrim);
+          pumpPad.position.set(pumpPosX, beamH + 0.015, pumpPosZ);
+          sysG.add(pumpPad);
+          const pumpMotor = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.20, 16), matMotor);
+          pumpMotor.rotation.z = Math.PI / 2;
+          pumpMotor.position.set(pumpPosX + 0.04, beamH + 0.11, pumpPosZ);
+          sysG.add(pumpMotor);
+          const pumpHead = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.07, 16), matHoseSupply);
+          pumpHead.rotation.z = Math.PI / 2;
+          pumpHead.position.set(pumpPosX - 0.08, beamH + 0.11, pumpPosZ);
+          sysG.add(pumpHead);
+          // Y-strainer between sump and pump
+          const yStrain = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.12, 12), matFlange);
+          yStrain.rotation.z = Math.PI / 4;
+          yStrain.position.set(pumpPosX - 0.16, beamH + 0.09, pumpPosZ);
+          sysG.add(yStrain);
+
+          // Smooth color-coded supply hoses (cyan) & gravity return drains (sky-blue)
+          const addHose = (pts, rad, mat) => {
+            const path = new THREE.CatmullRomCurve3(pts);
+            sysG.add(new THREE.Mesh(new THREE.TubeGeometry(path, 28, rad, 10, false), mat));
+          };
+          // Sump suction -> pump
+          addHose([
+            new THREE.Vector3(sumpPosX + sumpTankW * 0.48, beamH + 0.11, pumpPosZ),
+            new THREE.Vector3(pumpPosX - 0.08, beamH + 0.11, pumpPosZ),
+          ], 0.022, matHoseSupply);
+          // Pump discharge -> Stage 1 Quench spray top
+          addHose([
+            new THREE.Vector3(pumpPosX - 0.08, beamH + 0.18, pumpPosZ),
+            new THREE.Vector3(pumpPosX - 0.08, beamH + 0.34, pumpPosZ - 0.10),
+            new THREE.Vector3(sqX + qR * 0.4, qH * 0.72, sqZ + qR + 0.10),
+            new THREE.Vector3(sqX, qH + 0.04, sqZ),
+          ], 0.017, matHoseSupply);
+          // Pump discharge -> Stage 2 Venturi throat
+          addHose([
+            new THREE.Vector3(pumpPosX - 0.05, beamH + 0.18, pumpPosZ),
+            new THREE.Vector3(svX, svY - 0.10, svZ + 0.14),
+            new THREE.Vector3(svX, svY, svZ),
+          ], 0.014, matHoseSupply);
+          // Pump discharge -> Stage 3 Packed Bed top liquid distributor
+          addHose([
+            new THREE.Vector3(pumpPosX - 0.02, beamH + 0.18, pumpPosZ),
+            new THREE.Vector3(spX - spR - 0.08, spH * 0.45, spZ + spR * 0.5),
+            new THREE.Vector3(spX - spR - 0.06, spH - 0.16, spZ),
+            new THREE.Vector3(spX - spR * 0.55, spH - 0.18, spZ),
+          ], 0.017, matHoseSupply);
+          // Gravity return drains (Stage 1 + Stage 3 -> Sump)
+          addHose([
+            new THREE.Vector3(sqX, beamH + 0.10, sqZ + qR * 0.7),
+            new THREE.Vector3(sumpPosX - sumpTankW * 0.32, beamH + 0.24, sumpPosZ - sumpTankD * 0.3),
+            new THREE.Vector3(sumpPosX - sumpTankW * 0.32, beamH + sumpTankH * 0.88, sumpPosZ),
+          ], 0.024, matHoseReturn);
+          addHose([
+            new THREE.Vector3(spX, beamH + 0.10, spZ + spR * 0.7),
+            new THREE.Vector3(sumpPosX + sumpTankW * 0.22, beamH + 0.24, sumpPosZ - sumpTankD * 0.25),
+            new THREE.Vector3(sumpPosX + sumpTankW * 0.22, beamH + sumpTankH * 0.88, sumpPosZ),
+          ], 0.024, matHoseReturn);
+
+          // 4. Stand-Mounted NEMA 4X Control/VFD Panel + Red E-Stop + Lockable Disconnect + NEC 110.26 Clearance Floor Pad
+          const panelX = skidMaxX - 0.24;
+          const panelZ = skidCZ + 0.08;
+          const standH = 1.05;
+          const boxW = 0.44, boxH = 0.56, boxD = 0.24;
+          const standPost1 = new THREE.Mesh(new THREE.BoxGeometry(0.05, standH, 0.05), matSkidSteel);
+          standPost1.position.set(panelX - 0.14, beamH + standH * 0.5, panelZ);
+          sysG.add(standPost1);
+          const standPost2 = new THREE.Mesh(new THREE.BoxGeometry(0.05, standH, 0.05), matSkidSteel);
+          standPost2.position.set(panelX + 0.14, beamH + standH * 0.5, panelZ);
+          sysG.add(standPost2);
+          const panelBody = new THREE.Mesh(new THREE.BoxGeometry(boxW, boxH, boxD), matPanelBox);
+          const panelMidY = beamH + standH + boxH * 0.38;
+          panelBody.position.set(panelX, panelMidY, panelZ);
+          sysG.add(panelBody);
+          // VFD screen window on panel face (+Z)
+          const vfdScreen = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.11, 0.015), matBlowerDark);
+          vfdScreen.position.set(panelX - 0.08, panelMidY + 0.11, panelZ + boxD * 0.5 + 0.006);
+          sysG.add(vfdScreen);
+          // Red mushroom E-Stop button
+          const eStop = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.028, 0.04, 16), matEStopRed);
+          eStop.rotation.x = Math.PI / 2;
+          eStop.position.set(panelX - 0.10, panelMidY - 0.11, panelZ + boxD * 0.5 + 0.02);
+          sysG.add(eStop);
+          // Lockable NEC 430.102 disconnect rotary handle
+          const discHandle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.12, 0.045), matConduit);
+          discHandle.position.set(panelX + 0.12, panelMidY + 0.04, panelZ + boxD * 0.5 + 0.02);
+          sysG.add(discHandle);
+          // Amber shielded VFD conduit from panel to blower
+          addHose([
+            new THREE.Vector3(panelX, panelMidY - boxH * 0.5, panelZ),
+            new THREE.Vector3(panelX, beamH + 0.14, panelZ),
+            new THREE.Vector3(sbX, beamH + 0.14, sbZ - sbDepth * 0.4),
+            new THREE.Vector3(sbX, sbY, sbZ - sbDepth * 0.4),
+          ], 0.016, matConduit);
+          // Translucent green floor pad marking NEC 110.26 36" x 30" working clearance in front of panel
+          const necPad = new THREE.Mesh(new THREE.PlaneGeometry(0.76, 0.91), matNecZone);
+          necPad.rotation.x = -Math.PI / 2;
+          necPad.position.set(panelX, 0.008, panelZ + boxD * 0.5 + 0.48);
+          sysG.add(necPad);
+
+          // 5. Semi-Transparent Cutaway Acoustic Blower Baffle Box + Inline Cylindrical Stack Silencer
+          const boxBW = sbR * 3.1 + 0.18;
+          const boxBH = sbR * 2.9 + 0.14;
+          const boxBD = Math.max(sbDepth + 0.24, sbR * 2.4);
+          const bBoxGroup = new THREE.Group();
+          bBoxGroup.position.set(sbX, Math.max(beamH + boxBH * 0.5, sbY), sbZ - sbDepth * 0.12);
+          // Back, top, left, right translucent acoustic panels (front open so spinning CCW impeller stays visible!)
+          const wallT2 = 0.045;
+          const bTop = new THREE.Mesh(new THREE.BoxGeometry(boxBW, wallT2, boxBD), matAcousticBox);
+          bTop.position.y = boxBH * 0.5;
+          bBoxGroup.add(bTop);
+          const bBack = new THREE.Mesh(new THREE.BoxGeometry(boxBW, boxBH, wallT2), matAcousticBox);
+          bBack.position.z = -boxBD * 0.5;
+          bBoxGroup.add(bBack);
+          const bLeft = new THREE.Mesh(new THREE.BoxGeometry(wallT2, boxBH, boxBD), matAcousticBox);
+          bLeft.position.x = -boxBW * 0.5;
+          bBoxGroup.add(bLeft);
+          const bRight = new THREE.Mesh(new THREE.BoxGeometry(wallT2, boxBH, boxBD), matAcousticBox);
+          bRight.position.x = boxBW * 0.5;
+          bBoxGroup.add(bRight);
+          // Crisp wireframe corner frame for acoustic baffle enclosure
+          const frameEdge = new THREE.LineSegments(
+            new THREE.EdgesGeometry(new THREE.BoxGeometry(boxBW, boxBH, boxBD)),
+            new THREE.LineBasicMaterial({ color: 0xc084fc, transparent: true, opacity: 0.78 })
+          );
+          bBoxGroup.add(frameEdge);
+          sysG.add(bBoxGroup);
+
+          // Inline cylindrical absorptive Stack Silencer around vertical exhaust stack
+          const silLen = Math.min(sstH * 0.52, 0.56);
+          const silR = sstR * 1.62;
+          const silY = sstBaseY + silLen * 0.5 + 0.12;
+          const silMesh = new THREE.Mesh(new THREE.CylinderGeometry(silR, silR, silLen, 28, 1, cut, thetaStart, thetaLen), matSilencerBody);
+          silMesh.position.set(sstX, silY, sstZ);
+          sysG.add(silMesh);
+          addBoltedFlange(sysG, sstX, silY - silLen * 0.5, sstZ, "y", sstR, matAcousticTrim, matBolt, 8);
+          addBoltedFlange(sysG, sstX, silY + silLen * 0.5, sstZ, "y", sstR, matAcousticTrim, matBolt, 8);
+
+          // 6. Deluxe Mode Vessel Hardware (Borosilicate Sight Glasses, NFPA 91 Cleanout Doors, Flue Jacket)
+          if (isDeluxe) {
+            const addSightGlass = (sx, sy, sz, rad) => {
+              const sgBezel = new THREE.Mesh(new THREE.TorusGeometry(rad, 0.015, 10, 20), matFlange);
+              sgBezel.position.set(sx, sy, sz);
+              sysG.add(sgBezel);
+              const sgLens = new THREE.Mesh(new THREE.CylinderGeometry(rad * 0.92, rad * 0.92, 0.02, 20), matSightGlass);
+              sgLens.rotation.x = Math.PI / 2;
+              sgLens.position.set(sx, sy, sz);
+              sysG.add(sgLens);
+            };
+            // Sight glasses on Stage 1 Quench & Stage 3 Packed Bed (on side/front edge)
+            addSightGlass(sqX + qR * 0.65, qH * 0.62, sqZ + qR * 0.76, 0.062);
+            addSightGlass(spX + spR * 0.65, spH * 0.56, spZ + spR * 0.76, 0.070);
+            // Bolted NFPA 91 Cleanout Hatch Plates
+            const addCleanoutHatch = (hx, hy, hz) => {
+              const plate = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.16, 0.03), matConduit);
+              plate.position.set(hx, hy, hz);
+              sysG.add(plate);
+            };
+            addCleanoutHatch(sqX, 0.28, sqZ + qR + 0.015);
+            addCleanoutHatch(spX, 0.34, spZ + spR + 0.015);
+            // Hot-flue ceramic/SS insulation jacket collar
+            const flueJacket = new THREE.Mesh(new THREE.CylinderGeometry(ductR * 1.28, ductR * 1.28, 0.34, 24), matFlange);
+            flueJacket.rotation.z = Math.PI / 2;
+            flueJacket.position.set(sqX - qR - 0.24, sInletY, sqZ);
+            sysG.add(flueJacket);
+          }
+
+          assemblyGroup.add(sysG);
+        }
 
         const clamp = (val, lo, hi) => Math.max(lo, Math.min(hi, val || lo));
         const ductR = clamp((env.duct_diameter_m || 0.20) * 0.5, 0.055, 0.15);
@@ -8996,23 +10596,33 @@
           assemblyGroup.add(dryFanGroup);
 
           // Stage 3 Packed Bed + Clean Vertical Top Exhaust Stack (NO wet Stage 4 blower!)
-          const { topNeckY } = buildPackedBedAt(pX, pZ, sweepCenterY);
+          const { bundleR: edBundleR, topNeckY } = buildPackedBedAt(pX, pZ, sweepCenterY);
           const stackR = ductR * 0.96;
           const stackH = clamp(1.05, 0.85, 1.30);
           const { exitY: stackExitWorldY } = addStackAndDiluter(assemblyGroup, pX, topNeckY, pZ, stackR, stackH);
 
-          // Center assembly & compute dynamic bounding-box camera framing
+          // Phase 9 Systems Overlay (Skid, K-Bracing, Sump/Pump/Hoses, NEMA 4X Panel, Acoustic Box & Stack Silencer)
+          addSystemsOverlay3D({
+            qX, qZ, pX, pZ, pR: edBundleR, pH,
+            vX: teeX, vY: teeY - teeH * 0.5 - cL - tL * 0.5, vZ: teeZ,
+            bX: dryFanX, bY: dryFanY, bZ: teeZ, bR: dryWheelR, bDepth: dryScrollW + dmLen,
+            stX: pX, stBaseY: topNeckY, stH: stackH, stR: stackR, stZ: pZ,
+            inletY,
+          });
+
+          // Center assembly & compute dynamic bounding-box camera framing (includes skid, panel & silencer!)
           const rawBox = new THREE.Box3().setFromObject(assemblyGroup);
           const centerX = -(rawBox.min.x + rawBox.max.x) * 0.5;
           const centerZ = -(rawBox.min.z + rawBox.max.z) * 0.5;
           assemblyGroup.position.set(centerX, 0, centerZ);
 
           const totalW = rawBox.max.x - rawBox.min.x;
+          const totalD = rawBox.max.z - rawBox.min.z;
           const totalH = Math.max(rawBox.max.y, stackExitWorldY) + 0.16;
           const tanHalfFov = Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
           const allTargetY = totalH * 0.50;
-          const allTargetX = Math.max(0.28, totalW * 0.10);
-          const allDist = Math.max(5.6, Math.max((totalH * 0.54) / tanHalfFov, (totalW * 0.44) / (tanHalfFov * Math.max(1.45, camera.aspect || 2.1))) * 1.22);
+          const allTargetX = Math.max(0.22, totalW * 0.08);
+          const allDist = Math.max(5.8, Math.max((totalH * 0.56) / tanHalfFov, (totalW * 0.48) / (tanHalfFov * Math.max(1.45, camera.aspect || 2.1))) * 1.24 + totalD * 0.38);
 
           stageViews = {
             all: { target: new THREE.Vector3(allTargetX, allTargetY, 0), cam: new THREE.Vector3(allTargetX + 0.85, allTargetY + totalH * 0.22, allDist) },
@@ -9386,20 +10996,30 @@
         eyePath.add(elbow4);
         assemblyGroup.add(new THREE.Mesh(new THREE.TubeGeometry(eyePath, 28, ductR, 24, false), cut ? matCutGlass : matCPVCSolid));
 
-        // Center assembly cleanly using bounding box
+        // Phase 9 Systems Overlay (Skid, K-Bracing, Sump/Pump/Hoses, NEMA 4X Panel, Acoustic Box & Stack Silencer)
+        addSystemsOverlay3D({
+          qX, qZ, pX, pZ, pR: bundleR, pH,
+          vX: vStartX + vConvL + vThL * 0.5, vY, vZ: qZ,
+          bX, bY, bZ: pZ, bR: wheelR, bDepth: skidDepth,
+          stX: stackX, stBaseY: bY + stackBaseLocalY, stH: stackH, stR: stackR, stZ: pZ,
+          inletY,
+        });
+
+        // Center assembly cleanly using bounding box (includes skid, panel & silencer!)
         const rawBox = new THREE.Box3().setFromObject(assemblyGroup);
         const centerOffset = -(rawBox.min.x + rawBox.max.x) * 0.5;
         const centerZ = -(rawBox.min.z + rawBox.max.z) * 0.5;
         assemblyGroup.position.set(centerOffset, 0, centerZ);
 
         const tanHalfFov = Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
-        const topY = Math.max(topDuctY + ductR, stackExitWorldY) + 0.14;
+        const topY = Math.max(rawBox.max.y, topDuctY + ductR, stackExitWorldY) + 0.14;
         const totalW = rawBox.max.x - rawBox.min.x;
+        const totalD = rawBox.max.z - rawBox.min.z;
         const allTargetY = topY * 0.50;
-        const allTargetX = Math.max(0.32, totalW * 0.11);
-        const allDistY = (topY * 0.54) / tanHalfFov;
-        const allDistX = (totalW * 0.42) / (tanHalfFov * Math.max(1.45, camera.aspect || 2.1));
-        const allDist = Math.max(5.8, Math.max(allDistY, allDistX) * 1.18);
+        const allTargetX = Math.max(0.24, totalW * 0.08);
+        const allDistY = (topY * 0.56) / tanHalfFov;
+        const allDistX = (totalW * 0.48) / (tanHalfFov * Math.max(1.45, camera.aspect || 2.1));
+        const allDist = Math.max(5.8, Math.max(allDistY, allDistX) * 1.22 + (showSystems ? totalD * 0.40 : 0));
 
         const blowerTopY = stackExitWorldY + 0.16;
         const blowerMidY = blowerTopY * 0.50;
@@ -9422,7 +11042,7 @@
           camera.position.copy(initView.cam);
           controls.target.copy(initView.target);
           controls.update();
-        } else if (state.selectedStage === "blower" || isCompact) {
+        } else if (state.selectedStage === "blower" || isCompact || showSystems) {
           const vGoal = stageViews[state.selectedStage] || stageViews.all;
           targetGoal = vGoal.target.clone();
           camGoal = vGoal.cam.clone();
@@ -9574,6 +11194,10 @@
       window.__kiln3D = {
         updateDesign: (d) => buildAssembly(d),
         setCutaway: () => buildAssembly(state.design),
+        setSystemsOverlay: () => {
+          buildAssembly(state.design);
+          focusStage(state.selectedStage || "all");
+        },
         setParticles: (on) => { particlePoints.visible = on; },
         focusStage,
         resize,

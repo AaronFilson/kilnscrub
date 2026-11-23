@@ -118,6 +118,49 @@ func selectQuenchVessel(project StudioProject, design model.ScrubberDesign) COTS
 	heightFt := design.Quench.TowerHeight.Feet()
 	heavy := project.CorrosionTier == CorrosionTierHeavyC276FRP
 
+	if project.IsDeluxe() {
+		nomIn := round1(reqIn)
+		if project.SnapToCOTS {
+			if heavy {
+				spec, _ := snapPipe(quenchC276Catalog, reqIn)
+				nomIn = spec.nominalIn
+			} else {
+				spec, _ := snapPipe(quench316LCatalog, reqIn)
+				nomIn = spec.nominalIn
+			}
+		}
+		if heavy {
+			cost := round2(2450.0 + 165.0*nomIn + 145.0*heightFt)
+			weight := round2(math.Max(45.0, 2.20*nomIn*heightFt))
+			return COTSPart{
+				SKU:         fmt.Sprintf("DLX-QC276-%02.0f", nomIn),
+				Name:        fmt.Sprintf(`%.0f" TIG-Welded Heavy-Gauge Alloy C-276 Quench Tower w/ ANSI B16.5 Class 150 Flanges (%.1f ft)`, nomIn, heightFt),
+				NominalIn:   nomIn,
+				Material:    "Heavy-Gauge Alloy C-276 (11 ga / Sch 10S, TIG Back-Purged) + ANSI B16.5 Class 150 Lap-Joint Flanges + PTFE Envelope Gaskets",
+				Source:      "Custom TIG Process Fabricator (scrubber.dxf + ANSI B16.5)",
+				UnitCostUSD: cost,
+				WeightKg:    weight,
+				Notes:       fmt.Sprintf("Custom Fab Deluxe quench tower (%.0f\" nom, calc %.1f\"): TIG back-purged Alloy C-276 shell, machined ANSI/ASME B16.5 Class 150 lap-joint flanges, PTFE envelope gaskets, 2× borosilicate sight-glass ports, 2× bolted NFPA 91 quick-release cleanout doors, and 1\" ceramic-fiber + stainless hot-flue insulation jacket.", nomIn, reqIn),
+			}
+		}
+		cost := round2(1150.0 + 58.0*nomIn + 65.0*heightFt)
+		weight := round2(math.Max(28.0, 1.45*nomIn*heightFt))
+		notes := fmt.Sprintf("Custom Fab Deluxe quench tower (%.0f\" nom, calc %.1f\"): TIG back-purged heavy-gauge 316L SS shell, machined ANSI/ASME B16.5 Class 150 lap-joint flanges, PTFE envelope gaskets, 2× borosilicate sight-glass ports, 2× bolted NFPA 91 quick-release cleanout doors, and 1\" ceramic-fiber + stainless hot-flue insulation jacket.", nomIn, reqIn)
+		if project.VaporGlazeMode == VaporGlazeSalt {
+			notes += " Recirculate alkaline NaHCO3 quench spray (pH 8.0-8.5) and inspect back-purged TIG welds every 5-10 salt firings."
+		}
+		return COTSPart{
+			SKU:         fmt.Sprintf("DLX-Q316L-%02.0f", nomIn),
+			Name:        fmt.Sprintf(`%.0f" TIG-Welded Heavy-Gauge 316L SS Quench Tower w/ ANSI B16.5 Class 150 Flanges (%.1f ft)`, nomIn, heightFt),
+			NominalIn:   nomIn,
+			Material:    "Heavy-Gauge 316L Stainless Steel (11 ga / Sch 10S, TIG Back-Purged) + ANSI B16.5 Class 150 Lap-Joint Flanges + PTFE Envelope Gaskets",
+			Source:      "Custom TIG Process Fabricator (scrubber.dxf + ANSI B16.5)",
+			UnitCostUSD: cost,
+			WeightKg:    weight,
+			Notes:       notes,
+		}
+	}
+
 	if !project.SnapToCOTS {
 		mat := "316L Stainless Steel (14 ga)"
 		sku := fmt.Sprintf("FAB-Q316-%.0f", math.Round(reqIn))
@@ -191,6 +234,56 @@ func selectSinglePackedColumn(project StudioProject, design model.ScrubberDesign
 	}
 	heightFt := design.PackedBed.ColumnHeight.Feet()
 	heavy := project.CorrosionTier == CorrosionTierHeavyC276FRP
+
+	if project.IsDeluxe() {
+		var actualIDIn, nomIn, cost, weight float64
+		var sku string
+		if !project.SnapToCOTS {
+			if eductor.Enabled && eductor.EnlargedBedDiameterIn > reqIn {
+				reqIn = eductor.EnlargedBedDiameterIn
+			}
+			nomIn = round1(reqIn)
+			actualIDIn = reqIn
+			sku = fmt.Sprintf("DLX-FAB-FRP-%02.0f", math.Round(reqIn))
+			cost = round2(1080.0 + 78.0*reqIn + 60.0*heightFt)
+			weight = round2(math.Max(28.0, 1.10*reqIn*heightFt))
+		} else {
+			var spec pipeSpec
+			if eductor.Enabled {
+				spec, _ = snapPipeByNominal(packedFRPCatalog, eductor.EnlargedBedDiameterIn)
+			} else {
+				spec, _ = snapPipe(packedFRPCatalog, reqIn)
+			}
+			nomIn = spec.nominalIn
+			actualIDIn = spec.actualID
+			sku = "DLX-FRP-COL-" + spec.skuSuffix
+			cost = round2(spec.baseCost*math.Max(0.95, heightFt/8.0) + 460.0) // +structural gusset rings, bolted 12" packing manway & ANSI stub-end flanges
+			weight = round2(spec.kgPerFt*heightFt + 9.5)
+		}
+		part := COTSPart{
+			SKU:         sku,
+			Name:        fmt.Sprintf(`%.0f" Custom Filament-Wound Derakane Vinyl-Ester FRP Packed Column w/ Bolted Manway & Gusset Rings (%.1f ft)`, nomIn, heightFt),
+			NominalIn:   nomIn,
+			Material:    "Filament-Wound Derakane Vinyl-Ester FRP (210 F Wet Acid Rated, ASTM E84 Class 1, Structural Gusset Rings, ANSI Class 150 Flanges)",
+			Source:      "Ershigs / Beetle Plastics / Custom Industrial FRP Fabricator",
+			UnitCostUSD: cost,
+			WeightKg:    weight,
+			Notes:       fmt.Sprintf("Custom Fab Deluxe absorber column (ID %.1f\", calc %.1f\") with structural gusset rings, bolted 12\" packing access manway, borosilicate bed sight-glass port, and removable demister cassette flange (alternative: heavy-wall welded PP/CPVC with structural gusset rings).", actualIDIn, reqIn),
+		}
+		if eductor.Enabled {
+			part.Notes += fmt.Sprintf(" Enlarged for dry-fan eductor mixed airflow (%.0f ACFM @ %.1f F, +%.2f inWC positive pressure, outdoor-only bolted ANSI PTFE flanges).",
+				eductor.TotalMixedACFM, eductor.MixedTempF, eductor.PositivePressureInWC)
+			return part, actualIDIn, eductor.EnlargedBedFloodPct
+		}
+		actualDiamM := float64(model.InchesToMeters(actualIDIn))
+		actualArea := math.Pi * actualDiamM * actualDiamM / 4.0
+		actualPctFlood := design.PackedBed.PercentOfFlood
+		if actualArea > 0 && design.PackedBed.FloodingVelocity > 0 && design.QuenchedGas.VolumetricFlow > 0 {
+			vSupActual := float64(design.QuenchedGas.VolumetricFlow) / actualArea
+			actualPctFlood = round2((vSupActual / float64(design.PackedBed.FloodingVelocity)) * 100.0)
+		}
+		return part, actualIDIn, actualPctFlood
+	}
 
 	if !project.SnapToCOTS {
 		if eductor.Enabled && eductor.EnlargedBedDiameterIn > reqIn {
@@ -307,7 +400,48 @@ func snapPipeByNominal(catalog []pipeSpec, nomIn float64) (pipeSpec, bool) {
 }
 
 func selectSumpTank(design model.ScrubberDesign) COTSPart {
+	return selectSumpTankForProject(StudioProject{}, design)
+}
+
+func selectSumpTankForProject(project StudioProject, design model.ScrubberDesign) COTSPart {
 	sumpGal := float64(design.PackedBed.SumpVolume) / model.CubicMetersPerUSGallon
+	if project.IsDeluxe() {
+		switch {
+		case sumpGal <= 22.0:
+			return COTSPart{
+				SKU:         "DLX-SUMP-SLOPED-35",
+				Name:        `35-Gallon Sloped-Bottom Baffled Chemical Settling Sump w/ 2" Drain Ball Valve & Ash Basket`,
+				NominalIn:   20.0,
+				Material:    "Welded Heavy-Wall HDPE / Derakane FRP (Sloped-Bottom Baffled, Atmospheric Vented)",
+				Source:      "Custom Plastics / US Plastic Industrial Tank",
+				UnitCostUSD: 385.0,
+				WeightKg:    18.0,
+				Notes:       fmt.Sprintf("Custom Fab Deluxe atmospheric vented sloped-bottom settling sump covering %.1f gal required holdup; includes internal weir baffle, removable 316L ash basket, flooded-suction bulkhead, and 2\" full-port drain ball valve.", sumpGal),
+			}
+		case sumpGal <= 45.0:
+			return COTSPart{
+				SKU:         "DLX-SUMP-SLOPED-60",
+				Name:        `60-Gallon Sloped-Bottom Baffled Chemical Settling Sump w/ 2" Drain Ball Valve & Ash Basket`,
+				NominalIn:   24.0,
+				Material:    "Welded Heavy-Wall HDPE / Derakane FRP (Sloped-Bottom Baffled, Atmospheric Vented)",
+				Source:      "Custom Plastics / US Plastic Industrial Tank",
+				UnitCostUSD: 495.0,
+				WeightKg:    24.0,
+				Notes:       fmt.Sprintf("Custom Fab Deluxe atmospheric vented sloped-bottom settling sump covering %.1f gal required holdup; includes internal weir baffle, removable 316L ash basket, flooded-suction bulkhead, and 2\" full-port drain ball valve.", sumpGal),
+			}
+		default:
+			return COTSPart{
+				SKU:         "DLX-SUMP-SLOPED-110",
+				Name:        `110-Gallon Sloped-Bottom Baffled Chemical Settling Sump w/ 2" Drain Ball Valve & Ash Basket`,
+				NominalIn:   30.0,
+				Material:    "Welded Heavy-Wall XLPE / Derakane FRP (Sloped-Bottom Baffled, Atmospheric Vented)",
+				Source:      "Custom Industrial FRP / Ace Roto-Mold",
+				UnitCostUSD: 745.0,
+				WeightKg:    38.0,
+				Notes:       fmt.Sprintf("Custom Fab Deluxe atmospheric vented sloped-bottom co-op settling sump covering %.1f gal required holdup; includes internal weir baffle, removable 316L ash basket, flooded-suction bulkhead, and 2\" full-port drain ball valve.", sumpGal),
+			}
+		}
+	}
 	switch {
 	case sumpGal <= 22.0:
 		return COTSPart{
@@ -513,7 +647,25 @@ func selectDryMotiveBlowerVFD(project StudioProject, eductor EductorAnalysis) CO
 }
 
 func selectSilencer(design model.ScrubberDesign) COTSPart {
+	return selectSilencerForProject(StudioProject{}, design)
+}
+
+func selectSilencerForProject(project StudioProject, design model.ScrubberDesign) COTSPart {
 	ductIn := math.Max(6.0, math.Ceil(design.Envelope.DuctDiameter.Inches()/2.0)*2.0)
+	if project.IsDeluxe() {
+		cost := round2(540.0 + 34.0*ductIn)
+		weight := round2(28.0 + 1.8*ductIn)
+		return COTSPart{
+			SKU:         fmt.Sprintf("DLX-ACOUSTIC-ENC-%02.0f", ductIn),
+			Name:        fmt.Sprintf(`%.0f" Deluxe Acoustic Blower Baffle Enclosure (2" Rockwool + Cooling Labyrinth) & Tuned Absorptive Stack Silencer`, ductIn),
+			NominalIn:   ductIn,
+			Material:    `Powder-Coated Steel Acoustic Baffle Box (2" Rockwool Mineral Wool + Perforated Metal Liner + Cooling-Air Labyrinth) + Tuned Absorptive Stack Silencer`,
+			Source:      "Custom Acoustic Fab / Rockwool Safe'n'Sound / Industrial Silencer",
+			UnitCostUSD: cost,
+			WeightKg:    weight,
+			Notes:       "Custom Fab Deluxe acoustic package: reduces blower & discharge noise by ~22 dBA total (+9 dBA quieter than standard silencer) while maintaining baffled TEFC motor cooling airflow for ultra-quiet residential property-line operation.",
+		}
+	}
 	cost := round2(220.0 + 22.0*ductIn)
 	weight := round2(8.0 + 1.1*ductIn)
 	return COTSPart{
@@ -613,10 +765,32 @@ func selectSensorKitForTier(tier string, design model.ScrubberDesign) COTSPart {
 	}
 }
 
+func selectSensorKitForProject(project StudioProject, design model.ScrubberDesign) COTSPart {
+	base := selectSensorKitForTier(project.ControlTier, design)
+	if !project.IsDeluxe() {
+		return base
+	}
+	ductIn := math.Max(6.0, math.Ceil(design.Envelope.DuctDiameter.Inches()))
+	const deluxeUL508AUpgradeCost = 780.0 // UL 508A-style NEMA 4X stainless/polycarbonate pre-wired enclosure, FM/UL 1/16-DIN 200 F high-limit controller, dual Type-K thermowells, inline flow transmitter, flow-through pH probe, pilot stack light & alarm horn
+	return COTSPart{
+		SKU:         "DLX-UL508A-N4X-PANEL",
+		Name:        "UL 508A-Style Pre-Wired NEMA 4X Control/VFD Panel, FM/UL 200 F High-Limit Safety Loop & Fail-Safe Bypass Kit",
+		NominalIn:   ductIn,
+		Material:    "NEMA 4X 316 SS / Polycarbonate Pre-Wired Panel / FM-UL 1/16-DIN 200 F High-Limit / Dual Type-K Thermowells / Flow Transmitter / Flow-Through pH / Stack Light & Horn",
+		Source:      "UL 508A Panel Shop / AutomationDirect / Dwyer / Belimo / Atlas Scientific",
+		UnitCostUSD: round2(base.UnitCostUSD + deluxeUL508AUpgradeCost),
+		WeightKg:    round2(base.WeightKg + 13.5),
+		Notes:       fmt.Sprintf(`Custom Fab Deluxe UL 508A-style pre-wired NEMA 4X panel (control_tier=%s): through-door NEC 430.102 lockable disconnect, 3%% input line reactor, HF-GFCI, GS21 VFD subpanel, independent FM/UL 1/16-DIN 200 F (93.3 C) high-limit controller + NFPA 86 hardwired 24VDC latching safety relay + E-stop, dual 316L Type-K thermowells, inline flow transmitter (0.25 GPM trip), flow-through pH probe, pilot stack light/alarm horn, and %.0f" Belimo spring-return fail-open bypass damper.`, project.ControlTier, ductIn),
+	}
+}
+
 func estimateSingleVenturiCost(project StudioProject, design model.ScrubberDesign) float64 {
 	ventCost := round2(240.0 + 18.0*design.Venturi.InletDiameter.Inches())
-	if project.BuildPath == BuildPathWeldedDXF {
+	switch project.BuildPath {
+	case BuildPathWeldedDXF:
 		ventCost = round2(ventCost * 1.15)
+	case BuildPathCustomFabDeluxe:
+		ventCost = round2(ventCost * 1.65)
 	}
 	if project.CorrosionTier == CorrosionTierHeavyC276FRP {
 		ventCost = round2(ventCost * 2.6)
@@ -700,9 +874,9 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 	packMedia, packSpec, packCuFt := analyzePackingMedia(p, design, eductor, parallelBed)
 
 	quenchPart := selectQuenchVessel(p, design)
-	sumpPart := selectSumpTank(design)
+	sumpPart := selectSumpTankForProject(p, design)
 	nozzlePart := selectSprayNozzle(p, design)
-	sensorPart := selectSensorKitForTier(p.ControlTier, design)
+	sensorPart := selectSensorKitForProject(p, design)
 
 	var colPart COTSPart
 	var actualColIDIn, actualPctFlood float64
@@ -745,8 +919,8 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 	blowerPart := selectBlowerForDrive(p, design, eductor, compressor, blowerDrive)
 
 	var silencerPtr *COTSPart
-	if p.IncludeSilencer {
-		s := selectSilencer(design)
+	if p.IncludeSilencer || p.IsDeluxe() {
+		s := selectSilencerForProject(p, design)
 		silencerPtr = &s
 	}
 
@@ -772,6 +946,11 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 		ventName = "Rolled & Welded Venturi Cones & Throat Spool (from scrubber.dxf)"
 		ventSpec = fmt.Sprintf(`DXF flat-pattern cones: %.0fmm -> %.1fmm throat -> %.0fmm + bolted flanges`,
 			design.Venturi.InletDiameter.Millimeters(), design.Venturi.ThroatDiameter.Millimeters(), design.Venturi.OutletDiameter.Millimeters())
+	} else if p.IsDeluxe() {
+		ventName = "TIG-Welded Heavy-Gauge Venturi Cones & Throat w/ ANSI B16.5 Class 150 Lap-Joint Flanges"
+		ventSpec = fmt.Sprintf(`Precision-rolled & back-purged TIG venturi: %.0fmm -> %.1fmm throat -> %.0fmm w/ machined ANSI/ASME B16.5 Class 150 lap-joint flanges & PTFE envelope gaskets`,
+			design.Venturi.InletDiameter.Millimeters(), design.Venturi.ThroatDiameter.Millimeters(), design.Venturi.OutletDiameter.Millimeters())
+		ventWeight = round2(ventWeight * 1.35)
 	}
 	if p.CorrosionTier == CorrosionTierHeavyC276FRP {
 		ventMat = "Alloy C-276 Throat / Silicon Carbide Liner + FRP Diffuser"
@@ -803,18 +982,43 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 	}
 	pumpCost := round2(265.0 + 14.0*recircGPM)
 	pumpWeight := round2(7.5 + 0.30*recircGPM)
+	pumpName := "Seal-Less Mag-Drive Recirculation Pump & Ash Strainer"
+	pumpMat := "Polypropylene / EPDM / Ceramic Shaft"
+	pumpSpec := fmt.Sprintf("Rated %.1f GPM @ 35 ft TDH (March / Iwaki / Little Giant TE-MD) + 50-mesh inline Y-strainer", recircGPM)
+	if p.IsDeluxe() {
+		pumpCost = round2(pumpCost + 195.0)
+		pumpWeight = round2(pumpWeight + 4.5)
+		pumpName = "Heavy-Duty Magnetic-Drive Sealless Chemical Recirculation Pump Station (PVDF/Ceramic)"
+		pumpMat = "PVDF / Ceramic Shaft / PTFE O-Rings + CPVC/316L Isolation Valves & Y-Strainer"
+		pumpSpec = fmt.Sprintf("[DLX-MAGDRIVE-PUMP] Rated %.1f GPM @ 45 ft TDH (Iwaki MD / March PVDF) + flooded-suction 316L/CPVC Y-strainer, true-union isolation ball valves, check valve & glycerin pressure gauge", recircGPM)
+	}
 
 	// 3-pass polypropylene chevron mist eliminator pad sized to actual column ID.
 	colAreaSqFt := math.Pi * (actualColIDIn / 12.0) * (actualColIDIn / 12.0) / 4.0
 	demisterCost := round2(145.0 + 95.0*colAreaSqFt)
 	demisterWeight := round2(math.Max(2.0, 2.8*colAreaSqFt))
+	demisterName := "3-Pass Chevron Mist Eliminator Pad & Packing Support Grate"
+	demisterSpec := fmt.Sprintf(`Cut to %.1f" equivalent column bore; captures >99%% entrained mist droplets`, actualColIDIn)
+	if p.IsDeluxe() {
+		demisterCost = round2(demisterCost + 125.0)
+		demisterWeight = round2(demisterWeight + 3.2)
+		demisterName = "Removable 3-Pass Chevron Demister Cassette & Reinforced FRP Support Grate"
+		demisterSpec = fmt.Sprintf(`[DLX-DEMISTER-CASS] Slide-out removable cassette frame sized to %.1f" bore w/ bolted access cover & reinforced FRP support bar grating`, actualColIDIn)
+	}
 
 	// Gaskets, clamps, CPVC cement, hardware kit.
 	hardwareCost := 195.0
 	hardwareName := "No-Weld Couplings, EPDM/PTFE Gaskets, CPVC Cement & 316 SS Clamps"
+	hardwareWeight := 8.5
+	hardwareSpec := ">=2300 F alumina-silica ceramic fiber rope/gaskets for dry hot flue upstream of Stage 1 (NO silicone/PTFE on 2400 F flue!), expanded PTFE/EPDM gaskets strictly downstream (<=200 F), band clamps/bolts, CPVC Sch 80 primer & cement, drain ball valve, thermometer (IPC 702.5 <=140 F check), brine hydrometer (SG 1.000-1.200), pH test strips"
 	if p.BuildPath == BuildPathWeldedDXF {
 		hardwareCost = 245.0
 		hardwareName = "PTFE Full-Face Flange Gaskets & 316 SS Hex Bolt/Nut Kit"
+	} else if p.IsDeluxe() {
+		hardwareCost = 485.0
+		hardwareWeight = 16.5
+		hardwareName = "ANSI/ASME B16.5 Class 150 Lap-Joint Flanges, PTFE Envelope Gaskets, 316 SS Studs & Braided Chemical Hose Kit"
+		hardwareSpec = "[DLX-ANSI150-HOSE] >=2300 F alumina-silica ceramic fiber hot-flue gaskets (NO silicone/PTFE on 2400 F flue!), machined ANSI/ASME B16.5 Class 150 lap-joint flange kit, PTFE envelope gaskets, 316 SS studs w/ anti-seize, braided EPDM/PTFE chemical hoses, IPC 702.5 <=140 F thermometer, brine hydrometer (SG 1.000-1.200) & pH test kit"
 	}
 
 	items := []model.BOMItem{
@@ -870,11 +1074,11 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 		},
 		{
 			Category:    "Stage 3: Packed-Bed Column",
-			Name:        "3-Pass Chevron Mist Eliminator Pad & Packing Support Grate",
+			Name:        demisterName,
 			Material:    "Polypropylene (PP) / FRP Grating",
 			Quantity:    1,
 			Unit:        "assy",
-			Spec:        fmt.Sprintf(`Cut to %.1f" equivalent column bore; captures >99%% entrained mist droplets`, actualColIDIn),
+			Spec:        demisterSpec,
 			UnitCostUSD: demisterCost,
 			WeightKg:    demisterWeight,
 		},
@@ -890,11 +1094,11 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 		},
 		{
 			Category:    "Liquid & Chemical Handling",
-			Name:        "Seal-Less Mag-Drive Recirculation Pump & Ash Strainer",
-			Material:    "Polypropylene / EPDM / Ceramic Shaft",
+			Name:        pumpName,
+			Material:    pumpMat,
 			Quantity:    1,
 			Unit:        "ea",
-			Spec:        fmt.Sprintf("Rated %.1f GPM @ 35 ft TDH (March / Iwaki / Little Giant TE-MD) + 50-mesh inline Y-strainer", recircGPM),
+			Spec:        pumpSpec,
 			UnitCostUSD: pumpCost,
 			WeightKg:    pumpWeight,
 		},
@@ -962,6 +1166,39 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 		})
 	}
 
+	if p.IsDeluxe() {
+		skidLenFt := math.Max(5.5, design.Envelope.Length.Feet())
+		items = append(items,
+			model.BOMItem{
+				Category:    "Stage 1: Quench Vessel",
+				Name:        `2× Borosilicate Sight-Glass Ports, 2× Bolted NFPA 91 Cleanout Doors & 1" Ceramic-Fiber/SS Flue Insulation Jacket`,
+				Material:    "Borosilicate Glass / 316L SS / 2300 F Ceramic-Fiber Blanket w/ Stainless Cladding",
+				Quantity:    1,
+				Unit:        "kit",
+				Spec:        "[DLX-SIGHT-CLNOUT-INSUL] 2× flanged borosilicate sight-glass ports (quench spray + packing bed), 2× bolted NFPA 91 quick-release cleanout doors, and 1\" ceramic-fiber + stainless steel hot-flue insulation jacket",
+				UnitCostUSD: 585.0,
+				WeightKg:    14.5,
+			},
+			model.BOMItem{
+				Category:    "Structural Skid & Vibration Isolation",
+				Name:        `Welded 2"×2"×3/16" Galvanized/Powder-Coated Steel Forklift Skid, Diagonal K-Bracing, Pipe Saddles, Anchors & Vibration Boots`,
+				Material:    `ASTM A500 2"×2"×3/16" Galvanized/Powder-Coated Steel Tube / 316 SS Wedge Anchors / PTFE-EPDM Flex Boots`,
+				Quantity:    1,
+				Unit:        "assy",
+				Spec:        fmt.Sprintf(`[DLX-SKID-KBRACE-VBOOT] Welded forklift-pocket structural steel skid (%.1f ft base) + Stage 3 column cage & diagonal K-bracing + overhead duct pipe saddles + 6× 1/2"×4" 316 SS concrete wedge anchors + flexible PTFE/EPDM vibration isolation boots at blower inlet & outlet`, skidLenFt),
+				UnitCostUSD: round2(780.0 + 28.0*skidLenFt),
+				WeightKg:    round2(88.0 + 6.5*skidLenFt),
+			},
+		)
+	}
+
+	discSpec := "[NEC430-DISC-LR] Padlockable line-side disconnect within sight (<=50 ft) of VFD & blower + 3% input line reactor for NEC 210.8(F) HF-GFCI stability (Square D / AutomationDirect)"
+	discCost := 215.0
+	if p.IsDeluxe() {
+		discSpec = "[NEC430-DISC-LR] UL 508A through-door lockable NEC 430.102 disconnect handle + 3% copper-wound input line reactor + NEC 210.8(F) HF-GFCI breaker kit (Square D / AutomationDirect)"
+		discCost = 310.0
+	}
+
 	items = append(items,
 		model.BOMItem{
 			Category:    "Liquid & Chemical Handling",
@@ -979,8 +1216,8 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 			Material:    "NEMA 4X Non-Fused Disconnect / Copper-Wound Line Reactor",
 			Quantity:    1,
 			Unit:        "assy",
-			Spec:        "[NEC430-DISC-LR] Padlockable line-side disconnect within sight (<=50 ft) of VFD & blower + 3% input line reactor for NEC 210.8(F) HF-GFCI stability (Square D / AutomationDirect)",
-			UnitCostUSD: 215.0,
+			Spec:        discSpec,
+			UnitCostUSD: discCost,
 			WeightKg:    4.8,
 		},
 		model.BOMItem{
@@ -999,9 +1236,9 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 			Material:    "316 SS / Ceramic Fiber / PTFE / EPDM / CPVC",
 			Quantity:    1,
 			Unit:        "lot",
-			Spec:        ">=2300 F alumina-silica ceramic fiber rope/gaskets for dry hot flue upstream of Stage 1 (NO silicone/PTFE on 2400 F flue!), expanded PTFE/EPDM gaskets strictly downstream (<=200 F), band clamps/bolts, CPVC Sch 80 primer & cement, drain ball valve, thermometer (IPC 702.5 <=140 F check), brine hydrometer (SG 1.000-1.200), pH test strips",
+			Spec:        hardwareSpec,
 			UnitCostUSD: hardwareCost,
-			WeightKg:    8.5,
+			WeightKg:    hardwareWeight,
 		},
 	)
 

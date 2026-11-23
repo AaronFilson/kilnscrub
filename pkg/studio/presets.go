@@ -16,8 +16,9 @@ const (
 	VaporGlazeSoda = "soda"
 	VaporGlazeSalt = "salt"
 
-	BuildPathCOTSNoWeld = "cots_no_weld"
-	BuildPathWeldedDXF  = "welded_dxf"
+	BuildPathCOTSNoWeld      = "cots_no_weld"
+	BuildPathWeldedDXF       = "welded_dxf"
+	BuildPathCustomFabDeluxe = "custom_fab_deluxe"
 
 	// CorrosionTierStandard316L is the canonical light/occasional 316L SS tier.
 	CorrosionTierStandard316L = "standard_316l"
@@ -448,6 +449,11 @@ func isFinite(v float64) bool {
 	return !math.IsNaN(v) && !math.IsInf(v, 0)
 }
 
+// IsDeluxe reports whether the project uses the Phase 9 Custom Fabrication Deluxe build path.
+func (p StudioProject) IsDeluxe() bool {
+	return p.BuildPath == BuildPathCustomFabDeluxe
+}
+
 // Validate checks that all StudioProject parameters and its effective DesignInput are valid.
 func (p StudioProject) Validate() error {
 	if !isFinite(p.FiringDurationHours) || p.FiringDurationHours <= 0 || p.FiringDurationHours > 168.0 {
@@ -463,10 +469,10 @@ func (p StudioProject) Validate() error {
 			VaporGlazeNone, VaporGlazeSoda, VaporGlazeSalt, p.VaporGlazeMode)
 	}
 	switch p.BuildPath {
-	case BuildPathCOTSNoWeld, BuildPathWeldedDXF:
+	case BuildPathCOTSNoWeld, BuildPathWeldedDXF, BuildPathCustomFabDeluxe:
 	default:
-		return fmt.Errorf("build_path must be %q or %q, got %q",
-			BuildPathCOTSNoWeld, BuildPathWeldedDXF, p.BuildPath)
+		return fmt.Errorf("build_path must be %q, %q, or %q, got %q",
+			BuildPathCOTSNoWeld, BuildPathWeldedDXF, BuildPathCustomFabDeluxe, p.BuildPath)
 	}
 	switch p.CorrosionTier {
 	case CorrosionTierStandard316L, CorrosionTierHobby316L, CorrosionTierHeavyC276FRP:
