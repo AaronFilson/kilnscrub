@@ -1,0 +1,2333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>kilnscrub — 4-Stage Kiln Wet Scrubber Engineering Workstation</title>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+  <style>
+    :root {
+      --bg: #0c1118;
+      --surface: #131a24;
+      --surface-elev: #192331;
+      --border: #253347;
+      --border-hi: #344864;
+      --text: #e6edf7;
+      --muted: #8ea0b8;
+      --accent-quench: #f97316;
+      --accent-venturi: #94a3b8;
+      --accent-packed: #06b6d4;
+      --accent-blower: #10b981;
+      --accent-blue: #38bdf8;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --ok: #22c55e;
+      --mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+      --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 13px;
+      line-height: 1.45;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 18px;
+      background: rgba(12, 17, 24, 0.94);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-mark {
+      width: 30px;
+      height: 30px;
+      border-radius: 7px;
+      background: linear-gradient(135deg, #f97316 0%, #06b6d4 60%, #10b981 100%);
+      display: grid;
+      place-items: center;
+      font-family: var(--mono);
+      font-weight: 800;
+      font-size: 14px;
+      color: #081018;
+      letter-spacing: -0.05em;
+    }
+    .brand-title {
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: -0.01em;
+    }
+    .brand-sub {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .status-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+    }
+    .pill.ok { border-color: rgba(34, 197, 94, 0.45); color: #86efac; background: rgba(34, 197, 94, 0.1); }
+    .pill.warn { border-color: rgba(245, 158, 11, 0.5); color: #fcd34d; background: rgba(245, 158, 11, 0.12); }
+    .pill.danger { border-color: rgba(239, 68, 68, 0.5); color: #fca5a5; background: rgba(239, 68, 68, 0.14); }
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .export-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      appearance: none;
+      border: 1px solid var(--border-hi);
+      background: var(--surface-elev);
+      color: var(--text);
+      padding: 6px 11px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.14s, border-color 0.14s, transform 0.08s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn:hover { background: #223044; border-color: #4b6588; }
+    .btn:active { transform: translateY(1px); }
+    .btn:disabled { opacity: 0.5; cursor: wait; }
+    .btn-primary {
+      background: rgba(6, 182, 212, 0.16);
+      border-color: rgba(6, 182, 212, 0.5);
+      color: #67e8f9;
+    }
+    .btn-primary:hover { background: rgba(6, 182, 212, 0.25); }
+    .btn-ghost {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--muted);
+    }
+    .btn-ghost:hover { color: var(--text); background: var(--surface); }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 336px 1fr;
+      gap: 14px;
+      padding: 14px 18px 24px;
+      max-width: 1840px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1080px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(25, 35, 49, 0.72);
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #cbd5e1;
+    }
+
+    /* Left Parameter Sidebar */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-self: start;
+      position: sticky;
+      top: 64px;
+      max-height: calc(100vh - 80px);
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    @media (max-width: 1080px) {
+      .sidebar { position: static; max-height: none; }
+    }
+
+    .param-section {
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+    .param-group-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      padding-top: 6px;
+      border-top: 1px solid rgba(37, 51, 71, 0.7);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .param-group-label:first-child { border-top: none; padding-top: 0; }
+    .stage-dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+
+    .control {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .control-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .control label {
+      color: #cbd5e1;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .control-val {
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 12px;
+      font-weight: 600;
+      color: #7dd3fc;
+    }
+    .control-sub {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 5px;
+      accent-color: #38bdf8;
+      cursor: pointer;
+      background: #233043;
+      border-radius: 4px;
+    }
+    select {
+      width: 100%;
+      padding: 6px 9px;
+      border-radius: 6px;
+      border: 1px solid var(--border-hi);
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    /* Main Content Column */
+    .main-col {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .error-banner {
+      display: none;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(239, 68, 68, 0.55);
+      background: rgba(239, 68, 68, 0.14);
+      color: #fecaca;
+      font-size: 12px;
+    }
+    .error-banner.visible { display: block; }
+
+    .warnings-banner {
+      display: none;
+      padding: 9px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      background: rgba(245, 158, 11, 0.12);
+      color: #fde68a;
+      font-size: 12px;
+    }
+    .warnings-banner.visible { display: block; }
+    .warnings-banner ul { margin: 4px 0 0 18px; padding: 0; }
+
+    /* KPI Strip */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+    }
+    @media (max-width: 1440px) {
+      .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--kpi-accent, var(--accent-blue));
+    }
+    .kpi-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .kpi-value {
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .kpi-sub {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .kpi-badge {
+      display: inline-block;
+      margin-top: 2px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      width: fit-content;
+    }
+    .badge-ok { background: rgba(34, 197, 94, 0.16); color: #86efac; }
+    .badge-warn { background: rgba(245, 158, 11, 0.18); color: #fcd34d; }
+    .badge-danger { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+
+    /* 3D Viewer Panel */
+    .viewer-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 9px 14px;
+      background: rgba(25, 35, 49, 0.8);
+      border-bottom: 1px solid var(--border);
+    }
+    .stage-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .stage-pill {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--muted);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.14s;
+    }
+    .stage-pill:hover { color: var(--text); border-color: var(--border-hi); }
+    .stage-pill.active {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: rgba(56, 189, 248, 0.65);
+      color: #e0f2fe;
+    }
+
+    .viewer-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .toggle-btn {
+      appearance: none;
+      border: 1px solid var(--border-hi);
+      background: var(--bg);
+      color: var(--muted);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .toggle-btn.active {
+      background: rgba(16, 185, 129, 0.18);
+      border-color: rgba(16, 185, 129, 0.6);
+      color: #6ee7b7;
+    }
+
+    .viewer-stage {
+      position: relative;
+      height: 450px;
+      background: radial-gradient(circle at 50% 42%, #182334 0%, #0b1017 78%);
+      overflow: hidden;
+    }
+    #viewport-3d, #viewport-2d {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    #viewport-3d.hidden, #viewport-2d.hidden { display: none; }
+
+    .viewer-hud-tl {
+      position: absolute;
+      top: 10px;
+      left: 12px;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 4;
+    }
+    .hud-chip {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      background: rgba(11, 16, 23, 0.8);
+      border: 1px solid rgba(52, 72, 100, 0.6);
+      color: #cbd5e1;
+      width: fit-content;
+    }
+
+    .inspector-card {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      width: 280px;
+      max-width: calc(100% - 24px);
+      background: rgba(15, 22, 32, 0.9);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border-hi);
+      border-radius: 8px;
+      padding: 10px 12px;
+      z-index: 5;
+    }
+    .inspector-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #7dd3fc;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .inspector-rows {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 3px 10px;
+      font-size: 11px;
+    }
+    .inspector-k { color: var(--muted); }
+    .inspector-v {
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      text-align: right;
+    }
+
+    /* Charts Grid */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+    @media (max-width: 1360px) {
+      .charts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 820px) {
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+    .chart-body {
+      padding: 10px 12px 12px;
+    }
+    .chart-svg {
+      width: 100%;
+      height: 235px;
+      display: block;
+    }
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .legend-swatch {
+      width: 10px;
+      height: 3px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+
+    /* Stage Readouts Table Grid */
+    .stages-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    @media (max-width: 1360px) {
+      .stages-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .stages-grid { grid-template-columns: 1fr; }
+    }
+    .stage-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 11px 13px;
+    }
+    .stage-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .stage-card-name {
+      font-weight: 700;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stage-mat {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .kv-list {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 4px 10px;
+      font-size: 11.5px;
+    }
+    .kv-list .k { color: var(--muted); }
+    .kv-list .v {
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      color: var(--text);
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      padding: 9px 14px;
+      border-radius: 8px;
+      background: #172334;
+      border: 1px solid #38bdf8;
+      color: #e0f2fe;
+      font-size: 12px;
+      z-index: 100;
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">KS</div>
+      <div>
+        <div class="brand-title">kilnscrub</div>
+        <div class="brand-sub">4-Stage Studio Kiln Exhaust Scrubber Designer</div>
+      </div>
+    </div>
+
+    <div class="status-group">
+      <span id="status-pill" class="pill"><span class="dot"></span><span id="status-text">Initializing</span></span>
+      <span id="envelope-pill" class="pill">Envelope: —</span>
+    </div>
+
+    <div class="export-bar">
+      <button class="btn btn-primary" data-export="stl" title="Download 3D fabrication mesh (.stl)">Download STL</button>
+      <button class="btn btn-primary" data-export="dxf" title="Download unfolded sheet-metal patterns (.dxf)">Download DXF</button>
+      <button class="btn" data-export="bom_csv" title="Download Bill of Materials (CSV)">BOM CSV</button>
+      <button class="btn" data-export="bom_md" title="Download Bill of Materials (Markdown)">BOM MD</button>
+      <button class="btn btn-ghost" id="btn-reset" title="Reset all inputs to 24 cu.ft. wood/salt kiln defaults">Reset</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <!-- Left Parameter Controls -->
+    <aside class="sidebar">
+      <section class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Design Parameters</span>
+          <span class="control-sub">Live /api/size</span>
+        </div>
+        <div class="param-section">
+          <div class="param-group-label"><span class="stage-dot" style="background:var(--accent-quench)"></span>Kiln &amp; Firing</div>
+
+          <div class="control">
+            <div class="control-row">
+              <label for="in-kiln-vol">Kiln Volume</label>
+              <span class="control-val" id="val-kiln-vol">24 cu.ft.</span>
+            </div>
+            <input id="in-kiln-vol" type="range" min="4" max="120" step="1" value="24" />
+          </div>
+
+          <div class="control">
+            <div class="control-row">
+              <label for="in-peak-temp">Peak Exit Temp</label>
+              <span class="control-val" id="val-peak-temp">2400 °F</span>
+            </div>
+            <input id="in-peak-temp" type="range" min="1200" max="2500" step="25" value="2400" />
+          </div>
+
+          <div class="control">
+            <div class="control-row">
+              <label for="in-salt-rate">Salt Introduction Rate</label>
+              <span class="control-val" id="val-salt-rate">2.0 lbs/hr</span>
+            </div>
+            <input id="in-salt-rate" type="range" min="0" max="10" step="0.1" value="2.0" />
+          </div>
+
+          <div class="control">
+            <div class="control-row">
+              <label for="in-fuel-type">Fuel Type</label>
+              <span class="control-sub">Stoichiometry</span>
+            </div>
+            <select id="in-fuel-type">
+              <option value="wood_salt">Wood + Salt (wood_salt)</option>
+              <option value="wood">Wood Only (wood)</option>
+              <option value="gas_salt">Gas + Salt (gas_salt)</option>
+              <option value="gas">Gas Only (gas)</option>
+            </select>
+          </div>
+
+          <div class="control">
+            <div class="control-row">
+              <label for="in-excess-air">Excess Air</label>
+              <span class="control-val" id="val-excess-air">30%</span>
+            </div>
+            <input id="in-excess-air" type="range" min="0" max="150" step="5" value="30" />
+          </div>
+
+          <div class="param-group-label"><span class="stage-dot" style="background:var(--accent-venturi)"></span>Stage 2 — Venturi</div>
+
+          <div class="control">
+            <div class="control-row">
+              <label for="in-venturi-vel">Throat Velocity</label>
+              <span class="control-val" id="val-venturi-vel">70 m/s</span>
+            </div>
+            <input id="in-venturi-vel" type="range" min="40" max="110" step="1" value="70" />
+          </div>
+
+          <div class="control">
+            <div class="control-row">
+              <label for="in-venturi-lg">Venturi L/G Ratio</label>
+              <span class="control-val" id="val-venturi-lg">0.0012 m³/m³</span>
+            </div>
+            <input id="in-venturi-lg" type="range" min="0.0004" max="0.0030" step="0.0001" value="0.0012" />
+          </div>
+
+          <div class="param-group-label"><span class="stage-dot" style="background:var(--accent-packed)"></span>Stage 3 — Packed Bed</div>
+
+          <div class="control">
+            <div class="control-row">
+              <label for="in-hcl-target">Target HCl Removal</label>
+              <span class="control-val" id="val-hcl-target">99.0%</span>
+            </div>
+            <input id="in-hcl-target" type="range" min="90.0" max="99.9" step="0.1" value="99.0" />
+          </div>
+
+          <div class="control">
+            <div class="control-row">
+              <label for="in-packing-void">Packing Voidage (ε)</label>
+              <span class="control-val" id="val-packing-void">0.90</span>
+            </div>
+            <input id="in-packing-void" type="range" min="0.70" max="0.95" step="0.01" value="0.90" />
+          </div>
+
+          <div class="control">
+            <div class="control-row">
+              <label for="in-packing-diam">Packing Diameter</label>
+              <span class="control-val" id="val-packing-diam">1.00 in (25.4 mm)</span>
+            </div>
+            <input id="in-packing-diam" type="range" min="0.50" max="2.00" step="0.25" value="1.00" />
+          </div>
+
+          <div class="param-group-label"><span class="stage-dot" style="background:var(--accent-blower)"></span>Stage 4 — Draft &amp; Blower</div>
+
+          <div class="control">
+            <div class="control-row">
+              <label for="in-kiln-draft">Target Kiln Draft</label>
+              <span class="control-val" id="val-kiln-draft">-0.05 inWC</span>
+            </div>
+            <input id="in-kiln-draft" type="range" min="-0.50" max="-0.01" step="0.01" value="-0.05" />
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Right Main Dashboard -->
+    <main class="main-col">
+      <div id="error-banner" class="error-banner" role="alert"></div>
+      <div id="warnings-banner" class="warnings-banner" role="status"></div>
+
+      <!-- KPI Strip -->
+      <section class="kpi-grid" aria-label="Key Engineering KPIs">
+        <div class="kpi-card" style="--kpi-accent: var(--accent-quench)">
+          <div class="kpi-label">Quench Outlet Temp</div>
+          <div class="kpi-value" id="kpi-quench-temp">—</div>
+          <div class="kpi-sub" id="kpi-quench-sub">Spray: —</div>
+          <span class="kpi-badge badge-ok" id="kpi-quench-badge">CPVC &lt; 210°F</span>
+        </div>
+
+        <div class="kpi-card" style="--kpi-accent: var(--accent-venturi)">
+          <div class="kpi-label">Venturi Cut d₅₀ (NaCl)</div>
+          <div class="kpi-value" id="kpi-d50">—</div>
+          <div class="kpi-sub" id="kpi-venturi-sub">NaCl — · Ash —</div>
+          <span class="kpi-badge badge-ok" id="kpi-venturi-badge">Calvert Model</span>
+        </div>
+
+        <div class="kpi-card" style="--kpi-accent: var(--accent-packed)">
+          <div class="kpi-label">HCl Removal</div>
+          <div class="kpi-value" id="kpi-hcl">—</div>
+          <div class="kpi-sub" id="kpi-hcl-sub">NTU — · Z —</div>
+          <span class="kpi-badge badge-ok" id="kpi-hcl-badge">Target &ge; 98%</span>
+        </div>
+
+        <div class="kpi-card" style="--kpi-accent: var(--accent-packed)">
+          <div class="kpi-label">Column % of Flood</div>
+          <div class="kpi-value" id="kpi-flood">—</div>
+          <div class="kpi-sub" id="kpi-flood-sub">v_s — / v_f —</div>
+          <span class="kpi-badge badge-ok" id="kpi-flood-badge">Limit &le; 75%</span>
+        </div>
+
+        <div class="kpi-card" style="--kpi-accent: var(--accent-blue)">
+          <div class="kpi-label">Total Static Pressure</div>
+          <div class="kpi-value" id="kpi-dp-total">—</div>
+          <div class="kpi-sub" id="kpi-dp-sub">Draft — · Flow —</div>
+          <span class="kpi-badge badge-ok" id="kpi-dp-badge">6-Stage Sum</span>
+        </div>
+
+        <div class="kpi-card" style="--kpi-accent: var(--accent-blower)">
+          <div class="kpi-label">ID Blower Motor</div>
+          <div class="kpi-value" id="kpi-motor">—</div>
+          <div class="kpi-sub" id="kpi-blower-sub">Shaft — · Eff —</div>
+          <span class="kpi-badge badge-ok" id="kpi-blower-badge">Induced Draft</span>
+        </div>
+      </section>
+
+      <!-- 3D / 2D Parametric Scrubber Assembly Viewer -->
+      <section class="panel" aria-label="Parametric 3D Scrubber Viewer">
+        <div class="viewer-toolbar">
+          <div class="stage-pills" role="tablist" aria-label="Stage Inspector">
+            <button class="stage-pill active" data-stage="all">All Stages</button>
+            <button class="stage-pill" data-stage="quench">1: Quench (316L)</button>
+            <button class="stage-pill" data-stage="venturi">2: Venturi (316L)</button>
+            <button class="stage-pill" data-stage="packed">3: Packed Bed (CPVC)</button>
+            <button class="stage-pill" data-stage="blower">4: ID Blower</button>
+          </div>
+          <div class="viewer-actions">
+            <button id="btn-cutaway" class="toggle-btn active" type="button">Cutaway: ON</button>
+            <button id="btn-particles" class="toggle-btn active" type="button">Flow Particles: ON</button>
+            <button id="btn-view-mode" class="toggle-btn" type="button">View: 2D Schematic</button>
+          </div>
+        </div>
+
+        <div class="viewer-stage">
+          <div id="viewport-3d" class="hidden" aria-label="Interactive Three.js 3D Scrubber Assembly"></div>
+          <canvas id="viewport-2d" aria-label="2D Parametric Cutaway Schematic"></canvas>
+
+          <div class="viewer-hud-tl">
+            <div class="hud-chip" id="hud-renderer">Renderer: 2D Parametric Cutaway</div>
+            <div class="hud-chip" id="hud-controls">Click stage pill to inspect geometry</div>
+          </div>
+
+          <div class="inspector-card" id="inspector-card">
+            <div class="inspector-title">
+              <span id="inspector-heading">Assembly Overview</span>
+              <span id="inspector-mat" style="color:var(--muted);font-family:var(--mono);font-size:10px;">4-Stage Train</span>
+            </div>
+            <div class="inspector-rows" id="inspector-rows"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Engineering Charts -->
+      <section class="charts-grid" aria-label="Performance Curves">
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Venturi Fractional Efficiency (0.1–2.0 µm)</span>
+            <span class="control-sub" id="chart-eff-sub">Calvert Cut</span>
+          </div>
+          <div class="chart-body">
+            <svg id="chart-efficiency" class="chart-svg" viewBox="0 0 420 235" role="img" aria-label="Venturi fractional efficiency curve"></svg>
+            <div class="chart-legend">
+              <span class="legend-item"><span class="legend-swatch" style="background:#f59e0b"></span>Wood Ash (2400 kg/m³)</span>
+              <span class="legend-item"><span class="legend-swatch" style="background:#06b6d4"></span>NaCl Fume (2160 kg/m³)</span>
+              <span class="legend-item"><span class="legend-swatch" style="background:#64748b"></span>50% Cut (d₅₀)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Fan Curve vs. System Resistance</span>
+            <span class="control-sub" id="chart-fan-sub">ACFM vs inWC</span>
+          </div>
+          <div class="chart-body">
+            <svg id="chart-fan" class="chart-svg" viewBox="0 0 420 235" role="img" aria-label="Fan curve versus system resistance curve"></svg>
+            <div class="chart-legend">
+              <span class="legend-item"><span class="legend-swatch" style="background:#10b981"></span>Blower Fan Curve</span>
+              <span class="legend-item"><span class="legend-swatch" style="background:#f97316"></span>System Resistance</span>
+              <span class="legend-item"><span class="legend-swatch" style="background:#38bdf8;height:8px;width:8px;border-radius:50%"></span>Operating Point</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Static Pressure Drop Breakdown</span>
+            <span class="control-sub" id="chart-dp-sub">6 Components</span>
+          </div>
+          <div class="chart-body">
+            <svg id="chart-dp" class="chart-svg" viewBox="0 0 420 235" role="img" aria-label="Static pressure drop breakdown across six components"></svg>
+            <div class="chart-legend">
+              <span class="legend-item">Packed Bed = Ergun bed only (demister itemized separately)</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4-Stage Engineering Readouts -->
+      <section class="stages-grid" aria-label="Stage Engineering Readouts">
+        <div class="stage-card">
+          <div class="stage-card-head">
+            <span class="stage-card-name"><span class="stage-dot" style="background:var(--accent-quench)"></span>Stage 1: Quench Tower</span>
+            <span class="stage-mat" id="s1-mat">316L SS</span>
+          </div>
+          <div class="kv-list" id="s1-kv"></div>
+        </div>
+
+        <div class="stage-card">
+          <div class="stage-card-head">
+            <span class="stage-card-name"><span class="stage-dot" style="background:var(--accent-venturi)"></span>Stage 2: Wet Venturi</span>
+            <span class="stage-mat" id="s2-mat">316L SS</span>
+          </div>
+          <div class="kv-list" id="s2-kv"></div>
+        </div>
+
+        <div class="stage-card">
+          <div class="stage-card-head">
+            <span class="stage-card-name"><span class="stage-dot" style="background:var(--accent-packed)"></span>Stage 3: Packed Bed</span>
+            <span class="stage-mat" id="s3-mat">CPVC / PP</span>
+          </div>
+          <div class="kv-list" id="s3-kv"></div>
+        </div>
+
+        <div class="stage-card">
+          <div class="stage-card-head">
+            <span class="stage-card-name"><span class="stage-dot" style="background:var(--accent-blower)"></span>Stage 4: ID Blower</span>
+            <span class="stage-mat" id="s4-mat">FRP / Coated</span>
+          </div>
+          <div class="kv-list" id="s4-kv"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const state = {
+        defaults: null,
+        input: null,
+        design: null,
+        selectedStage: "all",
+        cutaway: true,
+        particles: true,
+        viewMode: "2d", // "3d" once Three.js + WebGL succeeds
+        threeReady: false,
+        threeFailedReason: "",
+        requestSeq: 0,
+        debounceTimer: null,
+      };
+
+      const el = (id) => document.getElementById(id);
+      const kToF = (k) => (k - 273.15) * 9 / 5 + 32;
+      const mToIn = (m) => m / 0.0254;
+      const mToMm = (m) => m * 1000;
+      const fmt = (v, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : "—");
+
+      function showToast(msg) {
+        const t = el("toast");
+        t.textContent = msg;
+        t.classList.add("show");
+        clearTimeout(t._timer);
+        t._timer = setTimeout(() => t.classList.remove("show"), 2600);
+      }
+
+      function setStatus(kind, text) {
+        const pill = el("status-pill");
+        pill.className = "pill " + kind;
+        el("status-text").textContent = text;
+      }
+
+      function setError(msg) {
+        const banner = el("error-banner");
+        if (!msg) {
+          banner.classList.remove("visible");
+          banner.textContent = "";
+          return;
+        }
+        banner.textContent = msg;
+        banner.classList.add("visible");
+      }
+
+      function setWarnings(warnings) {
+        const banner = el("warnings-banner");
+        if (!warnings || warnings.length === 0) {
+          banner.classList.remove("visible");
+          banner.innerHTML = "";
+          return;
+        }
+        const items = warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join("");
+        banner.innerHTML = `<strong>Engineering Warnings:</strong><ul>${items}</ul>`;
+        banner.classList.add("visible");
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function populateControlsFromInput(inp) {
+        el("in-kiln-vol").value = inp.kiln_volume_cu_ft;
+        el("in-peak-temp").value = inp.peak_exit_temp_f;
+        el("in-salt-rate").value = inp.salt_rate_lbs_per_hr;
+        el("in-fuel-type").value = inp.fuel_type || "wood_salt";
+        el("in-excess-air").value = Math.round((inp.excess_air_fraction || 0.30) * 100);
+        el("in-venturi-vel").value = inp.venturi_throat_velocity_m_s;
+        el("in-venturi-lg").value = inp.venturi_lg_ratio;
+        el("in-hcl-target").value = (inp.target_hcl_removal * 100).toFixed(1);
+        el("in-packing-void").value = inp.packing_voidage;
+        el("in-packing-diam").value = mToIn(inp.packing_diameter_m).toFixed(2);
+        el("in-kiln-draft").value = inp.target_kiln_draft_in_wc;
+        updateControlLabels();
+      }
+
+      function readInputFromControls() {
+        const base = Object.assign({}, state.defaults || {});
+        base.kiln_volume_cu_ft = parseFloat(el("in-kiln-vol").value);
+        base.peak_exit_temp_f = parseFloat(el("in-peak-temp").value);
+        base.salt_rate_lbs_per_hr = parseFloat(el("in-salt-rate").value);
+        base.fuel_type = el("in-fuel-type").value;
+        base.excess_air_fraction = parseFloat(el("in-excess-air").value) / 100.0;
+        base.venturi_throat_velocity_m_s = parseFloat(el("in-venturi-vel").value);
+        base.venturi_lg_ratio = parseFloat(el("in-venturi-lg").value);
+        base.target_hcl_removal = parseFloat(el("in-hcl-target").value) / 100.0;
+        base.packing_voidage = parseFloat(el("in-packing-void").value);
+        const packIn = parseFloat(el("in-packing-diam").value);
+        base.packing_diameter_m = packIn * 0.0254;
+        base.packing_name = `${packIn.toFixed(2)}" PP Pall Rings`;
+        base.target_kiln_draft_in_wc = parseFloat(el("in-kiln-draft").value);
+        return base;
+      }
+
+      function updateControlLabels() {
+        const vol = parseFloat(el("in-kiln-vol").value);
+        const temp = parseFloat(el("in-peak-temp").value);
+        const salt = parseFloat(el("in-salt-rate").value);
+        const air = parseFloat(el("in-excess-air").value);
+        const vel = parseFloat(el("in-venturi-vel").value);
+        const lg = parseFloat(el("in-venturi-lg").value);
+        const hcl = parseFloat(el("in-hcl-target").value);
+        const voidage = parseFloat(el("in-packing-void").value);
+        const packIn = parseFloat(el("in-packing-diam").value);
+        const draft = parseFloat(el("in-kiln-draft").value);
+
+        el("val-kiln-vol").textContent = `${vol.toFixed(0)} cu.ft.`;
+        el("val-peak-temp").textContent = `${temp.toFixed(0)} °F`;
+        el("val-salt-rate").textContent = `${salt.toFixed(1)} lbs/hr`;
+        el("val-excess-air").textContent = `${air.toFixed(0)}%`;
+        el("val-venturi-vel").textContent = `${vel.toFixed(0)} m/s (${(vel / 0.3048).toFixed(0)} ft/s)`;
+        el("val-venturi-lg").textContent = `${lg.toFixed(4)} m³/m³`;
+        el("val-hcl-target").textContent = `${hcl.toFixed(1)}%`;
+        el("val-packing-void").textContent = voidage.toFixed(2);
+        el("val-packing-diam").textContent = `${packIn.toFixed(2)} in (${(packIn * 25.4).toFixed(1)} mm)`;
+        el("val-kiln-draft").textContent = `${draft.toFixed(2)} inWC`;
+      }
+
+      async function requestSize() {
+        const seq = ++state.requestSeq;
+        state.input = readInputFromControls();
+        setStatus("warn", "Sizing...");
+
+        try {
+          const res = await fetch("/api/size", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(state.input),
+          });
+          const data = await res.json();
+          if (seq !== state.requestSeq) return;
+          if (!res.ok) {
+            setStatus("danger", "Validation Error");
+            setError(data.error || `HTTP ${res.status}`);
+            return;
+          }
+          setError("");
+          state.design = data;
+          setStatus("ok", "Live Design");
+          renderDesign(data);
+        } catch (err) {
+          if (seq !== state.requestSeq) return;
+          setStatus("danger", "Offline");
+          setError(`Failed to reach /api/size: ${err.message}`);
+        }
+      }
+
+      function scheduleSize() {
+        updateControlLabels();
+        clearTimeout(state.debounceTimer);
+        state.debounceTimer = setTimeout(requestSize, 110);
+      }
+
+      async function handleExport(format, btn) {
+        if (!state.input) state.input = readInputFromControls();
+        const prevText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Exporting...";
+        try {
+          const res = await fetch(`/api/export?format=${encodeURIComponent(format)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(state.input),
+          });
+          if (!res.ok) {
+            let msg = `Export failed (HTTP ${res.status})`;
+            try {
+              const j = await res.json();
+              if (j.error) msg = j.error;
+            } catch (_) {}
+            setError(msg);
+            showToast(msg);
+            return;
+          }
+          const blob = await res.blob();
+          const cd = res.headers.get("Content-Disposition") || "";
+          const match = cd.match(/filename="([^"]+)"/);
+          const filename = match ? match[1] : `kilnscrub.${format}`;
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          showToast(`Downloaded ${filename} (${(blob.size / 1024).toFixed(1)} KB)`);
+        } catch (err) {
+          setError(`Export error: ${err.message}`);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = prevText;
+        }
+      }
+
+      function renderDesign(d) {
+        setWarnings(d.warnings);
+
+        const q = d.quench;
+        const v = d.venturi;
+        const p = d.packed_bed;
+        const b = d.blower;
+        const env = d.envelope;
+
+        el("envelope-pill").textContent =
+          `Envelope: ${fmt(env.length_m, 2)}×${fmt(env.width_m, 2)}×${fmt(env.height_m, 2)} m`;
+
+        // KPI 1: Quench Outlet Temp
+        const quenchOutF = kToF(q.outlet_temp_k);
+        el("kpi-quench-temp").textContent = `${fmt(quenchOutF, 1)} °F`;
+        el("kpi-quench-sub").textContent = `Sat ${fmt(kToF(q.adiabatic_sat_temp_k), 1)}°F · ${fmt(q.total_spray_water_gpm, 2)} GPM`;
+        const qBadge = el("kpi-quench-badge");
+        if (quenchOutF >= 210.0) {
+          qBadge.className = "kpi-badge badge-danger";
+          qBadge.textContent = "CPVC LIMIT EXCEEDED (>=210°F)";
+        } else if (quenchOutF >= 195.0) {
+          qBadge.className = "kpi-badge badge-warn";
+          qBadge.textContent = "Near 210°F CPVC Limit";
+        } else {
+          qBadge.className = "kpi-badge badge-ok";
+          qBadge.textContent = "CPVC Safe (< 210°F)";
+        }
+
+        // KPI 2: Venturi d50 & efficiencies (0..1 -> multiply by 100 for %)
+        el("kpi-d50").textContent = `${fmt(v.cut_diameter_d50_um, 2)} µm`;
+        el("kpi-venturi-sub").textContent =
+          `NaCl ${fmt(v.overall_nacl_fume_efficiency * 100, 1)}% · Ash ${fmt(v.overall_wood_ash_efficiency * 100, 1)}%`;
+        el("kpi-venturi-badge").textContent = `v_t ${fmt(v.throat_velocity_m_s, 0)} m/s · ΔP ${fmt(v.pressure_drop_in_wc, 1)} inWC`;
+
+        // KPI 3: HCl Removal (0..1 -> multiply by 100 for %)
+        const hclPct = p.hcl_removal_efficiency * 100.0;
+        el("kpi-hcl").textContent = `${fmt(hclPct, 2)}%`;
+        el("kpi-hcl-sub").textContent = `NTU ${fmt(p.ntu, 2)} · Bed Z ${fmt(p.packing_height_m, 2)} m`;
+        const hclBadge = el("kpi-hcl-badge");
+        if (hclPct >= 98.0) {
+          hclBadge.className = "kpi-badge badge-ok";
+          hclBadge.textContent = `${fmt(p.hcl_inlet_ppm, 0)} → ${fmt(p.hcl_outlet_ppm, 1)} ppm`;
+        } else {
+          hclBadge.className = "kpi-badge badge-warn";
+          hclBadge.textContent = `Below 98% Target (${fmt(p.hcl_outlet_ppm, 1)} ppm)`;
+        }
+
+        // KPI 4: Percent of Flood (CRITICAL: already 0..100 scale, do NOT multiply by 100!)
+        const floodPct = p.percent_of_flood;
+        el("kpi-flood").textContent = `${fmt(floodPct, 1)}%`;
+        el("kpi-flood-sub").textContent = `v_s ${fmt(p.superficial_gas_velocity_m_s, 2)} / v_f ${fmt(p.flooding_velocity_m_s, 2)} m/s`;
+        const fBadge = el("kpi-flood-badge");
+        if (floodPct > 75.0) {
+          fBadge.className = "kpi-badge badge-danger";
+          fBadge.textContent = "FLOODING RISK (> 75%)";
+        } else if (floodPct > 68.0) {
+          fBadge.className = "kpi-badge badge-warn";
+          fBadge.textContent = "High Load (<= 75%)";
+        } else {
+          fBadge.className = "kpi-badge badge-ok";
+          fBadge.textContent = "Nominal (<= 75% Limit)";
+        }
+
+        // KPI 5: Total Static Pressure (signed draft vs positive breakdown draw magnitude)
+        el("kpi-dp-total").textContent = `${fmt(b.total_static_pressure_in_wc, 2)} inWC`;
+        el("kpi-dp-sub").textContent =
+          `Draft ${fmt(b.target_kiln_draft_in_wc, 2)} inWC (draw +${fmt(b.breakdown.kiln_draft_in_wc, 2)})`;
+        el("kpi-dp-badge").textContent = `${fmt(b.total_static_pressure_pa, 0)} Pa · ${fmt(b.flow_acfm, 0)} ACFM`;
+
+        // KPI 6: ID Blower Motor (blower.efficiency is 0..1 -> multiply by 100)
+        el("kpi-motor").textContent = `${fmt(b.recommended_motor_hp, 2)} HP`;
+        el("kpi-blower-sub").textContent = `Shaft ${fmt(b.shaft_power_hp, 2)} HP · Eff ${fmt(b.efficiency * 100, 1)}%`;
+        el("kpi-blower-badge").textContent = `Wheel ${fmt(mToIn(b.wheel_diameter_m), 1)}" @ ${fmt(b.operating_rpm, 0)} RPM`;
+
+        renderStageReadouts(d);
+        renderInspector(d, state.selectedStage);
+        renderEfficiencyChart(d);
+        renderFanChart(d);
+        renderPressureDropChart(d);
+
+        if (window.__kiln3D && state.threeReady) {
+          window.__kiln3D.updateDesign(d);
+        }
+        draw2DSchematic();
+      }
+
+      function kvHtml(rows) {
+        return rows.map(([k, v]) => `<span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(v)}</span>`).join("");
+      }
+
+      function renderStageReadouts(d) {
+        const q = d.quench, v = d.venturi, p = d.packed_bed, b = d.blower;
+        el("s1-mat").textContent = q.material || "316L SS";
+        el("s1-kv").innerHTML = kvHtml([
+          ["Inlet → Outlet", `${fmt(kToF(q.inlet_temp_k), 0)} → ${fmt(kToF(q.outlet_temp_k), 1)} °F`],
+          ["Dew Point", `${fmt(kToF(q.dew_point_k), 1)} °F`],
+          ["Tower Ø × H", `${fmt(mToMm(q.tower_diameter_m), 0)} × ${fmt(mToMm(q.tower_height_m), 0)} mm`],
+          ["Spray / Evap", `${fmt(q.total_spray_water_gpm, 2)} / ${fmt(q.evaporated_water_gpm, 2)} GPM`],
+          ["Nozzles / Res.", `${q.nozzle_count} nos · ${fmt(q.residence_time_s, 2)} s`],
+          ["Pressure Drop", `${fmt(q.pressure_drop_in_wc, 2)} inWC (${fmt(q.pressure_drop_pa, 0)} Pa)`],
+        ]);
+
+        el("s2-mat").textContent = v.material || "316L SS";
+        el("s2-kv").innerHTML = kvHtml([
+          ["Throat Ø / Vel", `${fmt(mToMm(v.throat_diameter_m), 1)} mm · ${fmt(v.throat_velocity_m_s, 1)} m/s`],
+          ["In / Out Ø", `${fmt(mToMm(v.inlet_diameter_m), 0)} / ${fmt(mToMm(v.outlet_diameter_m), 0)} mm`],
+          ["Conv / Thr / Div", `${fmt(mToMm(v.converging_length_m), 0)} / ${fmt(mToMm(v.throat_length_m), 0)} / ${fmt(mToMm(v.diverging_length_m), 0)} mm`],
+          ["NaCl / Ash d₅₀", `${fmt(v.cut_diameter_d50_um, 2)} / ${fmt(v.wood_ash_cut_diameter_d50_um, 2)} µm`],
+          ["Spray Flow", `${fmt(v.liquid_flow_gpm, 2)} GPM (L/G ${fmt(v.lg_ratio, 4)})`],
+          ["Pressure Drop", `${fmt(v.pressure_drop_in_wc, 2)} inWC (${fmt(v.pressure_drop_pa, 0)} Pa)`],
+        ]);
+
+        el("s3-mat").textContent = p.material || "CPVC / PP";
+        el("s3-kv").innerHTML = kvHtml([
+          ["Column Ø × H", `${fmt(mToMm(p.column_diameter_m), 0)} × ${fmt(mToMm(p.column_height_m), 0)} mm`],
+          ["Packing Bed Z", `${fmt(p.packing_height_m, 2)} m (NTU ${fmt(p.ntu, 2)}, HTU ${fmt(p.htu_m, 2)} m)`],
+          ["% of Flood", `${fmt(p.percent_of_flood, 1)}% (limit <= 75%)`],
+          ["HCl Removal", `${fmt(p.hcl_removal_efficiency * 100, 2)}% (${fmt(p.hcl_inlet_ppm, 0)}→${fmt(p.hcl_outlet_ppm, 1)} ppm)`],
+          ["Recirc / NaHCO₃", `${fmt(p.recirculation_flow_gpm, 2)} GPM · ${fmt(p.nahco3_consumption_kg_hr, 2)} kg/hr`],
+          ["Bed / Demister ΔP", `${fmt(b.breakdown.packed_bed_in_wc, 2)} / ${fmt(b.breakdown.demister_in_wc, 2)} inWC`],
+        ]);
+
+        el("s4-mat").textContent = b.material || "FRP / Coated Steel";
+        el("s4-kv").innerHTML = kvHtml([
+          ["Flow Rate", `${fmt(b.flow_acfm, 1)} ACFM (${fmt(b.flow_m3_s, 3)} m³/s)`],
+          ["Total Static ΔP", `${fmt(b.total_static_pressure_in_wc, 2)} inWC (${fmt(b.total_static_pressure_pa, 0)} Pa)`],
+          ["Target Draft", `${fmt(b.target_kiln_draft_in_wc, 2)} inWC (draw +${fmt(b.breakdown.kiln_draft_in_wc, 2)})`],
+          ["Wheel / Speed", `${fmt(mToMm(b.wheel_diameter_m), 0)} mm (${fmt(mToIn(b.wheel_diameter_m), 1)}") @ ${fmt(b.operating_rpm, 0)} RPM`],
+          ["Shaft / Motor", `${fmt(b.shaft_power_hp, 2)} HP / ${fmt(b.recommended_motor_hp, 2)} HP`],
+          ["Static Efficiency", `${fmt(b.efficiency * 100, 1)}%`],
+        ]);
+      }
+
+      function renderInspector(d, stage) {
+        if (!d) return;
+        const q = d.quench, v = d.venturi, p = d.packed_bed, b = d.blower, env = d.envelope;
+        let title = "4-Stage Assembly Overview";
+        let mat = "316L SS → CPVC/PP";
+        let rows = [
+          ["Footprint (L×W)", `${fmt(env.length_m, 2)} × ${fmt(env.width_m, 2)} m`],
+          ["Overall Height", `${fmt(env.height_m, 2)} m (${fmt(env.height_m / 0.3048, 1)} ft)`],
+          ["Flue Duct Ø", `${fmt(mToMm(env.duct_diameter_m), 0)} mm (${fmt(mToIn(env.duct_diameter_m), 1)}")`],
+          ["Inlet → Outlet Flow", `${fmt(d.inlet_gas.volumetric_flow_acfm, 0)} → ${fmt(d.outlet_gas.volumetric_flow_acfm, 0)} ACFM`],
+          ["Total ΔP / Motor", `${fmt(b.total_static_pressure_in_wc, 2)} inWC · ${fmt(b.recommended_motor_hp, 2)} HP`],
+        ];
+        if (stage === "quench") {
+          title = "Stage 1: Adiabatic Quench";
+          mat = q.material || "316L SS";
+          rows = [
+            ["Tower Ø × H", `${fmt(mToMm(q.tower_diameter_m), 0)} × ${fmt(mToMm(q.tower_height_m), 0)} mm`],
+            ["Inlet → Outlet T", `${fmt(kToF(q.inlet_temp_k), 0)}°F → ${fmt(kToF(q.outlet_temp_k), 1)}°F`],
+            ["Spray / Nozzles", `${fmt(q.total_spray_water_gpm, 2)} GPM · ${q.nozzle_count} nozzles`],
+            ["Gas Velocity", `${fmt(q.gas_velocity_m_s, 2)} m/s (${fmt(q.residence_time_s, 2)} s)`],
+            ["Stage ΔP", `${fmt(q.pressure_drop_in_wc, 2)} inWC`],
+          ];
+        } else if (stage === "venturi") {
+          title = "Stage 2: Wet Venturi";
+          mat = v.material || "316L SS";
+          rows = [
+            ["Throat Ø × L", `${fmt(mToMm(v.throat_diameter_m), 1)} × ${fmt(mToMm(v.throat_length_m), 0)} mm`],
+            ["Throat Velocity", `${fmt(v.throat_velocity_m_s, 1)} m/s (${fmt(v.throat_velocity_m_s / 0.3048, 0)} ft/s)`],
+            ["NaCl Cut d₅₀", `${fmt(v.cut_diameter_d50_um, 2)} µm (${fmt(v.overall_nacl_fume_efficiency * 100, 1)}%)`],
+            ["Wood Ash d₅₀", `${fmt(v.wood_ash_cut_diameter_d50_um, 2)} µm (${fmt(v.overall_wood_ash_efficiency * 100, 1)}%)`],
+            ["Stage ΔP", `${fmt(v.pressure_drop_in_wc, 2)} inWC`],
+          ];
+        } else if (stage === "packed") {
+          title = "Stage 3: Packed-Bed Absorber";
+          mat = p.material || "CPVC / PP";
+          rows = [
+            ["Column Ø × H", `${fmt(mToMm(p.column_diameter_m), 0)} × ${fmt(mToMm(p.column_height_m), 0)} mm`],
+            ["Packing / Demister", `${fmt(p.packing_height_m, 2)} m / ${fmt(mToMm(p.demister_height_m), 0)} mm`],
+            ["% of Flood", `${fmt(p.percent_of_flood, 1)}% (limit <= 75%)`],
+            ["HCl Removal", `${fmt(p.hcl_removal_efficiency * 100, 2)}% (pH ${fmt(p.sump_ph, 1)})`],
+            ["Sump Volume", `${fmt(p.sump_volume_m3 * 264.172, 1)} gal (${fmt(p.recirculation_flow_gpm, 2)} GPM)`],
+          ];
+        } else if (stage === "blower") {
+          title = "Stage 4: ID Centrifugal Blower";
+          mat = b.material || "FRP / Coated";
+          rows = [
+            ["Wheel Ø / RPM", `${fmt(mToIn(b.wheel_diameter_m), 1)}" @ ${fmt(b.operating_rpm, 0)} RPM`],
+            ["Operating Point", `${fmt(b.flow_acfm, 0)} ACFM @ ${fmt(b.total_static_pressure_in_wc, 2)} inWC`],
+            ["Kiln Draft Target", `${fmt(b.target_kiln_draft_in_wc, 2)} inWC (draw +${fmt(b.breakdown.kiln_draft_in_wc, 2)})`],
+            ["Shaft / Motor", `${fmt(b.shaft_power_hp, 2)} / ${fmt(b.recommended_motor_hp, 2)} HP`],
+            ["Static Efficiency", `${fmt(b.efficiency * 100, 1)}%`],
+          ];
+        }
+        el("inspector-heading").textContent = title;
+        el("inspector-mat").textContent = mat;
+        el("inspector-rows").innerHTML = rows
+          .map(([k, v]) => `<span class="inspector-k">${escapeHtml(k)}</span><span class="inspector-v">${escapeHtml(v)}</span>`)
+          .join("");
+      }
+
+      /* ===================== SVG CHARTS ===================== */
+
+      function renderEfficiencyChart(d) {
+        const svg = el("chart-efficiency");
+        const pts = (d.venturi && d.venturi.efficiency_curve) || [];
+        const W = 420, H = 235, mL = 44, mR = 16, mT = 14, mB = 34;
+        const pW = W - mL - mR, pH = H - mT - mB;
+
+        const minLog = Math.log10(0.1), maxLog = Math.log10(2.0);
+        const xMap = (um) => mL + ((Math.log10(Math.max(0.1, Math.min(2.0, um))) - minLog) / (maxLog - minLog)) * pW;
+        const yMap = (pct) => mT + pH - (Math.max(0, Math.min(100, pct)) / 100) * pH;
+
+        let out = `<rect x="${mL}" y="${mT}" width="${pW}" height="${pH}" fill="#0d131c" stroke="#243246" rx="3"/>`;
+
+        // Horizontal gridlines
+        for (const pct of [0, 25, 50, 75, 100]) {
+          const y = yMap(pct);
+          const dash = pct === 50 ? 'stroke-dasharray="4 3" stroke="#64748b"' : 'stroke="#1c2738"';
+          out += `<line x1="${mL}" y1="${y}" x2="${mL + pW}" y2="${y}" ${dash} stroke-width="1"/>`;
+          out += `<text x="${mL - 6}" y="${y + 3}" text-anchor="end" fill="#8ea0b8" font-size="10" font-family="monospace">${pct}%</text>`;
+        }
+
+        // Vertical log gridlines
+        for (const tick of [0.1, 0.2, 0.5, 1.0, 2.0]) {
+          const x = xMap(tick);
+          out += `<line x1="${x}" y1="${mT}" x2="${x}" y2="${mT + pH}" stroke="#1c2738" stroke-width="1"/>`;
+          out += `<text x="${x}" y="${mT + pH + 15}" text-anchor="middle" fill="#8ea0b8" font-size="10" font-family="monospace">${tick}</text>`;
+        }
+        out += `<text x="${mL + pW / 2}" y="${H - 4}" text-anchor="middle" fill="#94a3b8" font-size="10">Particle Diameter (µm, log scale)</text>`;
+
+        if (pts.length > 0) {
+          // CRITICAL: EfficiencyPoint.*Efficiency is 0..1 -> multiply by 100 for % display
+          const ashPath = pts.map((pt, i) => `${i === 0 ? "M" : "L"}${xMap(pt.particle_diameter_um).toFixed(1)},${yMap(pt.wood_ash_efficiency * 100).toFixed(1)}`).join(" ");
+          const naclPath = pts.map((pt, i) => `${i === 0 ? "M" : "L"}${xMap(pt.particle_diameter_um).toFixed(1)},${yMap(pt.nacl_fume_efficiency * 100).toFixed(1)}`).join(" ");
+
+          out += `<path d="${ashPath}" fill="none" stroke="#f59e0b" stroke-width="2.2"/>`;
+          out += `<path d="${naclPath}" fill="none" stroke="#06b6d4" stroke-width="2.2"/>`;
+
+          for (const pt of pts) {
+            const x = xMap(pt.particle_diameter_um);
+            out += `<circle cx="${x.toFixed(1)}" cy="${yMap(pt.wood_ash_efficiency * 100).toFixed(1)}" r="2.4" fill="#f59e0b"/>`;
+            out += `<circle cx="${x.toFixed(1)}" cy="${yMap(pt.nacl_fume_efficiency * 100).toFixed(1)}" r="2.4" fill="#06b6d4"/>`;
+          }
+
+          // d50 markers
+          const d50NaCl = d.venturi.cut_diameter_d50_um;
+          if (d50NaCl >= 0.1 && d50NaCl <= 2.0) {
+            const x50 = xMap(d50NaCl);
+            const y50 = yMap(50);
+            out += `<line x1="${x50.toFixed(1)}" y1="${y50}" x2="${x50.toFixed(1)}" y2="${mT + pH}" stroke="#06b6d4" stroke-dasharray="3 2" stroke-width="1.2"/>`;
+            out += `<circle cx="${x50.toFixed(1)}" cy="${y50}" r="4" fill="#0c1118" stroke="#06b6d4" stroke-width="2"/>`;
+            out += `<text x="${Math.min(mL + pW - 4, x50 + 6).toFixed(1)}" y="${y50 - 7}" fill="#67e8f9" font-size="10" font-family="monospace">d50=${fmt(d50NaCl, 2)}µm</text>`;
+          }
+        }
+
+        el("chart-eff-sub").textContent = `NaCl d50 = ${fmt(d.venturi.cut_diameter_d50_um, 2)} µm`;
+        svg.innerHTML = out;
+      }
+
+      function renderFanChart(d) {
+        const svg = el("chart-fan");
+        const b = d.blower || {};
+        const fan = b.fan_curve || [];
+        const sys = b.system_curve || [];
+        const op = b.operating_point || { flow_acfm: b.flow_acfm || 0, pressure_in_wc: b.total_static_pressure_in_wc || 0 };
+
+        const W = 420, H = 235, mL = 46, mR = 16, mT = 14, mB = 34;
+        const pW = W - mL - mR, pH = H - mT - mB;
+
+        const allPts = [...fan, ...sys, op];
+        const maxQ = Math.max(100, ...allPts.map((p) => p.flow_acfm || 0)) * 1.05;
+        const maxP = Math.max(5, ...allPts.map((p) => p.pressure_in_wc || 0)) * 1.12;
+
+        const xMap = (q) => mL + (Math.max(0, q) / maxQ) * pW;
+        const yMap = (p) => mT + pH - (Math.max(0, p) / maxP) * pH;
+
+        let out = `<rect x="${mL}" y="${mT}" width="${pW}" height="${pH}" fill="#0d131c" stroke="#243246" rx="3"/>`;
+
+        for (let i = 0; i <= 4; i++) {
+          const pVal = (maxP * i) / 4;
+          const y = yMap(pVal);
+          out += `<line x1="${mL}" y1="${y.toFixed(1)}" x2="${mL + pW}" y2="${y.toFixed(1)}" stroke="#1c2738" stroke-width="1"/>`;
+          out += `<text x="${mL - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end" fill="#8ea0b8" font-size="10" font-family="monospace">${pVal.toFixed(1)}</text>`;
+        }
+        for (let i = 0; i <= 4; i++) {
+          const qVal = (maxQ * i) / 4;
+          const x = xMap(qVal);
+          out += `<line x1="${x.toFixed(1)}" y1="${mT}" x2="${x.toFixed(1)}" y2="${mT + pH}" stroke="#1c2738" stroke-width="1"/>`;
+          out += `<text x="${x.toFixed(1)}" y="${mT + pH + 15}" text-anchor="middle" fill="#8ea0b8" font-size="10" font-family="monospace">${qVal.toFixed(0)}</text>`;
+        }
+        out += `<text x="${mL + pW / 2}" y="${H - 4}" text-anchor="middle" fill="#94a3b8" font-size="10">Volumetric Flow (ACFM)</text>`;
+        out += `<text x="12" y="${mT + pH / 2}" text-anchor="middle" fill="#94a3b8" font-size="10" transform="rotate(-90 12 ${mT + pH / 2})">Static Pressure (inWC)</text>`;
+
+        if (fan.length > 1) {
+          const fanPath = fan.map((pt, i) => `${i === 0 ? "M" : "L"}${xMap(pt.flow_acfm).toFixed(1)},${yMap(pt.pressure_in_wc).toFixed(1)}`).join(" ");
+          out += `<path d="${fanPath}" fill="none" stroke="#10b981" stroke-width="2.3"/>`;
+        }
+        if (sys.length > 1) {
+          const sysPath = sys.map((pt, i) => `${i === 0 ? "M" : "L"}${xMap(pt.flow_acfm).toFixed(1)},${yMap(pt.pressure_in_wc).toFixed(1)}`).join(" ");
+          out += `<path d="${sysPath}" fill="none" stroke="#f97316" stroke-width="2.1" stroke-dasharray="5 3"/>`;
+        }
+
+        // Operating point crosshair & label
+        const ox = xMap(op.flow_acfm);
+        const oy = yMap(op.pressure_in_wc);
+        out += `<line x1="${mL}" y1="${oy.toFixed(1)}" x2="${ox.toFixed(1)}" y2="${oy.toFixed(1)}" stroke="#38bdf8" stroke-dasharray="2 2" stroke-width="1"/>`;
+        out += `<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${ox.toFixed(1)}" y2="${mT + pH}" stroke="#38bdf8" stroke-dasharray="2 2" stroke-width="1"/>`;
+        out += `<circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="5" fill="#38bdf8" stroke="#0c1118" stroke-width="2"/>`;
+        const labelX = ox > mL + pW * 0.58 ? ox - 8 : ox + 8;
+        const anchor = ox > mL + pW * 0.58 ? "end" : "start";
+        out += `<text x="${labelX.toFixed(1)}" y="${Math.max(mT + 14, oy - 8).toFixed(1)}" text-anchor="${anchor}" fill="#bae6fd" font-size="10" font-family="monospace">${fmt(op.flow_acfm, 0)} ACFM @ ${fmt(op.pressure_in_wc, 1)}"</text>`;
+
+        el("chart-fan-sub").textContent = `${fmt(op.flow_acfm, 0)} ACFM @ ${fmt(op.pressure_in_wc, 2)} inWC`;
+        svg.innerHTML = out;
+      }
+
+      function renderPressureDropChart(d) {
+        const svg = el("chart-dp");
+        const bd = (d.blower && d.blower.breakdown) || {};
+        const total = Math.max(1e-6, d.blower.total_static_pressure_in_wc || (
+          (bd.duct_in_wc || 0) + (bd.quench_in_wc || 0) + (bd.venturi_in_wc || 0) +
+          (bd.packed_bed_in_wc || 0) + (bd.demister_in_wc || 0) + (bd.kiln_draft_in_wc || 0)
+        ));
+
+        const items = [
+          { label: "Flue Duct", inwc: bd.duct_in_wc || 0, pa: bd.duct_pa || 0, color: "#64748b" },
+          { label: "1. Quench", inwc: bd.quench_in_wc || 0, pa: bd.quench_pa || 0, color: "#f97316" },
+          { label: "2. Venturi", inwc: bd.venturi_in_wc || 0, pa: bd.venturi_pa || 0, color: "#94a3b8" },
+          { label: "3a. Packed Bed", inwc: bd.packed_bed_in_wc || 0, pa: bd.packed_bed_pa || 0, color: "#06b6d4" },
+          { label: "3b. Demister", inwc: bd.demister_in_wc || 0, pa: bd.demister_pa || 0, color: "#38bdf8" },
+          { label: "Kiln Draft Draw", inwc: bd.kiln_draft_in_wc || 0, pa: bd.kiln_draft_pa || 0, color: "#10b981" },
+        ];
+
+        const W = 420, H = 235, mL = 104, mR = 96, mT = 12, rowH = 31;
+        const barAreaW = W - mL - mR;
+        const maxVal = Math.max(0.5, ...items.map((x) => x.inwc));
+
+        let out = "";
+        items.forEach((it, idx) => {
+          const y = mT + idx * rowH;
+          const bw = Math.max(2, (it.inwc / maxVal) * barAreaW);
+          const pct = (it.inwc / total) * 100;
+          out += `<text x="${mL - 8}" y="${y + 15}" text-anchor="end" fill="#cbd5e1" font-size="11">${it.label}</text>`;
+          out += `<rect x="${mL}" y="${y + 4}" width="${barAreaW}" height="16" fill="#0d131c" stroke="#1e2a3b" rx="3"/>`;
+          out += `<rect x="${mL}" y="${y + 4}" width="${bw.toFixed(1)}" height="16" fill="${it.color}" rx="3" opacity="0.9"/>`;
+          out += `<text x="${mL + barAreaW + 6}" y="${y + 15}" fill="#e2e8f0" font-size="10.5" font-family="monospace">${fmt(it.inwc, 2)}" (${fmt(pct, 0)}%)</text>`;
+        });
+
+        out += `<line x1="12" y1="${mT + 6 * rowH + 4}" x2="${W - 12}" y2="${mT + 6 * rowH + 4}" stroke="#253347"/>`;
+        out += `<text x="14" y="${mT + 6 * rowH + 22}" fill="#94a3b8" font-size="11" font-family="monospace">Total Static Pressure:</text>`;
+        out += `<text x="${W - 14}" y="${mT + 6 * rowH + 22}" text-anchor="end" fill="#7dd3fc" font-size="12" font-weight="700" font-family="monospace">${fmt(d.blower.total_static_pressure_in_wc, 2)} inWC (${fmt(d.blower.total_static_pressure_pa, 0)} Pa)</text>`;
+
+        el("chart-dp-sub").textContent = `Total ${fmt(d.blower.total_static_pressure_in_wc, 2)} inWC`;
+        svg.innerHTML = out;
+      }
+
+      /* ===================== 2D CANVAS CUTAWAY FALLBACK ===================== */
+
+      const p2d = {
+        particles: Array.from({ length: 48 }, (_, i) => ({ t: i / 48, jitter: (Math.sin(i * 12.9898) * 0.5) })),
+        lastTime: 0,
+      };
+
+      function draw2DSchematic(ts = 0) {
+        const canvas = el("viewport-2d");
+        if (!canvas || canvas.classList.contains("hidden")) return;
+        const rect = canvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(300, Math.floor(rect.width));
+        const h = Math.max(240, Math.floor(rect.height));
+        if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) {
+          canvas.width = Math.floor(w * dpr);
+          canvas.height = Math.floor(h * dpr);
+        }
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        // Background engineering grid
+        ctx.fillStyle = "#0d1420";
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = "rgba(42, 60, 86, 0.28)";
+        ctx.lineWidth = 1;
+        for (let gx = 0; gx < w; gx += 28) {
+          ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, h); ctx.stroke();
+        }
+        for (let gy = 0; gy < h; gy += 28) {
+          ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+        }
+
+        const d = state.design;
+        if (!d) {
+          ctx.fillStyle = "#8ea0b8";
+          ctx.font = "13px monospace";
+          ctx.fillText("Loading scrubber geometry from /api/size...", 24, h / 2);
+          return;
+        }
+
+        const q = d.quench, v = d.venturi, p = d.packed_bed, b = d.blower;
+        const floorY = h - 42;
+        const maxH = Math.max(q.tower_height_m || 1.2, p.column_height_m || 2.2, 1.5);
+        const scale = Math.min((h - 110) / maxH, (w - 330) / 3.4);
+
+        const qW = Math.max(46, (q.tower_diameter_m || 0.4) * scale);
+        const qH = Math.max(95, (q.tower_height_m || 1.2) * scale);
+        const pW = Math.max(58, (p.column_diameter_m || 0.5) * scale);
+        const pH = Math.max(150, (p.column_height_m || 2.2) * scale);
+        const bR = Math.max(24, ((b.wheel_diameter_m || 0.35) * scale) * 0.8);
+
+        const qX = Math.max(84, w * 0.14);
+        const vX = qX + qW + 42;
+        const vLen = Math.max(95, ((v.converging_length_m || 0.25) + (v.throat_length_m || 0.15) + (v.diverging_length_m || 0.45)) * scale);
+        const pX = vX + vLen + 26;
+        const bX = Math.min(w - 290, pX + pW + 70);
+
+        const hi = (stage) => state.selectedStage === "all" || state.selectedStage === stage;
+
+        // Ground line
+        ctx.strokeStyle = "#334663";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(24, floorY); ctx.lineTo(w - 24, floorY); ctx.stroke();
+
+        // Inlet flue duct from kiln
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.moveTo(26, floorY - qH + 26);
+        ctx.lineTo(qX, floorY - qH + 26);
+        ctx.stroke();
+
+        // Stage 1: Quench Tower
+        ctx.save();
+        ctx.globalAlpha = hi("quench") ? 1.0 : 0.35;
+        ctx.fillStyle = state.cutaway ? "rgba(249, 115, 22, 0.12)" : "#7c8ea4";
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = state.selectedStage === "quench" ? 3 : 2;
+        ctx.fillRect(qX, floorY - qH, qW, qH);
+        ctx.strokeRect(qX, floorY - qH, qW, qH);
+        if (state.cutaway) {
+          // Spray nozzle header & mist cone
+          ctx.strokeStyle = "#38bdf8";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(qX + qW / 2, floorY - qH);
+          ctx.lineTo(qX + qW / 2, floorY - qH + 22);
+          ctx.stroke();
+          ctx.fillStyle = "rgba(56, 189, 248, 0.24)";
+          ctx.beginPath();
+          ctx.moveTo(qX + qW / 2, floorY - qH + 22);
+          ctx.lineTo(qX + 6, floorY - 20);
+          ctx.lineTo(qX + qW - 6, floorY - 20);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.fillStyle = "#fdba74";
+        ctx.font = "bold 11px monospace";
+        ctx.fillText("1. QUENCH", qX, floorY + 16);
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "10px monospace";
+        ctx.fillText(`Ø${fmt(mToMm(q.tower_diameter_m), 0)}mm`, qX, floorY + 29);
+        ctx.restore();
+
+        // Stage 2: Wet Venturi (Horizontal converging -> throat -> diverging)
+        const vY = floorY - 46;
+        const inR = Math.max(14, (v.inlet_diameter_m || 0.2) * scale * 0.45);
+        const thR = Math.max(6, (v.throat_diameter_m || 0.08) * scale * 0.45);
+        const outR = Math.max(15, (v.outlet_diameter_m || 0.22) * scale * 0.45);
+        const cL = vLen * 0.30, tL = vLen * 0.22, dL = vLen * 0.48;
+
+        ctx.save();
+        ctx.globalAlpha = hi("venturi") ? 1.0 : 0.35;
+        // Connect Quench bottom to Venturi
+        ctx.strokeStyle = "#94a3b8";
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(qX + qW, vY);
+        ctx.lineTo(vX, vY);
+        ctx.stroke();
+
+        ctx.fillStyle = state.cutaway ? "rgba(148, 163, 184, 0.16)" : "#94a3b8";
+        ctx.strokeStyle = "#cbd5e1";
+        ctx.lineWidth = state.selectedStage === "venturi" ? 3 : 2;
+        ctx.beginPath();
+        ctx.moveTo(vX, vY - inR);
+        ctx.lineTo(vX + cL, vY - thR);
+        ctx.lineTo(vX + cL + tL, vY - thR);
+        ctx.lineTo(vX + cL + tL + dL, vY - outR);
+        ctx.lineTo(vX + cL + tL + dL, vY + outR);
+        ctx.lineTo(vX + cL + tL, vY + thR);
+        ctx.lineTo(vX + cL, vY + thR);
+        ctx.lineTo(vX, vY + inR);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        if (state.cutaway) {
+          ctx.fillStyle = "rgba(56, 189, 248, 0.45)";
+          ctx.fillRect(vX + cL, vY - thR + 1, tL, thR * 2 - 2);
+        }
+        ctx.fillStyle = "#e2e8f0";
+        ctx.font = "bold 11px monospace";
+        ctx.fillText("2. VENTURI", vX + 6, floorY + 16);
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "10px monospace";
+        ctx.fillText(`Øt=${fmt(mToMm(v.throat_diameter_m), 0)}mm`, vX + 6, floorY + 29);
+        ctx.restore();
+
+        // Connect Venturi to Packed Bed lower plenum
+        ctx.strokeStyle = "#06b6d4";
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(vX + vLen, vY);
+        ctx.lineTo(pX, vY);
+        ctx.stroke();
+
+        // Stage 3: Packed-Bed Absorber
+        ctx.save();
+        ctx.globalAlpha = hi("packed") ? 1.0 : 0.35;
+        ctx.fillStyle = state.cutaway ? "rgba(6, 182, 212, 0.11)" : "#286e8a";
+        ctx.strokeStyle = "#06b6d4";
+        ctx.lineWidth = state.selectedStage === "packed" ? 3 : 2;
+        ctx.fillRect(pX, floorY - pH, pW, pH);
+        ctx.strokeRect(pX, floorY - pH, pW, pH);
+
+        if (state.cutaway) {
+          // Sump
+          const sumpH = Math.max(22, pH * 0.16);
+          ctx.fillStyle = "rgba(14, 165, 233, 0.32)";
+          ctx.fillRect(pX + 2, floorY - sumpH, pW - 4, sumpH - 2);
+
+          // Packing Bed Layer
+          const packRatio = Math.min(0.55, Math.max(0.24, (p.packing_height_m || 1.0) / Math.max(1.0, p.column_height_m || 2.2)));
+          const packH = pH * packRatio;
+          const packTop = floorY - sumpH - 22 - packH;
+          ctx.fillStyle = "rgba(20, 184, 166, 0.28)";
+          ctx.fillRect(pX + 3, packTop, pW - 6, packH);
+          ctx.strokeStyle = "rgba(45, 212, 191, 0.65)";
+          ctx.lineWidth = 1;
+          for (let yy = packTop + 6; yy < packTop + packH - 3; yy += 8) {
+            ctx.beginPath(); ctx.moveTo(pX + 4, yy); ctx.lineTo(pX + pW - 4, yy + 4); ctx.stroke();
+          }
+
+          // Chevron Demister Pad
+          const demH = Math.max(14, pH * 0.08);
+          const demTop = floorY - pH + 18;
+          ctx.fillStyle = "rgba(125, 211, 252, 0.3)";
+          ctx.fillRect(pX + 3, demTop, pW - 6, demH);
+          ctx.strokeStyle = "#7dd3fc";
+          ctx.strokeRect(pX + 3, demTop, pW - 6, demH);
+        }
+
+        ctx.fillStyle = "#67e8f9";
+        ctx.font = "bold 11px monospace";
+        ctx.fillText("3. PACKED BED", pX - 4, floorY + 16);
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "10px monospace";
+        ctx.fillText(`Ø${fmt(mToMm(p.column_diameter_m), 0)}×${fmt(p.column_height_m, 2)}m`, pX - 4, floorY + 29);
+        ctx.restore();
+
+        // Top duct from Packed Bed to ID Blower
+        const bY = floorY - bR - 14;
+        ctx.strokeStyle = "#10b981";
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.moveTo(pX + pW / 2, floorY - pH);
+        ctx.lineTo(pX + pW / 2, floorY - pH - 18);
+        ctx.lineTo(bX, floorY - pH - 18);
+        ctx.lineTo(bX, bY);
+        ctx.stroke();
+
+        // Stage 4: ID Centrifugal Blower
+        ctx.save();
+        ctx.globalAlpha = hi("blower") ? 1.0 : 0.35;
+        ctx.fillStyle = state.cutaway ? "rgba(16, 185, 129, 0.16)" : "#15803d";
+        ctx.strokeStyle = "#10b981";
+        ctx.lineWidth = state.selectedStage === "blower" ? 3 : 2;
+        ctx.beginPath();
+        ctx.arc(bX, bY, bR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        // Discharge stack
+        ctx.fillRect(bX + bR * 0.35, bY - bR * 2.1, bR * 0.65, bR * 1.4);
+        ctx.strokeRect(bX + bR * 0.35, bY - bR * 2.1, bR * 0.65, bR * 1.4);
+
+        if (state.cutaway) {
+          const rot = (ts || 0) * 0.006;
+          ctx.strokeStyle = "#6ee7b7";
+          ctx.lineWidth = 1.6;
+          for (let k = 0; k < 6; k++) {
+            const a = rot + (k * Math.PI) / 3;
+            ctx.beginPath();
+            ctx.moveTo(bX, bY);
+            ctx.lineTo(bX + Math.cos(a) * (bR * 0.72), bY + Math.sin(a) * (bR * 0.72));
+            ctx.stroke();
+          }
+        }
+        ctx.fillStyle = "#6ee7b7";
+        ctx.font = "bold 11px monospace";
+        ctx.fillText("4. BLOWER", bX - 24, floorY + 16);
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "10px monospace";
+        ctx.fillText(`${fmt(b.recommended_motor_hp, 1)} HP`, bX - 20, floorY + 29);
+        ctx.restore();
+
+        // Animated flow particles along gas train
+        if (state.particles) {
+          const dt = p2d.lastTime ? Math.min(0.05, (ts - p2d.lastTime) / 1000) : 0.016;
+          p2d.lastTime = ts;
+          const waypoints = [
+            [26, floorY - qH + 26],
+            [qX + qW / 2, floorY - qH + 26],
+            [qX + qW / 2, vY],
+            [vX + cL + tL / 2, vY],
+            [pX + pW / 2, vY],
+            [pX + pW / 2, floorY - pH],
+            [pX + pW / 2, floorY - pH - 18],
+            [bX, floorY - pH - 18],
+            [bX, bY],
+            [bX + bR * 0.67, bY - bR * 2.3],
+          ];
+          for (const pt of p2d.particles) {
+            pt.t = (pt.t + dt * 0.16) % 1.0;
+            const segF = pt.t * (waypoints.length - 1);
+            const idx = Math.min(waypoints.length - 2, Math.floor(segF));
+            const frac = segF - idx;
+            const x = waypoints[idx][0] + (waypoints[idx + 1][0] - waypoints[idx][0]) * frac + pt.jitter * 6;
+            const y = waypoints[idx][1] + (waypoints[idx + 1][1] - waypoints[idx][1]) * frac;
+            ctx.fillStyle = pt.t < 0.25 ? "#fb923c" : pt.t < 0.55 ? "#38bdf8" : "#6ee7b7";
+            ctx.beginPath();
+            ctx.arc(x, y, 2.6, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      function anim2DLoop(ts) {
+        if (state.viewMode === "2d") {
+          draw2DSchematic(ts);
+        }
+        requestAnimationFrame(anim2DLoop);
+      }
+
+      /* ===================== VIEW CONTROLS & EVENTS ===================== */
+
+      function setViewMode(mode) {
+        if (mode === "3d" && !state.threeReady) {
+          showToast(state.threeFailedReason || "3D WebGL unavailable — using 2D schematic");
+          return;
+        }
+        state.viewMode = mode;
+        const v3 = el("viewport-3d");
+        const v2 = el("viewport-2d");
+        const btn = el("btn-view-mode");
+        if (mode === "3d") {
+          v3.classList.remove("hidden");
+          v2.classList.add("hidden");
+          btn.textContent = "View: 3D WebGL";
+          btn.classList.add("active");
+          el("hud-renderer").textContent = "Renderer: Three.js 0.170.0 WebGL";
+          el("hud-controls").textContent = "Drag to orbit · Scroll to zoom · Right-drag to pan";
+          if (window.__kiln3D) window.__kiln3D.resize();
+        } else {
+          v3.classList.add("hidden");
+          v2.classList.remove("hidden");
+          btn.textContent = state.threeReady ? "View: 2D Schematic" : "View: 2D Fallback";
+          btn.classList.remove("active");
+          el("hud-renderer").textContent = state.threeReady
+            ? "Renderer: 2D Parametric Cutaway"
+            : "Renderer: 2D Cutaway (WebGL/CDN Fallback)";
+          el("hud-controls").textContent = "Click stage pills to inspect dimensions";
+          draw2DSchematic();
+        }
+      }
+
+      function bindUI() {
+        const inputIds = [
+          "in-kiln-vol", "in-peak-temp", "in-salt-rate", "in-fuel-type",
+          "in-excess-air", "in-venturi-vel", "in-venturi-lg", "in-hcl-target",
+          "in-packing-void", "in-packing-diam", "in-kiln-draft"
+        ];
+        for (const id of inputIds) {
+          const node = el(id);
+          node.addEventListener("input", scheduleSize);
+          node.addEventListener("change", scheduleSize);
+        }
+
+        document.querySelectorAll("[data-export]").forEach((btn) => {
+          btn.addEventListener("click", () => handleExport(btn.dataset.export, btn));
+        });
+
+        el("btn-reset").addEventListener("click", () => {
+          if (state.defaults) {
+            populateControlsFromInput(state.defaults);
+            requestSize();
+            showToast("Reset to 24 cu.ft. salt kiln defaults");
+          }
+        });
+
+        document.querySelectorAll(".stage-pill").forEach((pill) => {
+          pill.addEventListener("click", () => {
+            document.querySelectorAll(".stage-pill").forEach((p) => p.classList.remove("active"));
+            pill.classList.add("active");
+            state.selectedStage = pill.dataset.stage;
+            renderInspector(state.design, state.selectedStage);
+            if (window.__kiln3D && state.threeReady) {
+              window.__kiln3D.focusStage(state.selectedStage);
+            }
+            draw2DSchematic();
+          });
+        });
+
+        el("btn-cutaway").addEventListener("click", () => {
+          state.cutaway = !state.cutaway;
+          const b = el("btn-cutaway");
+          b.textContent = `Cutaway: ${state.cutaway ? "ON" : "OFF"}`;
+          b.classList.toggle("active", state.cutaway);
+          if (window.__kiln3D && state.threeReady) {
+            window.__kiln3D.setCutaway(state.cutaway);
+          }
+          draw2DSchematic();
+        });
+
+        el("btn-particles").addEventListener("click", () => {
+          state.particles = !state.particles;
+          const b = el("btn-particles");
+          b.textContent = `Flow Particles: ${state.particles ? "ON" : "OFF"}`;
+          b.classList.toggle("active", state.particles);
+          if (window.__kiln3D && state.threeReady) {
+            window.__kiln3D.setParticles(state.particles);
+          }
+        });
+
+        el("btn-view-mode").addEventListener("click", () => {
+          setViewMode(state.viewMode === "3d" ? "2d" : "3d");
+        });
+
+        window.addEventListener("resize", () => {
+          if (window.__kiln3D && state.threeReady) window.__kiln3D.resize();
+          draw2DSchematic();
+        });
+      }
+
+      async function boot() {
+        bindUI();
+        requestAnimationFrame(anim2DLoop);
+
+        try {
+          const res = await fetch("/api/defaults");
+          if (res.ok) {
+            state.defaults = await res.json();
+            populateControlsFromInput(state.defaults);
+          }
+        } catch (err) {
+          setError(`Failed to load /api/defaults: ${err.message}`);
+        }
+        await requestSize();
+      }
+
+      window.__kilnState = state;
+      window.__kilnSetViewMode = setViewMode;
+      boot();
+    })();
+  </script>
+
+  <!-- Progressive Enhancement: Three.js 0.170.0 + OrbitControls 3D Viewer -->
+  <script type="module">
+    const state = window.__kilnState;
+
+    function hasWebGL() {
+      try {
+        const c = document.createElement("canvas");
+        return !!(c.getContext("webgl2") || c.getContext("webgl"));
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function importWithTimeout(specifier, ms) {
+      return Promise.race([
+        import(specifier),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("CDN import timeout")), ms)),
+      ]);
+    }
+
+    async function initThree() {
+      if (!hasWebGL()) {
+        state.threeFailedReason = "WebGL unavailable — 2D cutaway fallback active";
+        return;
+      }
+
+      let THREE, OrbitControls;
+      try {
+        const [threeMod, orbitMod] = await Promise.all([
+          importWithTimeout("three", 6000),
+          importWithTimeout("three/addons/controls/OrbitControls.js", 6000),
+        ]);
+        THREE = threeMod;
+        OrbitControls = orbitMod.OrbitControls;
+      } catch (err) {
+        state.threeFailedReason = `Three.js CDN unavailable (${err.message}) — 2D fallback active`;
+        return;
+      }
+
+      const container = document.getElementById("viewport-3d");
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0d1420);
+
+      const camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.05, 60);
+      camera.position.set(1.6, 2.3, 4.6);
+
+      let renderer;
+      try {
+        renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+      } catch (err) {
+        state.threeFailedReason = "WebGL context creation failed — 2D fallback active";
+        return;
+      }
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.15;
+      container.innerHTML = "";
+      container.appendChild(renderer.domElement);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.07;
+      controls.target.set(0.2, 1.0, 0);
+
+      // Studio lighting
+      scene.add(new THREE.AmbientLight(0xbcd4f0, 0.7));
+      const hemi = new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 0.65);
+      scene.add(hemi);
+      const key = new THREE.DirectionalLight(0xffffff, 1.35);
+      key.position.set(4, 7, 5);
+      scene.add(key);
+      const rim = new THREE.DirectionalLight(0x38bdf8, 0.55);
+      rim.position.set(-5, 3, -4);
+      scene.add(rim);
+
+      const grid = new THREE.GridHelper(8, 24, 0x2a3b55, 0x182334);
+      scene.add(grid);
+
+      const assemblyGroup = new THREE.Group();
+      scene.add(assemblyGroup);
+
+      const particleCount = 120;
+      const particleGeo = new THREE.BufferGeometry();
+      const particlePos = new Float32Array(particleCount * 3);
+      const particleCol = new Float32Array(particleCount * 3);
+      const particlePhase = new Float32Array(particleCount);
+      for (let i = 0; i < particleCount; i++) particlePhase[i] = i / particleCount;
+      particleGeo.setAttribute("position", new THREE.BufferAttribute(particlePos, 3));
+      particleGeo.setAttribute("color", new THREE.BufferAttribute(particleCol, 3));
+      const particleMat = new THREE.PointsMaterial({
+        size: 0.055,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.92,
+      });
+      const particlePoints = new THREE.Points(particleGeo, particleMat);
+      scene.add(particlePoints);
+
+      let flowWaypoints = [];
+      let impellerMesh = null;
+      let stageCenters = {
+        all: new THREE.Vector3(0.2, 1.1, 0),
+        quench: new THREE.Vector3(-1.3, 0.8, 0),
+        venturi: new THREE.Vector3(-0.3, 0.45, 0),
+        packed: new THREE.Vector3(0.85, 1.2, 0),
+        blower: new THREE.Vector3(1.85, 0.7, 0),
+      };
+      let camGoal = null;
+      let targetGoal = null;
+
+      function clearAssembly() {
+        while (assemblyGroup.children.length > 0) {
+          const child = assemblyGroup.children[0];
+          child.traverse((obj) => {
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+              if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+              else obj.material.dispose();
+            }
+          });
+          assemblyGroup.remove(child);
+        }
+        impellerMesh = null;
+      }
+
+      function buildAssembly(d) {
+        if (!d) return;
+        clearAssembly();
+
+        const q = d.quench, v = d.venturi, p = d.packed_bed, b = d.blower, env = d.envelope;
+        const cut = state.cutaway;
+        const thetaStart = cut ? Math.PI * 0.5 : 0;
+        const thetaLen = cut ? Math.PI : Math.PI * 2;
+        const side = cut ? THREE.DoubleSide : THREE.FrontSide;
+
+        const matSS = new THREE.MeshStandardMaterial({ color: 0xb8c5d4, metalness: 0.72, roughness: 0.30, side });
+        const matHot = new THREE.MeshStandardMaterial({ color: 0xf97316, metalness: 0.45, roughness: 0.38, emissive: 0x3b1305, side });
+        const matCPVC = new THREE.MeshStandardMaterial({ color: 0x337fa0, metalness: 0.15, roughness: 0.42, side });
+        const matPacking = new THREE.MeshStandardMaterial({ color: 0x14b8a6, metalness: 0.1, roughness: 0.75, wireframe: false });
+        const matDemister = new THREE.MeshStandardMaterial({ color: 0x7dd3fc, metalness: 0.5, roughness: 0.35, transparent: true, opacity: 0.82 });
+        const matSump = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, metalness: 0.1, roughness: 0.15, transparent: true, opacity: 0.55 });
+        const matBlower = new THREE.MeshStandardMaterial({ color: 0x10b981, metalness: 0.45, roughness: 0.36, side });
+        const matDark = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.55, roughness: 0.45 });
+        const matSpray = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.28, side: THREE.DoubleSide });
+
+        // Clamp geometry dimensions to realistic visual bounds while staying faithfully parametric
+        const clamp = (val, lo, hi) => Math.max(lo, Math.min(hi, val || lo));
+        const ductR = clamp((env.duct_diameter_m || 0.2) * 0.5, 0.06, 0.22);
+
+        // Stage 1: Quench Tower (316L SS)
+        const qR = clamp((q.tower_diameter_m || 0.45) * 0.5, 0.14, 0.75);
+        const qH = clamp(q.tower_height_m || 1.35, 0.7, 3.2);
+        const qX = -1.35;
+
+        const qGroup = new THREE.Group();
+        const qShell = new THREE.Mesh(new THREE.CylinderGeometry(qR, qR, qH, 32, 1, cut, thetaStart, thetaLen), matSS);
+        qShell.position.set(qX, qH * 0.5, 0);
+        qGroup.add(qShell);
+
+        // Hot kiln inlet collar + duct
+        const inletY = qH - ductR * 1.4;
+        const inletLen = 0.55;
+        const inletDuct = new THREE.Mesh(new THREE.CylinderGeometry(ductR, ductR, inletLen, 20), matHot);
+        inletDuct.rotation.z = Math.PI / 2;
+        inletDuct.position.set(qX - qR - inletLen * 0.45, inletY, 0);
+        qGroup.add(inletDuct);
+
+        // Quench flanges + top cap
+        const qTop = new THREE.Mesh(new THREE.CylinderGeometry(qR * 1.07, qR * 1.07, 0.04, 32), matSS);
+        qTop.position.set(qX, qH + 0.02, 0);
+        qGroup.add(qTop);
+        const qBase = new THREE.Mesh(new THREE.CylinderGeometry(qR * 1.08, qR * 1.08, 0.05, 32), matDark);
+        qBase.position.set(qX, 0.025, 0);
+        qGroup.add(qBase);
+
+        // Internal spray lance & water mist cone
+        const lance = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.28, 12), matDark);
+        lance.position.set(qX, qH - 0.14, 0);
+        qGroup.add(lance);
+        const mistCone = new THREE.Mesh(new THREE.ConeGeometry(qR * 0.82, qH * 0.68, 24, 1, true), matSpray);
+        mistCone.position.set(qX, qH * 0.46, 0);
+        qGroup.add(mistCone);
+        assemblyGroup.add(qGroup);
+
+        // Stage 2: Wet Venturi (316L SS)
+        const vInR = clamp((v.inlet_diameter_m || 0.22) * 0.5, 0.07, 0.35);
+        const vThR = clamp((v.throat_diameter_m || 0.09) * 0.5, 0.032, 0.22);
+        const vOutR = clamp((v.outlet_diameter_m || 0.24) * 0.5, 0.07, 0.38);
+        const vConvL = clamp(v.converging_length_m || 0.28, 0.15, 0.7);
+        const vThL = clamp(v.throat_length_m || 0.18, 0.10, 0.45);
+        const vDivL = clamp(v.diverging_length_m || 0.52, 0.25, 1.1);
+        const vY = Math.max(0.32, vOutR + 0.16);
+        const vStartX = qX + qR + 0.18;
+
+        // Connector from Quench to Venturi
+        const conn1 = new THREE.Mesh(new THREE.CylinderGeometry(vInR, vInR, 0.22, 20), matSS);
+        conn1.rotation.z = Math.PI / 2;
+        conn1.position.set(qX + qR + 0.09, vY, 0);
+        assemblyGroup.add(conn1);
+
+        // Converging section (along +X)
+        const vConv = new THREE.Mesh(new THREE.CylinderGeometry(vThR, vInR, vConvL, 28, 1, cut, thetaStart, thetaLen), matSS);
+        vConv.rotation.z = -Math.PI / 2;
+        vConv.position.set(vStartX + vConvL * 0.5, vY, 0);
+        assemblyGroup.add(vConv);
+
+        // Throat section
+        const vTh = new THREE.Mesh(new THREE.CylinderGeometry(vThR, vThR, vThL, 28, 1, cut, thetaStart, thetaLen), matHot);
+        vTh.rotation.z = -Math.PI / 2;
+        vTh.position.set(vStartX + vConvL + vThL * 0.5, vY, 0);
+        assemblyGroup.add(vTh);
+
+        // Diverging diffuser
+        const vDiv = new THREE.Mesh(new THREE.CylinderGeometry(vOutR, vThR, vDivL, 28, 1, cut, thetaStart, thetaLen), matSS);
+        vDiv.rotation.z = -Math.PI / 2;
+        vDiv.position.set(vStartX + vConvL + vThL + vDivL * 0.5, vY, 0);
+        assemblyGroup.add(vDiv);
+
+        const vEndX = vStartX + vConvL + vThL + vDivL;
+
+        // Stage 3: Packed-Bed Absorber (CPVC/PP)
+        const pR = clamp((p.column_diameter_m || 0.55) * 0.5, 0.18, 0.9);
+        const pH = clamp(p.column_height_m || 2.3, 1.2, 4.4);
+        const packH = clamp(p.packing_height_m || 1.0, 0.35, pH * 0.58);
+        const demH = clamp(p.demister_height_m || 0.18, 0.08, 0.35);
+        const pX = vEndX + pR + 0.18;
+
+        const conn2 = new THREE.Mesh(new THREE.CylinderGeometry(vOutR, vOutR, 0.22, 20), matCPVC);
+        conn2.rotation.z = Math.PI / 2;
+        conn2.position.set(vEndX + 0.09, vY, 0);
+        assemblyGroup.add(conn2);
+
+        const pShell = new THREE.Mesh(new THREE.CylinderGeometry(pR, pR, pH, 36, 1, cut, thetaStart, thetaLen), matCPVC);
+        pShell.position.set(pX, pH * 0.5, 0);
+        assemblyGroup.add(pShell);
+
+        // Sump liquid reservoir
+        const sumpH = Math.min(0.45, Math.max(0.22, pH * 0.15));
+        const sumpMesh = new THREE.Mesh(new THREE.CylinderGeometry(pR * 0.94, pR * 0.94, sumpH, 28), matSump);
+        sumpMesh.position.set(pX, sumpH * 0.5 + 0.02, 0);
+        assemblyGroup.add(sumpMesh);
+
+        // Support plate & random packing bed
+        const packBaseY = Math.max(sumpH + vOutR + 0.14, pH * 0.28);
+        const clampedPackH = Math.min(packH, pH - packBaseY - demH - 0.28);
+        const packMesh = new THREE.Mesh(new THREE.CylinderGeometry(pR * 0.92, pR * 0.92, Math.max(0.22, clampedPackH), 28), matPacking);
+        packMesh.position.set(pX, packBaseY + Math.max(0.22, clampedPackH) * 0.5, 0);
+        assemblyGroup.add(packMesh);
+
+        // Liquid distributor ring
+        const distRing = new THREE.Mesh(new THREE.TorusGeometry(pR * 0.65, 0.02, 10, 24), matDark);
+        distRing.rotation.x = Math.PI / 2;
+        distRing.position.set(pX, packBaseY + Math.max(0.22, clampedPackH) + 0.10, 0);
+        assemblyGroup.add(distRing);
+
+        // Chevron Demister Pad
+        const demY = pH - demH * 0.5 - 0.18;
+        const demMesh = new THREE.Mesh(new THREE.CylinderGeometry(pR * 0.93, pR * 0.93, demH, 28), matDemister);
+        demMesh.position.set(pX, demY, 0);
+        assemblyGroup.add(demMesh);
+
+        // Top conical cap on Packed Bed
+        const topConeH = 0.26;
+        const pCap = new THREE.Mesh(new THREE.ConeGeometry(pR, topConeH, 32, 1, false), matCPVC);
+        pCap.position.set(pX, pH + topConeH * 0.5, 0);
+        assemblyGroup.add(pCap);
+        const pBase = new THREE.Mesh(new THREE.CylinderGeometry(pR * 1.07, pR * 1.07, 0.05, 32), matDark);
+        pBase.position.set(pX, 0.025, 0);
+        assemblyGroup.add(pBase);
+
+        // Stage 4: ID Centrifugal Blower
+        const wheelR = clamp((b.wheel_diameter_m || 0.36) * 0.65, 0.16, 0.45);
+        const bX = pX + pR + wheelR + 0.48;
+        const bY = wheelR + 0.26;
+
+        // Overhead outlet duct from Stage 3 top to Stage 4 blower suction
+        const topDuctY = pH + topConeH + 0.12;
+        const vertUp = new THREE.Mesh(new THREE.CylinderGeometry(ductR, ductR, 0.22, 20), matCPVC);
+        vertUp.position.set(pX, pH + topConeH + 0.02, 0);
+        assemblyGroup.add(vertUp);
+
+        const horizLen = bX - pX;
+        const horizDuct = new THREE.Mesh(new THREE.CylinderGeometry(ductR, ductR, horizLen, 20), matCPVC);
+        horizDuct.rotation.z = Math.PI / 2;
+        horizDuct.position.set(pX + horizLen * 0.5, topDuctY, 0);
+        assemblyGroup.add(horizDuct);
+
+        const downLen = topDuctY - bY;
+        const downDuct = new THREE.Mesh(new THREE.CylinderGeometry(ductR, ductR, downLen, 20), matCPVC);
+        downDuct.position.set(bX, bY + downLen * 0.5, 0);
+        assemblyGroup.add(downDuct);
+
+        // Blower volute housing
+        const volute = new THREE.Mesh(new THREE.CylinderGeometry(wheelR, wheelR, wheelR * 0.72, 32, 1, cut, thetaStart, thetaLen), matBlower);
+        volute.rotation.x = Math.PI / 2;
+        volute.position.set(bX, bY, 0);
+        assemblyGroup.add(volute);
+
+        // Spinning impeller inside blower
+        const impGroup = new THREE.Group();
+        impGroup.position.set(bX, bY, 0);
+        const hub = new THREE.Mesh(new THREE.CylinderGeometry(wheelR * 0.2, wheelR * 0.2, wheelR * 0.45, 16), matDark);
+        hub.rotation.x = Math.PI / 2;
+        impGroup.add(hub);
+        for (let k = 0; k < 6; k++) {
+          const blade = new THREE.Mesh(new THREE.BoxGeometry(wheelR * 0.72, 0.025, wheelR * 0.36), matSS);
+          const angle = (k * Math.PI) / 3;
+          blade.position.set(Math.cos(angle) * wheelR * 0.36, Math.sin(angle) * wheelR * 0.36, 0);
+          blade.rotation.z = angle;
+          impGroup.add(blade);
+        }
+        assemblyGroup.add(impGroup);
+        impellerMesh = impGroup;
+
+        // Discharge exhaust stack & motor pedestal
+        const stackH = 0.85;
+        const stack = new THREE.Mesh(new THREE.CylinderGeometry(ductR * 0.9, ductR * 0.95, stackH, 20), matBlower);
+        stack.position.set(bX + wheelR * 0.65, bY + stackH * 0.5, 0);
+        assemblyGroup.add(stack);
+
+        const motor = new THREE.Mesh(new THREE.CylinderGeometry(wheelR * 0.45, wheelR * 0.45, wheelR * 0.95, 20), matDark);
+        motor.rotation.x = Math.PI / 2;
+        motor.position.set(bX, bY, -wheelR * 0.85);
+        assemblyGroup.add(motor);
+
+        const pedestal = new THREE.Mesh(new THREE.BoxGeometry(wheelR * 1.4, bY - wheelR * 0.5, wheelR * 1.4), matDark);
+        pedestal.position.set(bX, (bY - wheelR * 0.5) * 0.5, -wheelR * 0.3);
+        assemblyGroup.add(pedestal);
+
+        // Center assembly horizontally around X = 0
+        const centerOffset = -(qX + bX) * 0.5;
+        assemblyGroup.position.x = centerOffset;
+
+        stageCenters = {
+          all: new THREE.Vector3(0, pH * 0.48, 0),
+          quench: new THREE.Vector3(qX + centerOffset, qH * 0.5, 0),
+          venturi: new THREE.Vector3((vStartX + vEndX) * 0.5 + centerOffset, vY, 0),
+          packed: new THREE.Vector3(pX + centerOffset, pH * 0.5, 0),
+          blower: new THREE.Vector3(bX + centerOffset, bY + 0.15, 0),
+        };
+
+        flowWaypoints = [
+          new THREE.Vector3(qX - qR - inletLen + centerOffset, inletY, 0),
+          new THREE.Vector3(qX + centerOffset, inletY, 0),
+          new THREE.Vector3(qX + centerOffset, vY, 0),
+          new THREE.Vector3(vStartX + vConvL + vThL * 0.5 + centerOffset, vY, 0),
+          new THREE.Vector3(pX + centerOffset, vY, 0),
+          new THREE.Vector3(pX + centerOffset, pH + topConeH * 0.6, 0),
+          new THREE.Vector3(pX + centerOffset, topDuctY, 0),
+          new THREE.Vector3(bX + centerOffset, topDuctY, 0),
+          new THREE.Vector3(bX + centerOffset, bY, 0),
+          new THREE.Vector3(bX + wheelR * 0.65 + centerOffset, bY + stackH + 0.15, 0),
+        ];
+      }
+
+      function focusStage(stage) {
+        const tgt = stageCenters[stage] || stageCenters.all;
+        targetGoal = tgt.clone();
+        if (stage === "all") {
+          camGoal = new THREE.Vector3(tgt.x + 0.4, tgt.y + 1.1, 4.8);
+        } else {
+          camGoal = new THREE.Vector3(tgt.x + 0.25, tgt.y + 0.55, 2.35);
+        }
+      }
+
+      function resize() {
+        const rect = container.getBoundingClientRect();
+        const w = Math.max(300, rect.width);
+        const h = Math.max(240, rect.height);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h, false);
+      }
+
+      const clock = new THREE.Clock();
+      function animate() {
+        requestAnimationFrame(animate);
+        const dt = Math.min(0.05, clock.getDelta());
+
+        if (state.viewMode !== "3d") return;
+
+        if (camGoal && targetGoal) {
+          camera.position.lerp(camGoal, 0.08);
+          controls.target.lerp(targetGoal, 0.08);
+          if (camera.position.distanceTo(camGoal) < 0.03) {
+            camGoal = null;
+            targetGoal = null;
+          }
+        }
+
+        if (impellerMesh) {
+          impellerMesh.rotation.z -= dt * 7.5;
+        }
+
+        particlePoints.visible = state.particles && flowWaypoints.length > 1;
+        if (particlePoints.visible) {
+          const posAttr = particleGeo.attributes.position;
+          const colAttr = particleGeo.attributes.color;
+          const nSeg = flowWaypoints.length - 1;
+          for (let i = 0; i < particleCount; i++) {
+            particlePhase[i] = (particlePhase[i] + dt * 0.18) % 1.0;
+            const t = particlePhase[i];
+            const segF = t * nSeg;
+            const idx = Math.min(nSeg - 1, Math.floor(segF));
+            const frac = segF - idx;
+            const a = flowWaypoints[idx];
+            const b = flowWaypoints[idx + 1];
+            const swirl = 0.035;
+            const ang = t * 28.0 + i * 1.7;
+            posAttr.setXYZ(
+              i,
+              a.x + (b.x - a.x) * frac + Math.cos(ang) * swirl,
+              a.y + (b.y - a.y) * frac + Math.sin(ang) * swirl * 0.6,
+              Math.sin(ang) * swirl
+            );
+            // Color shifts hot orange -> cool cyan -> clean emerald
+            if (t < 0.25) colAttr.setXYZ(i, 0.98, 0.48, 0.15);
+            else if (t < 0.58) colAttr.setXYZ(i, 0.12, 0.78, 0.95);
+            else colAttr.setXYZ(i, 0.30, 0.90, 0.65);
+          }
+          posAttr.needsUpdate = true;
+          colAttr.needsUpdate = true;
+        }
+
+        controls.update();
+        renderer.render(scene, camera);
+      }
+
+      window.__kiln3D = {
+        updateDesign: (d) => buildAssembly(d),
+        setCutaway: () => buildAssembly(state.design),
+        setParticles: (on) => { particlePoints.visible = on; },
+        focusStage,
+        resize,
+      };
+
+      state.threeReady = true;
+      if (state.design) buildAssembly(state.design);
+      window.__kilnSetViewMode("3d");
+      resize();
+      animate();
+    }
+
+    initThree();
+  </script>
+</body>
+</html>
