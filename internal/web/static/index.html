@@ -4822,7 +4822,7 @@
             name: arch.bedLayout === "parallel_manifold" ? `${arch.parallelBed.pipeNomIn}" Sch 80 CPVC Parallel Pipe Cuts` : "Packed Column Pipe Cut",
             shape: "pipe",
             material: "Sch 80 CPVC",
-            flat_width_in: arch.bedLayout === "parallel_manifold" ? arch.parallelBed.pipeNomIn : Number(pD.toFixed(1)),
+            flat_width_in: Number((Math.PI * (arch.bedLayout === "parallel_manifold" ? arch.parallelBed.pipeNomIn : pD)).toFixed(1)),
             flat_height_in: Number(pH.toFixed(1)),
             outer_radius_in: 0, inner_radius_in: 0, sweep_deg: 0,
             qty: arch.bedLayout === "parallel_manifold" ? arch.parallelBed.pipeCount : 1,
@@ -5411,18 +5411,20 @@
             out += `<text x="${x + 14}" y="${y + cardH - 10}" fill="#7dd3fc" font-family="monospace" font-size="10">R_out=${fmtPlanLen(rOutIn)} · R_in=${fmtPlanLen(rInIn)} · Sweep θ=${sweep.toFixed(1)}°</text>`;
           } else {
             // Scaled pipe cut or unrolled rectangular cylinder flat sheet
+            // Note: pkg/studio/plan.go sets flat_width_in = pi * diameter (unwrapped circumference) for shape="pipe"
             const wIn = Math.max(1, item.flat_width_in || 12);
             const hIn = Math.max(1, item.flat_height_in || 36);
             const isPipe = String(item.shape || "").toLowerCase().includes("pipe");
+            const pipeDiamIn = wIn / Math.PI;
             const drawW = isPipe ? Math.min(gw * 0.78, Math.max(120, gw * 0.68)) : Math.min(gw * 0.76, Math.max(84, (wIn / Math.max(wIn, hIn)) * (gw * 0.74)));
-            const drawH = isPipe ? Math.min(gh * 0.44, Math.max(22, (wIn / 20) * 52)) : Math.min(gh * 0.68, Math.max(44, (hIn / Math.max(wIn, hIn)) * (gh * 0.68)));
+            const drawH = isPipe ? Math.min(gh * 0.44, Math.max(20, (pipeDiamIn / 20) * 52)) : Math.min(gh * 0.68, Math.max(44, (hIn / Math.max(wIn, hIn)) * (gh * 0.68)));
             const rx = gx + (gw - drawW) * 0.5;
             const ry = gy + (gh - drawH) * 0.5;
 
             out += `<rect x="${rx.toFixed(1)}" y="${ry.toFixed(1)}" width="${drawW.toFixed(1)}" height="${drawH.toFixed(1)}" fill="${isPipe ? "rgba(6,182,212,0.18)" : "rgba(249,115,22,0.15)"}" stroke="${isPipe ? "#06b6d4" : "#fb923c"}" stroke-width="1.7"/>`;
             if (isPipe) {
               out += `<line x1="${rx.toFixed(1)}" y1="${(ry + drawH * 0.5).toFixed(1)}" x2="${(rx + drawW).toFixed(1)}" y2="${(ry + drawH * 0.5).toFixed(1)}" stroke="#67e8f9" stroke-dasharray="6 3" stroke-width="0.9"/>`;
-              out += `<text x="${x + 14}" y="${y + cardH - 10}" fill="#67e8f9" font-family="monospace" font-size="10">Pipe Ø=${fmtPlanLen(wIn)} · Cut Length L=${fmtPlanLen(hIn)}</text>`;
+              out += `<text x="${x + 14}" y="${y + cardH - 10}" fill="#67e8f9" font-family="monospace" font-size="10">Pipe Ø≈${fmtPlanLen(pipeDiamIn)} (Wrap ${fmtPlanLen(wIn)}) · Cut L=${fmtPlanLen(hIn)}</text>`;
             } else {
               out += `<text x="${x + 14}" y="${y + cardH - 10}" fill="#fdba74" font-family="monospace" font-size="10">Flat Sheet: W=${fmtPlanLen(wIn)} × H=${fmtPlanLen(hIn)}</text>`;
             }
@@ -5456,8 +5458,9 @@
         let totalCost = 0;
         tbody.innerHTML = parts.map((pt) => {
           const qty = Number.isFinite(pt.qty) ? pt.qty : 1;
+          // PlanPart.cost_usd is already the total assembly line-item cost in pkg/studio/plan.go
           const cost = Number.isFinite(pt.cost_usd) ? pt.cost_usd : 0;
-          totalCost += cost * qty;
+          totalCost += cost;
           const dimText = planState.unit === "mm"
             ? (pt.dimensions_mm || pt.dimensions_in || "—")
             : (pt.dimensions_in || pt.dimensions_mm || "—");
@@ -5471,7 +5474,7 @@
               <td style="font-family:var(--mono);font-size:11px">${escapeHtml(dimText)}</td>
               <td style="font-family:var(--mono);font-size:11px;color:#7dd3fc">${escapeHtml(pt.sku || "—")}</td>
               <td class="num">${qty}</td>
-              <td class="num">${fmtUSD(cost * qty)}</td>
+              <td class="num">${fmtUSD(cost)}</td>
               <td style="font-size:11px;color:var(--muted)">${escapeHtml(pt.notes || "")}</td>
             </tr>
           `;
@@ -5500,7 +5503,7 @@
         if (selBar && selText) {
           if (activePart) {
             const dimText = planState.unit === "mm" ? (activePart.dimensions_mm || activePart.dimensions_in) : (activePart.dimensions_in || activePart.dimensions_mm);
-            selText.textContent = `Highlighted [${activePart.num}] ${activePart.label} · ${activePart.material} · ${dimText} · SKU: ${activePart.sku || "N/A"} · Qty ${activePart.qty || 1} (${fmtUSD((activePart.cost_usd || 0) * (activePart.qty || 1))})`;
+            selText.textContent = `Highlighted [${activePart.num}] ${activePart.label} · ${activePart.material} · ${dimText} · SKU: ${activePart.sku || "N/A"} · Qty ${activePart.qty || 1} (${fmtUSD(activePart.cost_usd || 0)})`;
             selBar.classList.remove("hidden");
           } else {
             selBar.classList.add("hidden");
