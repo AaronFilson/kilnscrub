@@ -10,14 +10,19 @@
 
 - [4-Stage Scrubber Architecture](#4-stage-scrubber-architecture)
 - [Requirements & Build](#requirements--build)
+- [Studio Potter Kit (COTS, Urban Readiness & Build Packets)](#studio-potter-kit-cots-urban-readiness--build-packets)
 - [CLI Reference](#cli-reference)
+  - [`kilnscrub presets`](#kilnscrub-presets)
+  - [`kilnscrub guide`](#kilnscrub-guide)
+  - [`kilnscrub packet`](#kilnscrub-packet)
   - [`kilnscrub design`](#kilnscrub-design)
   - [`kilnscrub export`](#kilnscrub-export)
   - [`kilnscrub daemon`](#kilnscrub-daemon)
   - [`kilnscrub ui`](#kilnscrub-ui)
+  - [`kilnscrub version`](#kilnscrub-version)
 - [Web Dashboard & HTTP API](#web-dashboard--http-api)
 - [Fabrication & Safety Guide](#fabrication--safety-guide)
-- [Testing & Verification](#testing--verification)
+- [Testing, CI & Automated Releases](#testing-ci--automated-releases)
 - [Deployment (systemd)](#deployment-systemd)
 - [Repository Layout](#repository-layout)
 - [License](#license)
@@ -96,9 +101,24 @@ CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/kilnscrub ./cmd/kilnscr
 # Or using the Makefile
 make build
 
-# Cross-compile static binaries for linux/amd64, linux/arm64, darwin/arm64, windows/amd64
+# Cross-compile static binaries for linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64
 make release-all
+
+# Build reproducible packaged release archives (.tar.gz / .zip) + SHA256SUMS.txt
+make release-archives
 ```
+
+---
+
+## Studio Potter Kit (COTS, Urban Readiness & Build Packets)
+
+`kilnscrub` includes a potter-friendly Studio Kit (`pkg/studio`) layered on top of the validated 4-stage thermochemistry solver so urban ceramicists and makers can go from kiln profile to shopping list and build packet in one step:
+
+- **5 Curated Studio Presets:** `electric_raku_6` (6 cu.ft. 120V no-weld raku/test hood), `gas_soda_14` (14 cu.ft. zero-HCl Cone 10 soda kiln), `wood_salt_24` (24 cu.ft. Cone 11 wood-salt reference), `coop_wood_48` (48 cu.ft. heavy-duty C-276/FRP community kiln), and `foundry_glass_16` (16 cu.ft. particulate-focused glass/foundry scrubber).
+- **COTS Hardware Snapping (`snap_to_cots`):** Maps theoretical diameters to real off-the-shelf 316L SS / Alloy C-276 pipe spools, Schedule 40/80 CPVC pipe or 55-gallon HDPE drum columns, PP Pall rings, radial pressure blowers + NEMA 4X VFDs, and Modbus safety interlock kits — automatically recalculating actual `% of Eckert flooding velocity` (`<= 75%`). Supports both **No-Weld COTS** (`cots_no_weld`) and **Welded Sheet Metal DXF** (`welded_dxf`) build paths.
+- **Urban Neighbor & Backyard Readiness:** Evaluates 6 site checks — studio electrical (`120V` vs `240V` VFD circuit & amps), garden-hose water demand & total gallons/firing, inverse-square property-line noise (`dBA` vs `60 dBA` residential limit with optional acoustic silencer), baking soda (`NaHCO3`) consumption in `4-lb` grocery boxes + neutralized drain `pH`, 316L hot-wet-HCl corrosion vs. zero-HCl Soda (`Na2CO3`) comparison, and cold-weather steam plume visibility.
+- **Squirrel-Cage High-Velocity Plume Calculator:** Models psychrometric mixing lines using IAPWS-95 `WaterPsat` to report bare vs. diluted horizontal winter plume reach (`bare_plume_length_ft` -> `diluted_plume_length_ft`) against your property-line setback, sizes a downstream `120V` squirrel-cage dilution blower + high-velocity exit cone (`~3,400 FPM`), and computes tangent-clear kiln-jacket waste-heat recovery (`kW`).
+- **One-Click 10-File Build Packet (`.zip`):** Bundles `BUILD_GUIDE.md`, `OPERATIONS_CHECKLIST.md`, `bom_cots.md`, `bom_cots.csv`, `bom_engineered.csv`, `scrubber.stl`, `scrubber.dxf`, `project.json`, `daemon.json`, and `README_PACKET.txt`.
 
 ---
 
@@ -113,18 +133,52 @@ Usage:
 Commands:
   design   Size a 4-stage kiln exhaust scrubber from firing parameters
   export   Export fabrication .stl mesh, unfolded .dxf patterns, and BOM
+  presets  List curated studio kiln presets (ID, profile, audience, badge)
+  guide    Evaluate COTS hardware, urban readiness, and Build/Firing Guides
+  packet   Generate a complete 10-file Studio Build Packet (.zip)
   daemon   Run the closed-loop PID draft & quench safety controller
-  ui       Launch the interactive web dashboard (default :8080)
+  ui       Launch the interactive 3-tab web dashboard (default :8080)
+  version  Print the kilnscrub version
+```
+
+### `kilnscrub presets`
+
+Lists all 5 curated studio presets (`ID`, `Name`, `Badge`, `Audience`, `Tagline`) or emits machine-readable JSON (`--json`).
+
+```bash
+kilnscrub presets
+kilnscrub presets --json
+```
+
+### `kilnscrub guide`
+
+Evaluates a preset (`--preset`, default `wood_salt_24`) or saved `project.json` (`--project`), prints the COTS + Urban Readiness summary (including bare vs. squirrel-cage diluted plume reach), and either prints the tailored Markdown Build Guide to stdout or writes `BUILD_GUIDE.md` and `OPERATIONS_CHECKLIST.md` to `--out <dir>`.
+
+```bash
+kilnscrub guide --preset gas_soda_14
+kilnscrub guide --preset wood_salt_24 --out ./studio-guides
+kilnscrub guide --project ./my-studio-project.json --out ./studio-guides
+```
+
+### `kilnscrub packet`
+
+Generates the complete 10-file Build Packet `.zip` archive from a preset (`--preset`) or saved `project.json` (`--project`).
+
+```bash
+kilnscrub packet --preset wood_salt_24 --out ./kilnscrub-wood_salt_24-packet.zip
+kilnscrub packet --project ./my-studio-project.json --out ./my-build-packet.zip
 ```
 
 ### `kilnscrub design`
 
-Sizes all four scrubber stages from kiln firing parameters and prints either a formatted engineering summary or the full `ScrubberDesign` JSON document.
+Sizes all four scrubber stages from kiln firing parameters (optionally seeded by `--preset <id>` or `--project <path.json>`) and prints either a formatted engineering summary or the full `ScrubberDesign` JSON document.
 
 **Flags:**
 
 | Flag | Default | Description |
 |---|---|---|
+| `--preset` | *(none)* | Optional studio preset ID to seed sizing parameters |
+| `--project` | *(none)* | Optional path to a saved `StudioProject` `project.json` file |
 | `--kiln-volume` | `24` | Kiln interior volume (`cu.ft.`) |
 | `--peak-temp` | `2400` | Peak kiln exit gas temperature (`°F`) |
 | `--salt-rate` | `2.0` | `NaCl` salt introduction rate (`lbs/hr`) |
@@ -192,7 +246,7 @@ Generates fabrication deliverables from the sized scrubber design:
 
 **Flags:**
 
-Accepts all sizing flags from `kilnscrub design` (`--kiln-volume`, `--peak-temp`, `--salt-rate`, `--fuel`, `--throat-vel`, `--lg`, `--hcl-removal`, `--draft`) plus:
+Accepts all sizing flags from `kilnscrub design` (`--preset`, `--project`, `--kiln-volume`, `--peak-temp`, `--salt-rate`, `--fuel`, `--throat-vel`, `--lg`, `--hcl-removal`, `--draft`) plus:
 
 | Flag | Default | Description |
 |---|---|---|
@@ -297,32 +351,42 @@ kilnscrub ui --addr 127.0.0.1:8080 --no-control
 
 ---
 
+### `kilnscrub version`
+
+Prints the build version embedded via `-ldflags "-X main.version=..."` (`kilnscrub version` or `kilnscrub --version`).
+
+---
+
 ## Web Dashboard & HTTP API
 
-The embedded web application (`internal/web/static/index.html`) provides two workspace tabs:
+The embedded web application (`internal/web/static/index.html`) provides three workspace tabs out of the box when running `kilnscrub ui`:
 
 1. **Design & 3D Studio**
-   - Live interactive sliders for kiln volume, peak firing temperature, salt rate, fuel stoichiometry, venturi throat velocity, `L/G` ratio, `HCl` removal target, and draft setpoint.
-   - Parametric **Three.js** (`0.170.0`) 3D cutaway visualization with animated flow particles, orbit controls, and per-stage material/geometry inspector.
-   - Real-time engineering charts: venturi fractional capture efficiency (`0.1–2.0 µm` for wood ash and condensed `NaCl` fume) and blower fan vs. system resistance curves.
-   - Direct browser downloads for `.stl`, `.dxf`, `bom.csv`, `bom.md`, and `bom.json`.
-2. **Live Control & Telemetry**
+   - One-click **5 Curated Studio Presets** (`electric_raku_6`, `gas_soda_14`, `wood_salt_24`, `coop_wood_48`, `foundry_glass_16`), pyrometric Cone selector (`Cone 06`–`Cone 11`), Vapor Glaze toggle (`None` / `Soda` / `Salt`), Build Path (`No-Weld COTS` vs `Welded DXF`), Corrosion Tier (`Hobby 316L` vs `Heavy C-276 / FRP`), acoustic silencer & `120V` squirrel-cage plume diluter toggles, and `Save/Load project.json`.
+   - **Urban Neighbor Readiness Bar** displaying live traffic-light chips for Electrical, Water, Neighbor Noise, Baking Soda, Winter Plume reach (`bare -> HV squirrel-cage vs fence line`), and Corrosion/Soda comparison.
+   - Collapsible **Advanced Engineering Parameters** drawer for venturi throat velocity, `L/G` ratio, `HCl` removal target, packing voidage/diameter, and draft setpoint.
+   - Parametric **Three.js** (`0.170.0`) 3D cutaway visualization with animated flow particles, orbit controls, engineering charts, and direct CAD/BOM downloads.
+2. **Build & Firing Guide**
+   - COTS snapped hardware summary cards, actual `% of flooding velocity` check (`<= 75%`), full COTS shopping-list BOM table, and detailed 6-card Urban Site & Neighbor Readiness breakdown (including squirrel-cage plume verdict and bare vs. diluted plume reach).
+   - Interactive **Step-by-Step Build Guide** and **Firing-Day How-To Checklist** reader with persistent checkboxes and one-click **Download Complete Build Packet (`.zip`)** button.
+3. **Live Control & Telemetry**
    - Real-time **Server-Sent Events (SSE)** stream (`SSE LIVE` / `CONNECTING` / `OFFLINE`) with active HAL mode badge (`SIM` / `MODBUS`).
    - High-visibility safety interlock banner (`NORMAL`, `WARNING (pH)`, or `INTERLOCK TRIPPED — BYPASS DAMPER OPEN` with exact `trip_reason`) and **Reset Interlock** action.
-   - Live KPI cards (filtered draft in `inWC` & `Pa`, quench outlet temperature vs. `210°F` CPVC cutoff, spray water flow vs. `0.25 GPM` floor, sump `pH`, blower VFD `%`, quench spray valve `%`, bypass damper state).
-   - Rolling real-time SVG strip charts for draft vs. setpoint, quench outlet temperature vs. `210°F` trip threshold, and actuator outputs (`VFD %` & `Valve %`).
-   - Live setpoint controls (draft & quench outlet temperature) and simulation fault-injection buttons (wood-stoking heat spike, water loss, sensor fault, low `pH` warning, clear all faults) when running against `sim` HAL.
+   - Live KPI cards, rolling real-time SVG strip charts, live setpoint controls, and simulation fault-injection buttons when running against `sim` HAL.
 
 ### HTTP API Summary
 
 | Method & Endpoint | Description |
 |---|---|
-| `GET /` | Embedded single-file web dashboard (Design & 3D Studio + Live Control & Telemetry) |
+| `GET /` | Embedded single-file 3-tab web dashboard |
 | `GET /favicon.ico` | Embedded SVG favicon |
 | `GET /api/health` | Health check (`{"status":"ok"}`) |
 | `GET /api/defaults` | Default 24 cu.ft. wood/salt `DesignInput` JSON |
 | `POST /api/size` | Compute `ScrubberDesign` JSON (partial JSON payloads inherit defaults from `DefaultSaltKilnInput()`) |
 | `POST /api/export?format=...` | Export CAD/BOM attachment (`format` in `stl`, `dxf`, `bom_csv`, `bom_md`, `bom_json`) |
+| `GET /api/studio/presets` | List all 5 curated `StudioPreset` profiles (`{"presets":[...]}`) |
+| `POST /api/studio/evaluate` | Evaluate a `StudioProject` JSON payload into a full `StudioEvaluation` (design + COTS + urban readiness + Markdown guides) |
+| `POST /api/studio/packet` | Generate and download the 10-file Studio Build Packet `.zip` (`application/zip`) |
 | `GET /api/control/status` | Live controller snapshot, active `ControlConfig`, `hal_mode`, and `supports_fault_injection` (`{"enabled":false}` when no control backend is attached) |
 | `GET /api/control/stream` | Server-Sent Events (`text/event-stream`) live `ControlStatus` telemetry feed (`503` if control backend disabled) |
 | `POST /api/control/setpoint` | Update live `target_draft_in_wc` and/or `quench_setpoint_f` (`400` on out-of-range input) |
@@ -355,37 +419,39 @@ The embedded web application (`internal/web/static/index.html`) provides two wor
 
 ---
 
-## Testing & Verification
+## Testing, CI & Automated Releases
 
-Run the full formatting, static analysis, race-detector test suite, and CLI smoke checks with zero Python dependencies:
+Run the full formatting, static analysis, race-detector test suite, and CLI/packet smoke checks with zero Python dependencies:
 
 ```bash
-# Formatting check
-gofmt -l .
+# Full local verification gate (gofmt check, go vet, race tests across all 8 packages)
+make check
 
-# Static analysis
-go vet ./...
-
-# Full test suite with Go race detector across all packages
-CGO_ENABLED=1 go test -race -count=1 ./...
-
-# Or run via Makefile targets
-make vet
-make test
+# CLI end-to-end smoke checks (design, export, daemon) and Build Packet zip check
 make smoke
+make packet-smoke
 ```
+
+### GitHub Actions CI & Release Pipeline
+
+- **CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):** Runs `gofmt -l .`, `go vet ./...`, `go mod tidy` cleanliness check, zero-Python-in-Go guard, JSON validation, `go test -race -coverprofile`, CLI smoke checks (`design`, `export`, `daemon`, `presets`, `packet`), and 5-target static cross-compilation (`linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`) with `SHA256SUMS.txt`.
+- **Automated Releases ([`.github/workflows/release.yml`](.github/workflows/release.yml) & [`packaging/release.sh`](packaging/release.sh)):** Triggered on semantic version tags (`v*.*.*`) or manual `workflow_dispatch`; runs the race test gate, builds reproducible `.tar.gz`/`.zip` release archives with embedded `main.version`, verifies `SHA256SUMS.txt`, and publishes a GitHub Release automatically.
 
 ### Makefile Targets
 
 | Target | Description |
 |---|---|
-| `make build` | Compile static pure-Go binary (`CGO_ENABLED=0`) to `bin/kilnscrub` |
+| `make build` | Compile static pure-Go binary (`CGO_ENABLED=0`) to `bin/kilnscrub` with `-X main.version=...` |
 | `make test` | Run `CGO_ENABLED=1 go test -race -count=1 ./...` |
 | `make vet` | Run `go vet ./...` |
-| `make fmt` | Format all Go source files with `gofmt -w .` |
-| `make smoke` | Build binary and run `design` + `export` verification (`.stl`, `.dxf`, `bom.csv`, `bom.md`) |
-| `make release-all` | Cross-compile static binaries to `dist/` (`linux/amd64`, `linux/arm64`, `darwin/arm64`, `windows/amd64`) |
-| `make clean` | Remove `bin/` and `dist/` build outputs |
+| `make fmt` / `make fmt-check` | Format all Go source files with `gofmt -w .` / verify `gofmt` cleanliness |
+| `make check` | Run `fmt-check`, `vet`, and `test` |
+| `make coverage` | Run race tests with coverage profile and print total coverage |
+| `make smoke` | Build binary and run `design`, `export` (`.stl`, `.dxf`, `bom.csv`, `bom.md`), and `daemon` smoke checks |
+| `make packet-smoke` | Build binary and verify `presets` + `packet --preset wood_salt_24` `.zip` integrity |
+| `make release-all` | Cross-compile all 5 static binaries and `SHA256SUMS.txt` to `dist/` |
+| `make release-archives` | Build reproducible `.tar.gz`/`.zip` release archives + `SHA256SUMS.txt` via `packaging/release.sh` |
+| `make clean` | Remove `bin/`, `dist/`, and `coverage.out` build outputs |
 
 ---
 
@@ -413,22 +479,25 @@ sudo journalctl -u kilnscrub-daemon.service -f
 
 ```text
 kilnscrub/
-├── cmd/kilnscrub/              # CLI entrypoints (design, export, daemon, ui)
+├── cmd/kilnscrub/              # CLI entrypoints (design, export, presets, guide, packet, daemon, ui, version)
 ├── pkg/
 │   ├── model/                  # Shared SI unit types, DesignInput, ControlConfig, HAL interfaces
 │   ├── thermo/                 # NIST Shomate Cp/H, Lucas viscosity, IAPWS-95 Psat, Brent quench solver
 │   ├── scrubber/               # Venturi (Calvert), Packed Bed (Eckert/Ergun/NTU-HTU), ID Blower
-│   └── cad/                    # Binary .stl mesh, unfolded R12 .dxf patterns, CSV/Markdown BOM
+│   ├── cad/                    # Binary .stl mesh, unfolded R12 .dxf patterns, CSV/Markdown BOM
+│   └── studio/                 # Studio presets, COTS catalog & snapping, urban & plume readiness, guides, Build Packet .zip
 ├── internal/
 │   ├── control/                # PID draft/quench loops, LPF filter, fail-safe interlock, Sim & Modbus RTU HALs
-│   └── web/                    # Embedded HTTP server, JSON/SSE APIs, Three.js + Live Telemetry UI
+│   └── web/                    # Embedded HTTP server, JSON/SSE/Studio APIs, 3-tab Three.js + Guide + Telemetry UI
 ├── configs/                    # Example JSON daemon & Modbus RTU configuration
 ├── docs/                       # Independent physics & engineering validation report
-├── packaging/systemd/          # Hardened systemd service unit for studio controllers
+├── packaging/
+│   ├── release.sh              # Reproducible cross-platform .tar.gz/.zip release archive builder
+│   └── systemd/                # Hardened systemd service unit for studio controllers
 ├── scripts/generate_oracle.py  # One-time offline Python oracle fixture generator
 ├── testdata/oracle_fixtures.json # Committed ground-truth scientific test fixtures
-├── .github/workflows/ci.yml    # GitHub Actions CI (gofmt, vet, race tests, smoke, cross-platform builds)
-└── Makefile                    # Ergonomic build, test, smoke, and cross-compile targets
+├── .github/workflows/          # GitHub Actions CI (ci.yml), automated Release (release.yml), Dependabot
+└── Makefile                    # Ergonomic build, check, smoke, packet-smoke, and release targets
 ```
 
 ---

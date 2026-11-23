@@ -19,7 +19,11 @@ import (
 	"github.com/AaronFilson/kilnscrub/pkg/cad"
 	"github.com/AaronFilson/kilnscrub/pkg/model"
 	"github.com/AaronFilson/kilnscrub/pkg/scrubber"
+	"github.com/AaronFilson/kilnscrub/pkg/studio"
 )
+
+// version is overridden at build time via -ldflags "-X main.version=...".
+var version = "dev"
 
 func main() {
 	if err := run(context.Background(), os.Args[1:], os.Stdout, os.Stderr); err != nil {
@@ -39,10 +43,19 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 		return runDesign(args[1:], stdout, stderr)
 	case "export":
 		return runExport(args[1:], stdout, stderr)
+	case "presets":
+		return runPresets(args[1:], stdout, stderr)
+	case "guide":
+		return runGuide(args[1:], stdout, stderr)
+	case "packet":
+		return runPacket(args[1:], stdout, stderr)
 	case "daemon":
 		return runDaemon(ctx, args[1:], stdout, stderr)
 	case "ui":
 		return runUI(ctx, args[1:], stdout, stderr)
+	case "version", "--version", "-version":
+		fmt.Fprintf(stdout, "kilnscrub %s\n", version)
+		return nil
 	case "-h", "--help", "help":
 		printUsage(stdout)
 		return nil
@@ -61,8 +74,12 @@ Usage:
 Commands:
   design   Size a 4-stage kiln exhaust scrubber from firing parameters
   export   Export fabrication .stl mesh, unfolded .dxf patterns, and BOM
+  presets  List curated studio kiln presets (ID, profile, audience, badge)
+  guide    Evaluate COTS hardware, urban readiness, and Build/Firing Guides
+  packet   Generate a complete 10-file Studio Build Packet (.zip)
   daemon   Run the closed-loop PID draft & quench safety controller
-  ui       Launch the interactive web dashboard (default :8080)`)
+  ui       Launch the interactive 3-tab web dashboard (default :8080)
+  version  Print the kilnscrub version`)
 }
 
 type sizingFlags struct {
@@ -89,17 +106,57 @@ func bindSizingFlags(fs *flag.FlagSet, defaults model.DesignInput) sizingFlags {
 	}
 }
 
-func (f sizingFlags) apply(base model.DesignInput) model.DesignInput {
+func (f sizingFlags) applyExplicit(base model.DesignInput, setFlags map[string]bool) model.DesignInput {
 	input := base
-	input.KilnVolumeCuFt = *f.kilnVol
-	input.PeakExitTempF = *f.peakTemp
-	input.SaltRateLbsPerHr = *f.saltRate
-	input.FuelType = *f.fuel
-	input.VenturiThroatVelocity = model.MetersPerSec(*f.throatVel)
-	input.VenturiLGRatio = *f.lgRatio
-	input.TargetHClRemoval = *f.hclRemoval
-	input.TargetKilnDraftInWC = *f.draft
+	if setFlags["kiln-volume"] {
+		input.KilnVolumeCuFt = *f.kilnVol
+	}
+	if setFlags["peak-temp"] {
+		input.PeakExitTempF = *f.peakTemp
+	}
+	if setFlags["salt-rate"] {
+		input.SaltRateLbsPerHr = *f.saltRate
+	}
+	if setFlags["fuel"] {
+		input.FuelType = *f.fuel
+	}
+	if setFlags["throat-vel"] {
+		input.VenturiThroatVelocity = model.MetersPerSec(*f.throatVel)
+	}
+	if setFlags["lg"] {
+		input.VenturiLGRatio = *f.lgRatio
+	}
+	if setFlags["hcl-removal"] {
+		input.TargetHClRemoval = *f.hclRemoval
+	}
+	if setFlags["draft"] {
+		input.TargetKilnDraftInWC = *f.draft
+	}
 	return input
+}
+
+func resolveStudioProject(presetID, projectPath string) (studio.StudioProject, error) {
+	presetTrim := strings.TrimSpace(presetID)
+	projectTrim := strings.TrimSpace(projectPath)
+	if presetTrim != "" && projectTrim != "" {
+		return studio.StudioProject{}, fmt.Errorf("cannot specify both --preset and --project")
+	}
+	if projectTrim != "" {
+		return studio.LoadProject(projectTrim)
+	}
+	if presetTrim != "" {
+		preset, ok := studio.PresetByID(presetTrim)
+		if !ok {
+			presets := studio.Presets()
+			ids := make([]string, 0, len(presets))
+			for _, p := range presets {
+				ids = append(ids, p.ID)
+			}
+			return studio.StudioProject{}, fmt.Errorf("unknown preset %q (available: %s)", presetTrim, strings.Join(ids, ", "))
+		}
+		return preset.Project, nil
+	}
+	return studio.DefaultProject(), nil
 }
 
 func runDesign(args []string, stdout, stderr io.Writer) error {
@@ -108,6 +165,8 @@ func runDesign(args []string, stdout, stderr io.Writer) error {
 
 	defaults := model.DefaultSaltKilnInput()
 	sf := bindSizingFlags(fs, defaults)
+	presetID := fs.String("preset", "", "Optional studio preset ID to seed sizing parameters (see 'kilnscrub presets')")
+	projectPath := fs.String("project", "", "Optional path to a saved StudioProject project.json file")
 	asJSON := fs.Bool("json", false, "Output complete ScrubberDesign as indented JSON")
 
 	if err := fs.Parse(args); err != nil {
@@ -117,7 +176,21 @@ func runDesign(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("unexpected positional arguments: %v", fs.Args())
 	}
 
-	input := sf.apply(defaults)
+	setFlags := make(map[string]bool)
+	fs.Visit(func(f *flag.Flag) {
+		setFlags[f.Name] = true
+	})
+
+	base := defaults
+	if strings.TrimSpace(*presetID) != "" || strings.TrimSpace(*projectPath) != "" {
+		proj, err := resolveStudioProject(*presetID, *projectPath)
+		if err != nil {
+			return err
+		}
+		base = proj.EffectiveDesignInput()
+	}
+
+	input := sf.applyExplicit(base, setFlags)
 	if err := input.Validate(); err != nil {
 		return err
 	}
@@ -214,6 +287,8 @@ func runExport(args []string, stdout, stderr io.Writer) error {
 
 	defaults := model.DefaultSaltKilnInput()
 	sf := bindSizingFlags(fs, defaults)
+	presetID := fs.String("preset", "", "Optional studio preset ID to seed sizing parameters (see 'kilnscrub presets')")
+	projectPath := fs.String("project", "", "Optional path to a saved StudioProject project.json file")
 	outDir := fs.String("out", ".", "Output directory for scrubber.stl, scrubber.dxf, bom.csv, and bom.md")
 
 	if err := fs.Parse(args); err != nil {
@@ -226,7 +301,21 @@ func runExport(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("out directory must not be empty")
 	}
 
-	input := sf.apply(defaults)
+	setFlags := make(map[string]bool)
+	fs.Visit(func(f *flag.Flag) {
+		setFlags[f.Name] = true
+	})
+
+	base := defaults
+	if strings.TrimSpace(*presetID) != "" || strings.TrimSpace(*projectPath) != "" {
+		proj, err := resolveStudioProject(*presetID, *projectPath)
+		if err != nil {
+			return err
+		}
+		base = proj.EffectiveDesignInput()
+	}
+
+	input := sf.applyExplicit(base, setFlags)
 	if err := input.Validate(); err != nil {
 		return err
 	}
@@ -282,6 +371,223 @@ func runExport(args []string, stdout, stderr io.Writer) error {
 	fmt.Fprintf(stdout, "BOM summary: %d items | %.1f kg total | $%.2f est. USD\n",
 		len(bom.Items), bom.TotalWeightKg, bom.TotalCostUSD)
 	return nil
+}
+
+func runPresets(args []string, stdout, stderr io.Writer) error {
+	fs := flag.NewFlagSet("presets", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+
+	asJSON := fs.Bool("json", false, "Output studio presets as indented JSON")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() > 0 {
+		return fmt.Errorf("unexpected positional arguments: %v", fs.Args())
+	}
+
+	presets := studio.Presets()
+	if *asJSON {
+		payload := struct {
+			Presets []studio.StudioPreset `json:"presets"`
+		}{Presets: presets}
+		out, err := json.MarshalIndent(payload, "", "  ")
+		if err != nil {
+			return fmt.Errorf("marshal presets json: %w", err)
+		}
+		fmt.Fprintln(stdout, string(out))
+		return nil
+	}
+
+	fmt.Fprintln(stdout, "Kiln Scrub Curated Studio Presets")
+	fmt.Fprintln(stdout, "=================================")
+	for _, p := range presets {
+		fmt.Fprintf(stdout, "\n%s  [%s]\n", p.ID, p.Badge)
+		fmt.Fprintf(stdout, "  Name     : %s\n", p.Name)
+		fmt.Fprintf(stdout, "  Audience : %s\n", p.Audience)
+		fmt.Fprintf(stdout, "  Tagline  : %s\n", p.Tagline)
+	}
+	return nil
+}
+
+func runGuide(args []string, stdout, stderr io.Writer) error {
+	fs := flag.NewFlagSet("guide", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+
+	presetID := fs.String("preset", "", "Studio preset ID (default: wood_salt_24; see 'kilnscrub presets')")
+	projectPath := fs.String("project", "", "Path to a saved StudioProject project.json file")
+	outDir := fs.String("out", "", "Optional output directory to write BUILD_GUIDE.md and OPERATIONS_CHECKLIST.md")
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() > 0 {
+		return fmt.Errorf("unexpected positional arguments: %v", fs.Args())
+	}
+
+	setFlags := make(map[string]bool)
+	fs.Visit(func(f *flag.Flag) {
+		setFlags[f.Name] = true
+	})
+	if setFlags["out"] && strings.TrimSpace(*outDir) == "" {
+		return fmt.Errorf("out directory must not be empty")
+	}
+
+	proj, err := resolveStudioProject(*presetID, *projectPath)
+	if err != nil {
+		return err
+	}
+
+	eval, err := studio.NewEvaluator(scrubber.NewDesigner(), cad.NewExporter()).Evaluate(proj)
+	if err != nil {
+		return err
+	}
+
+	printStudioSummary(stdout, eval)
+
+	if strings.TrimSpace(*outDir) != "" {
+		if err := os.MkdirAll(*outDir, 0o755); err != nil {
+			return fmt.Errorf("create output directory %q: %w", *outDir, err)
+		}
+		files := []struct {
+			name string
+			data string
+		}{
+			{name: "BUILD_GUIDE.md", data: eval.BuildGuideMD},
+			{name: "OPERATIONS_CHECKLIST.md", data: eval.OperationsChecklistMD},
+		}
+		for _, item := range files {
+			path := filepath.Join(*outDir, item.name)
+			if err := os.WriteFile(path, []byte(item.data), 0o644); err != nil {
+				return fmt.Errorf("write %s: %w", path, err)
+			}
+			fmt.Fprintf(stdout, "wrote %s (%d bytes)\n", path, len(item.data))
+		}
+		return nil
+	}
+
+	fmt.Fprintln(stdout)
+	fmt.Fprint(stdout, eval.BuildGuideMD)
+	return nil
+}
+
+func printStudioSummary(w io.Writer, eval studio.StudioEvaluation) {
+	p := eval.Project
+	c := eval.COTS
+	u := eval.Urban
+	fmt.Fprintf(w, "Kiln Scrub Studio Readiness & COTS Summary\n")
+	fmt.Fprintf(w, "==========================================\n")
+	fmt.Fprintf(w, "Studio          : %s (preset=%s)\n", p.StudioName, p.PresetID)
+	fmt.Fprintf(w, "Kiln & Firing   : %.1f cu.ft. | %s (%.0f F peak, %.0f hrs) | Glaze: %s\n",
+		eval.Design.Input.KilnVolumeCuFt, p.FiringCone, eval.Design.Input.PeakExitTempF, p.FiringDurationHours, p.VaporGlazeMode)
+	fmt.Fprintf(w, "Build & Alloy   : path=%s | tier=%s | snap_to_cots=%v\n",
+		p.BuildPath, p.CorrosionTier, c.Snapped)
+	fmt.Fprintf(w, "COTS Hardware   : $%.2f est. USD | Quench %.1f\" | Column %.1f\" (%.1f%% of flood) | %s\n",
+		c.EstimatedTotalUSD, c.QuenchVessel.NominalIn, c.PackedColumn.NominalIn, c.ActualPercentOfFlood, c.BlowerVFD.Name)
+	fmt.Fprintf(w, "Urban Readiness : %s\n", strings.ToUpper(u.OverallStatus))
+	fmt.Fprintf(w, "  Electrical    : [%s] %s (~%.1f A)\n", u.Electrical.Status, u.Electrical.CircuitLabel, u.Electrical.RequiredAmps)
+	fmt.Fprintf(w, "  Water         : [%s] %.2f GPM peak (~%.0f gal/firing)\n", u.Water.Status, u.Water.RequiredGPM, u.Water.TotalFiringGallons)
+	fmt.Fprintf(w, "  Noise         : [%s] %.1f dBA @ %.0f ft property line (limit %.0f dBA)\n",
+		u.Noise.Status, u.Noise.PropertyLineDBA, u.Noise.PropertyLineFt, u.Noise.UrbanLimitDBA)
+	fmt.Fprintf(w, "  Winter Plume  : [%s] %.0f ft bare -> %.0f ft w/ %.0f CFM HV squirrel-cage (vs %.0f ft fence; 0-ft reheat %.1f kW)\n",
+		u.Plume.Status, u.Plume.BarePlumeLengthFt, u.Plume.DilutedPlumeLengthFt, u.Plume.DilutionCFMNeeded, p.PropertyLineFt, u.Plume.DilutionReheatKW)
+	fmt.Fprintf(w, "  Drain / Soda  : [%s] %.1f lbs baking soda (%d x 4-lb boxes) | target pH %s\n",
+		u.Drain.Status, u.Drain.BakingSodaLbsPerFiring, u.Drain.BakingSoda4LbBoxes, u.Drain.TargetDrainPH)
+	fmt.Fprintf(w, "  Corrosion     : [%s] %s\n", u.Corrosion.Status, u.Corrosion.InspectionInterval)
+}
+
+func runPacket(args []string, stdout, stderr io.Writer) error {
+	fs := flag.NewFlagSet("packet", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+
+	presetID := fs.String("preset", "", "Studio preset ID (default: wood_salt_24; see 'kilnscrub presets')")
+	projectPath := fs.String("project", "", "Path to a saved StudioProject project.json file")
+	outPath := fs.String("out", "", "Output .zip file path (default: kilnscrub-<preset>-packet.zip)")
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() > 0 {
+		return fmt.Errorf("unexpected positional arguments: %v", fs.Args())
+	}
+
+	setFlags := make(map[string]bool)
+	fs.Visit(func(f *flag.Flag) {
+		setFlags[f.Name] = true
+	})
+	if setFlags["out"] && strings.TrimSpace(*outPath) == "" {
+		return fmt.Errorf("out path must not be empty")
+	}
+
+	proj, err := resolveStudioProject(*presetID, *projectPath)
+	if err != nil {
+		return err
+	}
+
+	targetPath := strings.TrimSpace(*outPath)
+	if targetPath == "" {
+		targetPath = studio.PacketFilename(proj)
+	}
+
+	zipBytes, eval, err := studio.NewEvaluator(scrubber.NewDesigner(), cad.NewExporter()).BuildPacketZip(proj)
+	if err != nil {
+		return err
+	}
+
+	if parent := filepath.Dir(targetPath); parent != "" && parent != "." {
+		if err := os.MkdirAll(parent, 0o755); err != nil {
+			return fmt.Errorf("create output directory %q: %w", parent, err)
+		}
+	}
+	if err := os.WriteFile(targetPath, zipBytes, 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", targetPath, err)
+	}
+
+	fmt.Fprintf(stdout, "wrote %s (%d bytes, 10 files) | %s | Est. COTS $%.2f | Urban Readiness: %s\n",
+		targetPath, len(zipBytes), eval.Project.StudioName, eval.COTS.EstimatedTotalUSD, strings.ToUpper(eval.Urban.OverallStatus))
+	return nil
+}
+
+type studioBackendAdapter struct {
+	eval *studio.Evaluator
+}
+
+func newStudioBackendAdapter(designer model.Designer, exporter model.CADExporter) *studioBackendAdapter {
+	return &studioBackendAdapter{
+		eval: studio.NewEvaluator(designer, exporter),
+	}
+}
+
+func (a *studioBackendAdapter) PresetsJSON() ([]byte, error) {
+	payload := struct {
+		Presets []studio.StudioPreset `json:"presets"`
+	}{
+		Presets: studio.Presets(),
+	}
+	return json.Marshal(payload)
+}
+
+func (a *studioBackendAdapter) EvaluateJSON(reqBody []byte) ([]byte, error) {
+	proj, err := studio.ParseProject(reqBody)
+	if err != nil {
+		return nil, err
+	}
+	eval, err := a.eval.Evaluate(proj)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(eval)
+}
+
+func (a *studioBackendAdapter) BuildPacketZip(reqBody []byte) ([]byte, string, error) {
+	proj, err := studio.ParseProject(reqBody)
+	if err != nil {
+		return nil, "", err
+	}
+	zipBytes, eval, err := a.eval.BuildPacketZip(proj)
+	if err != nil {
+		return nil, "", err
+	}
+	return zipBytes, studio.PacketFilename(eval.Project), nil
 }
 
 func resolveDaemonConfig(
@@ -467,7 +773,10 @@ func runUI(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 		setFlags[f.Name] = true
 	})
 
-	srv := web.NewServer(scrubber.NewDesigner(), cad.NewExporter())
+	designer := scrubber.NewDesigner()
+	exporter := cad.NewExporter()
+	srv := web.NewServer(designer, exporter)
+	srv.SetStudioBackend(newStudioBackendAdapter(designer, exporter))
 
 	sigCtx, stopSignals := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()

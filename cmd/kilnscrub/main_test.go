@@ -1,11 +1,13 @@
 package main
 
 import (
+	"archive/zip"
 	"bufio"
 	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -15,6 +17,7 @@ import (
 	"time"
 
 	"github.com/AaronFilson/kilnscrub/pkg/model"
+	"github.com/AaronFilson/kilnscrub/pkg/studio"
 )
 
 func TestRunDesignSummary(t *testing.T) {
@@ -387,6 +390,14 @@ func TestRunErrorCases(t *testing.T) {
 		{name: "daemon negative duration", args: []string{"daemon", "--duration", "-1s"}},
 		{name: "daemon zero interval", args: []string{"daemon", "--interval", "0s"}},
 		{name: "ui empty addr", args: []string{"ui", "--addr", ""}},
+		{name: "presets unexpected arg", args: []string{"presets", "extra"}},
+		{name: "guide unknown preset", args: []string{"guide", "--preset", "nonexistent"}},
+		{name: "guide both preset and project", args: []string{"guide", "--preset", "wood_salt_24", "--project", "p.json"}},
+		{name: "guide empty out dir", args: []string{"guide", "--out", "   "}},
+		{name: "packet unknown preset", args: []string{"packet", "--preset", "nonexistent"}},
+		{name: "packet empty out path", args: []string{"packet", "--out", "   "}},
+		{name: "design unknown preset", args: []string{"design", "--preset", "nonexistent"}},
+		{name: "export unknown preset", args: []string{"export", "--preset", "nonexistent"}},
 	}
 
 	for _, tc := range cases {
@@ -406,8 +417,314 @@ func TestRunHelpAndNoArgs(t *testing.T) {
 		if err := run(context.Background(), args, &stdout, &stderr); err != nil {
 			t.Fatalf("args %v returned unexpected error: %v", args, err)
 		}
-		if !strings.Contains(stdout.String(), "Usage:") {
-			t.Errorf("args %v did not print usage: %q", args, stdout.String())
+		out := stdout.String()
+		if !strings.Contains(out, "Usage:") {
+			t.Errorf("args %v did not print usage: %q", args, out)
+		}
+		for _, cmd := range []string{"presets", "guide", "packet", "version"} {
+			if !strings.Contains(out, cmd) {
+				t.Errorf("usage missing subcommand %q:\n%s", cmd, out)
+			}
+		}
+	}
+}
+
+func TestRunVersion(t *testing.T) {
+	for _, args := range [][]string{{"version"}, {"--version"}, {"-version"}} {
+		var stdout, stderr bytes.Buffer
+		if err := run(context.Background(), args, &stdout, &stderr); err != nil {
+			t.Fatalf("args %v failed: %v", args, err)
+		}
+		if !strings.Contains(stdout.String(), "kilnscrub "+version) {
+			t.Errorf("args %v output = %q, want prefix %q", args, stdout.String(), "kilnscrub "+version)
+		}
+	}
+}
+
+func TestRunPresetsTextAndJSON(t *testing.T) {
+	t.Run("text", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		if err := run(context.Background(), []string{"presets"}, &stdout, &stderr); err != nil {
+			t.Fatalf("presets failed: %v (stderr: %s)", err, stderr.String())
+		}
+		out := stdout.String()
+		for _, id := range []string{"electric_raku_6", "gas_soda_14", "wood_salt_24", "coop_wood_48", "foundry_glass_16"} {
+			if !strings.Contains(out, id) {
+				t.Errorf("presets output missing %q;\n%s", id, out)
+			}
+		}
+	})
+
+	t.Run("json", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		if err := run(context.Background(), []string{"presets", "--json"}, &stdout, &stderr); err != nil {
+			t.Fatalf("presets --json failed: %v (stderr: %s)", err, stderr.String())
+		}
+		var payload struct {
+			Presets []studio.StudioPreset `json:"presets"`
+		}
+		if err := json.Unmarshal(stdout.Bytes(), &payload); err != nil {
+			t.Fatalf("unmarshal presets --json: %v", err)
+		}
+		if len(payload.Presets) != 5 {
+			t.Fatalf("got %d presets, want 5", len(payload.Presets))
+		}
+	})
+}
+
+func TestRunGuideStdoutAndOutDirAndProject(t *testing.T) {
+	t.Run("stdout_default_and_preset", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		if err := run(context.Background(), []string{"guide", "--preset", "gas_soda_14"}, &stdout, &stderr); err != nil {
+			t.Fatalf("guide failed: %v (stderr: %s)", err, stderr.String())
+		}
+		out := stdout.String()
+		for _, want := range []string{
+			"Kiln Scrub Studio Readiness & COTS Summary",
+			"gas_soda_14",
+			"Urban Readiness",
+			"Winter Plume",
+			"# Build & Assembly Guide",
+		} {
+			if !strings.Contains(out, want) {
+				t.Errorf("guide stdout missing %q;\n%s", want, out)
+			}
+		}
+	})
+
+	t.Run("write_guides_from_project_file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		projPath := filepath.Join(tmpDir, "project.json")
+		proj := studio.DefaultProject()
+		proj.StudioName = "Cedar Creek Wood-Salt"
+		proj.IncludePlumeDiluter = true
+		if err := studio.SaveProject(projPath, proj); err != nil {
+			t.Fatalf("save project: %v", err)
+		}
+
+		outDir := filepath.Join(tmpDir, "guides")
+		var stdout, stderr bytes.Buffer
+		if err := run(context.Background(), []string{"guide", "--project", projPath, "--out", outDir}, &stdout, &stderr); err != nil {
+			t.Fatalf("guide --project --out failed: %v (stderr: %s)", err, stderr.String())
+		}
+		for _, fname := range []string{"BUILD_GUIDE.md", "OPERATIONS_CHECKLIST.md"} {
+			data, err := os.ReadFile(filepath.Join(outDir, fname))
+			if err != nil {
+				t.Fatalf("read %s: %v", fname, err)
+			}
+			if !strings.Contains(string(data), "Cedar Creek Wood-Salt") {
+				t.Errorf("%s missing studio name", fname)
+			}
+		}
+	})
+}
+
+func TestRunPacketCreatesValid10FileZip(t *testing.T) {
+	outZip := filepath.Join(t.TempDir(), "nested", "ci-packet.zip")
+	var stdout, stderr bytes.Buffer
+	err := run(context.Background(), []string{
+		"packet",
+		"--preset", "wood_salt_24",
+		"--out", outZip,
+	}, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("packet failed: %v (stderr: %s)", err, stderr.String())
+	}
+
+	zipBytes, err := os.ReadFile(outZip)
+	if err != nil {
+		t.Fatalf("read zip %s: %v", outZip, err)
+	}
+	assertValid10FilePacketZip(t, zipBytes)
+}
+
+func TestRunDesignAndExportWithPreset(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if err := run(context.Background(), []string{"design", "--preset", "gas_soda_14", "--json"}, &stdout, &stderr); err != nil {
+		t.Fatalf("design --preset failed: %v (stderr: %s)", err, stderr.String())
+	}
+	var design model.ScrubberDesign
+	if err := json.Unmarshal(stdout.Bytes(), &design); err != nil {
+		t.Fatalf("unmarshal design --preset json: %v", err)
+	}
+	if design.Input.KilnVolumeCuFt != 14.0 || design.Input.SaltRateLbsPerHr != 0.0 || design.Input.FuelType != model.FuelGas {
+		t.Errorf("unexpected preset design input: %+v", design.Input)
+	}
+
+	// Verify explicit flag overrides preset base.
+	stdout.Reset()
+	stderr.Reset()
+	if err := run(context.Background(), []string{"design", "--preset", "gas_soda_14", "--kiln-volume", "18", "--json"}, &stdout, &stderr); err != nil {
+		t.Fatalf("design --preset with override failed: %v", err)
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &design); err != nil {
+		t.Fatalf("unmarshal override json: %v", err)
+	}
+	if design.Input.KilnVolumeCuFt != 18.0 || design.Input.FuelType != model.FuelGas {
+		t.Errorf("override did not preserve preset fuel or apply kiln-volume: %+v", design.Input)
+	}
+
+	// Verify export --preset succeeds.
+	outDir := filepath.Join(t.TempDir(), "preset-export")
+	stdout.Reset()
+	stderr.Reset()
+	if err := run(context.Background(), []string{"export", "--preset", "electric_raku_6", "--out", outDir}, &stdout, &stderr); err != nil {
+		t.Fatalf("export --preset failed: %v (stderr: %s)", err, stderr.String())
+	}
+	for _, f := range []string{"scrubber.stl", "scrubber.dxf", "bom.csv", "bom.md"} {
+		info, err := os.Stat(filepath.Join(outDir, f))
+		if err != nil || info.Size() == 0 {
+			t.Errorf("export --preset missing or empty %s: err=%v", f, err)
+		}
+	}
+}
+
+func TestRunUIStudioBackendRoutes(t *testing.T) {
+	addr := reserveEphemeralAddr(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var stdout, stderr bytes.Buffer
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- run(ctx, []string{"ui", "--addr", addr, "--no-control"}, &stdout, &stderr)
+	}()
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	baseURL := "http://" + addr
+
+	// Wait until server is ready by polling /api/studio/presets.
+	var presetsPayload struct {
+		Presets []studio.StudioPreset `json:"presets"`
+	}
+	deadline := time.Now().Add(3 * time.Second)
+	ready := false
+	for time.Now().Before(deadline) {
+		resp, err := client.Get(baseURL + "/api/studio/presets")
+		if err == nil {
+			if resp.StatusCode == http.StatusOK {
+				err = json.NewDecoder(resp.Body).Decode(&presetsPayload)
+				resp.Body.Close()
+				if err == nil {
+					ready = true
+					break
+				}
+			} else {
+				resp.Body.Close()
+			}
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if !ready {
+		cancel()
+		t.Fatalf("ui studio server did not become ready on %s (stderr=%q)", addr, stderr.String())
+	}
+	if len(presetsPayload.Presets) != 5 {
+		t.Fatalf("GET /api/studio/presets returned %d presets, want 5", len(presetsPayload.Presets))
+	}
+
+	// POST /api/studio/evaluate
+	evalReq := `{"preset_id":"wood_salt_24","include_plume_diluter":true,"property_line_ft":35,"ambient_winter_f":35}`
+	evalResp, err := client.Post(baseURL+"/api/studio/evaluate", "application/json", strings.NewReader(evalReq))
+	if err != nil {
+		cancel()
+		t.Fatalf("POST /api/studio/evaluate failed: %v", err)
+	}
+	evalBody, _ := io.ReadAll(evalResp.Body)
+	evalResp.Body.Close()
+	if evalResp.StatusCode != http.StatusOK {
+		cancel()
+		t.Fatalf("POST /api/studio/evaluate status = %d, want 200; body=%s", evalResp.StatusCode, string(evalBody))
+	}
+	var evalOut studio.StudioEvaluation
+	if err := json.Unmarshal(evalBody, &evalOut); err != nil {
+		cancel()
+		t.Fatalf("unmarshal StudioEvaluation: %v", err)
+	}
+	if evalOut.COTS.EstimatedTotalUSD <= 0 || evalOut.COTS.PlumeDiluter == nil {
+		t.Errorf("unexpected COTS evaluation: total=%.2f diluter=%v", evalOut.COTS.EstimatedTotalUSD, evalOut.COTS.PlumeDiluter)
+	}
+	if evalOut.Urban.Plume.BarePlumeLengthFt <= 0 || evalOut.Urban.Plume.DilutedPlumeLengthFt <= 0 ||
+		evalOut.Urban.Plume.DilutedPlumeLengthFt >= evalOut.Urban.Plume.BarePlumeLengthFt {
+		t.Errorf("unexpected plume reach lengths: bare=%.1f diluted=%.1f",
+			evalOut.Urban.Plume.BarePlumeLengthFt, evalOut.Urban.Plume.DilutedPlumeLengthFt)
+	}
+	if !strings.Contains(evalOut.BuildGuideMD, "# Build & Assembly Guide") || !strings.Contains(evalOut.OperationsChecklistMD, "# Firing-Day Operations Checklist") {
+		t.Errorf("missing guide or checklist markdown in evaluation response")
+	}
+
+	// POST /api/studio/packet
+	pktResp, err := client.Post(baseURL+"/api/studio/packet", "application/json", strings.NewReader(evalReq))
+	if err != nil {
+		cancel()
+		t.Fatalf("POST /api/studio/packet failed: %v", err)
+	}
+	pktBytes, _ := io.ReadAll(pktResp.Body)
+	pktResp.Body.Close()
+	if pktResp.StatusCode != http.StatusOK {
+		cancel()
+		t.Fatalf("POST /api/studio/packet status = %d, want 200; body=%s", pktResp.StatusCode, string(pktBytes))
+	}
+	if ct := pktResp.Header.Get("Content-Type"); ct != "application/zip" {
+		t.Errorf("packet Content-Type = %q, want application/zip", ct)
+	}
+	if cd := pktResp.Header.Get("Content-Disposition"); !strings.Contains(cd, "kilnscrub-wood_salt_24-packet.zip") {
+		t.Errorf("packet Content-Disposition = %q, want kilnscrub-wood_salt_24-packet.zip", cd)
+	}
+	assertValid10FilePacketZip(t, pktBytes)
+
+	cancel()
+	select {
+	case runErr := <-errCh:
+		if runErr != nil {
+			t.Fatalf("ui returned error on shutdown: %v", runErr)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatalf("ui did not shut down cleanly")
+	}
+}
+
+func assertValid10FilePacketZip(t *testing.T, zipBytes []byte) {
+	t.Helper()
+	zr, err := zip.NewReader(bytes.NewReader(zipBytes), int64(len(zipBytes)))
+	if err != nil {
+		t.Fatalf("invalid zip archive: %v", err)
+	}
+	expected := map[string]bool{
+		"scrubber.stl":            false,
+		"scrubber.dxf":            false,
+		"bom_cots.csv":            false,
+		"bom_cots.md":             false,
+		"bom_engineered.csv":      false,
+		"BUILD_GUIDE.md":          false,
+		"OPERATIONS_CHECKLIST.md": false,
+		"project.json":            false,
+		"daemon.json":             false,
+		"README_PACKET.txt":       false,
+	}
+	if len(zr.File) != len(expected) {
+		t.Fatalf("zip contains %d files, want %d", len(zr.File), len(expected))
+	}
+	for _, f := range zr.File {
+		if _, ok := expected[f.Name]; !ok {
+			t.Errorf("unexpected zip entry %q", f.Name)
+			continue
+		}
+		rc, err := f.Open()
+		if err != nil {
+			t.Errorf("open zip entry %q: %v", f.Name, err)
+			continue
+		}
+		data, err := io.ReadAll(rc)
+		rc.Close()
+		if err != nil || len(data) == 0 {
+			t.Errorf("zip entry %q empty or unreadable: len=%d err=%v", f.Name, len(data), err)
+		}
+		expected[f.Name] = true
+	}
+	for name, seen := range expected {
+		if !seen {
+			t.Errorf("zip missing expected entry %q", name)
 		}
 	}
 }

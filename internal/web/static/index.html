@@ -2798,11 +2798,17 @@
         );
 
         const plume = u.plume || {};
-        const plumeVal = plume.visible_plume_risk
-          ? `${String(plume.visible_plume_risk).replace(/^\w/, (ch) => ch.toUpperCase())} mist risk`
-          : (Number.isFinite(plume.exhaust_temp_f) ? `${fmt(plume.exhaust_temp_f, 0)}°F steam` : "—");
+        const hasPlumeLengths = Number.isFinite(plume.bare_plume_length_ft) && Number.isFinite(plume.diluted_plume_length_ft) && plume.bare_plume_length_ft > 0;
+        const fenceFt = Number.isFinite(noise.property_line_ft) ? noise.property_line_ft : studioState.project?.property_line_ft;
+        const plumeVal = hasPlumeLengths
+          ? `${fmt(plume.bare_plume_length_ft, 0)} ft bare → ${fmt(plume.diluted_plume_length_ft, 0)} ft HV`
+          : (plume.visible_plume_risk
+            ? `${String(plume.visible_plume_risk).replace(/^\w/, (ch) => ch.toUpperCase())} mist risk`
+            : (Number.isFinite(plume.exhaust_temp_f) ? `${fmt(plume.exhaust_temp_f, 0)}°F steam` : "—"));
         let plumeSub = plume.min_stack_height_ft ? `Stack >= ${fmt(plume.min_stack_height_ft, 0)} ft` : "Clean water vapor";
-        if (Number.isFinite(plume.dilution_cfm_needed) && plume.dilution_cfm_needed > 0) {
+        if (hasPlumeLengths && Number.isFinite(fenceFt)) {
+          plumeSub = `vs ${fmt(fenceFt, 0)} ft fence · ${Math.round(plume.dilution_cfm_needed || 0)} CFM`;
+        } else if (Number.isFinite(plume.dilution_cfm_needed) && plume.dilution_cfm_needed > 0) {
           plumeSub = `Dilute: ${Math.round(plume.dilution_cfm_needed)} CFM${Number.isFinite(plume.dilution_reheat_kw) && plume.dilution_reheat_kw > 0 ? ` · ${fmt(plume.dilution_reheat_kw, 1)} kW` : ""}`;
         }
         const plumeTip = [plume.summary, plume.squirrel_cage_verdict].filter(Boolean).join(" — ");
@@ -2967,6 +2973,13 @@
         const corr = u.corrosion || {};
 
         const plumeExtras = [];
+        if (Number.isFinite(plume.bare_plume_length_ft) && Number.isFinite(plume.diluted_plume_length_ft)) {
+          const fenceStr = Number.isFinite(noise.property_line_ft) ? ` vs ${fmt(noise.property_line_ft, 0)} ft fence line` : "";
+          plumeExtras.push([
+            "Plume Reach",
+            `${fmt(plume.bare_plume_length_ft, 0)} ft bare → ${fmt(plume.diluted_plume_length_ft, 0)} ft w/ HV squirrel-cage${fenceStr}`,
+          ]);
+        }
         if (Number.isFinite(plume.dilution_cfm_needed) && plume.dilution_cfm_needed > 0) {
           plumeExtras.push(["Dilution Airflow", `${Math.round(plume.dilution_cfm_needed)} CFM`]);
         }
@@ -2974,7 +2987,7 @@
           plumeExtras.push(["Reheat / Waste Heat", `${fmt(plume.dilution_reheat_kw, 1)} kW`]);
         }
         if (typeof plume.cold_dilution_works === "boolean") {
-          plumeExtras.push(["Unheated Cold Air", plume.cold_dilution_works ? "Works alone" : "Creates more fog (needs heat/sub-cool)"]);
+          plumeExtras.push(["Unheated Cold Air", plume.cold_dilution_works ? "Works alone" : "Stays supersaturated (HV jet shortens reach; heat clears 0 ft)"]);
         }
 
         const cards = [
