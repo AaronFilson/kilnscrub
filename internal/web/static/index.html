@@ -3787,9 +3787,9 @@
 
         const q = d.quench, v = d.venturi, p = d.packed_bed, b = d.blower;
         const hasDiluter = !!(el("in-include-plume-diluter")?.checked);
-        const floorY = h - 42;
+        const floorY = h - 54;
         const maxH = Math.max(q.tower_height_m || 1.2, p.column_height_m || 2.2, 1.5);
-        const scale = Math.min((h - 130) / maxH, (w - 340) / 3.8);
+        const scale = Math.min((h - 146) / maxH, (w - 340) / 3.8);
 
         const qW = Math.max(46, (q.tower_diameter_m || 0.45) * scale);
         const qH = Math.max(96, (q.tower_height_m || 1.2) * scale);
@@ -5211,7 +5211,7 @@
       scene.background = new THREE.Color(0x0d1420);
 
       const camera = new THREE.PerspectiveCamera(39, 16 / 9, 0.05, 60);
-      camera.position.set(0.85, 2.25, 5.45);
+      camera.position.set(1.25, 2.55, 6.75);
 
       let renderer;
       try {
@@ -5222,27 +5222,30 @@
       }
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.16;
+      renderer.toneMappingExposure = 1.18;
       container.innerHTML = "";
       container.appendChild(renderer.domElement);
 
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.07;
-      controls.target.set(0.10, 1.28, 0);
+      controls.target.set(0.45, 1.65, 0);
 
-      scene.add(new THREE.AmbientLight(0xc2d8f4, 0.72));
-      const hemi = new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 0.68);
+      scene.add(new THREE.AmbientLight(0xc8dcf6, 0.78));
+      const hemi = new THREE.HemisphereLight(0xe0f2fe, 0x334155, 0.78);
       scene.add(hemi);
       const key = new THREE.DirectionalLight(0xffffff, 1.38);
       key.position.set(4.5, 7.5, 5.5);
       scene.add(key);
-      const fill = new THREE.DirectionalLight(0x93c5fd, 0.42);
-      fill.position.set(-4.5, 2.5, 4.5);
+      const fill = new THREE.DirectionalLight(0x93c5fd, 0.48);
+      fill.position.set(-4.5, 2.8, 4.5);
       scene.add(fill);
-      const rim = new THREE.DirectionalLight(0x38bdf8, 0.55);
-      rim.position.set(-5, 3, -4);
+      const rim = new THREE.DirectionalLight(0x38bdf8, 0.62);
+      rim.position.set(-5, 3.2, -4.5);
       scene.add(rim);
+      const rearFill = new THREE.DirectionalLight(0xdbeafe, 0.90);
+      rearFill.position.set(3.5, 4.5, -5.5);
+      scene.add(rearFill);
 
       const grid = new THREE.GridHelper(9, 28, 0x2a3b55, 0x182334);
       scene.add(grid);
@@ -5269,12 +5272,13 @@
 
       let flowSamples = [];
       let impellerMesh = null;
-      let stageCenters = {
-        all: new THREE.Vector3(0.15, 1.15, 0),
-        quench: new THREE.Vector3(-1.4, 0.8, 0),
-        venturi: new THREE.Vector3(-0.3, 0.48, 0),
-        packed: new THREE.Vector3(0.75, 1.25, 0),
-        blower: new THREE.Vector3(1.85, 0.8, 0),
+      let hasFramedInitial = false;
+      let stageViews = {
+        all: { target: new THREE.Vector3(0.45, 1.65, 0), cam: new THREE.Vector3(1.25, 2.55, 6.75) },
+        quench: { target: new THREE.Vector3(-1.4, 0.8, 0), cam: new THREE.Vector3(-1.1, 1.35, 2.5) },
+        venturi: { target: new THREE.Vector3(-0.3, 0.48, 0), cam: new THREE.Vector3(0.0, 1.0, 2.4) },
+        packed: { target: new THREE.Vector3(0.75, 1.35, 0), cam: new THREE.Vector3(1.05, 1.95, 3.6) },
+        blower: { target: new THREE.Vector3(1.85, 1.1, 0), cam: new THREE.Vector3(2.25, 1.65, 3.6) },
       };
       let camGoal = null;
       let targetGoal = null;
@@ -5515,9 +5519,11 @@
         const side = cut ? THREE.DoubleSide : THREE.FrontSide;
 
         const matSS = new THREE.MeshStandardMaterial({ color: 0xb8c5d4, metalness: 0.72, roughness: 0.28, side });
+        const matSSPipe = new THREE.MeshStandardMaterial({ color: 0xb8c5d4, metalness: 0.72, roughness: 0.28, side: THREE.DoubleSide });
         const matFlange = new THREE.MeshStandardMaterial({ color: 0x9fb0c4, metalness: 0.74, roughness: 0.30, side: THREE.DoubleSide });
         const matBolt = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.85, roughness: 0.22 });
         const matHot = new THREE.MeshStandardMaterial({ color: 0xf97316, metalness: 0.45, roughness: 0.36, emissive: 0x3b1305, side });
+        const matHotPipe = new THREE.MeshStandardMaterial({ color: 0xf97316, metalness: 0.45, roughness: 0.36, emissive: 0x3b1305, side: THREE.DoubleSide });
         const matCPVC = new THREE.MeshStandardMaterial({ color: 0x2e7fa3, metalness: 0.16, roughness: 0.38, side });
         const matCPVCSolid = new THREE.MeshStandardMaterial({ color: 0x2e7fa3, metalness: 0.18, roughness: 0.36, side: THREE.DoubleSide });
         const matCPVCFlange = new THREE.MeshStandardMaterial({ color: 0x3f95ba, metalness: 0.22, roughness: 0.34, side: THREE.DoubleSide });
@@ -5529,11 +5535,12 @@
         const matSump = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, metalness: 0.1, roughness: 0.16, transparent: true, opacity: 0.55 });
         const matBlower = new THREE.MeshStandardMaterial({ color: 0x10b981, metalness: 0.40, roughness: 0.34, side: THREE.DoubleSide });
         const matBlowerFlange = new THREE.MeshStandardMaterial({ color: 0x34d399, metalness: 0.48, roughness: 0.30, side: THREE.DoubleSide });
-        const matBlowerDark = new THREE.MeshStandardMaterial({ color: 0x1f2f40, metalness: 0.65, roughness: 0.34 });
-        const matBlade = new THREE.MeshStandardMaterial({ color: 0xe2edf8, metalness: 0.82, roughness: 0.20 });
-        const matShroud = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.72, roughness: 0.26 });
-        const matDark = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.58, roughness: 0.42 });
-        const matMotor = new THREE.MeshStandardMaterial({ color: 0x243447, metalness: 0.52, roughness: 0.38 });
+        const matBlowerDark = new THREE.MeshStandardMaterial({ color: 0x3b4f66, metalness: 0.36, roughness: 0.42 });
+        const matBlade = new THREE.MeshStandardMaterial({ color: 0xe2edf8, metalness: 0.80, roughness: 0.20 });
+        const matShroud = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.68, roughness: 0.28 });
+        const matDark = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.40, roughness: 0.44 });
+        const matMotor = new THREE.MeshStandardMaterial({ color: 0x4b6078, metalness: 0.36, roughness: 0.40 });
+        const matMotorFin = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.42, roughness: 0.38 });
         const matSpray = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.26, side: THREE.DoubleSide, depthWrite: false });
         const matDiluter = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.45, roughness: 0.34, side: THREE.DoubleSide });
 
@@ -5578,15 +5585,18 @@
         qShell.position.set(qX, qH * 0.5, 0);
         qGroup.add(qShell);
 
-        // Kiln flue hot inlet pipe seated cleanly into a bolted nozzle collar on Stage 1 wall
+        // Kiln flue hot inlet pipe (open-ended hollow bore seated cleanly into bolted collar on Stage 1 wall)
         const inletLen = 0.52;
-        const inletEmbed = 0.04;
-        const inletDuct = new THREE.Mesh(new THREE.CylinderGeometry(ductR, ductR, inletLen + inletEmbed, 24), matHot);
+        const inletEmbed = 0.014;
+        const inletDuct = new THREE.Mesh(
+          new THREE.CylinderGeometry(ductR, ductR, inletLen + inletEmbed, 24, 1, true),
+          matHotPipe
+        );
         inletDuct.rotation.z = Math.PI / 2;
         inletDuct.position.set(qX - qR - inletLen * 0.5 + inletEmbed * 0.5, inletY, 0);
         qGroup.add(inletDuct);
         addBoltedFlange(qGroup, qX - qR - inletLen + 0.015, inletY, 0, "x", ductR, matFlange, matBolt, 8);
-        addBoltedFlange(qGroup, qX - qR - 0.015, inletY, 0, "x", ductR, matFlange, matBolt, 8);
+        addBoltedFlange(qGroup, qX - qR - 0.012, inletY, 0, "x", ductR, matFlange, matBolt, 8);
 
         // Top bolted cover flange + base plinth
         const qTop = new THREE.Mesh(new THREE.CylinderGeometry(qR * 1.09, qR * 1.09, 0.04, 36), matFlange);
@@ -5609,11 +5619,14 @@
         assemblyGroup.add(qGroup);
 
         // ---------- STAGE 1 -> STAGE 2 FLANGED TRANSITION & WET VENTURI ----------
-        const conn1 = new THREE.Mesh(new THREE.CylinderGeometry(vInR, vInR, spool1Len + 0.06, 24), matSS);
+        const conn1 = new THREE.Mesh(
+          new THREE.CylinderGeometry(vInR, vInR, spool1Len + 0.024, 24, 1, true),
+          matSSPipe
+        );
         conn1.rotation.z = Math.PI / 2;
-        conn1.position.set(qX + qR + spool1Len * 0.5 - 0.02, vY, 0);
+        conn1.position.set(qX + qR + spool1Len * 0.5 - 0.008, vY, 0);
         assemblyGroup.add(conn1);
-        addBoltedFlange(assemblyGroup, qX + qR + 0.015, vY, 0, "x", vInR, matFlange, matBolt, 8);
+        addBoltedFlange(assemblyGroup, qX + qR + 0.012, vY, 0, "x", vInR, matFlange, matBolt, 8);
         addBoltedFlange(assemblyGroup, vStartX, vY, 0, "x", vInR, matFlange, matBolt, 8);
 
         const vConv = new THREE.Mesh(new THREE.CylinderGeometry(vThR, vInR, vConvL, 28, 1, cut, thetaStart, thetaLen), matSS);
@@ -5638,12 +5651,15 @@
         assemblyGroup.add(vDiv);
 
         // ---------- STAGE 2 -> STAGE 3 FLANGED ENTRY & PACKED BED ABSORBER ----------
-        const conn2 = new THREE.Mesh(new THREE.CylinderGeometry(vOutR, vOutR, spool2Len + 0.06, 24), matCPVCSolid);
+        const conn2 = new THREE.Mesh(
+          new THREE.CylinderGeometry(vOutR, vOutR, spool2Len + 0.024, 24, 1, true),
+          matCPVCSolid
+        );
         conn2.rotation.z = Math.PI / 2;
-        conn2.position.set(vEndX + spool2Len * 0.5 + 0.02, vY, 0);
+        conn2.position.set(vEndX + spool2Len * 0.5 + 0.008, vY, 0);
         assemblyGroup.add(conn2);
         addBoltedFlange(assemblyGroup, vEndX, vY, 0, "x", vOutR, matFlange, matBolt, 8);
-        addBoltedFlange(assemblyGroup, pX - pR - 0.015, vY, 0, "x", vOutR, matCPVCFlange, matBolt, 8);
+        addBoltedFlange(assemblyGroup, pX - pR - 0.012, vY, 0, "x", vOutR, matCPVCFlange, matBolt, 8);
 
         const pShell = new THREE.Mesh(new THREE.CylinderGeometry(pR, pR, pH, 36, 1, cut, thetaStart, thetaLen), matCPVC);
         pShell.position.set(pX, pH * 0.5, 0);
@@ -5788,16 +5804,16 @@
         motorBody.rotation.x = Math.PI / 2;
         motorBody.position.z = motorCenterZ;
         blowerGroup.add(motorBody);
-        const motorCap = new THREE.Mesh(new THREE.CylinderGeometry(motorR * 0.92, motorR * 0.98, motorLen * 0.20, 24), matDark);
+        const motorCap = new THREE.Mesh(new THREE.CylinderGeometry(motorR * 0.92, motorR * 0.98, motorLen * 0.20, 24), matMotorFin);
         motorCap.rotation.x = Math.PI / 2;
         motorCap.position.z = motorCenterZ - motorLen * 0.55;
         blowerGroup.add(motorCap);
         for (let rIdx = -2; rIdx <= 2; rIdx++) {
-          const fin = new THREE.Mesh(new THREE.TorusGeometry(motorR * 1.01, 0.008, 6, 24), matDark);
+          const fin = new THREE.Mesh(new THREE.TorusGeometry(motorR * 1.01, 0.009, 6, 24), matMotorFin);
           fin.position.z = motorCenterZ + rIdx * (motorLen * 0.14);
           blowerGroup.add(fin);
         }
-        const jBox = new THREE.Mesh(new THREE.BoxGeometry(motorR * 0.52, motorR * 0.36, motorR * 0.52), matDark);
+        const jBox = new THREE.Mesh(new THREE.BoxGeometry(motorR * 0.52, motorR * 0.36, motorR * 0.52), matMotorFin);
         jBox.position.set(0, motorR + motorR * 0.14, motorCenterZ + motorLen * 0.08);
         blowerGroup.add(jBox);
 
@@ -5860,18 +5876,19 @@
         addBoltedFlange(blowerGroup, stackLocalX, stackBaseLocalY, 0, "y", stackR, matBlowerFlange, matBolt, 8);
 
         // Vertical circular exhaust stack (completely clear of impeller hub and blades!)
-        const stackH = Math.max(0.88, pH - (bY + stackBaseLocalY) + 0.35);
-        const stackMesh = new THREE.Mesh(new THREE.CylinderGeometry(stackR, stackR, stackH, 28, 1, false), matBlower);
+        const stackH = clamp(pH - (bY + stackBaseLocalY) + 0.08, 0.82, 1.32);
+        const stackMesh = new THREE.Mesh(new THREE.CylinderGeometry(stackR, stackR, stackH, 28, 1, true), matBlower);
         stackMesh.position.set(stackLocalX, stackBaseLocalY + stackH * 0.5, 0);
         blowerGroup.add(stackMesh);
 
         // Top discharge rim or optional 120V squirrel-cage plume diluter tee + tapered HV nozzle cone
         let stackExitWorldY = bY + stackBaseLocalY + stackH;
+        let diluterRightExtra = 0;
         if (hasDiluter) {
-          const teeLocalY = stackBaseLocalY + stackH * 0.48;
+          const teeLocalY = stackBaseLocalY + stackH * 0.42;
           const dilR = stackR * 0.72;
           const teeLen = stackR + 0.24;
-          const teeStub = new THREE.Mesh(new THREE.CylinderGeometry(dilR, dilR, teeLen, 20), matDiluter);
+          const teeStub = new THREE.Mesh(new THREE.CylinderGeometry(dilR, dilR, teeLen, 20, 1, true), matDiluter);
           teeStub.rotation.z = Math.PI / 2;
           teeStub.position.set(stackLocalX + teeLen * 0.5, teeLocalY, 0);
           blowerGroup.add(teeStub);
@@ -5887,13 +5904,18 @@
           const sqIntake = new THREE.Mesh(new THREE.TorusGeometry(sqR * 0.56, 0.012, 8, 20), matDark);
           sqIntake.position.set(stackLocalX + teeLen + sqR * 0.75, teeLocalY - sqR * 0.15, dilR * 0.88);
           blowerGroup.add(sqIntake);
+          diluterRightExtra = teeLen + sqR * 1.75;
 
           // Tapered High-Velocity (HV) nozzle cone on top of stack
-          const hvH = 0.28;
+          const hvH = 0.26;
           addBoltedFlange(blowerGroup, stackLocalX, stackBaseLocalY + stackH, 0, "y", stackR, matBlowerFlange, matBolt, 8);
-          const hvCone = new THREE.Mesh(new THREE.CylinderGeometry(stackR * 0.64, stackR, hvH, 28, 1, false), matDiluter);
+          const hvCone = new THREE.Mesh(new THREE.CylinderGeometry(stackR * 0.64, stackR, hvH, 28, 1, true), matDiluter);
           hvCone.position.set(stackLocalX, stackBaseLocalY + stackH + hvH * 0.5, 0);
           blowerGroup.add(hvCone);
+          const hvLip = new THREE.Mesh(new THREE.TorusGeometry(stackR * 0.64, 0.010, 10, 28), matBlowerFlange);
+          hvLip.rotation.x = Math.PI / 2;
+          hvLip.position.set(stackLocalX, stackBaseLocalY + stackH + hvH, 0);
+          blowerGroup.add(hvLip);
           stackExitWorldY += hvH;
         } else {
           const exitLip = new THREE.Mesh(new THREE.TorusGeometry(stackR, 0.012, 10, 28), matBlowerFlange);
@@ -5973,16 +5995,64 @@
         assemblyGroup.add(new THREE.Mesh(eyeElbowGeo, cut ? matCutGlass : matCPVCSolid));
 
         // Center assembly horizontally in the viewport
-        const centerOffset = -((qX - qR - inletLen) + (stackX + stackR)) * 0.5;
+        const leftBoundX = qX - qR - inletLen;
+        const rightBoundX = stackX + Math.max(stackR, diluterRightExtra);
+        const centerOffset = -(leftBoundX + rightBoundX) * 0.5;
         assemblyGroup.position.x = centerOffset;
 
-        stageCenters = {
-          all: new THREE.Vector3(0.05, Math.max(pH * 0.52, 1.15), 0),
-          quench: new THREE.Vector3(qX + centerOffset, qH * 0.52, 0),
-          venturi: new THREE.Vector3((vStartX + vEndX) * 0.5 + centerOffset, vY, 0),
-          packed: new THREE.Vector3(pX + centerOffset, pH * 0.52, 0),
-          blower: new THREE.Vector3(bX + wheelR * 0.35 + centerOffset, bY + wheelR * 0.45, 0),
+        // Compute dynamic camera framing from exact assembly bounds so top elbows, exhaust stack & diluter NEVER clip
+        const tanHalfFov = Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
+        const topY = Math.max(topDuctY + ductR, stackExitWorldY) + 0.14;
+        const totalW = rightBoundX - leftBoundX;
+        const allTargetY = topY * 0.50;
+        // Shift target.x slightly right (+X) so the full assembly sits clear of the lower-right .inspector-card
+        const allTargetX = Math.max(0.32, totalW * 0.11);
+        const allDistY = (topY * 0.54) / tanHalfFov;
+        const allDistX = (totalW * 0.42) / (tanHalfFov * Math.max(1.45, camera.aspect || 2.1));
+        const allDist = Math.max(5.8, Math.max(allDistY, allDistX) * 1.18);
+
+        // Dynamic Stage 4 blower view framing BOTH scroll/impeller/suction-elbow AND full exhaust stack + diluter/HV cone
+        const blowerTopY = stackExitWorldY + 0.16;
+        const blowerMidY = blowerTopY * 0.50;
+        const blowerCenterX = (bX + (hasDiluter ? stackLocalX + diluterRightExtra * 0.42 : stackLocalX * 0.55)) + centerOffset;
+        const blowerDist = Math.max(2.95, (blowerTopY * 0.55) / tanHalfFov * 1.18);
+
+        const packedTopY = topDuctY + ductR + 0.12;
+        const packedDist = Math.max(3.2, (packedTopY * 0.54) / tanHalfFov * 1.12);
+
+        stageViews = {
+          all: {
+            target: new THREE.Vector3(allTargetX, allTargetY, 0),
+            cam: new THREE.Vector3(allTargetX + 0.72, allTargetY + topY * 0.24, allDist),
+          },
+          quench: {
+            target: new THREE.Vector3(qX + centerOffset + 0.15, qH * 0.52, 0),
+            cam: new THREE.Vector3(qX + centerOffset + 0.45, qH * 0.72, Math.max(2.4, qH * 1.65)),
+          },
+          venturi: {
+            target: new THREE.Vector3((vStartX + vEndX) * 0.5 + centerOffset + 0.10, vY + 0.08, 0),
+            cam: new THREE.Vector3((vStartX + vEndX) * 0.5 + centerOffset + 0.35, vY + 0.55, 2.35),
+          },
+          packed: {
+            target: new THREE.Vector3(pX + centerOffset + 0.25, packedTopY * 0.50, 0),
+            cam: new THREE.Vector3(pX + centerOffset + 0.65, packedTopY * 0.62, packedDist),
+          },
+          blower: {
+            target: new THREE.Vector3(blowerCenterX + 0.28, blowerMidY, 0),
+            cam: new THREE.Vector3(blowerCenterX + 0.78, blowerMidY + blowerTopY * 0.16, blowerDist),
+          },
         };
+
+        if (!hasFramedInitial) {
+          hasFramedInitial = true;
+          const initView = stageViews[state.selectedStage] || stageViews.all;
+          camera.position.copy(initView.cam);
+          controls.target.copy(initView.target);
+          controls.update();
+        } else if (state.selectedStage === "blower") {
+          targetGoal = stageViews.blower.target.clone();
+          camGoal = stageViews.blower.cam.clone();
+        }
 
         // ---------- TRUE SMOOTH 3D FLOW PARTICLE PATH ----------
         // Sample exact world-space points along Stages 1 -> 2 -> 3 -> curved duct -> CCW volute -> tangential stack
@@ -6051,15 +6121,9 @@
       }
 
       function focusStage(stage) {
-        const tgt = stageCenters[stage] || stageCenters.all;
-        targetGoal = tgt.clone();
-        if (stage === "all") {
-          camGoal = new THREE.Vector3(tgt.x + 1.0, tgt.y + 1.0, 5.25);
-        } else if (stage === "blower") {
-          camGoal = new THREE.Vector3(tgt.x + 0.35, tgt.y + 0.45, 2.25);
-        } else {
-          camGoal = new THREE.Vector3(tgt.x + 0.28, tgt.y + 0.55, 2.45);
-        }
+        const view = stageViews[stage] || stageViews.all;
+        targetGoal = view.target.clone();
+        camGoal = view.cam.clone();
       }
 
       function resize() {
@@ -6134,9 +6198,9 @@
       };
 
       state.threeReady = true;
-      if (state.design) buildAssembly(state.design);
       window.__kilnSetViewMode("3d");
       resize();
+      if (state.design) buildAssembly(state.design);
       animate();
     }
 
