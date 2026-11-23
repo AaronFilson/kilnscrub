@@ -62,19 +62,26 @@ type PlumeAssessment struct {
 	Summary              string  `json:"summary"`
 }
 
-// DrainAssessment converts NaHCO3 neutralization into grocery-store boxes and drain pH guidance.
+// DrainAssessment sizes bulk 15-lb bags / 50-lb sacks of baking soda (NaHCO3) for the
+// active peak salting window and provides IPC 702.5 / 40 CFR 403.5 drain neutralization guidance.
 type DrainAssessment struct {
 	Status                 string  `json:"status"`
+	SaltingHours           float64 `json:"salting_hours"`
 	BakingSodaLbsPerFiring float64 `json:"baking_soda_lbs_per_firing"`
-	BakingSoda4LbBoxes     int     `json:"baking_soda_4lb_boxes"`
+	BakingSoda15LbBags     int     `json:"baking_soda_15lb_bags"`
+	BakingSoda50LbSacks    int     `json:"baking_soda_50lb_sacks"`
+	BulkPackagingLabel     string  `json:"bulk_packaging_label"`
 	TargetDrainPH          string  `json:"target_drain_ph"`
 	Summary                string  `json:"summary"`
+	// BakingSoda4LbBoxes is retained hidden from JSON solely for CLI source compatibility until updated.
+	BakingSoda4LbBoxes int `json:"-"`
 }
 
-// CorrosionAssessment surfaces 316L SS hot-wet-HCl pitting guidance and Soda-vs-Salt comparison.
+// CorrosionAssessment provides practical alloy selection, buffered flush, and weld inspection guidance.
 type CorrosionAssessment struct {
 	Status             string `json:"status"`
 	Tier               string `json:"tier"`
+	TierLabel          string `json:"tier_label"`
 	MaterialSummary    string `json:"material_summary"`
 	SodaComparison     string `json:"soda_comparison"`
 	InspectionInterval string `json:"inspection_interval"`
@@ -113,14 +120,15 @@ func worstStatus(statuses ...string) string {
 }
 
 // AssessUrban performs electrical, water, neighbor-noise, steam-plume, neutralized-drain,
-// and corrosion/soda-vs-salt checks grounded in validated scrubber physics.
+// and corrosion maintenance checks grounded in validated scrubber physics.
 func AssessUrban(project StudioProject, design model.ScrubberDesign, cots COTSSummary) UrbanAssessment {
-	elec := assessElectrical(project, design)
-	water := assessWater(project, design)
-	noise := assessNoise(project, design)
-	plume := assessPlume(project, design)
-	drain := assessDrain(project, design)
-	corr := assessCorrosion(project, design, drain)
+	p := project.Normalize()
+	elec := assessElectrical(p, design)
+	water := assessWater(p, design)
+	noise := assessNoise(p, design)
+	plume := assessPlume(p, design)
+	drain := assessDrain(p, design)
+	corr := assessCorrosion(p, design, drain)
 
 	overall := worstStatus(
 		elec.Status,
@@ -160,6 +168,14 @@ func diluterAmps120V(design model.ScrubberDesign) float64 {
 
 func assessElectrical(project StudioProject, design model.ScrubberDesign) ElectricalAssessment {
 	hp := design.Blower.RecommendedMotorHP
+	blowerRole := "blower"
+	if project.StageAlignment == StageAlignmentEductorDryFan {
+		ed := analyzeEductor(project, design)
+		if ed.DryFanMotorHP > 0 {
+			hp = ed.DryFanMotorHP
+		}
+		blowerRole = "dry motive fan"
+	}
 	if hp <= 0 {
 		hp = 0.5
 	}
@@ -235,13 +251,13 @@ func assessElectrical(project StudioProject, design model.ScrubberDesign) Electr
 		if reqAmps <= 20.0 {
 			circuitLabel = "120V 20A dedicated VFD circuit (12 AWG, NEC 430.122)"
 			status = StatusOK
-			summary = fmt.Sprintf("%.2g HP blower VFD (%.1f A rated in x 125%%) + pump requires %.1f A min ampacity — fits a %s.%s%s",
-				hp, vfdRatedInputA, reqAmps, circuitLabel, diluterNote, necNotes)
+			summary = fmt.Sprintf("%.2g HP %s VFD (%.1f A rated in x 125%%) + pump requires %.1f A min ampacity — fits a %s.%s%s",
+				hp, blowerRole, vfdRatedInputA, reqAmps, circuitLabel, diluterNote, necNotes)
 		} else {
 			circuitLabel = "120V 30A dedicated VFD circuit (10 AWG) — or 240V 20A"
 			status = StatusCaution
-			summary = fmt.Sprintf("%.2g HP blower VFD (%.1f A rated in x 125%%) + pump requires %.1f A min ampacity (exceeds standard 120V 20A garage outlet per NEC 430.122(A)) — install a 120V 30A circuit or upgrade to 240V 20A.%s%s",
-				hp, vfdRatedInputA, reqAmps, diluterNote, necNotes)
+			summary = fmt.Sprintf("%.2g HP %s VFD (%.1f A rated in x 125%%) + pump requires %.1f A min ampacity (exceeds standard 120V 20A garage outlet per NEC 430.122(A)) — install a 120V 30A circuit or upgrade to 240V 20A.%s%s",
+				hp, blowerRole, vfdRatedInputA, reqAmps, diluterNote, necNotes)
 		}
 	} else {
 		switch {
@@ -259,12 +275,12 @@ func assessElectrical(project StudioProject, design model.ScrubberDesign) Electr
 		fits = project.AvailableVoltage >= 240
 		if fits {
 			status = StatusOK
-			summary = fmt.Sprintf("%.2g HP blower VFD (%.1f A rated in x 125%%) + pump requires %.1f A min ampacity on 240V — ready for your %s.%s%s",
-				hp, vfdRatedInputA, reqAmps, circuitLabel, diluterNote, necNotes)
+			summary = fmt.Sprintf("%.2g HP %s VFD (%.1f A rated in x 125%%) + pump requires %.1f A min ampacity on 240V — ready for your %s.%s%s",
+				hp, blowerRole, vfdRatedInputA, reqAmps, circuitLabel, diluterNote, necNotes)
 		} else {
 			status = StatusActionNeeded
-			summary = fmt.Sprintf("%.2g HP blower requires a %s (%.1f A min ampacity per NEC 430.122(A)), but studio power is set to 120V. Add a 240V breaker/subpanel or downsize kiln/venturi throat velocity.%s%s",
-				hp, circuitLabel, reqAmps, diluterNote, necNotes)
+			summary = fmt.Sprintf("%.2g HP %s requires a %s (%.1f A min ampacity per NEC 430.122(A)), but studio power is set to 120V. Add a 240V breaker/subpanel or downsize kiln/venturi throat velocity.%s%s",
+				hp, blowerRole, circuitLabel, reqAmps, diluterNote, necNotes)
 		}
 	}
 
@@ -283,7 +299,6 @@ func assessWater(project StudioProject, design model.ScrubberDesign) WaterAssess
 	evapGPM := design.Quench.EvaporatedWaterGPM
 	blowdownGPM := 0.03
 	if project.VaporGlazeMode == VaporGlazeSalt {
-		// Continuous/batch blowdown to limit dissolved NaCl TDS buildup per ENGINEERING_VALIDATION.md B6.
 		blowdownGPM = 0.08
 	}
 	sumpFillGal := math.Max(25.0, float64(design.PackedBed.SumpVolume)/model.CubicMetersPerUSGallon)
@@ -300,7 +315,7 @@ func assessWater(project StudioProject, design model.ScrubberDesign) WaterAssess
 		status = StatusCaution
 		summary = fmt.Sprintf("Peak quench spray (%.2f GPM) uses >70%% of your %.1f GPM supply — avoid sharing the spigot during firing (~%.0f gal total per %.0f-hr firing).%s", reqGPM, project.GardenHoseGPM, totalGal, project.FiringDurationHours, ipc608Note)
 	default:
-		summary = fmt.Sprintf("Water flow capacity OK: %.2f GPM peak spray (%.2f GPM evaporated) vs %.1f GPM available; ~%.0f gal total per %.0f-hr firing (incl. sump fill & blowdown).%s", reqGPM, evapGPM, project.GardenHoseGPM, totalGal, project.FiringDurationHours, ipc608Note)
+		summary = fmt.Sprintf("Water flow capacity OK: %.2f GPM peak spray (%.2f GPM evaporated) vs %.1f GPM available; ~%.0f gal total per %.0f-hr firing (closed-loop recirculation cuts makeup water 70-85%% vs once-through).%s", reqGPM, evapGPM, project.GardenHoseGPM, totalGal, project.FiringDurationHours, ipc608Note)
 	}
 
 	return WaterAssessment{
@@ -319,6 +334,13 @@ func assessNoise(project StudioProject, design model.ScrubberDesign) NoiseAssess
 	)
 	shaftHP := math.Max(0.15, design.Blower.ShaftPowerHP)
 	spInWC := math.Max(1.0, design.Blower.TotalStaticPressureInWC)
+	if project.StageAlignment == StageAlignmentEductorDryFan {
+		ed := analyzeEductor(project, design)
+		if ed.DryFanShaftHP > 0 {
+			shaftHP = math.Max(0.15, ed.DryFanShaftHP)
+			spInWC = math.Max(1.0, ed.DryFanStaticInWC)
+		}
+	}
 
 	bare3Ft := round1(74.0 + 6.5*math.Log10(shaftHP) + 0.18*spInWC)
 	silenced3Ft := round1(bare3Ft - silencerDropDBA)
@@ -461,7 +483,6 @@ func assessPlume(project StudioProject, design model.ScrubberDesign) PlumeAssess
 	rhoAmb := (pAmb * 0.028964) / (model.UniversalGasConst * float64(tAmbK))
 	wSatAmb := humidityRatioSat(tAmbK, pAmb)
 	deltaWSat := math.Max(wSatAmb-wAmb, 1e-4)
-	// Account for slight thermal warming of the diluted plume at clearing (~0.85 mass factor vs isothermal).
 	mAmbClearKgS := 0.85 * math.Max(0.0, mH2O-mDry*wAmb) / deltaWSat
 	qAmbClearM3S := mAmbClearKgS / math.Max(rhoAmb, 0.5)
 	qAmbClearCFM := model.CubicMetersPerSec(qAmbClearM3S).CFM()
@@ -489,7 +510,6 @@ func assessPlume(project StudioProject, design model.ScrubberDesign) PlumeAssess
 		}
 	}
 
-	// Verdict on squirrel-cage blower suitability.
 	squirrelVerdict := fmt.Sprintf(
 		"A 120V squirrel-cage blower CANNOT replace the main Stage 4 radial ID blower (%.1f inWC static pressure exceeds the ~1.5-2.5 inWC squirrel-cage stall limit), "+
 			"but it DOES hold up downstream at ~0.7-1.2 inWC in a stack mixing tee + %.0f\" high-velocity exit cone (~3,400 FPM). "+
@@ -578,58 +598,71 @@ func assessPlume(project StudioProject, design model.ScrubberDesign) PlumeAssess
 
 func assessDrain(project StudioProject, design model.ScrubberDesign) DrainAssessment {
 	const targetPH = "6.5 - 8.5"
-	nahco3Kg := design.PackedBed.NaHCO3ConsumptionKgPerHr * project.FiringDurationHours
+	saltingHrs := project.EffectiveSaltingHours()
+	nahco3Kg := design.PackedBed.NaHCO3ConsumptionKgPerHr * saltingHrs
 	lbs := round1(nahco3Kg / model.KgPerLb)
-	boxes := 0
+	bags15 := 0
+	sacks50 := 0
 	if lbs > 0 {
-		boxes = int(math.Ceil(lbs / 4.0))
+		bags15 = int(math.Ceil(lbs / 15.0))
+		sacks50 = int(math.Ceil(lbs / 50.0))
 	}
 
 	if lbs <= 0 {
 		return DrainAssessment{
 			Status:                 StatusOK,
+			SaltingHours:           0,
 			BakingSodaLbsPerFiring: 0,
-			BakingSoda4LbBoxes:     0,
+			BakingSoda15LbBags:     0,
+			BakingSoda50LbSacks:    0,
+			BulkPackagingLabel:     "0 lbs required (zero HCl mode)",
 			TargetDrainPH:          targetPH,
 			Summary:                fmt.Sprintf("Zero HCl neutralization required (%s mode: 0 lbs baking soda). Cool sump/blowdown water to <=140 F (IPC 702.5 PVC/ABS drain limit), strain ash/solids, and confirm pH %s (federal 40 CFR 403.5(b)(2) floor >=5.0) before sanitary drain release.", project.VaporGlazeMode, targetPH),
 		}
 	}
 
+	firingsPerSack := maxInt(1, int(math.Floor(50.0/lbs)))
+	bagWord := "bag"
+	if bags15 > 1 {
+		bagWord = "bags"
+	}
+	bulkLabel := fmt.Sprintf("%d × 15 lb bulk %s (~%.1f lbs used over %.1f hr salting; 1 × 50 lb sack covers ~%d firings)",
+		bags15, bagWord, lbs, saltingHrs, firingsPerSack)
+
 	return DrainAssessment{
 		Status:                 StatusCaution,
+		SaltingHours:           saltingHrs,
 		BakingSodaLbsPerFiring: lbs,
-		BakingSoda4LbBoxes:     boxes,
+		BakingSoda15LbBags:     bags15,
+		BakingSoda50LbSacks:    sacks50,
+		BulkPackagingLabel:     bulkLabel,
 		TargetDrainPH:          targetPH,
-		Summary:                fmt.Sprintf("Stock %.1f lbs baking soda (%d x 4-lb Arm & Hammer boxes) for a %.0f-hr salt firing (15%% pH buffer). Cool/temper sump and live blowdown to <=140 F before PVC/ABS drains (IPC 702.5), settle wood ash, verify neutralized pH %s (IPC 803.1; federal 40 CFR 403.5(b)(2) strictly prohibits pH < 5.0), and check local POTW chloride/heavy-metal sludge limits.", lbs, boxes, project.FiringDurationHours, targetPH),
+		Summary:                fmt.Sprintf("Stock %.1f lbs bulk baking soda (%s) for the %.1f-hr active salting window (15%% pH buffer). Cool/temper sump and live blowdown to <=140 F before PVC/ABS drains (IPC 702.5), settle wood ash, verify neutralized pH %s (IPC 803.1; federal 40 CFR 403.5(b)(2) strictly prohibits pH < 5.0), and check local POTW chloride/heavy-metal sludge limits.", lbs, bulkLabel, saltingHrs, targetPH),
 	}
 }
 
 func assessCorrosion(project StudioProject, design model.ScrubberDesign, drain DrainAssessment) CorrosionAssessment {
 	hclPPM := design.PackedBed.HClInletPPM
-	// Reference comparison: stoichiometric NaHCO3 for 2.0 lbs/hr salt over this firing duration
-	// (1.485 kg/hr = 3.274 lbs/hr NaHCO3 with 15% buffer, matching validated reference case).
-	refSaltRate := project.Input.SaltRateLbsPerHr
-	if refSaltRate <= 0 {
-		refSaltRate = 2.0
-	}
-	equivLbsNaHCO3 := round1((refSaltRate / 2.0) * 3.274 * project.FiringDurationHours)
-	equivBoxes := int(math.Ceil(equivLbsNaHCO3 / 4.0))
+	tierLabel := CorrosionTierLabel(project.CorrosionTier)
+	saltingHrs := project.EffectiveSaltingHours()
 
 	switch project.VaporGlazeMode {
 	case VaporGlazeSoda:
 		return CorrosionAssessment{
 			Status:             StatusOK,
 			Tier:               project.CorrosionTier,
-			MaterialSummary:    "Soda ash (Na2CO3) vapor glazing generates ZERO HCl acid gas — standard 316L SS quench/venturi + CPVC packed column avoids hot wet chloride pitting and lasts for years.",
-			SodaComparison:     fmt.Sprintf("Choosing Soda (Na2CO3) instead of %.1f lbs/hr Salt (NaCl) eliminates 100%% of HCl acid gas (0 ppm HCl) and saves ~%.1f lbs (%d x 4-lb boxes) of baking soda per %.0f-hr firing while eliminating 316L chloride stress-corrosion cracking.", refSaltRate, equivLbsNaHCO3, equivBoxes, project.FiringDurationHours),
+			TierLabel:          tierLabel,
+			MaterialSummary:    fmt.Sprintf("%s: Soda ash (Na2CO3) vapor glazing generates zero HCl acid gas — standard 316L SS quench/venturi + Sch 80 CPVC packed column avoids chloride pitting and delivers long service life.", tierLabel),
+			SodaComparison:     "Zero HCl acid gas load (0 ppm HCl, 0 lbs baking soda required) allows standard 316L SS and Sch 80 CPVC hardware; periodically rinse dried soda deposits from spray nozzles and the 50-mesh pump strainer.",
 			InspectionInterval: "Every 25-30 firings (annual weld, gasket & spray-nozzle inspection)",
 		}
 	case VaporGlazeNone:
 		return CorrosionAssessment{
 			Status:             StatusOK,
 			Tier:               project.CorrosionTier,
-			MaterialSummary:    "No salt/acid vapor load — 316L SS hot quench/venturi + CPVC/HDPE wet column provides long service life against combustion smoke, ash, and non-acidic fumes.",
-			SodaComparison:     "Zero HCl acid gas (0 ppm HCl, 0 lbs NaHCO3). If you add vapor glazing later, choose Soda (Na2CO3) over Salt (NaCl) to avoid hot wet HCl corrosion.",
+			TierLabel:          tierLabel,
+			MaterialSummary:    fmt.Sprintf("%s: No salt/acid vapor load — standard 316L SS hot quench/venturi + Sch 80 CPVC wet column provides long service life against combustion smoke, ash, and non-acidic fumes.", tierLabel),
+			SodaComparison:     "Zero HCl acid gas load (0 ppm HCl, 0 lbs baking soda required) allows standard 316L SS and Sch 80 CPVC hardware; clean the 50-mesh ash strainer and check spray cone uniformity every 25-30 firings.",
 			InspectionInterval: "Every 25-30 firings (clean ash strainer and verify spray pattern)",
 		}
 	default: // VaporGlazeSalt
@@ -637,16 +670,18 @@ func assessCorrosion(project StudioProject, design model.ScrubberDesign, drain D
 			return CorrosionAssessment{
 				Status:             StatusOK,
 				Tier:               project.CorrosionTier,
-				MaterialSummary:    fmt.Sprintf("Industrial acid-proof tier: Alloy C-276 (UNS N10276) / refractory-lined quench & venturi throat + Derakane vinyl-ester FRP column & blower wheel — immune to hot wet HCl pitting & Cl-SCC at %.0f ppm HCl (~%.0f F quench).", hclPPM, design.Quench.OutletTemp.Fahrenheit()),
-				SodaComparison:     fmt.Sprintf("Salt (NaCl) produces %.0f ppm post-quench HCl requiring %.1f lbs (%d x 4-lb boxes) baking soda per firing. Switching to Soda (Na2CO3) drops HCl to 0 ppm and allows lower-cost 316L/CPVC hardware.", hclPPM, drain.BakingSodaLbsPerFiring, drain.BakingSoda4LbBoxes),
+				TierLabel:          tierLabel,
+				MaterialSummary:    fmt.Sprintf("%s: Alloy C-276 (UNS N10276) / refractory-lined quench & venturi throat + Derakane vinyl-ester FRP column & blower wheel — immune to hot wet HCl pitting & Cl-SCC at %.0f ppm HCl (~%.0f F quench).", tierLabel, hclPPM, design.Quench.OutletTemp.Fahrenheit()),
+				SodaComparison:     fmt.Sprintf("Salt-firing maintenance guidance: maintain buffered sump pH 7.5-8.5 throughout the %.1f-hr salting window (%.1f lbs bulk NaHCO3 per firing), run a 5-minute clean-water flush during cooldown so NaCl crystals never foul nozzles, and inspect PTFE flange gaskets & refractory liner every 20-25 firings.", saltingHrs, drain.BakingSodaLbsPerFiring),
 				InspectionInterval: "Every 20-25 salt firings (inspect PTFE gaskets, refractory liner & nozzle orifices)",
 			}
 		}
 		return CorrosionAssessment{
 			Status:             StatusCaution,
 			Tier:               project.CorrosionTier,
-			MaterialSummary:    fmt.Sprintf("316L SS HOT-WET-HCl WARNING: Unbuffered hot wet HCl (%.0f ppm @ %.0f F) causes rapid chloride pitting & Cl-SCC in 316L SS above 140 F. ALWAYS recirculate alkaline NaHCO3 liquor (pH 8.0-8.5) to BOTH quench & venturi, use bolted replaceable Stage 1-2 spools, or upgrade to Heavy C-276/FRP.", hclPPM, design.Quench.OutletTemp.Fahrenheit()),
-			SodaComparison:     fmt.Sprintf("Switching from Salt (NaCl) to Soda (Na2CO3) eliminates 100%% of HCl acid gas (%.0f ppm -> 0 ppm), saves %.1f lbs (%d x 4-lb boxes) of baking soda per firing, and removes 316L chloride pitting risk entirely.", hclPPM, drain.BakingSodaLbsPerFiring, drain.BakingSoda4LbBoxes),
+			TierLabel:          tierLabel,
+			MaterialSummary:    fmt.Sprintf("%s — HOT-WET-HCl CARE: Unbuffered hot wet HCl (%.0f ppm @ %.0f F) accelerates chloride pitting & Cl-SCC in 316L SS above 140 F. ALWAYS recirculate alkaline NaHCO3 liquor (pH 8.0-8.5) to BOTH quench & venturi, use bolted replaceable Stage 1-2 spools, or select Heavy Duty C-276/FRP for frequent community firings.", tierLabel, hclPPM, design.Quench.OutletTemp.Fahrenheit()),
+			SodaComparison:     fmt.Sprintf("Salt-firing maintenance guidance: pre-charge the sump to pH 8.0-8.5 before lighting, dose %.1f lbs bulk baking soda across the %.1f-hr salting window, run a 5-minute buffered pH 8 flush during cooldown to clear chloride films, and inspect 316L weld seams & flange crevices every 5-10 salt firings.", drain.BakingSodaLbsPerFiring, saltingHrs),
 			InspectionInterval: "Every 5-10 salt firings (inspect 316L weld seams, flange crevices & wall thickness)",
 		}
 	}

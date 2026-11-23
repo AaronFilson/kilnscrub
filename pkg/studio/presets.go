@@ -19,9 +19,33 @@ const (
 	BuildPathCOTSNoWeld = "cots_no_weld"
 	BuildPathWeldedDXF  = "welded_dxf"
 
+	// CorrosionTierStandard316L is the canonical light/occasional 316L SS tier.
+	CorrosionTierStandard316L = "standard_316l"
+	// CorrosionTierHobby316L is accepted as a backward-compatible alias for CorrosionTierStandard316L.
 	CorrosionTierHobby316L    = "hobby_316l"
 	CorrosionTierHeavyC276FRP = "heavy_c276_frp"
+
+	// Phase 7 selectable stage alignment, parallel layout, and control tier constants.
+	StageAlignmentInlineIDBlower = "inline_id_blower"
+	StageAlignmentEductorDryFan  = "eductor_dry_fan"
+
+	PackedBedLayoutSingleColumn     = "single_column"
+	PackedBedLayoutParallelManifold = "parallel_manifold"
+
+	VenturiLayoutSingleThroat         = "single_throat"
+	VenturiLayoutParallelMiniVenturis = "parallel_mini_venturis"
+
+	ControlTierRPiModbus             = "rpi_modbus"
+	ControlTierElectromechanicalOnly = "electromechanical_only"
 )
+
+// CorrosionTierLabel returns the user-facing display label for a corrosion tier.
+func CorrosionTierLabel(tier string) string {
+	if tier == CorrosionTierHeavyC276FRP {
+		return "Heavy Duty (Alloy C-276 / Vinyl-Ester FRP)"
+	}
+	return "Standard 316L SS (Light / Occasional)"
+}
 
 var coneFahrenheitMap = map[string]float64{
 	"06": 1830.0,
@@ -48,18 +72,25 @@ func SupportedCones() []string {
 }
 
 // StudioProject wraps a kiln engineering DesignInput with studio-friendly build,
-// vapor-glaze, corrosion, and urban site readiness parameters.
+// vapor-glaze, corrosion, urban site readiness, and Phase 7 stage-design parameters.
 type StudioProject struct {
 	PresetID            string            `json:"preset_id"`
 	StudioName          string            `json:"studio_name"`
 	FiringCone          string            `json:"firing_cone"`
 	FiringDurationHours float64           `json:"firing_duration_hours"`
+	SaltingHours        float64           `json:"salting_hours"`
 	VaporGlazeMode      string            `json:"vapor_glaze_mode"`
 	BuildPath           string            `json:"build_path"`
 	CorrosionTier       string            `json:"corrosion_tier"`
 	SnapToCOTS          bool              `json:"snap_to_cots"`
 	IncludeSilencer     bool              `json:"include_silencer"`
 	IncludePlumeDiluter bool              `json:"include_plume_diluter"`
+	StageAlignment      string            `json:"stage_alignment"`
+	PackedBedLayout     string            `json:"packed_bed_layout"`
+	VenturiLayout       string            `json:"venturi_layout"`
+	CompactFootprint    bool              `json:"compact_footprint"`
+	SharedBaffledSump   bool              `json:"shared_baffled_sump"`
+	ControlTier         string            `json:"control_tier"`
 	PropertyLineFt      float64           `json:"property_line_ft"`
 	AmbientWinterF      float64           `json:"ambient_winter_f"`
 	AvailableVoltage    int               `json:"available_voltage"`
@@ -124,11 +155,18 @@ func Presets() []StudioPreset {
 				StudioName:          "Home Raku & Test Kiln",
 				FiringCone:          "Cone 06",
 				FiringDurationHours: 6.0,
+				SaltingHours:        0.0,
 				VaporGlazeMode:      VaporGlazeNone,
 				BuildPath:           BuildPathCOTSNoWeld,
-				CorrosionTier:       CorrosionTierHobby316L,
+				CorrosionTier:       CorrosionTierStandard316L,
 				SnapToCOTS:          true,
 				IncludeSilencer:     true,
+				StageAlignment:      StageAlignmentInlineIDBlower,
+				PackedBedLayout:     PackedBedLayoutSingleColumn,
+				VenturiLayout:       VenturiLayoutSingleThroat,
+				CompactFootprint:    false,
+				SharedBaffledSump:   true,
+				ControlTier:         ControlTierRPiModbus,
 				PropertyLineFt:      25.0,
 				AmbientWinterF:      40.0,
 				AvailableVoltage:    120,
@@ -147,11 +185,18 @@ func Presets() []StudioPreset {
 				StudioName:          "Backyard Gas & Soda Kiln",
 				FiringCone:          "Cone 10",
 				FiringDurationHours: 10.0,
+				SaltingHours:        0.0,
 				VaporGlazeMode:      VaporGlazeSoda,
 				BuildPath:           BuildPathCOTSNoWeld,
-				CorrosionTier:       CorrosionTierHobby316L,
+				CorrosionTier:       CorrosionTierStandard316L,
 				SnapToCOTS:          true,
 				IncludeSilencer:     true,
+				StageAlignment:      StageAlignmentInlineIDBlower,
+				PackedBedLayout:     PackedBedLayoutSingleColumn,
+				VenturiLayout:       VenturiLayoutSingleThroat,
+				CompactFootprint:    false,
+				SharedBaffledSump:   true,
+				ControlTier:         ControlTierRPiModbus,
 				PropertyLineFt:      30.0,
 				AmbientWinterF:      35.0,
 				AvailableVoltage:    240,
@@ -170,11 +215,18 @@ func Presets() []StudioPreset {
 				StudioName:          "Reference Studio Wood-Salt Kiln",
 				FiringCone:          "Cone 11",
 				FiringDurationHours: 16.0,
+				SaltingHours:        3.0,
 				VaporGlazeMode:      VaporGlazeSalt,
 				BuildPath:           BuildPathCOTSNoWeld,
-				CorrosionTier:       CorrosionTierHobby316L,
+				CorrosionTier:       CorrosionTierStandard316L,
 				SnapToCOTS:          true,
 				IncludeSilencer:     true,
+				StageAlignment:      StageAlignmentInlineIDBlower,
+				PackedBedLayout:     PackedBedLayoutSingleColumn,
+				VenturiLayout:       VenturiLayoutSingleThroat,
+				CompactFootprint:    false,
+				SharedBaffledSump:   true,
+				ControlTier:         ControlTierRPiModbus,
 				PropertyLineFt:      40.0,
 				AmbientWinterF:      35.0,
 				AvailableVoltage:    240,
@@ -193,11 +245,18 @@ func Presets() []StudioPreset {
 				StudioName:          "Community Co-op Wood-Salt Kiln",
 				FiringCone:          "Cone 11",
 				FiringDurationHours: 24.0,
+				SaltingHours:        4.0,
 				VaporGlazeMode:      VaporGlazeSalt,
 				BuildPath:           BuildPathWeldedDXF,
 				CorrosionTier:       CorrosionTierHeavyC276FRP,
 				SnapToCOTS:          true,
 				IncludeSilencer:     true,
+				StageAlignment:      StageAlignmentInlineIDBlower,
+				PackedBedLayout:     PackedBedLayoutSingleColumn,
+				VenturiLayout:       VenturiLayoutSingleThroat,
+				CompactFootprint:    false,
+				SharedBaffledSump:   true,
+				ControlTier:         ControlTierRPiModbus,
 				PropertyLineFt:      60.0,
 				AmbientWinterF:      30.0,
 				AvailableVoltage:    240,
@@ -216,11 +275,18 @@ func Presets() []StudioPreset {
 				StudioName:          "Home Foundry & Glass Furnace",
 				FiringCone:          "Cone 6",
 				FiringDurationHours: 8.0,
+				SaltingHours:        0.0,
 				VaporGlazeMode:      VaporGlazeNone,
 				BuildPath:           BuildPathCOTSNoWeld,
-				CorrosionTier:       CorrosionTierHobby316L,
+				CorrosionTier:       CorrosionTierStandard316L,
 				SnapToCOTS:          true,
 				IncludeSilencer:     true,
+				StageAlignment:      StageAlignmentInlineIDBlower,
+				PackedBedLayout:     PackedBedLayoutSingleColumn,
+				VenturiLayout:       VenturiLayoutSingleThroat,
+				CompactFootprint:    false,
+				SharedBaffledSump:   true,
+				ControlTier:         ControlTierRPiModbus,
 				PropertyLineFt:      35.0,
 				AmbientWinterF:      40.0,
 				AvailableVoltage:    240,
@@ -248,10 +314,57 @@ func DefaultProject() StudioProject {
 	return p.Project
 }
 
+// Normalize fills default Phase 7 option values, normalizes legacy "hobby_316l"
+// to canonical "standard_316l", and clamps salting_hours to firing_duration_hours.
+func (p StudioProject) Normalize() StudioProject {
+	out := p
+	if out.CorrosionTier == "" || out.CorrosionTier == CorrosionTierHobby316L {
+		out.CorrosionTier = CorrosionTierStandard316L
+	}
+	if out.StageAlignment == "" {
+		out.StageAlignment = StageAlignmentInlineIDBlower
+	}
+	if out.PackedBedLayout == "" {
+		out.PackedBedLayout = PackedBedLayoutSingleColumn
+	}
+	if out.VenturiLayout == "" {
+		out.VenturiLayout = VenturiLayoutSingleThroat
+	}
+	if out.ControlTier == "" {
+		out.ControlTier = ControlTierRPiModbus
+	}
+	if out.VaporGlazeMode != VaporGlazeSalt {
+		out.SaltingHours = 0.0
+	} else {
+		if out.SaltingHours <= 0 {
+			out.SaltingHours = math.Min(3.0, out.FiringDurationHours)
+		}
+		if out.FiringDurationHours > 0 && out.SaltingHours > out.FiringDurationHours {
+			out.SaltingHours = out.FiringDurationHours
+		}
+	}
+	return out
+}
+
+// EffectiveSaltingHours returns the active peak salting window in hours
+// (0 for non-salt modes; clamped to (0, FiringDurationHours] for salt mode).
+func (p StudioProject) EffectiveSaltingHours() float64 {
+	if p.VaporGlazeMode != VaporGlazeSalt {
+		return 0.0
+	}
+	hrs := p.SaltingHours
+	if hrs <= 0 {
+		hrs = 3.0
+	}
+	if p.FiringDurationHours > 0 && hrs > p.FiringDurationHours {
+		hrs = p.FiringDurationHours
+	}
+	return round1(hrs)
+}
+
 // EffectiveDesignInput returns the physics DesignInput reconciled with VaporGlazeMode.
 // In "soda" or "none" modes, HCl salt loading is forced to 0 lbs/hr and fuel type is
-// switched from *_salt to the corresponding clean combustion mode, while preserving
-// StudioProject.VaporGlazeMode so Soda-vs-Salt comparisons remain exact.
+// switched from *_salt to the corresponding clean combustion mode.
 func (p StudioProject) EffectiveDesignInput() model.DesignInput {
 	in := p.Input
 	switch p.VaporGlazeMode {
@@ -285,6 +398,9 @@ func (p StudioProject) Validate() error {
 	if !isFinite(p.FiringDurationHours) || p.FiringDurationHours <= 0 || p.FiringDurationHours > 168.0 {
 		return fmt.Errorf("firing_duration_hours must be finite and in (0, 168], got %v", p.FiringDurationHours)
 	}
+	if !isFinite(p.SaltingHours) || p.SaltingHours < 0 || p.SaltingHours > 168.0 {
+		return fmt.Errorf("salting_hours must be finite and in [0, 168], got %v", p.SaltingHours)
+	}
 	switch p.VaporGlazeMode {
 	case VaporGlazeNone, VaporGlazeSoda, VaporGlazeSalt:
 	default:
@@ -298,10 +414,34 @@ func (p StudioProject) Validate() error {
 			BuildPathCOTSNoWeld, BuildPathWeldedDXF, p.BuildPath)
 	}
 	switch p.CorrosionTier {
-	case CorrosionTierHobby316L, CorrosionTierHeavyC276FRP:
+	case CorrosionTierStandard316L, CorrosionTierHobby316L, CorrosionTierHeavyC276FRP:
 	default:
 		return fmt.Errorf("corrosion_tier must be %q or %q, got %q",
-			CorrosionTierHobby316L, CorrosionTierHeavyC276FRP, p.CorrosionTier)
+			CorrosionTierStandard316L, CorrosionTierHeavyC276FRP, p.CorrosionTier)
+	}
+	switch p.StageAlignment {
+	case "", StageAlignmentInlineIDBlower, StageAlignmentEductorDryFan:
+	default:
+		return fmt.Errorf("stage_alignment must be %q or %q, got %q",
+			StageAlignmentInlineIDBlower, StageAlignmentEductorDryFan, p.StageAlignment)
+	}
+	switch p.PackedBedLayout {
+	case "", PackedBedLayoutSingleColumn, PackedBedLayoutParallelManifold:
+	default:
+		return fmt.Errorf("packed_bed_layout must be %q or %q, got %q",
+			PackedBedLayoutSingleColumn, PackedBedLayoutParallelManifold, p.PackedBedLayout)
+	}
+	switch p.VenturiLayout {
+	case "", VenturiLayoutSingleThroat, VenturiLayoutParallelMiniVenturis:
+	default:
+		return fmt.Errorf("venturi_layout must be %q or %q, got %q",
+			VenturiLayoutSingleThroat, VenturiLayoutParallelMiniVenturis, p.VenturiLayout)
+	}
+	switch p.ControlTier {
+	case "", ControlTierRPiModbus, ControlTierElectromechanicalOnly:
+	default:
+		return fmt.Errorf("control_tier must be %q or %q, got %q",
+			ControlTierRPiModbus, ControlTierElectromechanicalOnly, p.ControlTier)
 	}
 	if !isFinite(p.PropertyLineFt) || p.PropertyLineFt < 3.0 || p.PropertyLineFt > 5000.0 {
 		return fmt.Errorf("property_line_ft must be finite and in [3, 5000], got %v", p.PropertyLineFt)
@@ -353,6 +493,7 @@ func ParseProject(data []byte) (StudioProject, error) {
 	if err := proj.Validate(); err != nil {
 		return StudioProject{}, fmt.Errorf("invalid studio project: %w", err)
 	}
+	proj = proj.Normalize()
 	return proj, nil
 }
 
@@ -370,6 +511,7 @@ func SaveProject(path string, proj StudioProject) error {
 	if err := proj.Validate(); err != nil {
 		return fmt.Errorf("invalid studio project: %w", err)
 	}
+	proj = proj.Normalize()
 	data, err := json.MarshalIndent(proj, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal studio project: %w", err)

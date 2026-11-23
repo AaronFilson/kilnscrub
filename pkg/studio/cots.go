@@ -180,11 +180,21 @@ func selectQuenchVessel(project StudioProject, design model.ScrubberDesign) COTS
 }
 
 func selectPackedColumn(project StudioProject, design model.ScrubberDesign) (COTSPart, float64, float64) {
+	return selectSinglePackedColumn(project, design, EductorAnalysis{})
+}
+
+func selectSinglePackedColumn(project StudioProject, design model.ScrubberDesign, eductor EductorAnalysis) (COTSPart, float64, float64) {
 	reqIn := design.PackedBed.ColumnDiameter.Inches()
+	if eductor.Enabled && eductor.EnlargedBedDiameterIn > reqIn {
+		reqIn = eductor.EnlargedBedDiameterIn - 0.5 // snap cleanly to enlarged eductor nominal bore
+	}
 	heightFt := design.PackedBed.ColumnHeight.Feet()
 	heavy := project.CorrosionTier == CorrosionTierHeavyC276FRP
 
 	if !project.SnapToCOTS {
+		if eductor.Enabled && eductor.EnlargedBedDiameterIn > reqIn {
+			reqIn = eductor.EnlargedBedDiameterIn
+		}
 		mat := "CPVC / Polypropylene Sheet"
 		sku := fmt.Sprintf("FAB-COL-%.0f", math.Round(reqIn))
 		source := "Local plastics fabricator (scrubber.dxf)"
@@ -197,6 +207,10 @@ func selectPackedColumn(project StudioProject, design model.ScrubberDesign) (COT
 			cost = round2(620.0 + 75.0*reqIn + 55.0*heightFt)
 			weight = round2(math.Max(22.0, 0.95*reqIn*heightFt))
 		}
+		pctFlood := design.PackedBed.PercentOfFlood
+		if eductor.Enabled {
+			pctFlood = eductor.EnlargedBedFloodPct
+		}
 		part := COTSPart{
 			SKU:         sku,
 			Name:        fmt.Sprintf("Custom Packed-Bed Column (%.1f\" ID x %.1f ft)", reqIn, heightFt),
@@ -207,13 +221,17 @@ func selectPackedColumn(project StudioProject, design model.ScrubberDesign) (COT
 			WeightKg:    weight,
 			Notes:       fmt.Sprintf("Exact calculated column diameter %.1f\" (un-snapped).", reqIn),
 		}
-		return part, reqIn, design.PackedBed.PercentOfFlood
+		return part, reqIn, pctFlood
 	}
 
 	var spec pipeSpec
 	var part COTSPart
 	if heavy {
-		spec, _ = snapPipe(packedFRPCatalog, reqIn)
+		if eductor.Enabled {
+			spec, _ = snapPipeByNominal(packedFRPCatalog, eductor.EnlargedBedDiameterIn)
+		} else {
+			spec, _ = snapPipe(packedFRPCatalog, reqIn)
+		}
 		cost := round2(spec.baseCost * math.Max(0.85, heightFt/8.0))
 		weight := round2(spec.kgPerFt * heightFt)
 		part = COTSPart{
@@ -227,7 +245,11 @@ func selectPackedColumn(project StudioProject, design model.ScrubberDesign) (COT
 			Notes:       fmt.Sprintf("Filament-wound chemical-grade FRP column (ID %.1f\", snapped from %.1f\").", spec.actualID, reqIn),
 		}
 	} else {
-		spec, _ = snapPipe(packedCPVCCatalog, reqIn)
+		if eductor.Enabled {
+			spec, _ = snapPipeByNominal(packedCPVCCatalog, eductor.EnlargedBedDiameterIn)
+		} else {
+			spec, _ = snapPipe(packedCPVCCatalog, reqIn)
+		}
 		if spec.skuSuffix == "FRP-18" || spec.skuSuffix == "FRP-24" || spec.skuSuffix == "FRP-30" {
 			cost := round2(spec.baseCost * math.Max(0.85, heightFt/8.0))
 			weight := round2(spec.kgPerFt * heightFt)
@@ -239,7 +261,7 @@ func selectPackedColumn(project StudioProject, design model.ScrubberDesign) (COT
 				Source:      "Ershigs / Beetle Plastics / US Plastic Industrial FRP",
 				UnitCostUSD: cost,
 				WeightKg:    weight,
-				Notes:       fmt.Sprintf("Vacuum-rated FRP column (true bore %.1f\", snapped from %.1f\") avoids thin-wall HDPE drum collapse under -20 inWC suction at 184 F; protected by 200 F hardwired snap-disc + 210 F software interlock.", spec.actualID, reqIn),
+				Notes:       fmt.Sprintf("Vacuum-rated FRP column (true bore %.1f\", snapped from %.1f\") avoids thin-wall HDPE drum collapse; protected by 200 F hardwired snap-disc + 210 F software interlock.", spec.actualID, reqIn),
 			}
 		} else {
 			cost := round2(spec.baseCost * math.Max(0.85, heightFt/8.0))
@@ -257,6 +279,12 @@ func selectPackedColumn(project StudioProject, design model.ScrubberDesign) (COT
 		}
 	}
 
+	if eductor.Enabled {
+		part.Notes += fmt.Sprintf(" Enlarged for dry-fan eductor mixed airflow (%.0f ACFM @ %.1f F, +%.2f inWC positive pressure, outdoor-only bolted flanges).",
+			eductor.TotalMixedACFM, eductor.MixedTempF, eductor.PositivePressureInWC)
+		return part, spec.actualID, eductor.EnlargedBedFloodPct
+	}
+
 	// Recalculate superficial velocity and actual % of flood for the snapped bore ID.
 	actualDiamM := float64(model.InchesToMeters(spec.actualID))
 	actualArea := math.Pi * actualDiamM * actualDiamM / 4.0
@@ -268,13 +296,22 @@ func selectPackedColumn(project StudioProject, design model.ScrubberDesign) (COT
 	return part, spec.actualID, actualPctFlood
 }
 
+func snapPipeByNominal(catalog []pipeSpec, nomIn float64) (pipeSpec, bool) {
+	for _, spec := range catalog {
+		if spec.nominalIn >= nomIn-1e-6 {
+			return spec, true
+		}
+	}
+	return catalog[len(catalog)-1], false
+}
+
 func selectSumpTank(design model.ScrubberDesign) COTSPart {
 	sumpGal := float64(design.PackedBed.SumpVolume) / model.CubicMetersPerUSGallon
 	switch {
 	case sumpGal <= 22.0:
 		return COTSPart{
 			SKU:         "ULINE-S-16913",
-			Name:        "30-Gallon Open-Head HDPE Chemical Sump Drum",
+			Name:        "30-Gallon Open-Head HDPE Baffled Chemical Sump Drum",
 			NominalIn:   19.0,
 			Material:    "High-Density Polyethylene (HDPE)",
 			Source:      "Uline / Global Industrial",
@@ -285,18 +322,18 @@ func selectSumpTank(design model.ScrubberDesign) COTSPart {
 	case sumpGal <= 45.0:
 		return COTSPart{
 			SKU:         "ULINE-S-10757",
-			Name:        "55-Gallon Open-Head HDPE Chemical Sump Drum",
+			Name:        "55-Gallon Open-Head HDPE Baffled Chemical Sump Drum",
 			NominalIn:   22.5,
 			Material:    "High-Density Polyethylene (HDPE)",
 			Source:      "Uline / Grainger / McMaster-Carr",
 			UnitCostUSD: 96.0,
 			WeightKg:    10.5,
-			Notes:       fmt.Sprintf("Atmospheric vented sump ONLY (never under blower vacuum); covers %.1f gal required holdup with easy top access for baking soda dosing and ash basket.", sumpGal),
+			Notes:       fmt.Sprintf("Atmospheric vented sump ONLY (never under blower vacuum); covers %.1f gal required holdup with easy top access for bulk baking soda dosing and ash basket.", sumpGal),
 		}
 	default:
 		return COTSPart{
 			SKU:         "USPLASTIC-100T",
-			Name:        "100-Gallon Heavy-Duty Poly Chemical Sump Tank",
+			Name:        "100-Gallon Heavy-Duty Poly Baffled Chemical Sump Tank",
 			NominalIn:   28.0,
 			Material:    "Cross-Linked HDPE (XLPE)",
 			Source:      "US Plastic Corp / Ace Roto-Mold",
@@ -305,6 +342,16 @@ func selectSumpTank(design model.ScrubberDesign) COTSPart {
 			Notes:       fmt.Sprintf("Atmospheric vented co-op sump for %.1f gal holdup with bulkheads for recirculation & cooled blowdown.", sumpGal),
 		}
 	}
+}
+
+func dualSumpExtraCost(design model.ScrubberDesign) float64 {
+	sump := selectSumpTank(design)
+	recircGPM := design.PackedBed.RecirculationFlowGPM
+	if recircGPM <= 0 {
+		recircGPM = 4.0
+	}
+	extraPump := round2(220.0 + 10.0*recircGPM)
+	return round2(sump.UnitCostUSD + extraPump + 45.0)
 }
 
 func selectSprayNozzle(project StudioProject, design model.ScrubberDesign) COTSPart {
@@ -373,36 +420,35 @@ func selectPackingMedia(actualColIDIn float64, design model.ScrubberDesign) (COT
 	return part, packCuFt
 }
 
+func vfdSpecForHP(project StudioProject, hp float64) (voltageStr, vfdSKU string) {
+	switch {
+	case hp <= 0.5:
+		return "120V 1-Ph Input VFD in NEMA 4X Enclosure", "GS21-10P5"
+	case hp <= 1.0:
+		if project.AvailableVoltage >= 240 {
+			return "240V 1-Ph Input -> 3-Ph Motor VFD in NEMA 4X Enclosure", "GS21-21P0"
+		}
+		return "120V 1-Ph Input (30A) VFD in NEMA 4X Enclosure", "GS21-11P0"
+	case hp <= 2.0:
+		return "240V 1-Ph Input -> 3-Ph Motor VFD in NEMA 4X Enclosure", "GS21-22P0"
+	case hp <= 3.0:
+		return "240V 1-Ph Input -> 3-Ph Motor VFD in NEMA 4X Enclosure", "GS21-23P0"
+	default:
+		return "240V 3-Ph / Derated 1-Ph VFD in NEMA 4X Enclosure", "GS21-25P0"
+	}
+}
+
 func selectBlowerVFD(project StudioProject, design model.ScrubberDesign) COTSPart {
+	return selectWetBlowerVFD(project, design)
+}
+
+func selectWetBlowerVFD(project StudioProject, design model.ScrubberDesign) COTSPart {
 	hp := design.Blower.RecommendedMotorHP
 	if hp <= 0 {
 		hp = 1.0
 	}
 	heavy := project.CorrosionTier == CorrosionTierHeavyC276FRP
-
-	var voltageStr, vfdSKU string
-	switch {
-	case hp <= 0.5:
-		voltageStr = "120V 1-Ph Input VFD in NEMA 4X Enclosure"
-		vfdSKU = "GS21-10P5"
-	case hp <= 1.0:
-		if project.AvailableVoltage >= 240 {
-			voltageStr = "240V 1-Ph Input -> 3-Ph Motor VFD in NEMA 4X Enclosure"
-			vfdSKU = "GS21-21P0"
-		} else {
-			voltageStr = "120V 1-Ph Input (30A) VFD in NEMA 4X Enclosure"
-			vfdSKU = "GS21-11P0"
-		}
-	case hp <= 2.0:
-		voltageStr = "240V 1-Ph Input -> 3-Ph Motor VFD in NEMA 4X Enclosure"
-		vfdSKU = "GS21-22P0"
-	case hp <= 3.0:
-		voltageStr = "240V 1-Ph Input -> 3-Ph Motor VFD in NEMA 4X Enclosure"
-		vfdSKU = "GS21-23P0"
-	default:
-		voltageStr = "240V 3-Ph / Derated 1-Ph VFD in NEMA 4X Enclosure"
-		vfdSKU = "GS21-25P0"
-	}
+	voltageStr, vfdSKU := vfdSpecForHP(project, hp)
 
 	const nema4XEnclosureCost = 165.0 // NEC 110.28 NEMA 4X fiberglass/polycarbonate housing for IP20 GS21 (or upgrade to GS21X washdown)
 	var blowerCost, vfdCost, weightKg float64
@@ -442,6 +488,26 @@ func selectBlowerVFD(project StudioProject, design model.ScrubberDesign) COTSPar
 		UnitCostUSD: round2(blowerCost + vfdCost),
 		WeightKg:    weightKg,
 		Notes:       fmt.Sprintf("High-head radial pressure blower sized for %.0f ACFM @ %.1f inWC static pressure; %s VFD (IP20 housed in NEC 110.28 NEMA 4X enclosure, or upgrade to standalone GS21X washdown VFD) accepts 0-10V / Modbus PID draft control.", design.Blower.FlowACFM, design.Blower.TotalStaticPressureInWC, vfdSKU),
+	}
+}
+
+func selectDryMotiveBlowerVFD(project StudioProject, eductor EductorAnalysis) COTSPart {
+	hp := eductor.DryFanMotorHP
+	if hp <= 0 {
+		hp = 1.5
+	}
+	voltageStr, vfdSKU := vfdSpecForHP(project, hp)
+	fanCost, vfdCost, weightKg := dryFanUnitCost(hp)
+	wheelIn := round1(math.Max(8.0, 6.5+2.0*math.Sqrt(hp)))
+	return COTSPart{
+		SKU:         fmt.Sprintf("DRY-EDFAN-%.2gHP-%s-N4X", hp, vfdSKU),
+		Name:        fmt.Sprintf("%.2g HP Clean Dry-Air Motive Radial Blower + %s", hp, voltageStr),
+		NominalIn:   wheelIn,
+		Material:    "Carbon Steel / Cast Aluminum Clean-Air Radial Blower (Zero Acid Contact) + IP20 GS21 VFD inside NEMA 4X Enclosure",
+		Source:      "Grainger (Dayton/Cincinnati Fan Clean-Air) + AutomationDirect",
+		UnitCostUSD: round2(fanCost + vfdCost),
+		WeightKg:    weightKg,
+		Notes:       fmt.Sprintf("Handles 100%% dry ambient studio air (%.0f CFM @ %.1f inWC motive pressure) pushing downward into vertical static venturi eductor — eliminates corrosive wet-acid blower wheel & FRP scroll completely! %s VFD in NEC 110.28 NEMA 4X enclosure.", eductor.MotiveAirCFM, eductor.DryFanStaticInWC, vfdSKU),
 	}
 }
 
@@ -506,47 +572,136 @@ func selectPlumeDiluter(project StudioProject, design model.ScrubberDesign) COTS
 		Source:      "Grainger (Dayton 1TDT/4C) + US Plastic / SupplyHouse CPVC/FRP",
 		UnitCostUSD: cost,
 		WeightKg:    weight,
-		Notes:       fmt.Sprintf("120V (~%.1f A, 0.7-1.2 inWC) mounted DOWNSTREAM of Stage 4 ID blower (never in place of the %.1f inWC radial blower). Wetted stack mixing tee & %.0f\" high-velocity exit cone (~3,400 FPM) use CPVC/FRP/316L (never galvanized steel, which corrodes in HCl condensate); add optional cold-intake kiln-jacket warm-air shroud for near-zero visible plume.", amps, design.Blower.TotalStaticPressureInWC, coneIn),
+		Notes:       fmt.Sprintf("120V (~%.1f A, 0.7-1.2 inWC) mounted DOWNSTREAM of Stage 4 blower (never in place of the %.1f inWC radial blower). Wetted stack mixing tee & %.0f\" high-velocity exit cone (~3,400 FPM) use CPVC/FRP/316L (never galvanized steel, which corrodes in HCl condensate); add optional cold-intake kiln-jacket warm-air shroud for near-zero visible plume.", amps, design.Blower.TotalStaticPressureInWC, coneIn),
 	}
 }
 
 func selectSensorKit(design model.ScrubberDesign) COTSPart {
+	return selectSensorKitForTier(ControlTierRPiModbus, design)
+}
+
+func selectSensorKitForTier(tier string, design model.ScrubberDesign) COTSPart {
 	ductIn := math.Max(6.0, math.Ceil(design.Envelope.DuctDiameter.Inches()))
 	damperCost := round2(265.0 + 22.0*ductIn)
 	hardwiredSafetyCost := 228.0 // 200 F manual-reset snap-disc ($35) + 24VDC latching safety relay ($125) + NEMA 4X E-stop/reset/strobe ($68)
+
+	if tier == ControlTierElectromechanicalOnly {
+		analogGaugeAndDialCost := 85.0 // Dwyer Magnehelic 0 to -1.0 inWC dial gauge + VFD manual speed potentiometer + mechanical paddle flow switch
+		return COTSPart{
+			SKU:         "KIT-ELECTROMECH-SAFE-V1",
+			Name:        "Electromechanical Hardwired 200 F NFPA 86 Safety Loop, Magnehelic Gauge & Fail-Safe Bypass Kit",
+			NominalIn:   ductIn,
+			Material:    "316L SS Snap-Disc / NEMA 4X / 24VDC Latching Safety Relay / Dwyer Magnehelic / Spring-Return Damper",
+			Source:      "AutomationDirect / Dwyer / Belimo / Honeywell",
+			UnitCostUSD: round2(analogGaugeAndDialCost + damperCost + hardwiredSafetyCost),
+			WeightKg:    11.0,
+			Notes:       fmt.Sprintf(`Zero-software electromechanical kit (saves ~$960 vs Raspberry Pi Modbus): includes mandatory NFPA 86 hardwired 200 F manual-reset bimetallic snap-disc + 0.25 GPM mechanical paddle flow switch + 24VDC de-energize-to-trip latching safety relay + NEMA 4X E-Stop, analog Dwyer Magnehelic draft dial gauge, manual VFD speed knob, and %.0f" spring-return fail-open bypass damper.`, ductIn),
+		}
+	}
+
+	const rpiModbusAutomationCost = 1045.0 // RPi + DIN enclosure + 24VDC PSU + Modbus RTU I/O + digital Dwyer draft/pH/RTD/TC transmitters + modulating quench valve
 	return COTSPart{
 		SKU:         "KIT-MODBUS-SAFE-V2",
-		Name:        "Modbus RTU Sensor, Hardwired 200 F NFPA 86 Safety Relay & Fail-Safe Bypass Kit",
+		Name:        "Raspberry Pi Modbus RTU Sensor, Hardwired 200 F NFPA 86 Safety Relay & Fail-Safe Bypass Kit",
 		NominalIn:   ductIn,
-		Material:    "316L SS Thermowells / NEMA 4X / 24VDC Latching Safety Relay / Spring-Return Damper",
+		Material:    "316L SS Thermowells / NEMA 4X / RPi Modbus RTU / 24VDC Latching Safety Relay / Spring-Return Damper",
 		Source:      "AutomationDirect / Dwyer / Belimo / Honeywell / Atlas Scientific",
-		UnitCostUSD: round2(415.0 + damperCost + hardwiredSafetyCost),
-		WeightKg:    13.5,
-		Notes:       fmt.Sprintf(`Includes independent NFPA 86 hardwired 200 F manual-reset bimetallic snap-disc + 24VDC de-energize-to-trip latching safety relay + NEMA 4X E-Stop, Type-K flue TC, Pt100 quench RTD (210 F software backup), Dwyer +/-2 inWC draft transmitter, 0.25 GPM paddle flow switch, pH probe, isolated RS-485 USB adapter, and %.0f" spring-return fail-open bypass damper.`, ductIn),
+		UnitCostUSD: round2(rpiModbusAutomationCost + damperCost + hardwiredSafetyCost),
+		WeightKg:    14.5,
+		Notes:       fmt.Sprintf(`Includes independent NFPA 86 hardwired 200 F manual-reset bimetallic snap-disc + 24VDC de-energize-to-trip latching safety relay + NEMA 4X E-Stop, Raspberry Pi + RS-485 Modbus RTU I/O, Type-K flue TC, Pt100 quench RTD (210 F software backup), Dwyer +/-2 inWC digital draft transmitter, 0.25 GPM paddle flow switch, pH probe, modulating spray valve, and %.0f" spring-return fail-open bypass damper.`, ductIn),
 	}
 }
 
+func estimateSingleVenturiCost(project StudioProject, design model.ScrubberDesign) float64 {
+	ventCost := round2(240.0 + 18.0*design.Venturi.InletDiameter.Inches())
+	if project.BuildPath == BuildPathWeldedDXF {
+		ventCost = round2(ventCost * 1.15)
+	}
+	if project.CorrosionTier == CorrosionTierHeavyC276FRP {
+		ventCost = round2(ventCost * 2.6)
+	}
+	return ventCost
+}
+
 // BuildCOTSSummary snaps (when requested) the engineered scrubber geometry to standard
-// commercial off-the-shelf hardware, recalculates actual % of flooding velocity, and
-// builds a complete COTS Bill of Materials.
+// commercial off-the-shelf hardware, recalculates actual % of flooding velocity, reflects
+// all Phase 7 selectable options, and builds a complete COTS Bill of Materials.
 func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSummary {
-	quenchPart := selectQuenchVessel(project, design)
-	colPart, actualColIDIn, actualPctFlood := selectPackedColumn(project, design)
+	p := project.Normalize()
+	eductor := analyzeEductor(p, design)
+	parallelBed := analyzeParallelBed(p, design, eductor)
+	parallelVenturi := analyzeParallelVenturi(p, design)
+
+	quenchPart := selectQuenchVessel(p, design)
 	sumpPart := selectSumpTank(design)
-	nozzlePart := selectSprayNozzle(project, design)
-	packingPart, packCuFt := selectPackingMedia(actualColIDIn, design)
-	blowerPart := selectBlowerVFD(project, design)
-	sensorPart := selectSensorKit(design)
+	nozzlePart := selectSprayNozzle(p, design)
+	sensorPart := selectSensorKitForTier(p.ControlTier, design)
+
+	var colPart COTSPart
+	var actualColIDIn, actualPctFlood float64
+	var packingPart COTSPart
+	var packCuFt float64
+
+	if parallelBed.Enabled {
+		packHeightM := float64(design.PackedBed.PackingHeight)
+		if packHeightM <= 0 {
+			packHeightM = 0.65
+		}
+		pipeIDM := float64(model.InchesToMeters(parallelBed.PipeActualIDIn))
+		totalArea := float64(parallelBed.PipeCount) * math.Pi * pipeIDM * pipeIDM / 4.0
+		packCuFt = math.Max(1.0, math.Ceil(model.CubicMeters(totalArea*packHeightM).CuFt()))
+		unitPackCost := 62.0
+		packName := `1/2" Polypropylene Pall Rings/Saddles (1 cu.ft. Bulk Bag)`
+		packSKU := "PACK-PP-PALL-050IN"
+		if parallelBed.PackingDiameterIn < 0.45 {
+			unitPackCost = 68.0
+			packName = `3/8" Polypropylene Saddles/Rings (1 cu.ft. Bulk Bag)`
+			packSKU = "PACK-PP-SAD-0375IN"
+		}
+		packingPart = COTSPart{
+			SKU:         packSKU,
+			Name:        packName,
+			NominalIn:   parallelBed.PackingDiameterIn,
+			Material:    fmt.Sprintf("Polypropylene (PP), D/d_p=%.2f (>=7.5 wall-channeling safe)", parallelBed.WallRatioDToDp),
+			Source:      "McMaster-Carr / Jaeger / US Plastic",
+			UnitCostUSD: unitPackCost,
+			WeightKg:    2.8,
+			Notes:       fmt.Sprintf("Order %.0f cu.ft. of %.3g\" packing for %d × %.0f\" Sch 80 CPVC risers (irrigated bed dP %.2f inWC).", packCuFt, parallelBed.PackingDiameterIn, parallelBed.PipeCount, parallelBed.PipeNominalIn, parallelBed.BedDPInWC),
+		}
+		manifoldPipeCost := round2(math.Max(150.0, parallelBed.ManifoldCostUSD-packCuFt*unitPackCost))
+		colPart = COTSPart{
+			SKU:         fmt.Sprintf("PAR-CPVC80-%02dX%.0f", parallelBed.PipeCount, parallelBed.PipeNominalIn),
+			Name:        fmt.Sprintf(`Parallel Packed-Bed Manifold (%d × %.0f" Sch 80 CPVC Pipes + Headers + Balanced Spray Distributor)`, parallelBed.PipeCount, parallelBed.PipeNominalIn),
+			NominalIn:   parallelBed.PipeNominalIn,
+			Material:    "Schedule 80 CPVC (ASTM F441, ASTM E84 Class 1, 200 F max) + Calibrated Liquid Distributor Header",
+			Source:      "SupplyHouse / Local Plumbing Supply / US Plastic",
+			UnitCostUSD: manifoldPipeCost,
+			WeightKg:    round2(float64(parallelBed.PipeCount) * 6.5),
+			Notes:       fmt.Sprintf("%d parallel %.0f\" stock CPVC pipes (ID %.3f\") operating at %.1f%% flood (D/d_p=%.2f); includes top/bottom collector plenums and %d-port calibrated liquid spray distributor header.", parallelBed.PipeCount, parallelBed.PipeNominalIn, parallelBed.PipeActualIDIn, parallelBed.ActualFloodPct, parallelBed.WallRatioDToDp, parallelBed.PipeCount),
+		}
+		actualColIDIn = round2(math.Sqrt(float64(parallelBed.PipeCount)) * parallelBed.PipeActualIDIn)
+		actualPctFlood = parallelBed.ActualFloodPct
+	} else {
+		colPart, actualColIDIn, actualPctFlood = selectSinglePackedColumn(p, design, eductor)
+		packingPart, packCuFt = selectPackingMedia(actualColIDIn, design)
+	}
+
+	var blowerPart COTSPart
+	if eductor.Enabled {
+		blowerPart = selectDryMotiveBlowerVFD(p, eductor)
+	} else {
+		blowerPart = selectWetBlowerVFD(p, design)
+	}
 
 	var silencerPtr *COTSPart
-	if project.IncludeSilencer {
+	if p.IncludeSilencer {
 		s := selectSilencer(design)
 		silencerPtr = &s
 	}
 
 	var diluterPtr *COTSPart
-	if project.IncludePlumeDiluter {
-		d := selectPlumeDiluter(project, design)
+	if p.IncludePlumeDiluter {
+		d := selectPlumeDiluter(p, design)
 		diluterPtr = &d
 	}
 
@@ -555,23 +710,39 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 		nozzleQty = 4
 	}
 
-	// Venturi throat & transition assembly (no-weld bolted reducers vs welded DXF cones).
+	// Stage 2 Venturi / Eductor hardware selection.
 	ventMat := "316L Stainless Steel"
-	ventCost := round2(240.0 + 18.0*design.Venturi.InletDiameter.Inches())
+	ventCost := estimateSingleVenturiCost(p, design)
 	ventWeight := round2(7.5 + 0.9*design.Venturi.InletDiameter.Inches())
 	ventName := "Bolted Concentric Reducer Venturi & Throat Injection Spool"
 	ventSpec := fmt.Sprintf(`No-weld bolted reducers: %.1f" -> %.2f" throat -> %.1f" with 2x NPT throat injection ports`,
 		design.Venturi.InletDiameter.Inches(), design.Venturi.ThroatDiameter.Inches(), design.Venturi.OutletDiameter.Inches())
-	if project.BuildPath == BuildPathWeldedDXF {
+	if p.BuildPath == BuildPathWeldedDXF {
 		ventName = "Rolled & Welded Venturi Cones & Throat Spool (from scrubber.dxf)"
 		ventSpec = fmt.Sprintf(`DXF flat-pattern cones: %.0fmm -> %.1fmm throat -> %.0fmm + bolted flanges`,
 			design.Venturi.InletDiameter.Millimeters(), design.Venturi.ThroatDiameter.Millimeters(), design.Venturi.OutletDiameter.Millimeters())
-		ventCost = round2(ventCost * 1.15)
 	}
-	if project.CorrosionTier == CorrosionTierHeavyC276FRP {
+	if p.CorrosionTier == CorrosionTierHeavyC276FRP {
 		ventMat = "Alloy C-276 Throat / Silicon Carbide Liner + FRP Diffuser"
-		ventCost = round2(ventCost * 2.6)
 		ventWeight = round2(ventWeight * 1.35)
+	}
+
+	if eductor.Enabled {
+		ventName = fmt.Sprintf(`Vertical Downflow Static Venturi Eductor Tee & %.0f" 90° Cyclonic Sweep Elbow`, eductor.CyclonicSweepElbowIn)
+		ventCost = round2(285.0 + 24.0*eductor.CyclonicSweepElbowIn)
+		if p.CorrosionTier == CorrosionTierHeavyC276FRP {
+			ventCost = round2(ventCost * 2.2)
+		}
+		ventWeight = round2(11.0 + 1.1*eductor.CyclonicSweepElbowIn)
+		ventSpec = fmt.Sprintf(`Quench exits out & down to %.0f" flanged Tee -> vertical downflow static venturi driven by %.0f CFM dry motive air -> 90° cyclonic sweep elbow with bottom drain -> Stage 3 bottom plenum (+%.2f inWC positive pressure, outdoor-only airtight bolted PTFE joints).`,
+			eductor.CyclonicSweepElbowIn, eductor.MotiveAirCFM, eductor.PositivePressureInWC)
+	} else if parallelVenturi.Enabled {
+		ventName = fmt.Sprintf(`%d× Parallel COTS Sanitary Mini-Venturis (%.0f" -> %.2f" -> %.0f" Tri-Clamp)`,
+			parallelVenturi.ThroatCount, parallelVenturi.InletFittingIn, parallelVenturi.ThroatDiameterIn, parallelVenturi.InletFittingIn)
+		ventCost = parallelVenturi.MultiCostUSD
+		ventWeight = round2(float64(parallelVenturi.ThroatCount)*2.8 + 4.0)
+		ventSpec = fmt.Sprintf(`Zero cone rolling: %d parallel sanitary concentric-reducer throats (%.1f inWC dP, plugging risk: %s). %s`,
+			parallelVenturi.ThroatCount, parallelVenturi.ThroatDPInWC, parallelVenturi.PluggingRisk, parallelVenturi.TurndownBenefit)
 	}
 
 	// Chemical-resistant mag-drive recirculation pump.
@@ -590,7 +761,7 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 	// Gaskets, clamps, CPVC cement, hardware kit.
 	hardwareCost := 195.0
 	hardwareName := "No-Weld Couplings, EPDM/PTFE Gaskets, CPVC Cement & 316 SS Clamps"
-	if project.BuildPath == BuildPathWeldedDXF {
+	if p.BuildPath == BuildPathWeldedDXF {
 		hardwareCost = 245.0
 		hardwareName = "PTFE Full-Face Flange Gaskets & 316 SS Hex Bolt/Nut Kit"
 	}
@@ -652,7 +823,7 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 			Material:    "Polypropylene (PP) / FRP Grating",
 			Quantity:    1,
 			Unit:        "assy",
-			Spec:        fmt.Sprintf(`Cut to %.1f" ID column bore; captures >99%% entrained mist droplets`, actualColIDIn),
+			Spec:        fmt.Sprintf(`Cut to %.1f" equivalent column bore; captures >99%% entrained mist droplets`, actualColIDIn),
 			UnitCostUSD: demisterCost,
 			WeightKg:    demisterWeight,
 		},
@@ -686,6 +857,32 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 			UnitCostUSD: blowerPart.UnitCostUSD,
 			WeightKg:    blowerPart.WeightKg,
 		},
+	}
+
+	if !p.SharedBaffledSump {
+		items = append(items, model.BOMItem{
+			Category:    "Liquid & Chemical Handling",
+			Name:        "Secondary Dedicated Quench-Ash Sump Drum & Second Mag-Drive Pump",
+			Material:    "HDPE Drum + Polypropylene Mag-Drive Pump + CPVC Unions",
+			Quantity:    1,
+			Unit:        "assy",
+			Spec:        "[DUAL-SUMP-KIT] Separate Stage 1-2 ash-settling sump & transfer pump (uncheck to save cost with shared baffled sump)",
+			UnitCostUSD: dualSumpExtraCost(design),
+			WeightKg:    18.0,
+		})
+	}
+
+	if p.CompactFootprint {
+		items = append(items, model.BOMItem{
+			Category:    "Hardware & Plumbing",
+			Name:        "Compact U-Turn 180° Swept Return Bend & Folded Skid Mounting Frame",
+			Material:    "Schedule 80 CPVC / 316L SS Swept Elbow + Steel Frame",
+			Quantity:    1,
+			Unit:        "assy",
+			Spec:        "[UTURN-SKID-180] Folds train length by ~47% for narrow urban side-yards",
+			UnitCostUSD: 65.0,
+			WeightKg:    6.5,
+		})
 	}
 
 	if silencerPtr != nil {
@@ -751,21 +948,23 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 			Material:    "316 SS / Ceramic Fiber / PTFE / EPDM / CPVC",
 			Quantity:    1,
 			Unit:        "lot",
-			Spec:        ">=2300 F alumina-silica ceramic fiber rope/gaskets for dry hot flue upstream of Stage 1 (NO silicone/PTFE on 2400 F flue!), expanded PTFE/EPDM gaskets strictly downstream (<=200 F), band clamps/bolts, CPVC Sch 80 primer & cement, drain ball valve, thermometer (IPC 702.5 <=140 F check), pH test strips",
+			Spec:        ">=2300 F alumina-silica ceramic fiber rope/gaskets for dry hot flue upstream of Stage 1 (NO silicone/PTFE on 2400 F flue!), expanded PTFE/EPDM gaskets strictly downstream (<=200 F), band clamps/bolts, CPVC Sch 80 primer & cement, drain ball valve, thermometer (IPC 702.5 <=140 F check), brine hydrometer (SG 1.000-1.200), pH test strips",
 			UnitCostUSD: hardwareCost,
 			WeightKg:    8.5,
 		},
 	)
 
 	title := fmt.Sprintf("Studio COTS Hardware Bill of Materials — %s (%.1f cu.ft.)",
-		project.StudioName, design.Input.KilnVolumeCuFt)
+		p.StudioName, design.Input.KilnVolumeCuFt)
 	bom := model.BOM{
 		Title: title,
 		Items: items,
 		Notes: []string{
 			"All line-item WeightKg values represent TOTAL line-item weight (already multiplied by Quantity).",
 			"COTS pricing reflects realistic US studio/industrial distributor budgetary estimates (excluding freight and tax).",
-			fmt.Sprintf("Packed column snapped=%v -> %.1f\" actual ID operating at %.1f%% of Eckert flooding velocity (design limit <= 75%%).", project.SnapToCOTS, actualColIDIn, actualPctFlood),
+			fmt.Sprintf("Architecture: alignment=%s, packed_bed=%s, venturi=%s, compact_u_turn=%v, shared_sump=%v, controls=%s.",
+				p.StageAlignment, p.PackedBedLayout, p.VenturiLayout, p.CompactFootprint, p.SharedBaffledSump, p.ControlTier),
+			fmt.Sprintf("Packed absorber snapped=%v -> %.1f\" equiv ID operating at %.1f%% of Eckert flooding velocity (design limit <= 75%%).", p.SnapToCOTS, actualColIDIn, actualPctFlood),
 			"NFPA 86 & ASTM F441: Stage 3 Sch 80 CPVC/FRP components MUST be protected by an independent hardwired 200 F manual-reset snap-disc + 24VDC de-energize-to-trip latching safety relay driving the spring-return fail-open hot-gas bypass damper (ahead of the 210 F / 0.25 GPM software backup).",
 			"NEC 430.102 / 430.122 / 210.8(F) / 110.28: Size VFD branch circuit at >=125% VFD rated 1-phase input current, install lockable NEMA 4X sight disconnect (<=50 ft), house IP20 VFD in NEMA 4X enclosure, and use line-side HF-rated GFCI + input line reactor.",
 			"IPC 608 / 702.5 / 803.1 & NFPA 91: Isolate potable water via Air Gap (>=1\") or ASSE 1013 RPZ; cool drain/blowdown <=140 F and neutralize to pH 6.5-8.5 (>=5.0 per 40 CFR 403.5) before sanitary discharge; include NFPA 91 duct cleanouts/low-point drains and ASTM E84 Class 1 plastic ducting.",
@@ -774,7 +973,7 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 	bom.RecalculateTotals()
 
 	return COTSSummary{
-		Snapped:              project.SnapToCOTS,
+		Snapped:              p.SnapToCOTS,
 		QuenchVessel:         quenchPart,
 		PackedColumn:         colPart,
 		SumpTank:             sumpPart,
