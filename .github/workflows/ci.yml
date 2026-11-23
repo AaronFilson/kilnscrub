@@ -7,17 +7,18 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  test:
-    name: Format, Vet, Race Tests & CLI Smoke
+  quality-and-test:
+    name: Quality, Race Tests & CLI Smoke
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -41,38 +42,77 @@ jobs:
       - name: Run go vet
         run: go vet ./...
 
-      - name: Run unit and race tests (zero Python dependency)
+      - name: Verify go.mod and go.sum tidiness
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Verify zero Python runtime dependency in Go sources
+        run: |
+          ! grep -rn "python" --include="*.go" .
+
+      - name: Validate JSON configuration and oracle fixtures
+        run: |
+          jq empty configs/kilnscrub.example.json testdata/oracle_fixtures.json
+
+      - name: Run unit and race tests with coverage
         env:
           CGO_ENABLED: '1'
-        run: go test -race -count=1 ./...
+        run: |
+          set -euo pipefail
+          go test -race -count=1 -coverprofile=coverage.out ./...
+          total_cov="$(go tool cover -func=coverage.out | tail -n 1)"
+          echo "${total_cov}"
+          {
+            echo "### Go Test Coverage"
+            echo ""
+            echo '```text'
+            echo "${total_cov}"
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
 
-      - name: CLI end-to-end smoke test (design & export)
+      - name: Build static binary and run CLI end-to-end smoke checks
         env:
           CGO_ENABLED: '0'
         run: |
           set -euo pipefail
           smoke_dir="$(mktemp -d)"
-          trap 'rm -rf "${smoke_dir}"' EXIT
+          trap 'rm -rf "${smoke_dir}" /tmp/ci-export /tmp/ci-packet.zip' EXIT
+          rm -rf /tmp/ci-export /tmp/ci-packet.zip
 
           go build -trimpath -ldflags="-s -w" -o "${smoke_dir}/kilnscrub" ./cmd/kilnscrub
 
           "${smoke_dir}/kilnscrub" design --kiln-volume 24 --peak-temp 2400 --salt-rate 2.0
-          "${smoke_dir}/kilnscrub" export --kiln-volume 24 --peak-temp 2400 --salt-rate 2.0 --out "${smoke_dir}/out"
 
+          "${smoke_dir}/kilnscrub" export --kiln-volume 24 --peak-temp 2400 --salt-rate 2.0 --out /tmp/ci-export
           for artifact in scrubber.stl scrubber.dxf bom.csv bom.md; do
-            file="${smoke_dir}/out/${artifact}"
+            file="/tmp/ci-export/${artifact}"
             if [ ! -s "${file}" ]; then
               echo "ERROR: expected non-empty export artifact: ${file}"
               exit 1
             fi
           done
+          grep -q "EOF" /tmp/ci-export/scrubber.dxf
+          ls -lh /tmp/ci-export
 
-          grep -q "EOF" "${smoke_dir}/out/scrubber.dxf"
-          ls -lh "${smoke_dir}/out"
+          "${smoke_dir}/kilnscrub" daemon --config configs/kilnscrub.example.json --duration 300ms --interval 50ms
 
-  build:
+          "${smoke_dir}/kilnscrub" presets
+          "${smoke_dir}/kilnscrub" packet --preset wood_salt_24 --out /tmp/ci-packet.zip
+          if [ ! -s /tmp/ci-packet.zip ]; then
+            echo "ERROR: expected non-empty build packet zip: /tmp/ci-packet.zip"
+            exit 1
+          fi
+          if command -v unzip >/dev/null 2>&1; then
+            unzip -t /tmp/ci-packet.zip
+          else
+            python3 -m zipfile -t /tmp/ci-packet.zip
+          fi
+          ls -lh /tmp/ci-packet.zip
+
+  build-matrix:
     name: Build (${{ matrix.goos }}/${{ matrix.goarch }})
-    needs: test
+    needs: quality-and-test
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -83,6 +123,9 @@ jobs:
             ext: ''
           - goos: linux
             goarch: arm64
+            ext: ''
+          - goos: darwin
+            goarch: amd64
             ext: ''
           - goos: darwin
             goarch: arm64
@@ -100,21 +143,30 @@ jobs:
           go-version: '1.24.x'
           cache: true
 
-      - name: Build static binary (${{ matrix.goos }}/${{ matrix.goarch }})
+      - name: Build static binary and checksum (${{ matrix.goos }}/${{ matrix.goarch }})
         env:
           CGO_ENABLED: '0'
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
+          set -euo pipefail
           mkdir -p dist
+          bin_name="kilnscrub-${GOOS}-${GOARCH}${{ matrix.ext }}"
           go build -trimpath -ldflags="-s -w" \
-            -o "dist/kilnscrub-${GOOS}-${GOARCH}${{ matrix.ext }}" \
+            -o "dist/${bin_name}" \
             ./cmd/kilnscrub
-          ls -lh "dist/kilnscrub-${GOOS}-${GOARCH}${{ matrix.ext }}"
+          (
+            cd dist
+            sha256sum "${bin_name}" > SHA256SUMS.txt
+            sha256sum -c SHA256SUMS.txt
+          )
+          ls -lh "dist/${bin_name}" dist/SHA256SUMS.txt
 
-      - name: Upload binary artifact
+      - name: Upload binary and checksum artifacts
         uses: actions/upload-artifact@v4
         with:
           name: kilnscrub-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: dist/kilnscrub-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+          path: |
+            dist/kilnscrub-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+            dist/SHA256SUMS.txt
           if-no-files-found: error

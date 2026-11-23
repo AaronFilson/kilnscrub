@@ -1,0 +1,117 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version tag (e.g. v1.0.0); leave blank to dry-run build artifacts only'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Pre-Release Race Test Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go 1.24.x
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Check gofmt formatting
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "${unformatted}" ]; then
+            echo "The following Go files are not properly formatted with gofmt:"
+            echo "${unformatted}"
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run full race test suite
+        env:
+          CGO_ENABLED: '1'
+        run: go test -race -count=1 ./...
+
+  release:
+    name: Build Release Archives & Publish GitHub Release
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go 1.24.x
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Resolve release version
+        id: meta
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.version }}" ]; then
+            version="${{ inputs.version }}"
+          else
+            version="${GITHUB_REF_NAME}"
+          fi
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "Resolved release version: ${version}"
+
+      - name: Build cross-platform static archives and SHA256SUMS.txt
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          ./packaging/release.sh "${VERSION}" dist/release
+          for archive in \
+            "kilnscrub-${VERSION}-linux-amd64.tar.gz" \
+            "kilnscrub-${VERSION}-linux-arm64.tar.gz" \
+            "kilnscrub-${VERSION}-darwin-amd64.tar.gz" \
+            "kilnscrub-${VERSION}-darwin-arm64.tar.gz" \
+            "kilnscrub-${VERSION}-windows-amd64.zip" \
+            "SHA256SUMS.txt"; do
+            if [ ! -s "dist/release/${archive}" ]; then
+              echo "ERROR: missing or empty release artifact: dist/release/${archive}"
+              exit 1
+            fi
+          done
+          (cd dist/release && sha256sum -c SHA256SUMS.txt)
+          ls -lh dist/release
+
+      - name: Upload release bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kilnscrub-release-${{ steps.meta.outputs.version }}
+          path: dist/release/
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.version != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.version }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/release/kilnscrub-${{ steps.meta.outputs.version }}-linux-amd64.tar.gz
+            dist/release/kilnscrub-${{ steps.meta.outputs.version }}-linux-arm64.tar.gz
+            dist/release/kilnscrub-${{ steps.meta.outputs.version }}-darwin-amd64.tar.gz
+            dist/release/kilnscrub-${{ steps.meta.outputs.version }}-darwin-arm64.tar.gz
+            dist/release/kilnscrub-${{ steps.meta.outputs.version }}-windows-amd64.zip
+            dist/release/SHA256SUMS.txt
