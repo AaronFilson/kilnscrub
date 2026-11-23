@@ -5851,8 +5851,8 @@
             valves_fittings: "Needle Throttle Valve + Inline Strainer + Check Valve", notes: "Feeds fine mist at venturi throat for NaCl/ash impaction",
           },
           ...(isAirAtomize ? [{
-            id: "A1", label: "Shop Compressor Air-Atomize Line", fluid: "Compressed Air (90→40 PSI)", from: "Studio Air Compressor", to: "Filter-Regulator → Twin-Fluid Venturi Nozzle",
-            size_in: 0.375, material: "3/8\" Braided Air Hose", flow_gpm: 5.0, pressure_psi: 40,
+            id: "A1", label: "Shop Compressor Air-Atomize Line", fluid: "Clean Regulated Shop Air (5.0 SCFM @ 40 PSI)", from: "Studio Air Compressor", to: "Filter-Regulator → Twin-Fluid Venturi Nozzle",
+            size_in: 0.375, material: "3/8\" Braided Air Hose", flow_gpm: 0.0, pressure_psi: 40,
             valves_fittings: "5 µm Coalescing Filter + 40 PSI Regulator + Solenoid", notes: "Delivers 5 SCFM @ 40 PSI for 25 µm droplet atomization",
           }] : []),
           {
@@ -7155,6 +7155,42 @@
         });
       }
 
+      function formatCircuitVoltage(v, isSafetyLoop) {
+        if (typeof v === "number" && Number.isFinite(v) && v > 0) {
+          return isSafetyLoop && v === 24 ? "24VDC" : `${Math.round(v)}V`;
+        }
+        const s = String(v || "").trim();
+        if (!s) return "—";
+        if (/^\d+(\.\d+)?$/.test(s)) return `${s}V`;
+        return s;
+      }
+
+      function formatPumpVoltage(v) {
+        if (typeof v === "number" && Number.isFinite(v) && v > 0) {
+          return `${Math.round(v)}V GFCI`;
+        }
+        const s = String(v || "").trim();
+        if (!s) return "120V GFCI";
+        if (/^\d+(\.\d+)?$/.test(s)) return `${s}V GFCI`;
+        return s;
+      }
+
+      function formatPlumbingFlow(ln) {
+        const isAir = String(ln?.id || "").toUpperCase().startsWith("A");
+        const gpm = Number(ln?.flow_gpm);
+        const psi = Number(ln?.pressure_psi);
+        const psiText = Number.isFinite(psi) ? `${fmt(psi, 0)} PSI` : "—";
+        if (isAir) {
+          if (Number.isFinite(gpm) && gpm > 0) {
+            return `${fmt(gpm, 1)} SCFM · ${psiText}`;
+          }
+          const m = String(ln?.fluid || "").match(/(\d+(?:\.\d+)?)\s*SCFM/i);
+          if (m) return `${m[1]} SCFM · ${psiText}`;
+          return `Air · ${psiText}`;
+        }
+        return `${fmt(gpm, 1)} GPM · ${psiText}`;
+      }
+
       function renderPlanSchedules(plan) {
         const cl = plan.clearances || {};
         if (el("plan-elec-access-note")) {
@@ -7174,7 +7210,7 @@
                 <td><span class="sched-id-badge" style="border-color:${c.is_safety_loop ? "#ef4444" : "#f59e0b"};color:${c.is_safety_loop ? "#fca5a5" : "#fde68a"}">${escapeHtml(c.id || "—")}</span></td>
                 <td><strong>${escapeHtml(c.label || "—")}</strong>${c.is_safety_loop ? `<span class="safety-loop-badge">NFPA 86 SAFETY LOOP</span>` : ""}</td>
                 <td style="font-size:11px">${escapeHtml(c.from || "—")} &rarr; ${escapeHtml(c.to || "—")}</td>
-                <td class="num" style="font-family:var(--mono);font-size:11px">${escapeHtml(c.voltage || "—")} · ${fmt(c.amps, 1)}A</td>
+                <td class="num" style="font-family:var(--mono);font-size:11px">${escapeHtml(formatCircuitVoltage(c.voltage, !!c.is_safety_loop))} · ${fmt(c.amps, 1)}A</td>
                 <td class="num" style="font-family:var(--mono);font-size:11px">${Number.isFinite(c.breaker_amps) ? `${c.breaker_amps}A` : "—"}</td>
                 <td style="font-family:var(--mono);font-size:11px;color:#fcd34d">${escapeHtml(c.wire_gauge || "—")}</td>
                 <td style="font-family:var(--mono);font-size:11px">${escapeHtml(c.conduit || "—")}</td>
@@ -7193,7 +7229,7 @@
             <div class="sched-kpi">
               <span class="sched-kpi-k">Recirculation Pump</span>
               <span class="sched-kpi-v">${fmt(ps.flow_gpm, 1)} <span class="unit-literal">GPM</span> @ ${fmt(ps.head_ft, 0)} ft head</span>
-              <span class="sched-kpi-s">${escapeHtml(ps.pump_type || "Mag-Drive Chemical Pump")} (${fmt(ps.hp, 2)} HP · ${escapeHtml(ps.voltage || "120V GFCI")})</span>
+              <span class="sched-kpi-s">${escapeHtml(ps.pump_type || "Mag-Drive Chemical Pump")} (${fmt(ps.hp, 2)} HP · ${escapeHtml(formatPumpVoltage(ps.voltage))})</span>
             </div>
             <div class="sched-kpi">
               <span class="sched-kpi-k">Suction &amp; Y-Strainer</span>
@@ -7227,7 +7263,7 @@
                 <td style="font-size:11px">${escapeHtml(ln.from || "—")} &rarr; ${escapeHtml(ln.to || "—")}</td>
                 <td style="font-family:var(--mono);font-size:11px">${fmtPlanLen(ln.size_in || 0.75)}</td>
                 <td style="font-family:var(--mono);font-size:11px">${escapeHtml(ln.material || "—")}</td>
-                <td class="num" style="font-family:var(--mono);font-size:11px">${fmt(ln.flow_gpm, 1)} ${String(ln.id || "").startsWith("A") ? "SCFM" : "GPM"} · ${fmt(ln.pressure_psi, 0)} PSI</td>
+                <td class="num" style="font-family:var(--mono);font-size:11px">${escapeHtml(formatPlumbingFlow(ln))}</td>
                 <td style="font-size:11px;color:#7dd3fc">${escapeHtml(ln.valves_fittings || "—")}</td>
                 <td style="font-size:11px;color:var(--muted)">${escapeHtml(ln.notes || "")}</td>
               </tr>
