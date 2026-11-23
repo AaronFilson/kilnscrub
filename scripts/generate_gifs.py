@@ -321,6 +321,41 @@ def eval_polyline(pts: Sequence[tuple[float, float]], u: float) -> tuple[float, 
     return pts[-1]
 
 
+def eval_polyline_pose(
+    pts: Sequence[tuple[float, float]], u: float
+) -> tuple[float, float, float, float, float]:
+    """Return (x, y, nx, ny, corner_damp) along a piecewise-linear path for u in [0, 1].
+
+    (nx, ny) is the unit normal perpendicular to the local segment tangent, and
+    corner_damp tapers smoothly to 0 near interior bends so transverse offsets never
+    jump at corners or introduce backward motion along the flow axis.
+    """
+    segs = []
+    total = 0.0
+    for i in range(len(pts) - 1):
+        dx = pts[i + 1][0] - pts[i][0]
+        dy = pts[i + 1][1] - pts[i][1]
+        d = math.hypot(dx, dy)
+        segs.append((pts[i], pts[i + 1], dx, dy, d))
+        total += d
+    target = clamp(u) * total
+    acc = 0.0
+    n_segs = len(segs)
+    for idx, (p0, p1, dx, dy, d) in enumerate(segs):
+        if acc + d >= target or idx == n_segs - 1:
+            local = target - acc
+            frac = 0.0 if d == 0 else clamp(local / d)
+            tx = 1.0 if d == 0 else dx / d
+            ty = 0.0 if d == 0 else dy / d
+            nx, ny = -ty, tx
+            d_start = local if idx > 0 else 1e9
+            d_end = (d - local) if idx < n_segs - 1 else 1e9
+            corner_damp = clamp(min(d_start, d_end) / 14.0)
+            return (lerp(p0[0], p1[0], frac), lerp(p0[1], p1[1], frac), nx, ny, corner_damp)
+        acc += d
+    return (*pts[-1], 0.0, 1.0, 0.0)
+
+
 # ===========================================================================
 # GIF 1: 4-Stage Wet Scrubber Cutaway Flow (960x500, 32 frames)
 # ===========================================================================
@@ -368,6 +403,10 @@ def render_scrubber_flow_frame(frame_idx: int, total_frames: int) -> Image.Image
         outline=(*CPVC_WALL, 180),
         width=s(1.4),
     )
+    # Subtle static flow-direction chevrons inside Stage 3 -> Stage 4 overhead duct (right then down)
+    for ax in (686, 706, 724):
+        draw.line([(s(ax - 3), s(121)), (s(ax + 2), s(125)), (s(ax - 3), s(129))], fill=(*CPVC_WALL, 70), width=s(1.2))
+    draw.line([(s(739), s(162)), (s(743), s(167)), (s(747), s(162))], fill=(*CPVC_WALL, 70), width=s(1.2))
 
     # --- 0. Studio Kiln Firebox (x = 18..126, y = 134..324) ---
     # Outer brick body + arched crown
@@ -423,9 +462,9 @@ def render_scrubber_flow_frame(frame_idx: int, total_frames: int) -> Image.Image
             [(s(nx), s(126)), (s(nx - 24), s(225)), (s(nx + 24), s(225))],
             fill=(56, 189, 248, 34),
         )
-        # Animated falling spray droplets inside cone
-        for di in range(8):
-            du = (t * 2.0 + di / 8.0 + (0.06 if nx > 230 else 0.0)) % 1.0
+        # Animated falling spray droplets inside cone (3 rays x 3 droplets, ratio = 3/16 = 0.1875)
+        for di in range(9):
+            du = (t * 2.0 + di / 9.0 + (0.06 if nx > 230 else 0.0)) % 1.0
             spread = (di % 3 - 1) * 14 * du
             dx = nx + spread
             dy = 128 + du * 145
@@ -494,13 +533,24 @@ def render_scrubber_flow_frame(frame_idx: int, total_frames: int) -> Image.Image
     draw.line([(s(px0 + 4), s(bed_y1)), (s(px1 - 4), s(bed_y1))], fill=(*MINT, 240), width=s(2.4))
     draw.line([(s(px0 + 4), s(bed_y0)), (s(px1 - 4), s(bed_y0))], fill=(*MINT, 200), width=s(1.6))
 
-    # Counter-current NaHCO3 distributor spray above bed (y = 152)
-    draw.line([(s(px0 + 18), s(154)), (s(px1 - 18), s(154))], fill=(*MINT, 240), width=s(2.4))
-    for di in range(10):
-        du = (t * 2.0 + di / 10.0) % 1.0
-        dx = px0 + 22 + (di % 5) * 23 + math.sin(di * 1.7) * 3
-        dy = 156 + du * 132
-        draw.ellipse([s(dx - 1.8), s(dy - 2.6), s(dx + 1.8), s(dy + 2.6)], fill=(52, 211, 153, 200))
+    # Counter-current NaHCO3 distributor spray above bed (y = 154)
+    draw.line([(s(px0 + 14), s(154)), (s(px1 - 14), s(154))], fill=(*MINT, 240), width=s(2.4))
+    nozzle_xs = (px0 + 18, px0 + 43, px0 + 68, px0 + 93, px0 + 118)
+    for ni, nx_pos in enumerate(nozzle_xs):
+        # Small downward spray nozzle stub well inside column walls
+        draw.line([(s(nx_pos), s(154)), (s(nx_pos), s(159))], fill=(*MINT, 230), width=s(1.6))
+        # Two droplets per nozzle falling strictly downward into sump (step/spacing = 0.125)
+        for drop_idx in range(2):
+            du = (t * 2.0 + ni * 0.17 + drop_idx * 0.5) % 1.0
+            dx = nx_pos
+            dy = 161 + du * 126
+            alpha = int(215 * clamp(du / 0.08) * clamp((1.0 - du) / 0.10))
+            if alpha > 15:
+                draw.polygon(
+                    [(s(dx), s(dy - 3.6)), (s(dx + 1.8), s(dy + 0.4)), (s(dx - 1.8), s(dy + 0.4))],
+                    fill=(52, 211, 153, alpha),
+                )
+                draw.ellipse([s(dx - 1.8), s(dy - 1.2), s(dx + 1.8), s(dy + 2.4)], fill=(52, 211, 153, alpha))
 
     # Chevron Mist Eliminator (Demister) at top (y = 114..136)
     draw.rectangle([s(px0 + 6), s(114), s(px1 - 6), s(136)], fill=(20, 50, 68, 220), outline=(*CYAN, 160), width=s(1))
@@ -521,8 +571,8 @@ def render_scrubber_flow_frame(frame_idx: int, total_frames: int) -> Image.Image
     draw.rectangle([s(782), s(122), s(814), s(232)], fill=(20, 38, 64, 240), outline=(*COBALT, 220), width=s(2.0))
     # Volute snail circle
     draw.ellipse([s(bcx - br), s(bcy - br), s(bcx + br), s(bcy + br)], fill=(20, 38, 64, 250), outline=(*COBALT, 240), width=s(2.5))
-    # Rotating radial blades (8 blades spinning smoothly 1 full turn per loop -> 45 deg symmetry)
-    rot = t * 2 * math.pi  # 1 full rev per loop
+    # Rotating radial blades (8 blades spinning CCW to throw gas upward into right-hand stack; step/spacing = 0.25)
+    rot = -t * 2 * math.pi  # 1 full CCW rev per loop
     for bi in range(8):
         ang = rot + bi * (math.pi / 4.0)
         x1 = bcx + (br - 7) * math.cos(ang)
@@ -569,6 +619,11 @@ def render_scrubber_flow_frame(frame_idx: int, total_frames: int) -> Image.Image
     draw_text(draw, (822, 353), "FRP/PP Housing · VFD", "regular", 9.5, TEXT_MUTED, "mm")
 
     # --- Animated Gas, HCl, and NaCl/Ash Particles Flowing Through Entire Train ---
+    # All three streams share the exact same forward physical speed (du_loop = 0.25 over
+    # 32 frames -> ~9.6 px/frame forward) with step/spacing <= 0.1875 (well below the 0.5
+    # Nyquist limit, eliminating wagon-wheel backward aliasing in Stage 3/4 ducts).
+    # Each particle count divides evenly into du_loop=0.25 and its lane count so frame 31 -> 0
+    # loops seamlessly with zero wrap-back or flicker.
     main_path = [
         (82, 168),
         (134, 154),
@@ -577,67 +632,102 @@ def render_scrubber_flow_frame(frame_idx: int, total_frames: int) -> Image.Image
         (334, 261),   # Enter Venturi
         (405, 261),   # Throat (70 m/s)
         (488, 261),   # Exit Venturi
-        (604, 266),   # Enter Packed Bed bottom
-        (604, 125),   # Rise through bed & demister
-        (743, 125),   # Overhead duct to blower
-        (743, 232),   # Blower suction
-        (798, 232),   # Blower discharge
-        (798, 108),   # Clean stack exit
+        (604, 266),   # Enter Packed Bed bottom plenum
+        (604, 125),   # Rise strictly UP through packed bed & demister
+        (743, 125),   # Exit top of Stage 3 strictly RIGHT through overhead duct
+        (743, 234),   # Down into Blower suction
+        (762, 255),   # CCW scroll bottom around blower hub
+        (786, 248),   # Scroll transition to tangential discharge
+        (798, 224),   # Enter vertical discharge stack
+        (798, 108),   # Rise strictly UP out clean stack
     ]
+    du_loop = 0.25
 
-    # 1) Carrier gas particles (28 particles evenly spaced, color transitions hot->cool->clean)
-    n_gas = 28
+    def _transverse_amp(u: float) -> float:
+        # Tight in Venturi throat, modest in connecting ducts, slightly broader in towers
+        if 0.31 < u < 0.43:
+            return 1.2
+        if 0.13 < u < 0.22 or 0.52 < u < 0.63:
+            return 7.0
+        return 2.6
+
+    # 1) Carrier gas particles (24 particles -> advances 6 slots/loop, step/spacing = 0.1875, 3 seamless lanes)
+    n_gas = 24
     for i in range(n_gas):
-        u = (t + i / n_gas) % 1.0
-        px, py = eval_polyline(main_path, u)
-        # Slight transverse swirl
-        wobble = 4.5 * math.sin(2 * math.pi * (u * 7 + i * 0.37))
+        u = (du_loop * t + i / n_gas) % 1.0
+        px, py, nx, ny, damp = eval_polyline_pose(main_path, u)
+        lane = (i % 3) - 1  # -1, 0, +1 (preserved by +6 shift)
+        offset = lane * _transverse_amp(u) * damp
+        gx = px + nx * offset
+        gy = py + ny * offset
         if u < 0.24:
             col = lerp_color(ORANGE, CYAN, clamp((u - 0.12) / 0.12))
             rad = 3.2
-        elif u < 0.50:
-            col = lerp_color(CYAN, VIOLET, clamp((u - 0.30) / 0.15))
+        elif u < 0.48:
+            col = lerp_color(CYAN, VIOLET, clamp((u - 0.29) / 0.15))
             rad = 2.8
-        elif u < 0.72:
-            col = lerp_color(VIOLET, MINT, clamp((u - 0.52) / 0.16))
-            rad = 2.6
+        elif u < 0.64:
+            # Transition directly to clean pale sky-blue (distinct from MINT NaHCO3 droplets)
+            col = lerp_color(VIOLET, (186, 230, 253), clamp((u - 0.50) / 0.13))
+            rad = 2.8
         else:
             col = (186, 230, 253)
-            rad = 2.6
-        # Keep tight in venturi throat (u ~ 0.34..0.44)
-        if 0.33 < u < 0.45:
-            wobble *= 0.25
-        draw.ellipse(
-            [s(px - rad), s(py + wobble - rad), s(px + rad), s(py + wobble + rad)],
-            fill=(*col, 220),
-        )
+            rad = 2.8
+        edge_fade = clamp(u / 0.02) * clamp((1.0 - u) / 0.02)
+        alpha = int(230 * edge_fade)
+        if alpha > 15:
+            # Subtle trailing wake dot behind particle along flow path to visually reinforce direction
+            if u > 0.006:
+                tx_p, ty_p, tnx, tny, tdamp = eval_polyline_pose(main_path, u - 0.0045)
+                toff = lane * _transverse_amp(u - 0.0045) * tdamp
+                tr = rad * 0.68
+                draw.ellipse(
+                    [s(tx_p + tnx * toff - tr), s(ty_p + tny * toff - tr), s(tx_p + tnx * toff + tr), s(ty_p + tny * toff + tr)],
+                    fill=(*col, int(alpha * 0.42)),
+                )
+            draw.ellipse(
+                [s(gx - rad), s(gy - rad), s(gx + rad), s(gy + rad)],
+                fill=(*col, alpha),
+            )
 
-    # 2) HCl acid gas molecules (yellow diamonds) — survive Quench & Venturi, REMOVED inside Stage 3 Packed Bed (u ~ 0.56..0.67)!
-    n_hcl = 14
+    # 2) HCl acid gas molecules (yellow diamonds) — survive Quench & Venturi, ABSORBED inside Stage 3 Packed Bed (u ~ 0.52..0.60)!
+    # 16 full-path slots -> advances 4 slots/loop (step/spacing = 0.125, 2 seamless lanes)
+    n_hcl = 16
     for i in range(n_hcl):
-        u = ((t + i / n_hcl) % 1.0) * 0.66
-        px, py = eval_polyline(main_path, u)
-        wobble = 7.0 * math.cos(2 * math.pi * (u * 6 + i * 0.41))
-        if 0.33 < u < 0.45:
-            wobble *= 0.25
-        alpha = 235 if u < 0.54 else int(235 * clamp((0.66 - u) / 0.12))
+        u = (du_loop * t + (i + 0.5) / n_hcl) % 1.0
+        if u >= 0.61:
+            continue
+        px, py, nx, ny, damp = eval_polyline_pose(main_path, u)
+        lane = -1 if (i % 2 == 0) else 1  # preserved by +4 shift
+        offset = lane * (_transverse_amp(u) * 1.15) * damp
+        hx = px + nx * offset
+        hy = py + ny * offset
+        fade_in = clamp(u / 0.02)
+        fade_out = 1.0 if u < 0.525 else clamp((0.605 - u) / 0.08)
+        alpha = int(240 * fade_in * fade_out)
         if alpha > 15:
             r = 3.2
-            pts = [(s(px), s(py + wobble - r)), (s(px + r), s(py + wobble)), (s(px), s(py + wobble + r)), (s(px - r), s(py + wobble))]
+            pts = [(s(hx), s(hy - r)), (s(hx + r), s(hy)), (s(hx), s(hy + r)), (s(hx - r), s(hy))]
             draw.polygon(pts, fill=(*YELLOW, alpha))
 
-    # 3) Ash & NaCl fume specks (bright white/gray squares) — CAPTURED in Stage 2 Venturi (u ~ 0.37..0.47)!
-    n_pm = 12
+    # 3) Ash & NaCl fume specks (bright white/gray squares) — CAPTURED in Stage 2 Venturi (u ~ 0.35..0.43)!
+    # 24 full-path slots -> advances 6 slots/loop (step/spacing = 0.1875, 3 seamless lanes)
+    n_pm = 24
     for i in range(n_pm):
-        u = ((t + i / n_pm) % 1.0) * 0.46
-        px, py = eval_polyline(main_path, u)
-        wobble = 6.5 * math.sin(2 * math.pi * (u * 5 + i * 0.53))
-        if 0.33 < u < 0.45:
-            wobble *= 0.2
-        alpha = 230 if u < 0.37 else int(230 * clamp((0.46 - u) / 0.09))
+        u = (du_loop * t + (i + 0.5) / n_pm) % 1.0
+        if u >= 0.44:
+            continue
+        px, py, nx, ny, damp = eval_polyline_pose(main_path, u)
+        lane = ((i + 1) % 3) - 1  # preserved by +6 shift
+        offset = lane * (_transverse_amp(u) * 1.05) * damp
+        mx = px + nx * offset
+        my = py + ny * offset
+        fade_in = clamp(u / 0.02)
+        fade_out = 1.0 if u < 0.355 else clamp((0.435 - u) / 0.08)
+        alpha = int(235 * fade_in * fade_out)
         if alpha > 15:
             r = 2.4
-            draw.rectangle([s(px - r), s(py + wobble - r), s(px + r), s(py + wobble + r)], fill=(241, 245, 249, alpha))
+            draw.rectangle([s(mx - r), s(my - r), s(mx + r), s(my + r)], fill=(241, 245, 249, alpha))
 
     # --- Bottom 4 Engineering Spec Cards (y = 374..456) ---
     specs = [
