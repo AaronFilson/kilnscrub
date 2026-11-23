@@ -253,9 +253,14 @@ func buildPacketReadme(eval StudioEvaluation) []byte {
 		eval.Design.Input.PeakExitTempF, eval.Project.FiringDurationHours, eval.Project.EffectiveSaltingHours())
 	fmt.Fprintf(&b, "Vapor Glaze Mode: %s | Build Path: %s | Corrosion Tier: %s\n",
 		eval.Project.VaporGlazeMode, eval.Project.BuildPath, CorrosionTierLabel(eval.Project.CorrosionTier))
-	fmt.Fprintf(&b, "Stage Options:    %s | %s | %s | U-Turn=%v | SharedSump=%v | Controls=%s\n",
-		eval.Project.StageAlignment, eval.Project.PackedBedLayout, eval.Project.VenturiLayout,
+	fmt.Fprintf(&b, "Stage Options:    %s | %s (%.0f\" pipe) | %s | U-Turn=%v | SharedSump=%v | Controls=%s\n",
+		eval.Project.StageAlignment, eval.Project.PackedBedLayout, eval.Project.ParallelPipeSizeIn, eval.Project.VenturiLayout,
 		eval.Project.CompactFootprint, eval.Project.SharedBaffledSump, eval.Project.ControlTier)
+	fmt.Fprintf(&b, "Budget Options:   Blower=%s (%+.0f USD) | Packing=%s (%+.0f USD) | Shop Compressor=%.0f SCFM (Eductor feasible=%v, Air-Atomize feasible=%v)\n",
+		eval.Project.BlowerDriveOption, eval.ArchitectureOptions.BlowerDrive.CostDeltaUSD,
+		eval.Project.PackingMediaOption, eval.ArchitectureOptions.PackingMedia.CostDeltaUSD,
+		eval.ArchitectureOptions.Compressor.AvailableSCFM,
+		eval.ArchitectureOptions.Compressor.EductorFeasible, eval.ArchitectureOptions.Compressor.AtomizeFeasible)
 	fmt.Fprintf(&b, "Urban Readiness:  %s\n", strings.ToUpper(eval.Urban.OverallStatus))
 	fmt.Fprintf(&b, "Estimated COTS:   $%.2f USD (Delta %+.2f USD vs baseline | %.1f%% of flood)\n",
 		eval.COTS.EstimatedTotalUSD, eval.ArchitectureOptions.CostDeltaUSD, eval.COTS.ActualPercentOfFlood)

@@ -69,30 +69,31 @@ var quenchC276Catalog = []pipeSpec{
 }
 
 // Schedule 80 CPVC pipe nominal sizes (ASTM F441, vacuum-rated for -20 inWC ID suction)
-// up to 16", transitioning to vacuum-rated filament-wound FRP for 18"-30" columns
-// (open-head 55-gal HDPE drums are restricted strictly to atmospheric vented sump tanks).
+// up to 16", transitioning to vacuum-rated filament-wound FRP for 18"-30" columns.
+// Sizes >= 12" include realistic industrial Van Stone ANSI flanges and LTL pallet freight.
+// (Open-head 55-gal HDPE drums are restricted strictly to atmospheric vented sump tanks.)
 var packedCPVCCatalog = []pipeSpec{
-	{6, 5.761, "CPVC80-06", 185, 3.6},
-	{8, 7.625, "CPVC80-08", 275, 5.3},
-	{10, 9.564, "CPVC80-10", 395, 7.5},
-	{12, 11.376, "CPVC80-12", 525, 10.1},
-	{14, 12.500, "CPVC80-14", 665, 11.9},
-	{16, 14.314, "CPVC80-16", 835, 14.6},
-	{18, 18.000, "FRP-18", 1120, 11.5},
-	{24, 24.000, "FRP-24", 1590, 15.8},
-	{30, 30.000, "FRP-30", 2150, 20.5},
+	{6, 5.761, "CPVC80-06", 215, 3.6},
+	{8, 7.625, "CPVC80-08", 345, 5.3},
+	{10, 9.564, "CPVC80-10", 545, 7.5},
+	{12, 11.376, "CPVC80-12", 890, 10.1},
+	{14, 12.500, "CPVC80-14", 1245, 11.9},
+	{16, 14.314, "CPVC80-16", 1595, 14.6},
+	{18, 18.000, "FRP-18", 1890, 11.5},
+	{24, 24.000, "FRP-24", 2490, 15.8},
+	{30, 30.000, "FRP-30", 3250, 20.5},
 }
 
 var packedFRPCatalog = []pipeSpec{
-	{6, 6.00, "FRP-06", 420, 3.4},
-	{8, 8.00, "FRP-08", 540, 4.6},
-	{10, 10.00, "FRP-10", 680, 5.9},
-	{12, 12.00, "FRP-12", 835, 7.4},
-	{14, 14.00, "FRP-14", 990, 8.8},
-	{16, 16.00, "FRP-16", 1175, 10.4},
-	{18, 18.00, "FRP-18", 1360, 12.0},
-	{24, 24.00, "FRP-24", 1890, 16.5},
-	{30, 30.00, "FRP-30", 2540, 21.5},
+	{6, 6.00, "FRP-06", 460, 3.4},
+	{8, 8.00, "FRP-08", 620, 4.6},
+	{10, 10.00, "FRP-10", 840, 5.9},
+	{12, 12.00, "FRP-12", 1180, 7.4},
+	{14, 14.00, "FRP-14", 1540, 8.8},
+	{16, 16.00, "FRP-16", 1860, 10.4},
+	{18, 18.00, "FRP-18", 2150, 12.0},
+	{24, 24.00, "FRP-24", 2890, 16.5},
+	{30, 30.00, "FRP-30", 3740, 21.5},
 }
 
 func round2(v float64) float64 {
@@ -412,10 +413,10 @@ func selectPackingMedia(actualColIDIn float64, design model.ScrubberDesign) (COT
 		Name:        `1" Polypropylene Pall Rings (1 cu.ft. Bulk Bag)`,
 		NominalIn:   1.0,
 		Material:    "Polypropylene (PP), 90% Voidage, Fp=52/ft",
-		Source:      "McMaster-Carr / Jaeger / Amazon Industrial",
-		UnitCostUSD: 48.0,
+		Source:      "McMaster-Carr / Jaeger / US Plastic",
+		UnitCostUSD: 88.0,
 		WeightKg:    2.5,
-		Notes:       fmt.Sprintf("Order %.0f cu.ft. to fill %.1f\" ID column to %.1f\" bed depth (%.2f m). Bio-balls acceptable for zero-acid smoke-only mode.", packCuFt, actualColIDIn, design.PackedBed.PackingHeight.Inches(), float64(design.PackedBed.PackingHeight)),
+		Notes:       fmt.Sprintf("Order %.0f cu.ft. to fill %.1f\" ID column to %.1f\" bed depth (%.2f m). Select aquaculture bio-balls ($38/cu.ft.) or DIY kiln-fired stoneware rings ($18/cu.ft.) to save.", packCuFt, actualColIDIn, design.PackedBed.PackingHeight.Inches(), float64(design.PackedBed.PackingHeight)),
 	}
 	return part, packCuFt
 }
@@ -623,14 +624,80 @@ func estimateSingleVenturiCost(project StudioProject, design model.ScrubberDesig
 	return ventCost
 }
 
+func selectBlowerForDrive(
+	p StudioProject,
+	design model.ScrubberDesign,
+	eductor EductorAnalysis,
+	comp CompressorAnalysis,
+	drive BlowerDriveAnalysis,
+) COTSPart {
+	switch p.BlowerDriveOption {
+	case BlowerDriveRegenSideChannel:
+		return COTSPart{
+			SKU:         fmt.Sprintf("REGEN-RING-%.2gHP", drive.MotorHP),
+			Name:        fmt.Sprintf("%.2g HP Cast-Aluminum Side-Channel Regenerative Ring Blower + Bleed Blast-Gate", drive.MotorHP),
+			NominalIn:   round1(math.Max(2.0, design.Envelope.DuctDiameter.Inches()*0.5)),
+			Material:    "Die-Cast Aluminum Impeller & Housing (High-Static 60+ inWC, Dry Clean-Air Rated)",
+			Source:      "Goorui / Gast / Ametek Windjammer / Grainger",
+			UnitCostUSD: drive.FanCostUSD,
+			WeightKg:    round2(14.0 + 4.5*drive.MotorHP),
+			Notes:       fmt.Sprintf("Delivers %.1f inWC static (60+ inWC max headroom) for $%.0f (%+.0f USD vs industrial radial+VFD). %s", drive.RequiredStaticInWC, drive.FanCostUSD, drive.CostDeltaUSD, drive.Caveats[0]),
+		}
+	case BlowerDriveDualBypassBlowers:
+		return COTSPart{
+			SKU:         fmt.Sprintf("AMETEK-3STG-2X-%dV", drive.Voltage),
+			Name:        fmt.Sprintf("2× Ametek Lamb 3-Stage Tangential Bypass Blowers in Parallel (%dV) + Staging Relay", drive.Voltage),
+			NominalIn:   5.7,
+			Material:    "Aluminum/Coated 3-Stage Tangential Bypass Fans (Isolated Motor Windings) + Parallel Manifold",
+			Source:      "Ametek Lamb / Grainger / Central Vacuum Distributors",
+			UnitCostUSD: drive.FanCostUSD,
+			WeightKg:    7.2,
+			Notes:       fmt.Sprintf("~240–260 CFM @ 25+ inWC ($%.0f total, %+.0f USD vs industrial radial+VFD). Tangential discharge isolates armature/windings from wet exhaust; swap $15 carbon brushes every ~45 firings.", drive.FanCostUSD, drive.CostDeltaUSD),
+		}
+	case BlowerDriveCompressorAirAtomize:
+		_, weightKg := mediumPressureAirAtomizeBlowerCost(p, drive.MotorHP)
+		voltageStr, vfdSKU := vfdSpecForHP(p, drive.MotorHP)
+		return COTSPart{
+			SKU:         fmt.Sprintf("MP-CAST-%.2gHP-%s-TF25", drive.MotorHP, vfdSKU),
+			Name:        fmt.Sprintf("%.2g HP Medium-Pressure Cast-Aluminum Radial Blower + %s + $75 Twin-Fluid Air-Atomizing Nozzle", drive.MotorHP, voltageStr),
+			NominalIn:   round1(math.Max(8.0, design.Blower.WheelDiameter.Inches())),
+			Material:    "Cast-Aluminum Radial Scroll + IP20 GS21 VFD in NEMA 4X + 316L Twin-Fluid 25 um Air-Atomizing Nozzle & 40 PSI Regulator",
+			Source:      "Grainger (Dayton/Cincinnati Fan) + Spraying Systems Co. + AutomationDirect",
+			UnitCostUSD: drive.FanCostUSD,
+			WeightKg:    weightKg,
+			Notes:       fmt.Sprintf("Uses %.1f SCFM @ 40 PSI from studio shop compressor to produce 25 um SMD droplets at 48 m/s throat velocity (active twin-fluid Calvert d50=%.2f um parity), slashing static pressure to %.1f inWC and saving $%.0f vs industrial radial+VFD!", comp.AtomizeSCFMNeeded, activeTwinFluidD50Microns(design), drive.RequiredStaticInWC, math.Abs(drive.CostDeltaUSD)),
+		}
+	case BlowerDriveCompressorEductor:
+		return COTSPart{
+			SKU:         "AIR-AMP-316L-EDUCT",
+			Name:        "316L Stainless Compressed-Air Amplifier / Venturi Eductor + 1/2\" NPT Regulator (Uses Existing Shop Compressor)",
+			NominalIn:   round1(math.Max(2.0, design.Envelope.DuctDiameter.Inches()*0.5)),
+			Material:    "316L Stainless Steel Air Amplifier (No Moving Parts)",
+			Source:      "EXAIR / Vortec / McMaster-Carr",
+			UnitCostUSD: drive.FanCostUSD,
+			WeightKg:    3.4,
+			Notes:       fmt.Sprintf("Feasible=%v: requires %.1f SCFM (~%.1f HP) vs %.1f SCFM shop compressor. %s", drive.Feasible, comp.EductorSCFMNeeded, comp.EductorHPNeeded, comp.AvailableSCFM, comp.EductorVerdict),
+		}
+	default:
+		if eductor.Enabled {
+			return selectDryMotiveBlowerVFD(p, eductor)
+		}
+		return selectWetBlowerVFD(p, design)
+	}
+}
+
 // BuildCOTSSummary snaps (when requested) the engineered scrubber geometry to standard
 // commercial off-the-shelf hardware, recalculates actual % of flooding velocity, reflects
-// all Phase 7 selectable options, and builds a complete COTS Bill of Materials.
+// all Phase 7 & Phase 8 selectable options, and builds a complete COTS Bill of Materials.
 func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSummary {
 	p := project.Normalize()
+	baseDesign := resolveBaselineDesign(p, design)
 	eductor := analyzeEductor(p, design)
 	parallelBed := analyzeParallelBed(p, design, eductor)
 	parallelVenturi := analyzeParallelVenturi(p, design)
+	compressor, atomizeDesign := analyzeCompressor(p, design, baseDesign)
+	blowerDrive := analyzeBlowerDrive(p, design, baseDesign, eductor, compressor, atomizeDesign)
+	packMedia, packSpec, packCuFt := analyzePackingMedia(p, design, eductor, parallelBed)
 
 	quenchPart := selectQuenchVessel(p, design)
 	sumpPart := selectSumpTank(design)
@@ -639,59 +706,43 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 
 	var colPart COTSPart
 	var actualColIDIn, actualPctFlood float64
-	var packingPart COTSPart
-	var packCuFt float64
 
 	if parallelBed.Enabled {
-		packHeightM := float64(design.PackedBed.PackingHeight)
-		if packHeightM <= 0 {
-			packHeightM = 0.65
+		geom := resolveParallelPipeGeom(p, eductor)
+		baseSmallPackCost := packCuFt * geom.packUnitCost
+		manifoldHardwareCost := round2(math.Max(150.0, parallelBed.ManifoldCostUSD-baseSmallPackCost))
+		pipePrefix := "PAR-CPVC80"
+		if geom.isPVC {
+			pipePrefix = "PAR-PVC40"
 		}
-		pipeIDM := float64(model.InchesToMeters(parallelBed.PipeActualIDIn))
-		totalArea := float64(parallelBed.PipeCount) * math.Pi * pipeIDM * pipeIDM / 4.0
-		packCuFt = math.Max(1.0, math.Ceil(model.CubicMeters(totalArea*packHeightM).CuFt()))
-		unitPackCost := 62.0
-		packName := `1/2" Polypropylene Pall Rings/Saddles (1 cu.ft. Bulk Bag)`
-		packSKU := "PACK-PP-PALL-050IN"
-		if parallelBed.PackingDiameterIn < 0.45 {
-			unitPackCost = 68.0
-			packName = `3/8" Polypropylene Saddles/Rings (1 cu.ft. Bulk Bag)`
-			packSKU = "PACK-PP-SAD-0375IN"
-		}
-		packingPart = COTSPart{
-			SKU:         packSKU,
-			Name:        packName,
-			NominalIn:   parallelBed.PackingDiameterIn,
-			Material:    fmt.Sprintf("Polypropylene (PP), D/d_p=%.2f (>=7.5 wall-channeling safe)", parallelBed.WallRatioDToDp),
-			Source:      "McMaster-Carr / Jaeger / US Plastic",
-			UnitCostUSD: unitPackCost,
-			WeightKg:    2.8,
-			Notes:       fmt.Sprintf("Order %.0f cu.ft. of %.3g\" packing for %d × %.0f\" Sch 80 CPVC risers (irrigated bed dP %.2f inWC).", packCuFt, parallelBed.PackingDiameterIn, parallelBed.PipeCount, parallelBed.PipeNominalIn, parallelBed.BedDPInWC),
-		}
-		manifoldPipeCost := round2(math.Max(150.0, parallelBed.ManifoldCostUSD-packCuFt*unitPackCost))
 		colPart = COTSPart{
-			SKU:         fmt.Sprintf("PAR-CPVC80-%02dX%.0f", parallelBed.PipeCount, parallelBed.PipeNominalIn),
-			Name:        fmt.Sprintf(`Parallel Packed-Bed Manifold (%d × %.0f" Sch 80 CPVC Pipes + Headers + Balanced Spray Distributor)`, parallelBed.PipeCount, parallelBed.PipeNominalIn),
+			SKU:         fmt.Sprintf("%s-%02dX%.0f-UNISEAL", pipePrefix, parallelBed.PipeCount, parallelBed.PipeNominalIn),
+			Name:        fmt.Sprintf(`Shell-Less Uniseal Parallel Bundle (%d × %.0f" %s + Flat Collector Plates + %d Uniseals + Spray Header)`, parallelBed.PipeCount, parallelBed.PipeNominalIn, parallelBed.PipeMaterial, 2*parallelBed.PipeCount),
 			NominalIn:   parallelBed.PipeNominalIn,
-			Material:    "Schedule 80 CPVC (ASTM F441, ASTM E84 Class 1, 200 F max) + Calibrated Liquid Distributor Header",
-			Source:      "SupplyHouse / Local Plumbing Supply / US Plastic",
-			UnitCostUSD: manifoldPipeCost,
-			WeightKg:    round2(float64(parallelBed.PipeCount) * 6.5),
-			Notes:       fmt.Sprintf("%d parallel %.0f\" stock CPVC pipes (ID %.3f\") operating at %.1f%% flood (D/d_p=%.2f); includes top/bottom collector plenums and %d-port calibrated liquid spray distributor header.", parallelBed.PipeCount, parallelBed.PipeNominalIn, parallelBed.PipeActualIDIn, parallelBed.ActualFloodPct, parallelBed.WallRatioDToDp, parallelBed.PipeCount),
+			Material:    parallelBed.PipeMaterial + " + 1/2\" HDPE/CPVC Flat Collector Plates + Rubber Uniseals (NO External Large Pipe)",
+			Source:      "Local Plumbing Supply / Home Depot / US Plastic / Uniseal",
+			UnitCostUSD: manifoldHardwareCost,
+			WeightKg:    round2(float64(parallelBed.PipeCount)*3.8 + 6.5),
+			Notes:       fmt.Sprintf("Shell-less bundle of %d bare %.0f\" risers (ID %.3f\", %.1f%% flood, D/d_p=%.2f) held between top/bottom flat collector plates with %d Uniseal rubber pipe seals ($5.50 ea) and balanced %d-port spray header — eliminates specialty large pipe & industrial flanges.", parallelBed.PipeCount, parallelBed.PipeNominalIn, parallelBed.PipeActualIDIn, parallelBed.ActualFloodPct, parallelBed.WallRatioDToDp, 2*parallelBed.PipeCount, parallelBed.PipeCount),
 		}
 		actualColIDIn = round2(math.Sqrt(float64(parallelBed.PipeCount)) * parallelBed.PipeActualIDIn)
 		actualPctFlood = parallelBed.ActualFloodPct
 	} else {
 		colPart, actualColIDIn, actualPctFlood = selectSinglePackedColumn(p, design, eductor)
-		packingPart, packCuFt = selectPackingMedia(actualColIDIn, design)
 	}
 
-	var blowerPart COTSPart
-	if eductor.Enabled {
-		blowerPart = selectDryMotiveBlowerVFD(p, eductor)
-	} else {
-		blowerPart = selectWetBlowerVFD(p, design)
+	packingPart := COTSPart{
+		SKU:         packSpec.sku,
+		Name:        fmt.Sprintf("%s (1 cu.ft.)", packSpec.label),
+		NominalIn:   packSpec.diameterIn,
+		Material:    packSpec.material,
+		Source:      packSpec.source,
+		UnitCostUSD: packSpec.unitCostUSD,
+		WeightKg:    packSpec.weightKgCuFt,
+		Notes:       packMedia.Summary,
 	}
+
+	blowerPart := selectBlowerForDrive(p, design, eductor, compressor, blowerDrive)
 
 	var silencerPtr *COTSPart
 	if p.IncludeSilencer {
@@ -962,8 +1013,8 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 		Notes: []string{
 			"All line-item WeightKg values represent TOTAL line-item weight (already multiplied by Quantity).",
 			"COTS pricing reflects realistic US studio/industrial distributor budgetary estimates (excluding freight and tax).",
-			fmt.Sprintf("Architecture: alignment=%s, packed_bed=%s, venturi=%s, compact_u_turn=%v, shared_sump=%v, controls=%s.",
-				p.StageAlignment, p.PackedBedLayout, p.VenturiLayout, p.CompactFootprint, p.SharedBaffledSump, p.ControlTier),
+			fmt.Sprintf("Architecture: alignment=%s, packed_bed=%s (%.0f\" pipe), venturi=%s, blower_drive=%s, packing_media=%s, compact_u_turn=%v, shared_sump=%v, controls=%s.",
+				p.StageAlignment, p.PackedBedLayout, p.ParallelPipeSizeIn, p.VenturiLayout, p.BlowerDriveOption, p.PackingMediaOption, p.CompactFootprint, p.SharedBaffledSump, p.ControlTier),
 			fmt.Sprintf("Packed absorber snapped=%v -> %.1f\" equiv ID operating at %.1f%% of Eckert flooding velocity (design limit <= 75%%).", p.SnapToCOTS, actualColIDIn, actualPctFlood),
 			"NFPA 86 & ASTM F441: Stage 3 Sch 80 CPVC/FRP components MUST be protected by an independent hardwired 200 F manual-reset snap-disc + 24VDC de-energize-to-trip latching safety relay driving the spring-return fail-open hot-gas bypass damper (ahead of the 210 F / 0.25 GPM software backup).",
 			"NEC 430.102 / 430.122 / 210.8(F) / 110.28: Size VFD branch circuit at >=125% VFD rated 1-phase input current, install lockable NEMA 4X sight disconnect (<=50 ft), house IP20 VFD in NEMA 4X enclosure, and use line-side HF-rated GFCI + input line reactor.",

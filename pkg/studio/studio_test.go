@@ -385,10 +385,11 @@ func TestPhase7EductorParallelBedParallelVenturiCompactAndControls(t *testing.T)
 		t.Errorf("parallel bed missing mandatory liquid distribution header note: %+v", pb.Notes)
 	}
 
-	// Tiny 6 cu.ft. kiln with parallel bed uses 3" pipe + 3/8" packing (D/d_p >= 7.5).
+	// Tiny 6 cu.ft. kiln with explicit 3" parallel pipe uses 3" pipe + 3/8" packing (D/d_p >= 7.5).
 	raku, _ := PresetByID("electric_raku_6")
 	rakuPB := raku.Project
 	rakuPB.PackedBedLayout = PackedBedLayoutParallelManifold
+	rakuPB.ParallelPipeSizeIn = 3.0
 	rakuPBEval, err := eval.Evaluate(rakuPB)
 	if err != nil {
 		t.Fatalf("raku parallel bed evaluate: %v", err)
@@ -1154,4 +1155,383 @@ func TestStudioBranchCoverageAndEdgeCases(t *testing.T) {
 	if w <= 0 || h <= 0 {
 		t.Errorf("expected positive frustum bbox, got (%v, %v)", w, h)
 	}
+}
+
+func TestPhase8BudgetBlowerDrivesShelllessPipesPackingAndCompressor(t *testing.T) {
+	eval := NewEvaluator(scrubber.NewDesigner(), cad.NewExporter())
+	baseProj := DefaultProject()
+	baseEval, err := eval.Evaluate(baseProj)
+	if err != nil {
+		t.Fatalf("baseline evaluate: %v", err)
+	}
+
+	// Verify JSON contract keys on architecture_options.
+	archBytes, err := json.Marshal(baseEval.ArchitectureOptions)
+	if err != nil {
+		t.Fatalf("marshal architecture_options: %v", err)
+	}
+	var archRaw map[string]any
+	if err := json.Unmarshal(archBytes, &archRaw); err != nil {
+		t.Fatalf("unmarshal architecture_options: %v", err)
+	}
+	for _, key := range []string{"blower_drive", "compressor", "packing_media", "parallel_bed"} {
+		if _, ok := archRaw[key]; !ok {
+			t.Errorf("architecture_options JSON missing key %q", key)
+		}
+	}
+
+	// 1. Shop Compressor always evaluated on EVERY Evaluate() call.
+	comp := baseEval.ArchitectureOptions.Compressor
+	if comp.AvailableSCFM != 15.0 {
+		t.Errorf("default AvailableSCFM = %.1f, want 15.0", comp.AvailableSCFM)
+	}
+	if comp.EductorFeasible {
+		t.Errorf("24 cu.ft. kiln should mark compressor eductor_feasible=false, got %+v", comp)
+	}
+	if comp.EductorSCFMNeeded < 65.0 || comp.EductorHPNeeded < 17.0 {
+		t.Errorf("24 cu.ft. kiln eductor should need >=65 SCFM & >=17 HP, got %.1f SCFM / %.1f HP", comp.EductorSCFMNeeded, comp.EductorHPNeeded)
+	}
+	if !comp.AtomizeFeasible || comp.AtomizeSCFMNeeded < 4.0 || comp.AtomizeSCFMNeeded > 6.0 {
+		t.Errorf("24 cu.ft. kiln air-atomizing should be feasible with 4-6 SCFM, got %+v", comp)
+	}
+	if comp.AtomizeDropletUm != 25.0 || comp.AtomizeDPSavedInWC < 6.0 || comp.AtomizeCostSavedUSD < 950.0 {
+		t.Errorf("air-atomize savings below expected: %+v", comp)
+	}
+
+	// Tiny <= 6 cu.ft. low-dP test kiln marks compressor eductor_feasible=true!
+	tinyKiln, _ := PresetByID("electric_raku_6")
+	tinyProj := tinyKiln.Project
+	tinyProj.Input.VenturiThroatVelocity = 32.0 // low-dP test kiln (~4-5 inWC)
+	tinyProj.BlowerDriveOption = BlowerDriveCompressorEductor
+	tinyEval, err := eval.Evaluate(tinyProj)
+	if err != nil {
+		t.Fatalf("tiny compressor eductor evaluate: %v", err)
+	}
+	if !tinyEval.ArchitectureOptions.Compressor.EductorFeasible || !tinyEval.ArchitectureOptions.BlowerDrive.Feasible {
+		t.Errorf("tiny 6 cu.ft. low-dP kiln should be feasible on 15 SCFM shop compressor, got comp=%+v drive=%+v",
+			tinyEval.ArchitectureOptions.Compressor, tinyEval.ArchitectureOptions.BlowerDrive)
+	}
+
+	// Undersized 3 SCFM compressor marks atomize_feasible=false.
+	lowCompProj := baseProj
+	lowCompProj.ShopCompressorSCFM = 3.0
+	lowCompEval, err := eval.Evaluate(lowCompProj)
+	if err != nil {
+		t.Fatalf("lowComp evaluate: %v", err)
+	}
+	if lowCompEval.ArchitectureOptions.Compressor.AtomizeFeasible {
+		t.Errorf("3 SCFM compressor should not satisfy 4-6 SCFM air-atomizing, got %+v", lowCompEval.ArchitectureOptions.Compressor)
+	}
+
+	// 2. All 5 BlowerDriveOption modes on 24 cu.ft. reference kiln.
+	// 2a. compressor_air_atomize: exact Calvert active twin-fluid d_50 <= 0.22 um parity, slashed dP, saves ~$1,000+!
+	airAtomProj := baseProj
+	airAtomProj.BlowerDriveOption = BlowerDriveCompressorAirAtomize
+	airAtomEval, err := eval.Evaluate(airAtomProj)
+	if err != nil {
+		t.Fatalf("compressor_air_atomize evaluate: %v", err)
+	}
+	activeD50 := activeTwinFluidD50Microns(airAtomEval.Design)
+	if activeD50 > 0.22 {
+		t.Errorf("compressor_air_atomize active twin-fluid d_50 = %.3f um, want <= 0.22 um parity", activeD50)
+	}
+	if airAtomEval.Design.Venturi.DropletDiameter.Microns() != 25.0 || airAtomEval.Design.Venturi.ThroatVelocity != 48.0 {
+		t.Errorf("compressor_air_atomize expected 25 um @ 48 m/s, got %.1f um @ %.1f m/s",
+			airAtomEval.Design.Venturi.DropletDiameter.Microns(), airAtomEval.Design.Venturi.ThroatVelocity)
+	}
+	if airAtomEval.Design.Venturi.PressureDropInWC >= baseEval.Design.Venturi.PressureDropInWC-6.0 {
+		t.Errorf("compressor_air_atomize venturi dP = %.2f inWC did not drop enough vs baseline %.2f inWC",
+			airAtomEval.Design.Venturi.PressureDropInWC, baseEval.Design.Venturi.PressureDropInWC)
+	}
+	if airAtomEval.Design.Blower.TotalStaticPressureInWC > 14.0 {
+		t.Errorf("compressor_air_atomize total static = %.2f inWC, want ~12-13.5 inWC", airAtomEval.Design.Blower.TotalStaticPressureInWC)
+	}
+	if airAtomEval.ArchitectureOptions.BlowerDrive.CostDeltaUSD > -950.0 || !airAtomEval.ArchitectureOptions.BlowerDrive.Feasible {
+		t.Errorf("compressor_air_atomize should save ~$1,000+ and be feasible, got %+v", airAtomEval.ArchitectureOptions.BlowerDrive)
+	}
+	if !strings.Contains(airAtomEval.BuildGuideMD, "Twin-Fluid Air-Atomizing") {
+		t.Error("BuildGuideMD missing twin-fluid air-atomizing instructions")
+	}
+
+	// 2b. regen_side_channel: wet inline warns about dry-air corrosion; eductor mode clears wet caveat!
+	regenWetProj := baseProj
+	regenWetProj.BlowerDriveOption = BlowerDriveRegenSideChannel
+	regenWetEval, err := eval.Evaluate(regenWetProj)
+	if err != nil {
+		t.Fatalf("regen_side_channel wet evaluate: %v", err)
+	}
+	rwDrive := regenWetEval.ArchitectureOptions.BlowerDrive
+	if !rwDrive.Feasible || rwDrive.FanCostUSD < 380.0 || rwDrive.FanCostUSD > 520.0 {
+		t.Errorf("regen_side_channel cost/feasibility unexpected: %+v", rwDrive)
+	}
+	if !strings.Contains(strings.Join(rwDrive.Caveats, " "), "DRY-AIR CORROSION CAVEAT") {
+		t.Errorf("regen_side_channel wet mode missing dry-air corrosion caveat: %+v", rwDrive.Caveats)
+	}
+
+	regenDryProj := regenWetProj
+	regenDryProj.StageAlignment = StageAlignmentEductorDryFan
+	regenDryEval, err := eval.Evaluate(regenDryProj)
+	if err != nil {
+		t.Fatalf("regen_side_channel eductor evaluate: %v", err)
+	}
+	if strings.Contains(strings.Join(regenDryEval.ArchitectureOptions.BlowerDrive.Caveats, " "), "DRY-AIR CORROSION CAVEAT") {
+		t.Error("regen_side_channel with eductor_dry_fan should not emit wet corrosion caveat")
+	}
+
+	// 2c. dual_bypass_blowers: $380-$460, isolated windings, $15 brush swap every ~45 firings.
+	dualProj := baseProj
+	dualProj.BlowerDriveOption = BlowerDriveDualBypassBlowers
+	dualEval, err := eval.Evaluate(dualProj)
+	if err != nil {
+		t.Fatalf("dual_bypass_blowers evaluate: %v", err)
+	}
+	dbDrive := dualEval.ArchitectureOptions.BlowerDrive
+	if !dbDrive.Feasible || dbDrive.FanCostUSD < 380.0 || dbDrive.FanCostUSD > 460.0 || dbDrive.CostDeltaUSD > -1200.0 {
+		t.Errorf("dual_bypass_blowers unexpected: %+v", dbDrive)
+	}
+	if !strings.Contains(strings.Join(dbDrive.Caveats, " "), "$15") || !strings.Contains(strings.Join(dbDrive.Caveats, " "), "45 firings") {
+		t.Errorf("dual_bypass_blowers missing $15 brush swap / ~45 firings caveat: %+v", dbDrive.Caveats)
+	}
+
+	// 2d. compressor_eductor_only on 24 cu.ft. kiln -> feasible=false!
+	compEdProj := baseProj
+	compEdProj.BlowerDriveOption = BlowerDriveCompressorEductor
+	compEdEval, err := eval.Evaluate(compEdProj)
+	if err != nil {
+		t.Fatalf("compressor_eductor_only evaluate: %v", err)
+	}
+	if compEdEval.ArchitectureOptions.BlowerDrive.Feasible {
+		t.Errorf("compressor_eductor_only on 24 cu.ft. kiln must be infeasible: %+v", compEdEval.ArchitectureOptions.BlowerDrive)
+	}
+
+	// Large 48 cu.ft. co-op kiln flags infeasibility for single ring blower & dual bypass blowers.
+	coop, _ := PresetByID("coop_wood_48")
+	for _, opt := range []string{BlowerDriveRegenSideChannel, BlowerDriveDualBypassBlowers} {
+		p := coop.Project
+		p.BlowerDriveOption = opt
+		ev, err := eval.Evaluate(p)
+		if err != nil {
+			t.Fatalf("coop %s evaluate: %v", opt, err)
+		}
+		if ev.ArchitectureOptions.BlowerDrive.Feasible {
+			t.Errorf("48 cu.ft. co-op kiln should exceed single %s capacity", opt)
+		}
+	}
+
+	// 3. Shell-Less Uniseal Parallel 2", 3", 4" Pipes.
+	// 3a. 4" Sch 80 CPVC shell-less bundle genuinely SAVES money (negative cost_delta_usd, $400-$1,100)!
+	par4Proj := baseProj
+	par4Proj.PackedBedLayout = PackedBedLayoutParallelManifold
+	par4Proj.ParallelPipeSizeIn = 4.0
+	par4Eval, err := eval.Evaluate(par4Proj)
+	if err != nil {
+		t.Fatalf("parallel 4in evaluate: %v", err)
+	}
+	pb4 := par4Eval.ArchitectureOptions.ParallelBed
+	if !pb4.Enabled || !pb4.ShelllessPlenum || !strings.Contains(pb4.PipeMaterial, "CPVC") {
+		t.Errorf("4\" parallel bed missing shellless_plenum or CPVC pipe_material: %+v", pb4)
+	}
+	if pb4.CostDeltaUSD > -400.0 || pb4.CostDeltaUSD < -1100.0 {
+		t.Errorf("4\" shell-less CPVC parallel bed CostDeltaUSD = %.2f, want in [-1100, -400]", pb4.CostDeltaUSD)
+	}
+	if par4Eval.COTS.EstimatedTotalUSD >= baseEval.COTS.EstimatedTotalUSD-400.0 {
+		t.Errorf("4\" shell-less parallel BOM total ($%.2f) should save >=$400 vs baseline ($%.2f)",
+			par4Eval.COTS.EstimatedTotalUSD, baseEval.COTS.EstimatedTotalUSD)
+	}
+
+	// 3b. 4" Sch 40 PVC when eductor_dry_fan cools mixed gas <= 140 F (even larger savings + thermal warning)!
+	par4PVCProj := par4Proj
+	par4PVCProj.StageAlignment = StageAlignmentEductorDryFan
+	par4PVCEval, err := eval.Evaluate(par4PVCProj)
+	if err != nil {
+		t.Fatalf("eductor+parallel 4in PVC evaluate: %v", err)
+	}
+	pb4PVC := par4PVCEval.ArchitectureOptions.ParallelBed
+	if !strings.Contains(pb4PVC.PipeMaterial, "PVC") || !strings.Contains(strings.Join(pb4PVC.Notes, " "), "140 F") {
+		t.Errorf("eductor <=140 F parallel 4\" should select Sch 40 PVC with thermal warning: %+v", pb4PVC)
+	}
+	if pb4PVC.CostDeltaUSD >= pb4.CostDeltaUSD {
+		t.Errorf("eductor 4\" PVC savings (%.2f) should beat inline 4\" CPVC savings (%.2f)", pb4PVC.CostDeltaUSD, pb4.CostDeltaUSD)
+	}
+
+	// 3c. 2" parallel pipes warns honestly about 40+ pipes & labor vs 4" sweet spot.
+	par2Proj := baseProj
+	par2Proj.PackedBedLayout = PackedBedLayoutParallelManifold
+	par2Proj.ParallelPipeSizeIn = 2.0
+	par2Eval, err := eval.Evaluate(par2Proj)
+	if err != nil {
+		t.Fatalf("parallel 2in evaluate: %v", err)
+	}
+	pb2 := par2Eval.ArchitectureOptions.ParallelBed
+	if pb2.PipeNominalIn != 2.0 || pb2.PipeCount < 40 || pb2.WallRatioDToDp < 7.5 {
+		t.Errorf("2\" parallel bed expected >=40 pipes & D/d_p>=7.5, got %+v", pb2)
+	}
+	if !strings.Contains(strings.Join(pb2.Notes, " "), "HIGH PIPE-COUNT") {
+		t.Errorf("2\" parallel bed missing high pipe-count/labor warning: %+v", pb2.Notes)
+	}
+
+	// 3d. 3" parallel pipes (inline CPVC & eductor PVC).
+	for _, align := range []string{StageAlignmentInlineIDBlower, StageAlignmentEductorDryFan} {
+		par3Proj := baseProj
+		par3Proj.StageAlignment = align
+		par3Proj.PackedBedLayout = PackedBedLayoutParallelManifold
+		par3Proj.ParallelPipeSizeIn = 3.0
+		if ev, err := eval.Evaluate(par3Proj); err != nil || ev.ArchitectureOptions.ParallelBed.PipeNominalIn != 3.0 {
+			t.Fatalf("parallel 3in (%s) failed: err=%v, pb=%+v", align, err, ev.ArchitectureOptions.ParallelBed)
+		}
+	}
+	// Also test 2" PVC under eductor for full branch coverage.
+	par2PVC := par2Proj
+	par2PVC.StageAlignment = StageAlignmentEductorDryFan
+	if ev, err := eval.Evaluate(par2PVC); err != nil || !strings.Contains(ev.ArchitectureOptions.ParallelBed.PipeMaterial, "PVC") {
+		t.Fatalf("parallel 2in eductor PVC failed: err=%v, mat=%q", err, ev.ArchitectureOptions.ParallelBed.PipeMaterial)
+	}
+
+	// 4. All 3 PackingMediaOption modes.
+	basePack := baseEval.ArchitectureOptions.PackingMedia
+	bioProj := baseProj
+	bioProj.PackingMediaOption = PackingMediaAquacultureBioballs
+	bioEval, err := eval.Evaluate(bioProj)
+	if err != nil {
+		t.Fatalf("aquaculture_bioballs evaluate: %v", err)
+	}
+	bioPack := bioEval.ArchitectureOptions.PackingMedia
+	if bioPack.Voidage != 0.85 || bioPack.CostDeltaUSD > -150.0 || bioPack.CostDeltaUSD < -250.0 {
+		t.Errorf("aquaculture_bioballs expected voidage=0.85 and -$150..-$250 savings, got %+v", bioPack)
+	}
+
+	diyProj := baseProj
+	diyProj.PackingMediaOption = PackingMediaDIYCeramicRings
+	diyEval, err := eval.Evaluate(diyProj)
+	if err != nil {
+		t.Fatalf("diy_ceramic_rings evaluate: %v", err)
+	}
+	diyPack := diyEval.ArchitectureOptions.PackingMedia
+	if diyPack.Voidage != 0.70 || diyPack.BedDPInWC <= basePack.BedDPInWC*2.0 || diyPack.CostDeltaUSD >= bioPack.CostDeltaUSD {
+		t.Errorf("diy_ceramic_rings expected voidage=0.70, higher irrigated Ergun dP (>2x %.2f), and lower cost than bioballs: %+v", basePack.BedDPInWC, diyPack)
+	}
+	if diyEval.COTS.PackingMedia.WeightKg <= baseEval.COTS.PackingMedia.WeightKg*5.0 {
+		t.Errorf("diy_ceramic_rings must reflect heavy stoneware weight: %.1f kg/cuft vs %.1f kg/cuft",
+			diyEval.COTS.PackingMedia.WeightKg, baseEval.COTS.PackingMedia.WeightKg)
+	}
+	if !strings.Contains(diyEval.BuildGuideMD, "Stoneware Rings Support Note") {
+		t.Error("BuildGuideMD missing DIY stoneware support grate note")
+	}
+
+	// 5. Full Budget Studio Combo: shell-less 4" parallel + DIY ceramic rings + air-atomize + U-turn + electromechanical!
+	budgetProj := baseProj
+	budgetProj.PackedBedLayout = PackedBedLayoutParallelManifold
+	budgetProj.ParallelPipeSizeIn = 4.0
+	budgetProj.PackingMediaOption = PackingMediaDIYCeramicRings
+	budgetProj.BlowerDriveOption = BlowerDriveCompressorAirAtomize
+	budgetProj.CompactFootprint = true
+	budgetProj.ControlTier = ControlTierElectromechanicalOnly
+	budgetEval, err := eval.Evaluate(budgetProj)
+	if err != nil {
+		t.Fatalf("budget studio combo evaluate: %v", err)
+	}
+	netSavings := baseEval.COTS.EstimatedTotalUSD - budgetEval.COTS.EstimatedTotalUSD
+	if netSavings < 2400.0 {
+		t.Errorf("Budget Studio Combo net savings = $%.2f, want >= $2,400 (base=$%.2f, budget=$%.2f)",
+			netSavings, baseEval.COTS.EstimatedTotalUSD, budgetEval.COTS.EstimatedTotalUSD)
+	}
+	if math.Abs(budgetEval.ArchitectureOptions.CostDeltaUSD-(-netSavings)) > 0.02 {
+		t.Errorf("Budget CostDeltaUSD (%.2f) mismatch with exact BOM delta (%.2f)",
+			budgetEval.ArchitectureOptions.CostDeltaUSD, -netSavings)
+	}
+	// Verify ALL mandatory NEC 430 / IPC 608 / IPC 702.5 / NFPA 86 safety items remain intact!
+	hasRPZ, hasDisc, hasNFPA86, hasIPC702 := false, false, false, false
+	for _, it := range budgetEval.COTS.BOM.Items {
+		if strings.Contains(it.Spec, "IPC608-RPZ-AG") {
+			hasRPZ = true
+		}
+		if strings.Contains(it.Spec, "NEC430-DISC-LR") {
+			hasDisc = true
+		}
+		if strings.Contains(it.Spec, "200 F") && strings.Contains(it.Spec, "NFPA 86") {
+			hasNFPA86 = true
+		}
+		if strings.Contains(it.Spec, "IPC 702.5") {
+			hasIPC702 = true
+		}
+	}
+	if !hasRPZ || !hasDisc || !hasNFPA86 || !hasIPC702 {
+		t.Errorf("Budget combo dropped mandatory code safety items: RPZ=%v NEC430=%v NFPA86=%v IPC702=%v",
+			hasRPZ, hasDisc, hasNFPA86, hasIPC702)
+	}
+
+	// Verify zero banned strings across Budget Studio Combo output & guides!
+	bannedPhrases := []string{"Hobby " + "316L", "4-" + "lb", "gro" + "cery", "Switching from Salt " + "(NaCl) to Soda"}
+	budgetJSON, _ := json.Marshal(budgetEval)
+	haystack := string(budgetJSON) + "\n" + budgetEval.BuildGuideMD + "\n" + budgetEval.OperationsChecklistMD + "\n" + string(buildPacketReadme(budgetEval))
+	for _, banned := range bannedPhrases {
+		if strings.Contains(strings.ToLower(haystack), strings.ToLower(banned)) {
+			t.Errorf("Budget Studio Combo output contains banned phrase %q", banned)
+		}
+	}
+
+	// 6. Validate Phase 8 invalid inputs & defaults.
+	for _, bad := range []string{
+		`{"blower_drive_option": "jet_turbine"}`,
+		`{"parallel_pipe_size_in": 5}`,
+		`{"packing_media_option": "gravel"}`,
+		`{"shop_compressor_scfm": -10}`,
+		`{"shop_compressor_scfm": 500}`,
+	} {
+		if _, err := ParseProject([]byte(bad)); err == nil {
+			t.Errorf("expected validation error for %s", bad)
+		}
+	}
+	// Parallel + bioballs & heavy air-atomize + small 120V air-atomize branch coverage.
+	parBio := par4Proj
+	parBio.PackingMediaOption = PackingMediaAquacultureBioballs
+	if _, err := eval.Evaluate(parBio); err != nil {
+		t.Fatalf("parallel + bioballs evaluate: %v", err)
+	}
+	heavyAtom := airAtomProj
+	heavyAtom.CorrosionTier = CorrosionTierHeavyC276FRP
+	heavyAtom.Input.KilnVolumeCuFt = 48.0
+	if _, err := eval.Evaluate(heavyAtom); err != nil {
+		t.Fatalf("heavy 48 cuft air-atomize evaluate: %v", err)
+	}
+	smallRegen := tinyKiln.Project
+	smallRegen.BlowerDriveOption = BlowerDriveRegenSideChannel
+	if _, err := eval.Evaluate(smallRegen); err != nil {
+		t.Fatalf("small 6 cuft regen evaluate: %v", err)
+	}
+	smallDual := tinyKiln.Project
+	smallDual.BlowerDriveOption = BlowerDriveDualBypassBlowers
+	if _, err := eval.Evaluate(smallDual); err != nil {
+		t.Fatalf("small 6 cuft dual bypass evaluate: %v", err)
+	}
+	smallAtom := tinyKiln.Project
+	smallAtom.BlowerDriveOption = BlowerDriveCompressorAirAtomize
+	if _, err := eval.Evaluate(smallAtom); err != nil {
+		t.Fatalf("small 6 cuft air-atomize evaluate: %v", err)
+	}
+
+	t.Logf("Phase 8 24 cu.ft. Cost-Savings Table:\n"+
+		"  Baseline (industrial_radial_vfd, 14\" CPVC, PP Pall, RPi):   $%.2f (venturi dP=%.2f, total=%.2f inWC, d50=%.3f um)\n"+
+		"  Compressor Air-Atomize (25 um, 48 m/s, $75 nozzle+MP fan):  $%.2f (delta=%+.2f | venturi dP=%.2f, total=%.2f inWC, active d50=%.2f um, passive d50=%.3f um)\n"+
+		"  Dual 3-Stage Tangential Bypass (2x Ametek Lamb):            $%.2f (delta=%+.2f)\n"+
+		"  Side-Channel Ring Blower (wet inline / eductor dry):        $%.2f (delta=%+.2f) / $%.2f\n"+
+		"  Compressor Main Eductor (15 SCFM studio compressor):        feasible=%v (needs %.1f SCFM / %.1f HP)\n"+
+		"  Shell-Less 4\" CPVC Uniseal Bundle (%d pipes):               $%.2f (delta=%+.2f | bed dP=%.2f inWC)\n"+
+		"  Shell-Less 4\" PVC Uniseal + Eductor (%d pipes, %.1f F):     $%.2f (parallel delta=%+.2f)\n"+
+		"  Shell-Less 2\" CPVC Uniseal (%d pipes, high labor):          $%.2f (parallel delta=%+.2f)\n"+
+		"  Aquaculture Bio-Balls ($38/cu.ft., eps=0.85):               $%.2f (media delta=%+.2f | bed dP=%.2f inWC)\n"+
+		"  DIY Stoneware Ceramic Rings ($18/cu.ft., eps=0.70):         $%.2f (media delta=%+.2f | bed dP=%.2f inWC, wt=%.0f kg/cuft)\n"+
+		"  BUDGET STUDIO COMBO (4\" Uniseal+DIY Rings+AirAtom+UTurn+EM): $%.2f (TOTAL SAVED: -$%.2f!)",
+		baseEval.COTS.EstimatedTotalUSD, baseEval.Design.Venturi.PressureDropInWC, baseEval.Design.Blower.TotalStaticPressureInWC, baseEval.Design.Venturi.CutDiameterD50Microns,
+		airAtomEval.COTS.EstimatedTotalUSD, airAtomEval.ArchitectureOptions.CostDeltaUSD, airAtomEval.Design.Venturi.PressureDropInWC, airAtomEval.Design.Blower.TotalStaticPressureInWC, activeD50, airAtomEval.Design.Venturi.CutDiameterD50Microns,
+		dualEval.COTS.EstimatedTotalUSD, dualEval.ArchitectureOptions.CostDeltaUSD,
+		regenWetEval.COTS.EstimatedTotalUSD, regenWetEval.ArchitectureOptions.CostDeltaUSD, regenDryEval.COTS.EstimatedTotalUSD,
+		comp.EductorFeasible, comp.EductorSCFMNeeded, comp.EductorHPNeeded,
+		pb4.PipeCount, par4Eval.COTS.EstimatedTotalUSD, pb4.CostDeltaUSD, pb4.BedDPInWC,
+		pb4PVC.PipeCount, par4PVCEval.ArchitectureOptions.Eductor.MixedTempF, par4PVCEval.COTS.EstimatedTotalUSD, pb4PVC.CostDeltaUSD,
+		pb2.PipeCount, par2Eval.COTS.EstimatedTotalUSD, pb2.CostDeltaUSD,
+		bioEval.COTS.EstimatedTotalUSD, bioPack.CostDeltaUSD, bioPack.BedDPInWC,
+		diyEval.COTS.EstimatedTotalUSD, diyPack.CostDeltaUSD, diyPack.BedDPInWC, diyEval.COTS.PackingMedia.WeightKg,
+		budgetEval.COTS.EstimatedTotalUSD, netSavings,
+	)
 }

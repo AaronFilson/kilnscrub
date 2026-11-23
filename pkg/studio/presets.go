@@ -37,6 +37,17 @@ const (
 
 	ControlTierRPiModbus             = "rpi_modbus"
 	ControlTierElectromechanicalOnly = "electromechanical_only"
+
+	// Phase 8 selectable blower/motive drive and packing media constants.
+	BlowerDriveIndustrialRadialVFD  = "industrial_radial_vfd"
+	BlowerDriveRegenSideChannel     = "regen_side_channel"
+	BlowerDriveDualBypassBlowers    = "dual_bypass_blowers"
+	BlowerDriveCompressorAirAtomize = "compressor_air_atomize"
+	BlowerDriveCompressorEductor    = "compressor_eductor_only"
+
+	PackingMediaPPPallRings         = "pp_pall_rings"
+	PackingMediaAquacultureBioballs = "aquaculture_bioballs"
+	PackingMediaDIYCeramicRings     = "diy_ceramic_rings"
 )
 
 // CorrosionTierLabel returns the user-facing display label for a corrosion tier.
@@ -91,6 +102,10 @@ type StudioProject struct {
 	CompactFootprint    bool              `json:"compact_footprint"`
 	SharedBaffledSump   bool              `json:"shared_baffled_sump"`
 	ControlTier         string            `json:"control_tier"`
+	BlowerDriveOption   string            `json:"blower_drive_option,omitempty"`
+	ParallelPipeSizeIn  float64           `json:"parallel_pipe_size_in,omitempty"`
+	PackingMediaOption  string            `json:"packing_media_option,omitempty"`
+	ShopCompressorSCFM  float64           `json:"shop_compressor_scfm,omitempty"`
 	PropertyLineFt      float64           `json:"property_line_ft"`
 	AmbientWinterF      float64           `json:"ambient_winter_f"`
 	AvailableVoltage    int               `json:"available_voltage"`
@@ -167,6 +182,10 @@ func Presets() []StudioPreset {
 				CompactFootprint:    false,
 				SharedBaffledSump:   true,
 				ControlTier:         ControlTierRPiModbus,
+				BlowerDriveOption:   BlowerDriveIndustrialRadialVFD,
+				ParallelPipeSizeIn:  4.0,
+				PackingMediaOption:  PackingMediaPPPallRings,
+				ShopCompressorSCFM:  15.0,
 				PropertyLineFt:      25.0,
 				AmbientWinterF:      40.0,
 				AvailableVoltage:    120,
@@ -197,6 +216,10 @@ func Presets() []StudioPreset {
 				CompactFootprint:    false,
 				SharedBaffledSump:   true,
 				ControlTier:         ControlTierRPiModbus,
+				BlowerDriveOption:   BlowerDriveIndustrialRadialVFD,
+				ParallelPipeSizeIn:  4.0,
+				PackingMediaOption:  PackingMediaPPPallRings,
+				ShopCompressorSCFM:  15.0,
 				PropertyLineFt:      30.0,
 				AmbientWinterF:      35.0,
 				AvailableVoltage:    240,
@@ -227,6 +250,10 @@ func Presets() []StudioPreset {
 				CompactFootprint:    false,
 				SharedBaffledSump:   true,
 				ControlTier:         ControlTierRPiModbus,
+				BlowerDriveOption:   BlowerDriveIndustrialRadialVFD,
+				ParallelPipeSizeIn:  4.0,
+				PackingMediaOption:  PackingMediaPPPallRings,
+				ShopCompressorSCFM:  15.0,
 				PropertyLineFt:      40.0,
 				AmbientWinterF:      35.0,
 				AvailableVoltage:    240,
@@ -257,6 +284,10 @@ func Presets() []StudioPreset {
 				CompactFootprint:    false,
 				SharedBaffledSump:   true,
 				ControlTier:         ControlTierRPiModbus,
+				BlowerDriveOption:   BlowerDriveIndustrialRadialVFD,
+				ParallelPipeSizeIn:  4.0,
+				PackingMediaOption:  PackingMediaPPPallRings,
+				ShopCompressorSCFM:  15.0,
 				PropertyLineFt:      60.0,
 				AmbientWinterF:      30.0,
 				AvailableVoltage:    240,
@@ -287,6 +318,10 @@ func Presets() []StudioPreset {
 				CompactFootprint:    false,
 				SharedBaffledSump:   true,
 				ControlTier:         ControlTierRPiModbus,
+				BlowerDriveOption:   BlowerDriveIndustrialRadialVFD,
+				ParallelPipeSizeIn:  4.0,
+				PackingMediaOption:  PackingMediaPPPallRings,
+				ShopCompressorSCFM:  15.0,
 				PropertyLineFt:      35.0,
 				AmbientWinterF:      40.0,
 				AvailableVoltage:    240,
@@ -332,6 +367,18 @@ func (p StudioProject) Normalize() StudioProject {
 	}
 	if out.ControlTier == "" {
 		out.ControlTier = ControlTierRPiModbus
+	}
+	if out.BlowerDriveOption == "" {
+		out.BlowerDriveOption = BlowerDriveIndustrialRadialVFD
+	}
+	if out.ParallelPipeSizeIn == 0 {
+		out.ParallelPipeSizeIn = 4.0
+	}
+	if out.PackingMediaOption == "" {
+		out.PackingMediaOption = PackingMediaPPPallRings
+	}
+	if out.ShopCompressorSCFM == 0 {
+		out.ShopCompressorSCFM = 15.0
 	}
 	if out.VaporGlazeMode != VaporGlazeSalt {
 		out.SaltingHours = 0.0
@@ -384,6 +431,14 @@ func (p StudioProject) EffectiveDesignInput() model.DesignInput {
 			in.FuelType = model.FuelWoodSalt
 		case model.FuelGas:
 			in.FuelType = model.FuelGasSalt
+		}
+	}
+	// Phase 8: Twin-fluid air-atomizing venturi nozzle produces 25 um SMD droplets,
+	// unlocking reduced 48 m/s throat velocity with d_50 <= 0.22 um parity and ~45% lower dP.
+	if p.BlowerDriveOption == BlowerDriveCompressorAirAtomize {
+		in.VenturiDropletDiameter = model.MicronsToMeters(25.0)
+		if in.VenturiThroatVelocity > 48.0 {
+			in.VenturiThroatVelocity = 48.0
 		}
 	}
 	return in
@@ -442,6 +497,25 @@ func (p StudioProject) Validate() error {
 	default:
 		return fmt.Errorf("control_tier must be %q or %q, got %q",
 			ControlTierRPiModbus, ControlTierElectromechanicalOnly, p.ControlTier)
+	}
+	switch p.BlowerDriveOption {
+	case "", BlowerDriveIndustrialRadialVFD, BlowerDriveRegenSideChannel, BlowerDriveDualBypassBlowers, BlowerDriveCompressorAirAtomize, BlowerDriveCompressorEductor:
+	default:
+		return fmt.Errorf("blower_drive_option must be %q, %q, %q, %q, or %q, got %q",
+			BlowerDriveIndustrialRadialVFD, BlowerDriveRegenSideChannel, BlowerDriveDualBypassBlowers,
+			BlowerDriveCompressorAirAtomize, BlowerDriveCompressorEductor, p.BlowerDriveOption)
+	}
+	if !isFinite(p.ParallelPipeSizeIn) || (p.ParallelPipeSizeIn != 0 && p.ParallelPipeSizeIn != 2.0 && p.ParallelPipeSizeIn != 3.0 && p.ParallelPipeSizeIn != 4.0) {
+		return fmt.Errorf("parallel_pipe_size_in must be 0, 2, 3, or 4, got %v", p.ParallelPipeSizeIn)
+	}
+	switch p.PackingMediaOption {
+	case "", PackingMediaPPPallRings, PackingMediaAquacultureBioballs, PackingMediaDIYCeramicRings:
+	default:
+		return fmt.Errorf("packing_media_option must be %q, %q, or %q, got %q",
+			PackingMediaPPPallRings, PackingMediaAquacultureBioballs, PackingMediaDIYCeramicRings, p.PackingMediaOption)
+	}
+	if !isFinite(p.ShopCompressorSCFM) || (p.ShopCompressorSCFM != 0 && (p.ShopCompressorSCFM < 1.0 || p.ShopCompressorSCFM > 200.0)) {
+		return fmt.Errorf("shop_compressor_scfm must be 0 (default 15) or finite in [1, 200], got %v", p.ShopCompressorSCFM)
 	}
 	if !isFinite(p.PropertyLineFt) || p.PropertyLineFt < 3.0 || p.PropertyLineFt > 5000.0 {
 		return fmt.Errorf("property_line_ft must be finite and in [3, 5000], got %v", p.PropertyLineFt)
