@@ -47,9 +47,9 @@ func newMockStudioBackend(t *testing.T) *mockStudioBackend {
 		t.Fatalf("close zip writer: %v", err)
 	}
 
-	presets := []byte(`{"presets":[{"id":"wood_salt_24","name":"Reference Studio Wood / Salt Kiln","tagline":"24 cu.ft. Cone 11 studio reference","audience":"Studio Potters","badge":"Reference","project":{"preset_id":"wood_salt_24","studio_name":"Reference Studio","firing_cone":"Cone 11","firing_duration_hours":10,"salting_hours":3.0,"vapor_glaze_mode":"salt","build_path":"cots_no_weld","corrosion_tier":"standard_316l","stage_alignment":"inline_id_blower","packed_bed_layout":"single_column","venturi_layout":"single_throat","compact_footprint":false,"shared_baffled_sump":true,"control_tier":"rpi_modbus","snap_to_cots":true,"include_silencer":true,"include_plume_diluter":false,"property_line_ft":35,"ambient_winter_f":35,"available_voltage":240,"garden_hose_gpm":5}}]}`)
+	presets := []byte(`{"presets":[{"id":"wood_salt_24","name":"Reference Studio Wood / Salt Kiln","tagline":"24 cu.ft. Cone 11 studio reference","audience":"Studio Potters","badge":"Reference","project":{"preset_id":"wood_salt_24","studio_name":"Reference Studio","firing_cone":"Cone 11","firing_duration_hours":10,"salting_hours":3.0,"vapor_glaze_mode":"salt","build_path":"cots_no_weld","corrosion_tier":"standard_316l","stage_alignment":"inline_id_blower","packed_bed_layout":"single_column","parallel_pipe_size_in":4,"packing_media_option":"pp_pall_rings","blower_drive_option":"industrial_radial_vfd","shop_compressor_scfm":15,"venturi_layout":"single_throat","compact_footprint":false,"shared_baffled_sump":true,"control_tier":"rpi_modbus","snap_to_cots":true,"include_silencer":true,"include_plume_diluter":false,"property_line_ft":35,"ambient_winter_f":35,"available_voltage":240,"garden_hose_gpm":5}}]}`)
 
-	evalResp := []byte(`{"project":{"preset_id":"wood_salt_24","studio_name":"Reference Studio","salting_hours":3.0,"corrosion_tier":"standard_316l","stage_alignment":"inline_id_blower","packed_bed_layout":"single_column","venturi_layout":"single_throat","compact_footprint":false,"shared_baffled_sump":true,"control_tier":"rpi_modbus"},"cots":{"snapped":true,"actual_percent_of_flood":54.2,"estimated_total_usd":3450,"bom":{"title":"COTS BOM","items":[],"total_cost_usd":3450,"total_weight_kg":112}},"urban":{"overall_status":"ok","electrical":{"status":"ok","required_voltage":240,"required_amps":14.2,"circuit_label":"240V 20A single-phase VFD","summary":"Fits 240V studio circuit","fits_available_voltage":true},"water":{"status":"ok","required_gpm":2.3,"total_firing_gallons":180,"summary":"Garden hose OK"},"noise":{"status":"ok","bare_dba_3ft":82,"silenced_dba_3ft":68,"property_line_dba":50.5,"property_line_ft":35,"urban_limit_dba":60,"silencer_recommended":true,"summary":"Below 60 dBA urban limit"},"plume":{"status":"caution","exhaust_temp_f":184,"dew_point_f":184,"visible_plume_risk":"high","min_stack_height_ft":10,"dilution_cfm_needed":1500,"dilution_reheat_kw":21.5,"cold_dilution_works":false,"bare_plume_length_ft":28,"diluted_plume_length_ft":9,"squirrel_cage_verdict":"120V squirrel-cage blower works downstream with HV cone; unheated cold air alone stays supersaturated.","summary":"Clean condensed steam mist in winter"},"drain":{"status":"ok","salting_hours":3.0,"baking_soda_lbs_per_firing":9.8,"baking_soda_15lb_bags":1,"baking_soda_50lb_sacks":1,"bulk_packaging_label":"1 x 15 lb bulk bag (~9.8 lbs over 3.0 hr salting; 1 x 50 lb sack covers ~5 firings)","target_drain_ph":"6.5-8.5","summary":"Neutralized salt brine"},"corrosion":{"status":"caution","tier":"standard_316l","material_summary":"Standard 316L SS (Light / Occasional) with alkaline-buffered spray","soda_comparison":"Post-firing buffered pH 8 flush and flange weld check keeps 316L spools serviceable.","inspection_interval":"Every 5-10 firings"}},"architecture_options":{"cost_delta_usd":0,"footprint_length_ft":9.5,"footprint_width_ft":3.0,"footprint_area_sqft":28.5,"footprint_savings_pct":0,"savings_summary":[],"warnings":[]},"recirculation":{"sump_volume_gal":45,"once_through_water_gal":1260,"recirc_makeup_water_gal":235,"water_saved_pct":81.3,"salting_hours":3.0,"hcl_neutralized_lbs":4.2,"baking_soda_lbs_per_firing":9.8,"baking_soda_15lb_bags":1,"baking_soda_50lb_sacks":1,"initial_charge_lbs":11.3,"end_of_firing_tds_g_l":26.4,"dump_tds_limit_g_l":150,"dump_specific_gravity":1.105,"firings_before_full_dump":5,"top_up_soda_lbs_between_firings":9.8,"dump_triggers":["Hydrometer SG >= 1.105","pH < 7.0","Cool <= 140F per IPC 702.5"],"schedule_steps":["Charge initial pH 8 buffer","Top up 9.8 lbs between firings"],"summary":"Saves 81% water across 5 firings before full dump."},"shop_plan":{"title":"Reference Studio Shop Plan","stage_alignment":"inline_id_blower","compact_footprint":false,"overall_length_in":114,"overall_width_in":36,"overall_height_in":122,"parts":[{"num":1,"id":"quench_tower","label":"Stage 1 Quench","stage":"Stage 1","material":"316L SS","dimensions_in":"18 x 54 in","dimensions_mm":"457 x 1372 mm","sku":"Q-316L","qty":1,"cost_usd":580,"notes":"Bolted top"}],"cut_list":[{"part_num":2,"name":"Venturi Cone","shape":"cone_frustum","material":"316L SS","flat_width_in":0,"flat_height_in":0,"outer_radius_in":18.4,"inner_radius_in":7.2,"sweep_deg":112,"qty":1,"notes":"Converging frustum"}],"clearances":{"flue_to_combustibles_in":36,"property_line_min_ft":30,"stack_above_roof_ft":6,"service_aisle_in":36}},"build_guide_md":"# Build Guide\n\n- [ ] Bolt flanges","operations_checklist_md":"# Firing Checklist\n\n- [ ] Test 210F trip"}`)
+	evalResp := []byte(`{"project":{"preset_id":"wood_salt_24","studio_name":"Reference Studio","salting_hours":3.0,"corrosion_tier":"standard_316l","stage_alignment":"inline_id_blower","packed_bed_layout":"parallel_manifold","parallel_pipe_size_in":4,"packing_media_option":"diy_ceramic_rings","blower_drive_option":"compressor_air_atomize","shop_compressor_scfm":15,"venturi_layout":"single_throat","compact_footprint":true,"shared_baffled_sump":true,"control_tier":"electromechanical_only"},"cots":{"snapped":true,"actual_percent_of_flood":54.2,"estimated_total_usd":3020,"bom":{"title":"COTS BOM","items":[],"total_cost_usd":3020,"total_weight_kg":112}},"urban":{"overall_status":"ok","electrical":{"status":"ok","required_voltage":240,"required_amps":14.2,"circuit_label":"240V 20A single-phase VFD","summary":"Fits 240V studio circuit","fits_available_voltage":true},"water":{"status":"ok","required_gpm":2.3,"total_firing_gallons":180,"summary":"Garden hose OK"},"noise":{"status":"ok","bare_dba_3ft":82,"silenced_dba_3ft":68,"property_line_dba":50.5,"property_line_ft":35,"urban_limit_dba":60,"silencer_recommended":true,"summary":"Below 60 dBA urban limit"},"plume":{"status":"caution","exhaust_temp_f":184,"dew_point_f":184,"visible_plume_risk":"high","min_stack_height_ft":10,"dilution_cfm_needed":1500,"dilution_reheat_kw":21.5,"cold_dilution_works":false,"bare_plume_length_ft":28,"diluted_plume_length_ft":9,"squirrel_cage_verdict":"120V squirrel-cage blower works downstream with HV cone; unheated cold air alone stays supersaturated.","summary":"Clean condensed steam mist in winter"},"drain":{"status":"ok","salting_hours":3.0,"baking_soda_lbs_per_firing":9.8,"baking_soda_15lb_bags":1,"baking_soda_50lb_sacks":1,"bulk_packaging_label":"1 x 15 lb bulk bag (~9.8 lbs over 3.0 hr salting; 1 x 50 lb sack covers ~5 firings)","target_drain_ph":"6.5-8.5","summary":"Neutralized salt brine"},"corrosion":{"status":"caution","tier":"standard_316l","material_summary":"Standard 316L SS (Light / Occasional) with alkaline-buffered spray","soda_comparison":"Post-firing buffered pH 8 flush and flange weld check keeps 316L spools serviceable.","inspection_interval":"Every 5-10 firings"}},"architecture_options":{"cost_delta_usd":-3180,"footprint_length_ft":6.2,"footprint_width_ft":4.6,"footprint_area_sqft":28.5,"footprint_savings_pct":45,"savings_summary":["Shell-less 4 in Uniseal bundle saves $640","Compressor air-atomizing saves $1,040"],"warnings":["OUTDOOR-ONLY POSITIVE PRESSURE"],"eductor":{"warnings":["OUTDOOR-ONLY POSITIVE PRESSURE"]},"parallel_bed":{"pipe_nominal_in":4,"pipe_count":11,"packing_diameter_in":0.5,"bed_dp_inwc":1.05,"actual_flood_pct":56.4,"cost_delta_usd":-640,"shellless_plenum":true,"pipe_material":"4\" Sch 80 CPVC","summary":"Shell-less Uniseal flat-plate bundle saves $640 vs specialty 14\" pipe."},"blower_drive":{"option":"compressor_air_atomize","label":"Shop Compressor Air-Atomize + Low-dP Fan","fan_cost_usd":410,"baseline_fan_cost_usd":1450,"cost_delta_usd":-1040,"required_static_inwc":11.8,"throat_velocity_m_s":48.0,"droplet_um":25.0,"motor_hp":1.5,"voltage":240,"feasible":true,"summary":"25 um air-atomizing nozzle cuts static head from 21.2 to 11.8 inWC.","caveats":["Requires 5 SCFM @ 90 PSI continuous shop air during salting."]},"compressor":{"available_scfm":15,"eductor_scfm_needed":68.5,"eductor_hp_needed":18.0,"eductor_feasible":false,"eductor_verdict":"Infeasible as main air mover on 24 cu.ft. kiln (needs 68.5 SCFM / 18 HP vs 15 SCFM shop compressor).","atomize_scfm_needed":5.0,"atomize_feasible":true,"atomize_droplet_um":25.0,"atomize_dp_saved_inwc":9.4,"atomize_cost_saved_usd":1040,"atomize_verdict":"Feasible: 5 SCFM twin-fluid nozzle cuts venturi dP by 9.4 inWC and saves $1,040 on blower."},"packing_media":{"option":"diy_ceramic_rings","label":"DIY Kiln-Fired Ceramic Rings","diameter_in":0.625,"voidage":0.70,"bed_dp_inwc":1.85,"media_cost_usd":72,"baseline_media_cost_usd":380,"cost_delta_usd":-308,"summary":"Acid-proof stoneware Raschig rings save $308."}},"recirculation":{"sump_volume_gal":45,"once_through_water_gal":1260,"recirc_makeup_water_gal":235,"water_saved_pct":81.3,"salting_hours":3.0,"hcl_neutralized_lbs":4.2,"baking_soda_lbs_per_firing":9.8,"baking_soda_15lb_bags":1,"baking_soda_50lb_sacks":1,"initial_charge_lbs":11.3,"end_of_firing_tds_g_l":26.4,"dump_tds_limit_g_l":150,"dump_specific_gravity":1.105,"firings_before_full_dump":5,"top_up_soda_lbs_between_firings":9.8,"dump_triggers":["Hydrometer SG >= 1.105","pH < 7.0","Cool <= 140F per IPC 702.5"],"schedule_steps":["1. Pre-Firing Charge","2. Top up 9.8 lbs between firings"],"summary":"Saves 81% water across 5 firings before full dump."},"shop_plan":{"title":"Reference Studio Shop Plan","stage_alignment":"inline_id_blower","packed_bed_layout":"parallel_manifold","compact_footprint":true,"overall_length_in":74,"overall_width_in":55,"overall_height_in":122,"parts":[{"num":1,"id":"quench_tower","label":"Stage 1 Quench","stage":"Stage 1","material":"316L SS","dimensions_in":"18 x 54 in","dimensions_mm":"457 x 1372 mm","sku":"Q-316L","qty":1,"cost_usd":580,"notes":"Bolted top"}],"cut_list":[{"part_num":2,"name":"Venturi Cone","shape":"cone_frustum","material":"316L SS","flat_width_in":0,"flat_height_in":0,"outer_radius_in":18.4,"inner_radius_in":7.2,"sweep_deg":112,"qty":1,"notes":"Converging frustum"}],"clearances":{"flue_to_combustibles_in":36,"property_line_min_ft":30,"stack_above_roof_ft":6,"service_aisle_in":36}},"build_guide_md":"# Build Guide\n\n- [ ] Bolt flanges","operations_checklist_md":"# Firing Checklist\n\n- [ ] Test 210F trip"}`)
 
 	return &mockStudioBackend{
 		presetsJSON:    presets,
@@ -201,7 +201,7 @@ func TestStudioEvaluateEndpoint(t *testing.T) {
 		b := newMockStudioBackend(t)
 		srv.SetStudioBackend(b)
 
-		payload := `{"preset_id":"wood_salt_24","studio_name":"Cedar Creek","include_plume_diluter":true}`
+		payload := `{"preset_id":"wood_salt_24","studio_name":"Cedar Creek","include_plume_diluter":true,"blower_drive_option":"compressor_air_atomize","parallel_pipe_size_in":4,"packing_media_option":"diy_ceramic_rings","shop_compressor_scfm":15}`
 		rec := httptest.NewRecorder()
 		srv.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/studio/evaluate", strings.NewReader(payload)))
 		if rec.Code != http.StatusOK {
@@ -217,6 +217,15 @@ func TestStudioEvaluateEndpoint(t *testing.T) {
 		for _, key := range []string{"project", "cots", "urban", "architecture_options", "recirculation", "shop_plan", "build_guide_md", "operations_checklist_md"} {
 			if _, ok := out[key]; !ok {
 				t.Errorf("StudioEvaluation missing key %q", key)
+			}
+		}
+		archOpts, ok := out["architecture_options"].(map[string]any)
+		if !ok {
+			t.Fatalf("architecture_options is not an object: %T", out["architecture_options"])
+		}
+		for _, sub := range []string{"blower_drive", "compressor", "packing_media", "parallel_bed"} {
+			if _, ok := archOpts[sub]; !ok {
+				t.Errorf("architecture_options missing Phase 8 sub-object %q", sub)
 			}
 		}
 	})
@@ -412,6 +421,55 @@ func TestEmbeddedHTMLStudioUXAndJSIntegrity(t *testing.T) {
 		`data-stage-alignment="eductor_dry_fan"`,
 		`data-packed-bed-layout="single_column"`,
 		`data-packed-bed-layout="parallel_manifold"`,
+		`id="ctrl-parallel-pipe-size-wrap"`,
+		"Shell-Less Uniseal Bundle (No Big Pipe)",
+		`data-parallel-pipe-size="2"`,
+		`data-parallel-pipe-size="3"`,
+		`data-parallel-pipe-size="4"`,
+		"parallel_pipe_size_in",
+		`id="in-blower-drive"`,
+		`value="industrial_radial_vfd"`,
+		`value="regen_side_channel"`,
+		`value="dual_bypass_blowers"`,
+		`value="compressor_air_atomize"`,
+		`value="compressor_eductor_only"`,
+		"Industrial Radial + VFD (Baseline)",
+		"Side-Channel Ring Blower (Low-Cost High Push)",
+		"Dual 3-Stage Bypass Blowers (~$420)",
+		"Shop Compressor Air-Atomize + Low-ΔP Fan",
+		"Shop Compressor Main Eductor (Feasibility Check)",
+		"blower_drive_option",
+		`id="in-compressor-scfm"`,
+		"shop_compressor_scfm",
+		"SCFM @ 90 PSI",
+		`data-packing-media="pp_pall_rings"`,
+		`data-packing-media="aquaculture_bioballs"`,
+		`data-packing-media="diy_ceramic_rings"`,
+		"Commercial PP Pall Rings",
+		"Aquaculture Bio-Balls",
+		"DIY Kiln-Fired Ceramic Rings",
+		"packing_media_option",
+		`id="btn-apply-budget-combo"`,
+		"Apply Budget Studio Combo",
+		`id="design-budget-card"`,
+		`id="guide-budget-panel"`,
+		"Shop Compressor &amp; Affordable Fan Comparison",
+		"As Main Air Mover (Eductor)",
+		"As Twin-Fluid Air-Atomizing Nozzle",
+		"blower_drive",
+		"compressor",
+		"packing_media",
+		"shellless_plenum",
+		"pipe_material",
+		"eductor_scfm_needed",
+		"eductor_hp_needed",
+		"eductor_verdict",
+		"atomize_scfm_needed",
+		"atomize_dp_saved_inwc",
+		"atomize_cost_saved_usd",
+		"atomize_verdict",
+		"seenWarn",
+		`replace(/^\s*\d+\.\s*/, "")`,
 		`data-venturi-layout="single_throat"`,
 		`data-venturi-layout="parallel_mini_venturis"`,
 		`data-control-tier="rpi_modbus"`,

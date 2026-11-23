@@ -1480,14 +1480,14 @@
       margin: 0;
     }
 
-    /* ===================== PHASE 7: OPTIONS, RECIRCULATION & SHOP PLANS ===================== */
+    /* ===================== PHASE 7 & 8: OPTIONS, BUDGET DRIVES, RECIRCULATION & SHOP PLANS ===================== */
     .phase7-summary-strip {
       display: grid;
-      grid-template-columns: 1.15fr 1fr;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
       margin-top: 2px;
     }
-    @media (max-width: 1120px) {
+    @media (max-width: 1180px) {
       .phase7-summary-strip { grid-template-columns: 1fr; }
     }
     .p7-mini-card {
@@ -1498,10 +1498,122 @@
       display: flex;
       flex-direction: column;
       gap: 3px;
+      min-width: 0;
     }
     .p7-mini-card.warn-accent {
       border-color: rgba(245, 158, 11, 0.55);
       background: rgba(245, 158, 11, 0.08);
+    }
+    .p7-mini-card.ok-accent {
+      border-color: rgba(34, 197, 94, 0.45);
+      background: rgba(34, 197, 94, 0.07);
+    }
+    .p7-mini-card.danger-accent {
+      border-color: rgba(239, 68, 68, 0.55);
+      background: rgba(239, 68, 68, 0.10);
+    }
+    .btn-budget-combo {
+      width: 100%;
+      justify-content: space-between;
+      padding: 8px 11px;
+      border-radius: 7px;
+      border: 1px solid rgba(34, 197, 94, 0.62);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, rgba(6, 182, 212, 0.18) 100%);
+      color: #ecfdf5;
+      font-weight: 700;
+      font-size: 12px;
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.14);
+    }
+    .btn-budget-combo:hover {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.34) 0%, rgba(6, 182, 212, 0.28) 100%);
+      border-color: #6ee7b7;
+    }
+    .budget-combo-tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(34, 197, 94, 0.22);
+      border: 1px solid rgba(134, 239, 172, 0.45);
+      color: #86efac;
+      white-space: nowrap;
+    }
+    .compressor-highlight {
+      padding: 7px 9px;
+      border-radius: 7px;
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      background: rgba(6, 182, 212, 0.08);
+    }
+    .compressor-role-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+    @media (max-width: 820px) {
+      .compressor-role-grid { grid-template-columns: 1fr; }
+    }
+    .budget-role-card {
+      padding: 9px 11px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: rgba(12, 17, 24, 0.76);
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .budget-role-card.role-ok {
+      border-color: rgba(34, 197, 94, 0.5);
+      background: rgba(34, 197, 94, 0.07);
+    }
+    .budget-role-card.role-fail {
+      border-color: rgba(239, 68, 68, 0.52);
+      background: rgba(239, 68, 68, 0.09);
+    }
+    .budget-role-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .budget-role-metrics {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: #e2e8f0;
+      line-height: 1.4;
+    }
+    .budget-role-verdict {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .budget-badge-ok {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(34, 197, 94, 0.18);
+      border: 1px solid rgba(34, 197, 94, 0.5);
+      color: #86efac;
+      white-space: nowrap;
+    }
+    .budget-badge-fail {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.55);
+      color: #fca5a5;
+      white-space: nowrap;
+    }
+    .p7-full-span {
+      grid-column: 1 / -1;
     }
     .p7-mini-head {
       display: flex;
@@ -1743,7 +1855,7 @@
     @media print {
       body { background: #ffffff; color: #111827; }
       .topbar, .guide-hero-actions, .doc-toolbar .ctrl-btn-row, .plans-toolbar, .plan-hud-br, .toast { display: none !important; }
-      .panel, .urban-card, .cots-part-card, .guide-hero, .p7-mini-card, .recirc-kpi, .arch-sub-card, .trigger-box {
+      .panel, .urban-card, .cots-part-card, .guide-hero, .p7-mini-card, .recirc-kpi, .arch-sub-card, .budget-role-card, .trigger-box {
         background: #ffffff !important;
         color: #111827 !important;
         border-color: #cbd5e1 !important;
@@ -1982,13 +2094,41 @@
         </div>
       </section>
 
-      <!-- Phase 7: Stage Design & Cost-Saving Options -->
+      <!-- Phase 7 & 8: Stage Design & Cost-Saving Options -->
       <section class="panel" id="panel-stage-options" aria-label="Stage Design and Cost-Saving Options">
         <div class="panel-header">
           <span class="panel-title">Stage Design &amp; Cost-Saving Options</span>
           <span class="control-sub" id="options-delta-badge">Baseline</span>
         </div>
         <div class="param-section">
+          <button id="btn-apply-budget-combo" class="btn btn-budget-combo" type="button" title="Selects Shell-Less 4 in Parallel Manifold, DIY Kiln-Fired Ceramic Rings, Shop Compressor Air-Atomize + Low-dP Fan, Compact U-Turn, and Electromechanical Safety Only">
+            <span>Apply Budget Studio Combo</span>
+            <span class="budget-combo-tag">1-Click Savings</span>
+          </button>
+
+          <div class="control">
+            <div class="control-row">
+              <label for="in-blower-drive">Blower / Motive Drive <span class="tip-badge" title="Compare industrial radial VFD fans against side-channel ring blowers, dual 3-stage bypass blowers, shop compressor air-atomized low-ΔP fans, or a shop compressor eductor feasibility check.">?</span></label>
+            </div>
+            <select id="in-blower-drive" aria-label="Blower or Motive Drive Option">
+              <option value="industrial_radial_vfd">Industrial Radial + VFD (Baseline)</option>
+              <option value="regen_side_channel">Side-Channel Ring Blower (Low-Cost High Push)</option>
+              <option value="dual_bypass_blowers">Dual 3-Stage Bypass Blowers (~$420)</option>
+              <option value="compressor_air_atomize">Shop Compressor Air-Atomize + Low-ΔP Fan</option>
+              <option value="compressor_eductor_only">Shop Compressor Main Eductor (Feasibility Check)</option>
+            </select>
+            <span class="control-hint" id="hint-blower-drive">Baseline acid-duty radial wheel + VFD handles full 21 inWC venturi static head.</span>
+          </div>
+
+          <div class="control" id="ctrl-compressor-scfm-wrap">
+            <div class="control-row">
+              <label for="in-compressor-scfm">Shop Compressor (<span class="unit-literal">SCFM @ 90 PSI</span>) <span class="tip-badge" title="Your studio air compressor output at 90 PSI (typical 5 HP 60-gal shop compressor delivers ~15 SCFM). Used to evaluate 25 µm twin-fluid air-atomizing vs main airflow eductor feasibility.">?</span></label>
+              <span class="control-val" id="val-compressor-scfm">15 SCFM</span>
+            </div>
+            <input id="in-compressor-scfm" type="range" min="5" max="40" step="1" value="15" />
+            <span class="control-hint" id="hint-compressor-scfm">5 HP 60-gal shop compressor (~15 SCFM) easily runs 25 µm air-atomizing nozzles (4–6 SCFM).</span>
+          </div>
+
           <div class="control">
             <div class="control-row">
               <label>Stage Alignment <span class="tip-badge" title="Inline ID Blower pulls negative pressure through all stages. Dry-Fan Downflow Eductor uses a dry ambient radial fan above a downward static venturi and 90° sweep into Stage 3 (zero wet acid fan, outdoor siting required).">?</span></label>
@@ -2002,12 +2142,37 @@
 
           <div class="control">
             <div class="control-row">
-              <label>Packed Bed Geometry <span class="tip-badge" title="Single Large Pipe uses one 14-18 in column. Parallel 4 in Pipe Manifold replaces specialty large pipe with stock Sch 80 CPVC 4 in pipes + 1/2 in PP packing.">?</span></label>
+              <label>Packed Bed Geometry <span class="tip-badge" title="Single Large Pipe uses one freighted 14-18 in column. Parallel Pipe Manifold uses a Shell-Less Uniseal Bundle (no big outer pipe) with stock 2 in, 3 in, or 4 in pipes clamped between flat collector plates.">?</span></label>
             </div>
             <div class="seg-group" role="group" aria-label="Packed Bed Geometry">
               <button class="seg-btn active" type="button" data-packed-bed-layout="single_column">Single Large Pipe<span class="seg-sub">1 Column</span></button>
-              <button class="seg-btn" type="button" data-packed-bed-layout="parallel_manifold">Parallel 4" Pipe Manifold<span class="seg-sub">Stock Sch 80</span></button>
+              <button class="seg-btn" type="button" data-packed-bed-layout="parallel_manifold">Parallel Pipe Manifold<span class="seg-sub">Shell-Less 2"–4"</span></button>
             </div>
+          </div>
+
+          <div class="control hidden" id="ctrl-parallel-pipe-size-wrap">
+            <div class="control-row">
+              <label>Shell-Less Uniseal Bundle (No Big Pipe)</label>
+              <span class="control-sub" id="val-parallel-pipe-size">4" Pipe</span>
+            </div>
+            <div class="seg-group" role="group" aria-label="Parallel Pipe Size">
+              <button class="seg-btn" type="button" data-parallel-pipe-size="2">2"<span class="seg-sub">High Count</span></button>
+              <button class="seg-btn" type="button" data-parallel-pipe-size="3">3"<span class="seg-sub">Mid Bundle</span></button>
+              <button class="seg-btn active" type="button" data-parallel-pipe-size="4">4"<span class="seg-sub">Sweet Spot</span></button>
+            </div>
+            <span class="control-hint ok" id="hint-parallel-pipe-size">Bare stock pipes sealed through flat HDPE/CPVC plates with rubber Uniseals — zero large outer shell!</span>
+          </div>
+
+          <div class="control">
+            <div class="control-row">
+              <label>Packing Media <span class="tip-badge" title="Commercial PP Pall Rings are baseline. Aquaculture Bio-Balls save ~$150-$250. DIY Kiln-Fired Ceramic Rings are extruded stoneware rings (~$18/cu.ft.), acid-proof and 2000°F-proof.">?</span></label>
+            </div>
+            <div class="seg-group" role="group" aria-label="Packing Media Option">
+              <button class="seg-btn active" type="button" data-packing-media="pp_pall_rings">Commercial PP Pall Rings<span class="seg-sub">Baseline</span></button>
+              <button class="seg-btn" type="button" data-packing-media="aquaculture_bioballs">Aquaculture Bio-Balls<span class="seg-sub">Bulk PP</span></button>
+              <button class="seg-btn" type="button" data-packing-media="diy_ceramic_rings">DIY Kiln-Fired Ceramic Rings<span class="seg-sub">~$18/cu.ft.</span></button>
+            </div>
+            <span class="control-hint" id="hint-packing-media">Commercial 1" polypropylene Pall rings (ε = 0.90, lowest bed ΔP).</span>
           </div>
 
           <div class="control">
@@ -2178,6 +2343,14 @@
             <div class="p7-mini-val" id="design-arch-val">Inline ID Blower · Single Column · Linear</div>
             <div class="p7-mini-sub" id="design-arch-sub">Adjust Stage Design &amp; Cost-Saving Options in the sidebar to compare cost &amp; footprint live.</div>
             <div class="p7-warn-inline hidden" id="design-arch-warn"></div>
+          </div>
+          <div class="p7-mini-card" id="design-budget-card">
+            <div class="p7-mini-head">
+              <span>Blower Drive &amp; Shop Compressor</span>
+              <span id="design-budget-delta" style="font-family:var(--mono);color:#86efac;">Baseline</span>
+            </div>
+            <div class="p7-mini-val" id="design-budget-val">Industrial Radial + VFD · PP Pall Rings</div>
+            <div class="p7-mini-sub" id="design-budget-sub">25 <span class="unit-literal">µm</span> Air-Atomize vs. Main Eductor check ready in Build Guide.</div>
           </div>
           <div class="p7-mini-card" id="design-recirc-card">
             <div class="p7-mini-head">
@@ -2414,19 +2587,29 @@
       </div>
     </section>
 
-    <!-- Phase 7: Architecture Cost & Trade-Off Comparison + Sump Recirculation & Dump Schedule -->
-    <section class="p7-detail-grid" id="guide-phase7-section" aria-label="Architecture Trade-Offs and Sump Recirculation">
+    <!-- Phase 7 & 8: Architecture Cost & Trade-Off Comparison + Shop Compressor & Affordable Fan Comparison + Sump Recirculation -->
+    <section class="p7-detail-grid" id="guide-phase7-section" aria-label="Architecture Trade-Offs, Budget Blower Comparison, and Sump Recirculation">
       <div class="panel" id="guide-arch-panel">
         <div class="panel-header">
           <span class="panel-title">Architecture Cost &amp; Trade-Off Comparison</span>
           <span class="pill" id="guide-arch-delta-pill">Baseline</span>
         </div>
         <div class="p7-panel-body" id="guide-arch-body">
-          <p class="ctrl-note">Select Stage Design &amp; Cost-Saving Options on the Design tab to compare Dry-Fan Downflow Eductor, Parallel 4" Pipes, Mini-Venturis, Compact U-Turn Skid, and Electromechanical controls.</p>
+          <p class="ctrl-note">Select Stage Design &amp; Cost-Saving Options on the Design tab to compare Dry-Fan Downflow Eductor, Shell-Less 2"–4" Parallel Pipes, Mini-Venturis, Compact U-Turn Skid, and Electromechanical controls.</p>
         </div>
       </div>
 
-      <div class="panel" id="guide-recirc-panel">
+      <div class="panel" id="guide-budget-panel">
+        <div class="panel-header">
+          <span class="panel-title">Shop Compressor &amp; Affordable Fan Comparison</span>
+          <span class="pill ok" id="guide-budget-pill">Feasible</span>
+        </div>
+        <div class="p7-panel-body" id="guide-budget-body">
+          <p class="ctrl-note">Evaluating motive blower drive savings, shop compressor twin-fluid air-atomizing (25 µm) vs. main air-mover eductor feasibility, packing media delta, and shell-less Uniseal pipe bundle savings...</p>
+        </div>
+      </div>
+
+      <div class="panel p7-full-span" id="guide-recirc-panel">
         <div class="panel-header">
           <span class="panel-title">Sump Recirculation &amp; Dump Schedule</span>
           <span class="pill ok" id="guide-recirc-saved-pill">Closed-Loop</span>
@@ -2785,6 +2968,10 @@
         corrosionTier: "standard_316l",
         stageAlignment: "inline_id_blower",
         packedBedLayout: "single_column",
+        parallelPipeSizeIn: 4,
+        packingMediaOption: "pp_pall_rings",
+        blowerDriveOption: "industrial_radial_vfd",
+        shopCompressorScfm: 15.0,
         venturiLayout: "single_throat",
         compactFootprint: false,
         sharedBaffledSump: true,
@@ -2822,6 +3009,44 @@
         return normalizeCorrosionTier(tier) === "heavy_c276_frp"
           ? "Heavy Salt (C-276 / FRP)"
           : "Standard 316L SS (Light / Occasional)";
+      }
+
+      function normalizeBlowerDriveOption(raw) {
+        const s = String(raw || "").trim().toLowerCase();
+        if (s === "regen_side_channel" || s === "dual_bypass_blowers" || s === "compressor_air_atomize" || s === "compressor_eductor_only") {
+          return s;
+        }
+        return "industrial_radial_vfd";
+      }
+
+      function blowerDriveLabel(opt) {
+        switch (normalizeBlowerDriveOption(opt)) {
+          case "regen_side_channel": return "Side-Channel Ring Blower";
+          case "dual_bypass_blowers": return "Dual 3-Stage Bypass Blowers";
+          case "compressor_air_atomize": return "Shop Compressor Air-Atomize + Low-ΔP Fan";
+          case "compressor_eductor_only": return "Shop Compressor Main Eductor";
+          default: return "Industrial Radial + VFD (Baseline)";
+        }
+      }
+
+      function normalizeParallelPipeSize(raw) {
+        const n = Math.round(Number(raw));
+        if (n === 2 || n === 3 || n === 4) return n;
+        return 4;
+      }
+
+      function normalizePackingMediaOption(raw) {
+        const s = String(raw || "").trim().toLowerCase();
+        if (s === "aquaculture_bioballs" || s === "diy_ceramic_rings") return s;
+        return "pp_pall_rings";
+      }
+
+      function packingMediaLabel(opt) {
+        switch (normalizePackingMediaOption(opt)) {
+          case "aquaculture_bioballs": return "Aquaculture Bio-Balls";
+          case "diy_ceramic_rings": return "DIY Kiln-Fired Ceramic Rings";
+          default: return "Commercial PP Pall Rings";
+        }
       }
 
       function formatBulkSodaShort(lbs, bags15, sacks50) {
@@ -2986,6 +3211,78 @@
         document.querySelectorAll("[data-packed-bed-layout]").forEach((btn) => {
           btn.classList.toggle("active", btn.dataset.packedBedLayout === studioState.packedBedLayout);
         });
+        const pipeWrap = el("ctrl-parallel-pipe-size-wrap");
+        if (pipeWrap) {
+          pipeWrap.classList.toggle("hidden", studioState.packedBedLayout !== "parallel_manifold");
+        }
+        const pipeSize = normalizeParallelPipeSize(studioState.parallelPipeSizeIn);
+        studioState.parallelPipeSizeIn = pipeSize;
+        document.querySelectorAll("[data-parallel-pipe-size]").forEach((btn) => {
+          btn.classList.toggle("active", Number(btn.dataset.parallelPipeSize) === pipeSize);
+        });
+        if (el("val-parallel-pipe-size")) {
+          el("val-parallel-pipe-size").textContent = `${pipeSize}" Pipe`;
+        }
+        const pipeHint = el("hint-parallel-pipe-size");
+        if (pipeHint) {
+          if (pipeSize === 2) {
+            pipeHint.className = "control-hint warn";
+            pipeHint.textContent = "2\" bundle needs ~40+ pipes and 80+ Uniseals (high drilling labor); 4\" is the budget sweet spot.";
+          } else if (pipeSize === 3) {
+            pipeHint.className = "control-hint";
+            pipeHint.textContent = "3\" shell-less Uniseal bundle uses ~20–24 pipes clamped between flat HDPE/CPVC plates (no big outer shell).";
+          } else {
+            pipeHint.className = "control-hint ok";
+            pipeHint.textContent = "4\" shell-less Uniseal sweet spot (~11–12 stock pipes, zero big outer drum/flanges, saves $400–$1,100).";
+          }
+        }
+
+        const mediaOpt = normalizePackingMediaOption(studioState.packingMediaOption);
+        studioState.packingMediaOption = mediaOpt;
+        document.querySelectorAll("[data-packing-media]").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.packingMedia === mediaOpt);
+        });
+        const mediaHint = el("hint-packing-media");
+        if (mediaHint) {
+          if (mediaOpt === "diy_ceramic_rings") {
+            mediaHint.className = "control-hint ok";
+            mediaHint.textContent = "Extruded stoneware Raschig rings (~$18/cu.ft., ε = 0.70): acid-proof & 2000°F-proof, slightly higher bed ΔP.";
+          } else if (mediaOpt === "aquaculture_bioballs") {
+            mediaHint.className = "control-hint ok";
+            mediaHint.textContent = "Bulk 1\"–1.25\" aquaculture PP bio-media (~$38/cu.ft., ε = 0.85): saves ~$150–$250 vs industrial Pall rings.";
+          } else {
+            mediaHint.className = "control-hint";
+            mediaHint.textContent = "Commercial 1\" polypropylene Pall rings (ε = 0.90, lowest bed ΔP).";
+          }
+        }
+
+        const driveOpt = normalizeBlowerDriveOption(studioState.blowerDriveOption);
+        studioState.blowerDriveOption = driveOpt;
+        const driveSel = el("in-blower-drive");
+        if (driveSel) driveSel.value = driveOpt;
+        const compWrap = el("ctrl-compressor-scfm-wrap");
+        const isCompOpt = driveOpt === "compressor_air_atomize" || driveOpt === "compressor_eductor_only";
+        if (compWrap) compWrap.classList.toggle("compressor-highlight", isCompOpt);
+        const driveHint = el("hint-blower-drive");
+        if (driveHint) {
+          if (driveOpt === "regen_side_channel") {
+            driveHint.className = "control-hint ok";
+            driveHint.textContent = "High-pressure cast-aluminum regenerative ring blower (30–60 inWC) at ~50% lower fan cost.";
+          } else if (driveOpt === "dual_bypass_blowers") {
+            driveHint.className = "control-hint ok";
+            driveHint.textContent = "Two COTS 3-stage tangential bypass vacuum motors (~$420 total, 120V/240V) — watch carbon brush life (~500–800 hrs).";
+          } else if (driveOpt === "compressor_air_atomize") {
+            driveHint.className = "control-hint ok";
+            driveHint.textContent = "25 µm twin-fluid air-atomizing nozzle (4–6 SCFM) slashes venturi ΔP to ~9–10 inWC, unlocking a ~$360 low-ΔP fan!";
+          } else if (driveOpt === "compressor_eductor_only") {
+            driveHint.className = "control-hint warn";
+            driveHint.textContent = "Feasibility check: driving main scrubber airflow by shop air eductor typically needs 65+ SCFM (17+ HP) on 24 cu.ft. kilns.";
+          } else {
+            driveHint.className = "control-hint";
+            driveHint.textContent = "Baseline acid-duty radial wheel + VFD handles full 21 inWC venturi static head.";
+          }
+        }
+
         document.querySelectorAll("[data-venturi-layout]").forEach((btn) => {
           btn.classList.toggle("active", btn.dataset.venturiLayout === studioState.venturiLayout);
         });
@@ -3049,6 +3346,15 @@
         studioState.corrosionTier = normalizeCorrosionTier(proj.corrosion_tier);
         studioState.stageAlignment = proj.stage_alignment === "eductor_dry_fan" ? "eductor_dry_fan" : "inline_id_blower";
         studioState.packedBedLayout = proj.packed_bed_layout === "parallel_manifold" ? "parallel_manifold" : "single_column";
+        studioState.parallelPipeSizeIn = normalizeParallelPipeSize(proj.parallel_pipe_size_in);
+        studioState.packingMediaOption = normalizePackingMediaOption(proj.packing_media_option);
+        studioState.blowerDriveOption = normalizeBlowerDriveOption(proj.blower_drive_option);
+        const compScfm = Number.isFinite(proj.shop_compressor_scfm) && proj.shop_compressor_scfm > 0
+          ? Math.max(5, Math.min(40, proj.shop_compressor_scfm))
+          : 15.0;
+        studioState.shopCompressorScfm = compScfm;
+        el("in-compressor-scfm").value = compScfm;
+        el("in-blower-drive").value = studioState.blowerDriveOption;
         studioState.venturiLayout = proj.venturi_layout === "parallel_mini_venturis" ? "parallel_mini_venturis" : "single_throat";
         studioState.compactFootprint = !!proj.compact_footprint;
         studioState.sharedBaffledSump = proj.shared_baffled_sump !== false;
@@ -3085,7 +3391,11 @@
         base.packing_voidage = parseFloat(el("in-packing-void").value);
         const packIn = parseFloat(el("in-packing-diam").value);
         base.packing_diameter_m = packIn * 0.0254;
-        base.packing_name = `${packIn.toFixed(2)}" PP Pall Rings`;
+        base.packing_name = studioState.packingMediaOption === "diy_ceramic_rings"
+          ? `${packIn.toFixed(2)}" DIY Ceramic Raschig Rings`
+          : (studioState.packingMediaOption === "aquaculture_bioballs"
+            ? `${packIn.toFixed(2)}" Aquaculture Bio-Balls`
+            : `${packIn.toFixed(2)}" PP Pall Rings`);
         base.target_kiln_draft_in_wc = parseFloat(el("in-kiln-draft").value);
         return base;
       }
@@ -3096,6 +3406,10 @@
         const saltingHrs = studioState.vaporGlazeMode === "salt"
           ? Math.max(0.5, Math.min(firingHrs, Number.isFinite(rawSaltingHrs) ? rawSaltingHrs : 3.0))
           : 0.0;
+        const compScfmRaw = parseFloat(el("in-compressor-scfm").value);
+        const compScfm = Number.isFinite(compScfmRaw) ? Math.max(5, Math.min(40, compScfmRaw)) : 15.0;
+        studioState.shopCompressorScfm = compScfm;
+        studioState.blowerDriveOption = normalizeBlowerDriveOption(el("in-blower-drive").value);
         return {
           preset_id: studioState.activePresetId || "custom",
           studio_name: (el("in-studio-name").value || "").trim() || "Studio Kiln Scrubber",
@@ -3107,6 +3421,10 @@
           corrosion_tier: normalizeCorrosionTier(studioState.corrosionTier),
           stage_alignment: studioState.stageAlignment,
           packed_bed_layout: studioState.packedBedLayout,
+          parallel_pipe_size_in: normalizeParallelPipeSize(studioState.parallelPipeSizeIn),
+          packing_media_option: normalizePackingMediaOption(studioState.packingMediaOption),
+          blower_drive_option: studioState.blowerDriveOption,
+          shop_compressor_scfm: compScfm,
           venturi_layout: studioState.venturiLayout,
           compact_footprint: !!el("in-compact-footprint").checked,
           shared_baffled_sump: !!el("in-shared-baffled-sump").checked,
@@ -3135,6 +3453,7 @@
         const propFt = parseFloat(el("in-property-line").value);
         const winterF = parseFloat(el("in-ambient-winter").value);
         const hoseGpm = parseFloat(el("in-garden-hose").value);
+        const compScfm = parseFloat(el("in-compressor-scfm").value);
         const air = parseFloat(el("in-excess-air").value);
         const vel = parseFloat(el("in-venturi-vel").value);
         const lg = parseFloat(el("in-venturi-lg").value);
@@ -3157,6 +3476,14 @@
         el("val-property-line").textContent = `${propFt.toFixed(0)} ft`;
         el("val-ambient-winter").textContent = `${winterF.toFixed(0)} °F`;
         el("val-garden-hose").textContent = `${hoseGpm.toFixed(1)} GPM`;
+        if (el("val-compressor-scfm")) {
+          el("val-compressor-scfm").textContent = `${compScfm.toFixed(0)} SCFM`;
+        }
+        if (el("hint-compressor-scfm")) {
+          el("hint-compressor-scfm").textContent = compScfm >= 6
+            ? `${compScfm.toFixed(0)} SCFM @ 90 PSI easily drives 25 µm air-atomizing nozzle (4–6 SCFM); check Guide for main eductor SCFM.`
+            : `${compScfm.toFixed(0)} SCFM @ 90 PSI is tight even for air-atomizing (4–6 SCFM needed); >= 10 SCFM recommended.`;
+        }
 
         el("val-excess-air").textContent = `${air.toFixed(0)}%`;
         el("val-venturi-vel").textContent = `${vel.toFixed(0)} m/s (${(vel / 0.3048).toFixed(0)} ft/s)`;
@@ -3447,7 +3774,7 @@
         setReadinessChip("readiness-corrosion", (proj?.vapor_glaze_mode === "salt") ? "caution" : "ok", normalizeCorrosionTier(proj?.corrosion_tier) === "heavy_c276_frp" ? "C-276 / FRP" : "Standard 316L SS", proj?.vapor_glaze_mode === "salt" ? "Buffered pH 8 flush" : "Zero HCl acid load");
       }
 
-      /* ===================== PHASE 7: ARCHITECTURE & RECIRCULATION PANELS ===================== */
+      /* ===================== PHASE 7 & 8: ARCHITECTURE, BUDGET DRIVES & RECIRCULATION PANELS ===================== */
 
       function getEffectiveArchitectureData(ev) {
         const proj = (ev && ev.project) || studioState.project || readProjectFromControls();
@@ -3455,6 +3782,12 @@
         const d = (ev && ev.design) || state.design || {};
         const align = proj.stage_alignment || studioState.stageAlignment || "inline_id_blower";
         const bedLayout = proj.packed_bed_layout || studioState.packedBedLayout || "single_column";
+        const pipeSizeSel = normalizeParallelPipeSize(proj.parallel_pipe_size_in || studioState.parallelPipeSizeIn || 4);
+        const mediaOpt = normalizePackingMediaOption(proj.packing_media_option || studioState.packingMediaOption);
+        const driveOpt = normalizeBlowerDriveOption(proj.blower_drive_option || studioState.blowerDriveOption);
+        const compScfm = Number.isFinite(proj.shop_compressor_scfm) && proj.shop_compressor_scfm > 0
+          ? proj.shop_compressor_scfm
+          : (studioState.shopCompressorScfm || 15.0);
         const ventLayout = proj.venturi_layout || studioState.venturiLayout || "single_throat";
         const compact = !!(proj.compact_footprint ?? studioState.compactFootprint);
         const sharedSump = (proj.shared_baffled_sump ?? studioState.sharedBaffledSump) !== false;
@@ -3464,14 +3797,28 @@
         const ed = (raw && (raw.eductor || raw.eductor_dry_fan || raw.eductor_analysis)) || {};
         const pb = (raw && (raw.parallel_bed || raw.parallel_packed_bed || raw.packed_bed_manifold)) || {};
         const pv = (raw && (raw.parallel_venturi || raw.parallel_mini_venturis || raw.venturi_manifold)) || {};
+        const bd = (raw && raw.blower_drive) || {};
+        const cp = (raw && raw.compressor) || {};
+        const pm = (raw && raw.packing_media) || {};
 
         const baseColIn = Math.max(8, Math.round(mToIn(d.packed_bed?.column_diameter_m || 0.36)));
-        const fallbackPipeCount = Math.max(4, Math.min(18, Math.ceil((baseColIn * baseColIn) / (3.826 * 3.826))));
+        const pipeInnerIn = pipeSizeSel === 2 ? 1.939 : (pipeSizeSel === 3 ? 2.900 : 3.826);
+        const fallbackPipeCount = Math.max(4, Math.min(48, Math.ceil((baseColIn * baseColIn) / (pipeInnerIn * pipeInnerIn))));
+        const fallbackParallelDelta = pipeSizeSel === 4 ? -640 : (pipeSizeSel === 3 ? -380 : -110);
+        const fallbackMediaDelta = mediaOpt === "diy_ceramic_rings" ? -310 : (mediaOpt === "aquaculture_bioballs" ? -210 : 0);
+        const fallbackDriveDelta =
+          driveOpt === "regen_side_channel" ? -680 :
+          driveOpt === "dual_bypass_blowers" ? -1030 :
+          driveOpt === "compressor_air_atomize" ? -1040 :
+          driveOpt === "compressor_eductor_only" ? -1120 : 0;
+
         const fallbackCostDelta =
           (align === "eductor_dry_fan" ? -420 : 0) +
-          (bedLayout === "parallel_manifold" ? -280 : 0) +
+          (bedLayout === "parallel_manifold" ? fallbackParallelDelta : 0) +
           (ventLayout === "parallel_mini_venturis" ? -310 : 0) +
           (ctrlTier === "electromechanical_only" ? -1050 : 0) +
+          fallbackMediaDelta +
+          fallbackDriveDelta +
           (!sharedSump ? 320 : 0);
 
         const costDelta = Number.isFinite(raw?.cost_delta_usd) ? raw.cost_delta_usd : fallbackCostDelta;
@@ -3485,19 +3832,79 @@
           ? raw.footprint_savings_pct
           : (compact ? 45.0 : 0.0);
 
+        // Deduplicate raw.warnings vs ed.warnings so identical outdoor positive-pressure warnings never render twice!
+        const seenWarn = new Set();
         const warnings = [];
-        if (Array.isArray(raw?.warnings)) warnings.push(...raw.warnings);
-        if (Array.isArray(ed.warnings)) warnings.push(...ed.warnings);
+        const addWarn = (w) => {
+          const text = String(w || "").trim();
+          if (!text) return;
+          const key = text.toLowerCase();
+          if (seenWarn.has(key)) return;
+          seenWarn.add(key);
+          warnings.push(text);
+        };
+        if (Array.isArray(raw?.warnings)) raw.warnings.forEach(addWarn);
+        if (Array.isArray(ed.warnings)) ed.warnings.forEach(addWarn);
         if (align === "eductor_dry_fan" && warnings.length === 0) {
-          warnings.push("OUTDOOR-ONLY POSITIVE PRESSURE: Dry-fan downflow eductor pressurizes the packed bed (+2 to +5 inWC). Site strictly outdoors with airtight gasketed flanges.");
+          addWarn("OUTDOOR-ONLY POSITIVE PRESSURE: Dry-fan downflow eductor pressurizes the packed bed (+2 to +5 inWC). Site strictly outdoors with airtight gasketed flanges.");
         }
 
         const savingsSummary = Array.isArray(raw?.savings_summary) ? raw.savings_summary : [];
+
+        const baseStaticInwc = d.blower?.total_static_pressure_in_wc || 21.2;
+        const flowAcfm = d.blower?.flow_acfm || 110;
+        const fallbackEductorScfm = Math.max(12, Math.round(flowAcfm / (baseStaticInwc >= 15 ? 1.5 : 3.2)));
+        const fallbackEductorHp = Number((fallbackEductorScfm / 3.8).toFixed(1));
+        const fallbackEductorFeasible = compScfm >= fallbackEductorScfm;
+        const fallbackAtomizeScfm = 5.0;
+        const fallbackAtomizeFeasible = compScfm >= fallbackAtomizeScfm;
+        const fallbackAtomizeDpSaved = Number(Math.max(4.5, baseStaticInwc * 0.44).toFixed(1));
+        const fallbackAtomizeCostSaved = 1040;
+
+        const bdStaticInwc = Number.isFinite(bd.required_static_inwc)
+          ? bd.required_static_inwc
+          : (driveOpt === "compressor_air_atomize" ? Math.max(8.5, baseStaticInwc - fallbackAtomizeDpSaved) : baseStaticInwc);
+        const bdThroatVel = Number.isFinite(bd.throat_velocity_m_s)
+          ? bd.throat_velocity_m_s
+          : (driveOpt === "compressor_air_atomize" ? 48.0 : (d.venturi?.throat_velocity_m_s || 70.0));
+        const bdDropletUm = Number.isFinite(bd.droplet_um)
+          ? bd.droplet_um
+          : (driveOpt === "compressor_air_atomize" ? 25.0 : 52.0);
+        const bdBaselineCost = Number.isFinite(bd.baseline_fan_cost_usd) ? bd.baseline_fan_cost_usd : 1450;
+        const bdFanCost = Number.isFinite(bd.fan_cost_usd)
+          ? bd.fan_cost_usd
+          : Math.max(280, bdBaselineCost + fallbackDriveDelta);
+        const bdCostDelta = Number.isFinite(bd.cost_delta_usd) ? bd.cost_delta_usd : (bdFanCost - bdBaselineCost);
+        const bdFeasible = typeof bd.feasible === "boolean"
+          ? bd.feasible
+          : (driveOpt === "compressor_eductor_only" ? fallbackEductorFeasible : (driveOpt === "compressor_air_atomize" ? fallbackAtomizeFeasible : true));
+
+        const pmVoidage = Number.isFinite(pm.voidage)
+          ? pm.voidage
+          : (mediaOpt === "diy_ceramic_rings" ? 0.70 : (mediaOpt === "aquaculture_bioballs" ? 0.85 : 0.90));
+        const pmDiamIn = Number.isFinite(pm.diameter_in)
+          ? pm.diameter_in
+          : (mediaOpt === "diy_ceramic_rings" ? 0.625 : (mediaOpt === "aquaculture_bioballs" ? 1.125 : 1.0));
+        const pmBaselineCost = Number.isFinite(pm.baseline_media_cost_usd) ? pm.baseline_media_cost_usd : 380;
+        const pmMediaCost = Number.isFinite(pm.media_cost_usd) ? pm.media_cost_usd : Math.max(45, pmBaselineCost + fallbackMediaDelta);
+        const pmCostDelta = Number.isFinite(pm.cost_delta_usd) ? pm.cost_delta_usd : (pmMediaCost - pmBaselineCost);
+        const pmBedDp = Number.isFinite(pm.bed_dp_inwc)
+          ? pm.bed_dp_inwc
+          : ((d.blower?.breakdown?.packed_bed_in_wc || 0.8) * (mediaOpt === "diy_ceramic_rings" ? 2.1 : (mediaOpt === "aquaculture_bioballs" ? 1.25 : 1.0)));
+
+        const pipeNomOut = normalizeParallelPipeSize(Number.isFinite(pb.pipe_nominal_in) ? pb.pipe_nominal_in : pipeSizeSel);
+        const pipeCountOut = Number.isFinite(pb.pipe_count) ? pb.pipe_count : fallbackPipeCount;
+        const shelllessOut = typeof pb.shellless_plenum === "boolean" ? pb.shellless_plenum : true;
+        const pipeMatOut = pb.pipe_material || (align === "eductor_dry_fan" ? `Sch 40 PVC (${pipeNomOut}")` : `Sch 80 CPVC (${pipeNomOut}")`);
 
         return {
           raw,
           align,
           bedLayout,
+          parallelPipeSizeIn: pipeNomOut,
+          packingMediaOption: mediaOpt,
+          blowerDriveOption: driveOpt,
+          shopCompressorScfm: compScfm,
           ventLayout,
           compact,
           sharedSump,
@@ -3523,14 +3930,16 @@
             summary: ed.summary || "Dry ambient radial fan injects motive air straight down into a vertical static venturi + 90° sweep elbow into Stage 3 — eliminates wet acid-duty downstream blower.",
           },
           parallelBed: {
-            pipeNomIn: Number.isFinite(pb.pipe_nominal_in) ? pb.pipe_nominal_in : 4,
-            pipeCount: Number.isFinite(pb.pipe_count) ? pb.pipe_count : fallbackPipeCount,
-            packDiamIn: Number.isFinite(pb.packing_diameter_in) ? pb.packing_diameter_in : 0.5,
-            bedDpInwc: Number.isFinite(pb.bed_dp_inwc) ? pb.bed_dp_inwc : (d.blower?.breakdown?.packed_bed_in_wc || 0.8) * 1.35,
+            pipeNomIn: pipeNomOut,
+            pipeCount: pipeCountOut,
+            packDiamIn: Number.isFinite(pb.packing_diameter_in) ? pb.packing_diameter_in : (pipeNomOut <= 2 ? 0.375 : 0.5),
+            bedDpInwc: Number.isFinite(pb.bed_dp_inwc) ? pb.bed_dp_inwc : (d.blower?.breakdown?.packed_bed_in_wc || 0.8) * 1.25,
             floodPct: Number.isFinite(pb.actual_flood_pct) ? pb.actual_flood_pct : (d.packed_bed?.percent_of_flood || 55),
-            costDelta: Number.isFinite(pb.cost_delta_usd) ? pb.cost_delta_usd : -280,
-            summary: pb.summary || `Replaces specialty ${baseColIn}" pipe with ${fallbackPipeCount} × 4" Sch 80 CPVC pipes packed with 1/2" PP rings (D/d_p >= 7.5) and a multi-port top liquid header.`,
-            notes: Array.isArray(pb.notes) ? pb.notes : ["Use leveled top spray header orifices so flow distributes evenly across every 4\" pipe."],
+            costDelta: Number.isFinite(pb.cost_delta_usd) ? pb.cost_delta_usd : fallbackParallelDelta,
+            shelllessPlenum: shelllessOut,
+            pipeMaterial: pipeMatOut,
+            summary: pb.summary || `Shell-less Uniseal flat-plate bundle replaces specialty ${baseColIn}" pipe with ${pipeCountOut} bare ${pipeNomOut}" ${pipeMatOut} pipes clamped between flat collector plates (zero outer drum/flanges).`,
+            notes: Array.isArray(pb.notes) ? pb.notes : [`Use leveled top spray header orifices so liquid distributes evenly across all ${pipeCountOut} bare ${pipeNomOut}" pipes.`],
           },
           parallelVenturi: {
             throatCount: Number.isFinite(pv.throat_count) ? pv.throat_count : 3,
@@ -3541,7 +3950,174 @@
             summary: pv.summary || "Splits flow into parallel COTS 316L sanitary concentric reducers (zero custom cone rolling) with stageable throat blanking for low-fire turndown.",
             notes: Array.isArray(pv.notes) ? pv.notes : [],
           },
+          blowerDrive: {
+            option: bd.option || driveOpt,
+            label: bd.label || blowerDriveLabel(driveOpt),
+            fanCostUsd: bdFanCost,
+            baselineFanCostUsd: bdBaselineCost,
+            costDeltaUsd: bdCostDelta,
+            requiredStaticInwc: bdStaticInwc,
+            throatVelocityMs: bdThroatVel,
+            dropletUm: bdDropletUm,
+            motorHp: Number.isFinite(bd.motor_hp) ? bd.motor_hp : (d.blower?.recommended_motor_hp || 2.0),
+            voltage: Number.isFinite(bd.voltage) ? bd.voltage : (studioState.availableVoltage || 240),
+            feasible: bdFeasible,
+            summary: bd.summary || `${blowerDriveLabel(driveOpt)}: ${fmt(bdStaticInwc, 1)} inWC static, ${fmt(bdThroatVel, 0)} m/s throat, ${fmt(bdDropletUm, 0)} µm droplet.`,
+            caveats: Array.isArray(bd.caveats) ? bd.caveats : [],
+          },
+          compressor: {
+            availableScfm: Number.isFinite(cp.available_scfm) ? cp.available_scfm : compScfm,
+            eductorScfmNeeded: Number.isFinite(cp.eductor_scfm_needed) ? cp.eductor_scfm_needed : fallbackEductorScfm,
+            eductorHpNeeded: Number.isFinite(cp.eductor_hp_needed) ? cp.eductor_hp_needed : fallbackEductorHp,
+            eductorFeasible: typeof cp.eductor_feasible === "boolean" ? cp.eductor_feasible : fallbackEductorFeasible,
+            eductorVerdict: cp.eductor_verdict || (fallbackEductorFeasible
+              ? `Feasible for tiny low-ΔP kiln: ${fallbackEductorScfm} SCFM needed fits within ${compScfm.toFixed(0)} SCFM shop compressor.`
+              : `Infeasible as main air mover: needs ~${fallbackEductorScfm} SCFM (${fallbackEductorHp} HP compressor) under backpressure vs. ${compScfm.toFixed(0)} SCFM available.`),
+            atomizeScfmNeeded: Number.isFinite(cp.atomize_scfm_needed) ? cp.atomize_scfm_needed : fallbackAtomizeScfm,
+            atomizeFeasible: typeof cp.atomize_feasible === "boolean" ? cp.atomize_feasible : fallbackAtomizeFeasible,
+            atomizeDropletUm: Number.isFinite(cp.atomize_droplet_um) ? cp.atomize_droplet_um : 25.0,
+            atomizeDpSavedInwc: Number.isFinite(cp.atomize_dp_saved_inwc) ? cp.atomize_dp_saved_inwc : fallbackAtomizeDpSaved,
+            atomizeCostSavedUsd: Number.isFinite(cp.atomize_cost_saved_usd) ? cp.atomize_cost_saved_usd : fallbackAtomizeCostSaved,
+            atomizeVerdict: cp.atomize_verdict || `High-leverage match: ${fallbackAtomizeScfm.toFixed(1)} SCFM twin-fluid nozzle makes 25 µm droplets, cutting venturi ΔP by ${fallbackAtomizeDpSaved} inWC and saving ~${fmtUSD(fallbackAtomizeCostSaved)} on the blower!`,
+          },
+          packingMedia: {
+            option: pm.option || mediaOpt,
+            label: pm.label || packingMediaLabel(mediaOpt),
+            diameterIn: pmDiamIn,
+            voidage: pmVoidage,
+            bedDpInwc: pmBedDp,
+            mediaCostUsd: pmMediaCost,
+            baselineMediaCostUsd: pmBaselineCost,
+            costDeltaUsd: pmCostDelta,
+            summary: pm.summary || `${packingMediaLabel(mediaOpt)} (ε = ${fmt(pmVoidage, 2)}, ${fmt(pmDiamIn, 2)}" nom., bed ΔP ${fmt(pmBedDp, 2)} inWC).`,
+          },
         };
+      }
+
+      function formatSignedUSD(val) {
+        if (!Number.isFinite(val) || Math.abs(val) < 0.5) return "$0";
+        return `${val < 0 ? "-" : "+"}${fmtUSD(Math.abs(val))}`;
+      }
+
+      function renderBudgetComparisonPanels(ev, a) {
+        const bd = a.blowerDrive;
+        const cp = a.compressor;
+        const pm = a.packingMedia;
+        const pb = a.parallelBed;
+
+        // 1. Compact Design-tab indicator chip (#design-budget-card)
+        const dCard = el("design-budget-card");
+        if (dCard) {
+          dCard.classList.toggle("danger-accent", !bd.feasible);
+          dCard.classList.toggle("ok-accent", bd.feasible && (bd.costDeltaUsd < 0 || pm.costDeltaUsd < 0 || (a.bedLayout === "parallel_manifold" && pb.costDelta < 0)));
+        }
+        const dDelta = el("design-budget-delta");
+        if (dDelta) {
+          dDelta.textContent = bd.feasible
+            ? `${formatSignedUSD(bd.costDeltaUsd)} fan · ${fmt(bd.requiredStaticInwc, 1)} inWC`
+            : `INFEASIBLE (${fmt(cp.eductorScfmNeeded, 0)} SCFM req)`;
+          dDelta.style.color = !bd.feasible ? "#fca5a5" : (bd.costDeltaUsd < 0 ? "#86efac" : "#7dd3fc");
+        }
+        if (el("design-budget-val")) {
+          el("design-budget-val").textContent = `${bd.label} · ${pm.label}`;
+        }
+        if (el("design-budget-sub")) {
+          const atomTag = cp.atomizeFeasible ? `25 µm Atomize: OK (${fmt(cp.atomizeScfmNeeded, 1)} SCFM, -${fmt(cp.atomizeDpSavedInwc, 1)} inWC)` : `Atomize needs ${fmt(cp.atomizeScfmNeeded, 1)} SCFM`;
+          const edTag = cp.eductorFeasible ? `Main Eductor: OK` : `Main Eductor: NO (${fmt(cp.eductorScfmNeeded, 0)} vs ${fmt(cp.availableScfm, 0)} SCFM)`;
+          el("design-budget-sub").textContent = `${atomTag} · ${edTag}`;
+        }
+
+        // 2. Build & Firing Guide tab full Shop Compressor & Affordable Fan Comparison Card
+        const pill = el("guide-budget-pill");
+        if (pill) {
+          pill.className = "pill " + (!bd.feasible ? "danger" : (bd.costDeltaUsd < 0 ? "ok" : ""));
+          pill.textContent = !bd.feasible
+            ? "Drive Infeasible"
+            : (bd.costDeltaUsd < 0 ? `Fan ${formatSignedUSD(bd.costDeltaUsd)}` : "Baseline Fan");
+        }
+        const body = el("guide-budget-body");
+        if (!body) return;
+
+        const caveatsHtml = Array.isArray(bd.caveats) && bd.caveats.length > 0
+          ? `<div class="trigger-box"><h4>Active Drive Caveats &amp; Notes</h4><ul class="trigger-list">${bd.caveats.map((c) => `<li>${escapeHtml(c)}</li>`).join("")}</ul></div>`
+          : "";
+
+        body.innerHTML = `
+          <div class="recirc-kpi-grid">
+            <div class="recirc-kpi">
+              <span class="recirc-kpi-k">Fan Cost vs. Baseline</span>
+              <span class="recirc-kpi-v" style="color:${bd.costDeltaUsd <= 0 ? "#86efac" : "#fcd34d"}">${escapeHtml(formatSignedUSD(bd.costDeltaUsd))}</span>
+              <span class="recirc-kpi-s">${fmtUSD(bd.fanCostUsd)} vs ${fmtUSD(bd.baselineFanCostUsd)} radial</span>
+            </div>
+            <div class="recirc-kpi">
+              <span class="recirc-kpi-k">Required Static</span>
+              <span class="recirc-kpi-v">${fmt(bd.requiredStaticInwc, 1)} <span class="unit-literal">inWC</span></span>
+              <span class="recirc-kpi-s">${fmt(bd.motorHp, 1)} HP · ${Math.round(bd.voltage || 240)}V</span>
+            </div>
+            <div class="recirc-kpi">
+              <span class="recirc-kpi-k">Venturi Droplet</span>
+              <span class="recirc-kpi-v">${fmt(bd.dropletUm, 0)} <span class="unit-literal">µm</span></span>
+              <span class="recirc-kpi-s">Throat ${fmt(bd.throatVelocityMs, 0)} <span class="unit-literal">m/s</span></span>
+            </div>
+            <div class="recirc-kpi">
+              <span class="recirc-kpi-k">Drive Feasibility</span>
+              <span class="recirc-kpi-v" style="font-size:13px;color:${bd.feasible ? "#86efac" : "#fca5a5"}">${bd.feasible ? "FEASIBLE" : "NOT FEASIBLE"}</span>
+              <span class="recirc-kpi-s">${escapeHtml(bd.label)}</span>
+            </div>
+          </div>
+
+          <p class="urban-card-summary">${escapeHtml(bd.summary)}</p>
+
+          <div class="compressor-role-grid">
+            <div class="budget-role-card ${cp.eductorFeasible ? "role-ok" : "role-fail"}">
+              <div class="budget-role-head">
+                <span>As Main Air Mover (Eductor)</span>
+                <span class="${cp.eductorFeasible ? "budget-badge-ok" : "budget-badge-fail"}">${cp.eductorFeasible ? "FEASIBLE" : "INFEASIBLE"}</span>
+              </div>
+              <div class="budget-role-metrics">
+                Needs <strong>${fmt(cp.eductorScfmNeeded, 1)} <span class="unit-literal">SCFM</span></strong> (${fmt(cp.eductorHpNeeded, 1)} HP) vs. <strong>${fmt(cp.availableScfm, 0)} <span class="unit-literal">SCFM</span></strong> available
+              </div>
+              <div class="budget-role-verdict">${escapeHtml(cp.eductorVerdict)}</div>
+            </div>
+
+            <div class="budget-role-card ${cp.atomizeFeasible ? "role-ok" : "role-fail"}">
+              <div class="budget-role-head">
+                <span>As Twin-Fluid Air-Atomizing Nozzle (${fmt(cp.atomizeDropletUm, 0)} <span class="unit-literal">µm</span>)</span>
+                <span class="${cp.atomizeFeasible ? "budget-badge-ok" : "budget-badge-fail"}">${cp.atomizeFeasible ? "FEASIBLE" : "LOW SCFM"}</span>
+              </div>
+              <div class="budget-role-metrics">
+                Uses <strong>${fmt(cp.atomizeScfmNeeded, 1)} <span class="unit-literal">SCFM</span></strong> · Saves <strong>${fmt(cp.atomizeDpSavedInwc, 1)} <span class="unit-literal">inWC</span></strong> ΔP · Saves <strong>${fmtUSD(cp.atomizeCostSavedUsd)}</strong>
+              </div>
+              <div class="budget-role-verdict">${escapeHtml(cp.atomizeVerdict)}</div>
+            </div>
+          </div>
+
+          <div class="compressor-role-grid">
+            <div class="arch-sub-card ${a.packingMediaOption !== "pp_pall_rings" ? "active-opt" : ""}">
+              <div class="arch-sub-title">
+                <span>Packing Media: ${escapeHtml(pm.label)}</span>
+                <span class="preset-badge">${escapeHtml(formatSignedUSD(pm.costDeltaUsd))}</span>
+              </div>
+              <div class="arch-sub-body">
+                Media cost: <strong>${fmtUSD(pm.mediaCostUsd)}</strong> (vs ${fmtUSD(pm.baselineMediaCostUsd)}) · Voidage <strong>ε = ${fmt(pm.voidage, 2)}</strong> · Bed ΔP <strong>${fmt(pm.bedDpInwc, 2)} <span class="unit-literal">inWC</span></strong>
+              </div>
+              <div class="arch-sub-body">${escapeHtml(pm.summary)}</div>
+            </div>
+
+            <div class="arch-sub-card ${a.bedLayout === "parallel_manifold" ? "active-opt" : ""}">
+              <div class="arch-sub-title">
+                <span>Parallel Bed (${pb.shelllessPlenum ? "Shell-Less Uniseal" : "Cased"})</span>
+                <span class="preset-badge">${escapeHtml(formatSignedUSD(pb.costDelta))}</span>
+              </div>
+              <div class="arch-sub-body">
+                <strong>${pb.pipeCount} × ${pb.pipeNomIn}"</strong> ${escapeHtml(pb.pipeMaterial)} · ${pb.shelllessPlenum ? "Flat Uniseal plates (zero big pipe)" : "Standard plenum"} · Net savings <strong>${escapeHtml(formatSignedUSD(pb.costDelta))}</strong>
+              </div>
+              <div class="arch-sub-body">${escapeHtml(pb.summary)}</div>
+            </div>
+          </div>
+
+          ${caveatsHtml}
+        `;
       }
 
       function renderArchitecturePanels(ev) {
@@ -3554,7 +4130,9 @@
         if (badge) badge.textContent = deltaStr;
 
         const alignLabel = a.align === "eductor_dry_fan" ? "Dry-Fan Downflow Eductor" : "Inline ID Blower";
-        const bedLabel = a.bedLayout === "parallel_manifold" ? `Parallel ${a.parallelBed.pipeCount}×${a.parallelBed.pipeNomIn}" Pipes` : "Single Column";
+        const bedLabel = a.bedLayout === "parallel_manifold"
+          ? `Shell-Less ${a.parallelBed.pipeCount}×${a.parallelBed.pipeNomIn}" Bundle`
+          : "Single Column";
         const ventLabel = a.ventLayout === "parallel_mini_venturis" ? `${a.parallelVenturi.throatCount}× Mini-Venturis` : "Single Cone Venturi";
         const fpLabel = a.compact ? `U-Turn Skid (${fmt(a.fpSavePct, 0)}% shorter)` : "Linear Train";
         const ctrlLabel = a.ctrlTier === "electromechanical_only" ? "Electromechanical Safety" : "RPi Modbus PID";
@@ -3582,6 +4160,9 @@
             warnEl.textContent = "";
           }
         }
+
+        // Render Phase 8 Shop Compressor & Affordable Fan Comparison card + Design indicator chip
+        renderBudgetComparisonPanels(ev, a);
 
         // Build & Firing Guide tab full Architecture Cost & Trade-Off Comparison Card
         const gPill = el("guide-arch-delta-pill");
@@ -3631,18 +4212,18 @@
                 <span class="preset-badge">${a.align === "eductor_dry_fan" ? "ACTIVE" : "ALT"}</span>
               </div>
               <div class="arch-sub-body">
-                Motive air: <strong>${fmt(a.eductor.motiveCfm, 0)} CFM</strong> @ ${fmt(a.eductor.staticInwc, 1)} inWC (${fmt(a.eductor.dryFanHp, 1)} HP dry fan, ${fmtUSD(a.eductor.dryFanCost)} vs ${fmtUSD(a.eductor.wetSaved)} wet blower).
+                Motive air: <strong>${fmt(a.eductor.motiveCfm, 0)} CFM</strong> @ ${fmt(a.eductor.staticInwc, 1)} <span class="unit-literal">inWC</span> (${fmt(a.eductor.dryFanHp, 1)} HP dry fan, ${fmtUSD(a.eductor.dryFanCost)} vs ${fmtUSD(a.eductor.wetSaved)} wet blower).
                 Mixed gas: <strong>${fmt(a.eductor.mixedTempF, 0)}°F</strong> · Bed Ø ${fmt(a.eductor.enlargedBedIn, 0)}" (${fmt(a.eductor.enlargedFloodPct, 1)}% flood).
               </div>
               <div class="arch-sub-body">${escapeHtml(a.eductor.summary)}</div>
             </div>
             <div class="arch-sub-card ${a.bedLayout === "parallel_manifold" ? "active-opt" : ""}">
               <div class="arch-sub-title">
-                <span>Parallel ${a.parallelBed.pipeNomIn}" Pipe Manifold</span>
-                <span class="preset-badge">${a.bedLayout === "parallel_manifold" ? "ACTIVE" : "ALT"}</span>
+                <span>Shell-Less ${a.parallelBed.pipeNomIn}" Pipe Bundle</span>
+                <span class="preset-badge">${a.bedLayout === "parallel_manifold" ? "ACTIVE" : formatSignedUSD(a.parallelBed.costDelta)}</span>
               </div>
               <div class="arch-sub-body">
-                <strong>${a.parallelBed.pipeCount} × ${a.parallelBed.pipeNomIn}"</strong> Sch 80 CPVC w/ ${fmt(a.parallelBed.packDiamIn, 2)}" PP packing · ΔP ${fmt(a.parallelBed.bedDpInwc, 2)} inWC · ${fmt(a.parallelBed.floodPct, 1)}% flood.
+                <strong>${a.parallelBed.pipeCount} × ${a.parallelBed.pipeNomIn}"</strong> ${escapeHtml(a.parallelBed.pipeMaterial)} (${a.parallelBed.shelllessPlenum ? "Uniseal flat plates, no big pipe" : "cased"}) · ΔP ${fmt(a.parallelBed.bedDpInwc, 2)} <span class="unit-literal">inWC</span> · ${fmt(a.parallelBed.floodPct, 1)}% flood.
               </div>
               <div class="arch-sub-body">${escapeHtml(a.parallelBed.summary)}</div>
             </div>
@@ -3652,7 +4233,7 @@
                 <span class="preset-badge">${a.ventLayout === "parallel_mini_venturis" ? "ACTIVE" : "ALT"}</span>
               </div>
               <div class="arch-sub-body">
-                <strong>${a.parallelVenturi.throatCount} × ${fmt(a.parallelVenturi.throatDiamIn, 2)}"</strong> sanitary throats · ΔP ${fmt(a.parallelVenturi.throatDpInwc, 1)} inWC · Ash plugging risk: <strong>${escapeHtml(a.parallelVenturi.pluggingRisk)}</strong>.
+                <strong>${a.parallelVenturi.throatCount} × ${fmt(a.parallelVenturi.throatDiamIn, 2)}"</strong> sanitary throats · ΔP ${fmt(a.parallelVenturi.throatDpInwc, 1)} <span class="unit-literal">inWC</span> · Ash plugging risk: <strong>${escapeHtml(a.parallelVenturi.pluggingRisk)}</strong>.
               </div>
               <div class="arch-sub-body">${escapeHtml(a.parallelVenturi.summary)}</div>
             </div>
@@ -3758,7 +4339,7 @@
         if (!body) return;
 
         const stepsHtml = r.steps.length > 0
-          ? `<div class="trigger-box"><h4>Multi-Firing Recirculation Cadence</h4><ol class="trigger-list">${r.steps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ol></div>`
+          ? `<div class="trigger-box"><h4>Multi-Firing Recirculation Cadence</h4><ol class="trigger-list">${r.steps.map((s) => `<li>${escapeHtml(String(s).replace(/^\s*\d+\.\s*/, ""))}</li>`).join("")}</ol></div>`
           : "";
 
         body.innerHTML = `
@@ -4732,20 +5313,24 @@
           {
             num: 4, id: "packed_bed",
             label: arch.bedLayout === "parallel_manifold"
-              ? `Stage 3: Parallel ${arch.parallelBed.pipeNomIn}" CPVC Pipe Manifold (×${arch.parallelBed.pipeCount})`
+              ? `Stage 3: Shell-Less ${arch.parallelBed.pipeNomIn}" Uniseal Pipe Bundle (×${arch.parallelBed.pipeCount})`
               : "Stage 3: Packed-Bed Absorber Column",
             stage: "Stage 3",
-            material: "Sch 80 CPVC + PP Pall Rings",
+            material: arch.bedLayout === "parallel_manifold"
+              ? `${arch.parallelBed.pipeMaterial} + ${arch.packingMedia.label}`
+              : `Sch 80 CPVC + ${arch.packingMedia.label}`,
             dimensions_in: arch.bedLayout === "parallel_manifold"
-              ? `${arch.parallelBed.pipeCount} × ${arch.parallelBed.pipeNomIn}" Sch 80 × ${pH.toFixed(0)}" H`
+              ? `${arch.parallelBed.pipeCount} × ${arch.parallelBed.pipeNomIn}" bare pipes × ${pH.toFixed(0)}" H`
               : `Ø${pD.toFixed(1)}" × ${pH.toFixed(0)}" H`,
             dimensions_mm: arch.bedLayout === "parallel_manifold"
               ? `${arch.parallelBed.pipeCount} × DN${Math.round(arch.parallelBed.pipeNomIn * 25)} × ${Math.round(pH * 25.4)} mm`
               : `Ø${Math.round(pD * 25.4)} × ${Math.round(pH * 25.4)} mm`,
-            sku: arch.bedLayout === "parallel_manifold" ? "CPVC-SCH80-4IN" : "CPVC-COL-14",
+            sku: arch.bedLayout === "parallel_manifold" ? `UNISEAL-BUNDLE-${arch.parallelBed.pipeNomIn}IN` : "CPVC-COL-14",
             qty: arch.bedLayout === "parallel_manifold" ? arch.parallelBed.pipeCount : 1,
-            cost_usd: arch.bedLayout === "parallel_manifold" ? 680 : 960,
-            notes: arch.bedLayout === "parallel_manifold" ? "Includes top liquid distribution header + 1/2\" PP packing" : "Includes perforated support plate + demister pad",
+            cost_usd: arch.bedLayout === "parallel_manifold" ? Math.max(220, 960 + arch.parallelBed.costDelta) : 960,
+            notes: arch.bedLayout === "parallel_manifold"
+              ? `Shell-less flat HDPE/CPVC collector plates + ${arch.parallelBed.pipeCount * 2} rubber Uniseals (zero big outer pipe)`
+              : "Includes perforated support plate + demister pad",
           },
           {
             num: 5, id: "sump_pump",
@@ -4988,7 +5573,7 @@
           const baseX = ex + (showTop ? 92 : 170);
 
           out += `<rect x="${ex}" y="${ey}" width="${ew}" height="${eh}" fill="rgba(10, 24, 42, 0.55)" stroke="#234873" stroke-width="1"/>`;
-          out += `<text x="${ex + 14}" y="${ey + 22}" fill="#7dd3fc" font-family="monospace" font-size="12" font-weight="800">FRONT ELEVATION — ${escapeHtml(isEductor ? "DRY-FAN DOWNFLOW EDUCTOR" : "INLINE ID BLOWER")}${isParallelBed ? " · PARALLEL 4\" PIPES" : ""}${isCompact ? " · U-TURN SKID" : ""}</text>`;
+          out += `<text x="${ex + 14}" y="${ey + 22}" fill="#7dd3fc" font-family="monospace" font-size="12" font-weight="800">FRONT ELEVATION — ${escapeHtml(isEductor ? "DRY-FAN DOWNFLOW EDUCTOR" : "INLINE ID BLOWER")}${isParallelBed ? ` · SHELL-LESS ${arch.parallelBed.pipeNomIn}" UNISEAL BUNDLE` : ""}${isCompact ? " · U-TURN SKID" : ""}</text>`;
 
           // Ground / skid datum line
           out += `<line x1="${ex + 24}" y1="${floorY}" x2="${ex + ew - 24}" y2="${floorY}" stroke="#47729e" stroke-width="2"/>`;
@@ -5086,7 +5671,7 @@
             out += `<text x="${teeX - 14}" y="${fanY - 38}" text-anchor="middle" fill="#6ee7b7" font-family="monospace" font-size="9.5" font-weight="700">DRY AMBIENT FAN (DOWN)</text>`;
             out += svgCalloutBubble(numBlower, teeX + 12, fanY - 12, teeX + 58, fanY - 26, sel);
 
-            out += drawPlanPackedBedSVG(pX, pTopY, pW, pH, isParallelBed, arch.parallelBed.pipeCount, sel === numPacked);
+            out += drawPlanPackedBedSVG(pX, pTopY, pW, pH, isParallelBed, arch.parallelBed.pipeCount, arch.parallelBed.pipeNomIn, sel === numPacked);
             out += svgDimLine(pX, pTopY, pX + pW, pTopY, `Ø${fmtPlanLen(pDIn)}`, -16, false, "#67e8f9");
             out += svgDimLine(pX + pW, pTopY, pX + pW, floorY, fmtPlanLen(pHIn), 22, true, "#67e8f9");
             out += svgCalloutBubble(numPacked, pX + pW * 0.5, pTopY + pH * 0.5, pX + pW + 52, pTopY + pH * 0.45, sel);
@@ -5130,7 +5715,7 @@
             out += `<text x="${vX + vW * 0.5}" y="${vY - 24}" text-anchor="middle" fill="#cbd5e1" font-family="monospace" font-size="9">${isParallelVent ? `${arch.parallelVenturi.throatCount}× MINI VENTURIS` : `Øt ${fmtPlanLen(vThIn)}`}</text>`;
             out += svgCalloutBubble(numVenturi, vX + vW * 0.45, vY, vX + vW * 0.45, vY - 64, sel);
 
-            out += drawPlanPackedBedSVG(pX, pTopY, pW, pH, isParallelBed, arch.parallelBed.pipeCount, sel === numPacked);
+            out += drawPlanPackedBedSVG(pX, pTopY, pW, pH, isParallelBed, arch.parallelBed.pipeCount, arch.parallelBed.pipeNomIn, sel === numPacked);
             out += svgDimLine(pX, pTopY, pX + pW, pTopY, `Ø${fmtPlanLen(pDIn)}`, -16, false, "#67e8f9");
             out += svgCalloutBubble(numPacked, pX + pW * 0.5, pTopY + pH * 0.42, pX + pW * 0.5, pTopY - 60, sel);
 
@@ -5212,7 +5797,7 @@
             out += `<circle cx="${uX}" cy="${(r1Y + r2Y) * 0.5}" r="14" fill="rgba(148,163,184,0.26)" stroke="#e2e8f0" stroke-width="1.4"/>`;
             out += `<text x="${uX}" y="${(r1Y + r2Y) * 0.5 + 4}" text-anchor="middle" fill="#f8fafc" font-family="monospace" font-size="9.5" font-weight="700">${numVenturi}</text>`;
             // Stage 3 Packed Bed (front-right)
-            out += drawPlanTopPackedBedSVG(s3X, r2Y, 26, isParallelBed);
+            out += drawPlanTopPackedBedSVG(s3X, r2Y, 26, isParallelBed, arch.parallelBed.pipeNomIn);
             out += `<text x="${s3X}" y="${r2Y + 4}" text-anchor="middle" fill="#e0f2fe" font-family="monospace" font-size="10" font-weight="700">${numPacked}</text>`;
             if (!isEductor) {
               out += `<line x1="${s3X - 26}" y1="${r2Y}" x2="${s4X + 22}" y2="${r2Y}" stroke="#38bdf8" stroke-width="8"/>`;
@@ -5242,7 +5827,7 @@
               out += `<text x="${vMidX}" y="${midY - 22}" text-anchor="middle" fill="#a7f3d0" font-family="monospace" font-size="9" font-weight="700">${numBlower}</text>`;
             }
 
-            out += drawPlanTopPackedBedSVG(s3X, midY, 26, isParallelBed);
+            out += drawPlanTopPackedBedSVG(s3X, midY, 26, isParallelBed, arch.parallelBed.pipeNomIn);
             out += `<text x="${s3X}" y="${midY + 4}" text-anchor="middle" fill="#e0f2fe" font-family="monospace" font-size="10" font-weight="700">${numPacked}</text>`;
 
             if (!isEductor) {
@@ -5277,10 +5862,10 @@
         out += `<line x1="${tbX + 240}" y1="${tbY + 34}" x2="${tbX + 240}" y2="${tbY + tbH}" stroke="#234873" stroke-width="1"/>`;
         out += `<text x="${tbX + 12}" y="${tbY + 22}" fill="#f8fafc" font-family="monospace" font-size="12.5" font-weight="800">${escapeHtml(plan.title || "KILNSCRUB COMPLETE SHOP PLAN")}</text>`;
         out += `<text x="${tbX + 12}" y="${tbY + 51}" fill="#7dd3fc" font-family="monospace" font-size="10">ALIGNMENT: ${escapeHtml(isEductor ? "DRY-FAN EDUCTOR" : "INLINE ID BLOWER")}</text>`;
-        out += `<text x="${tbX + 12}" y="${tbY + 66}" fill="#cbd5e1" font-family="monospace" font-size="10">BED: ${escapeHtml(isParallelBed ? `PARALLEL ${arch.parallelBed.pipeCount}×${arch.parallelBed.pipeNomIn}" PIPES` : "SINGLE COLUMN")}</text>`;
+        out += `<text x="${tbX + 12}" y="${tbY + 66}" fill="#cbd5e1" font-family="monospace" font-size="10">BED: ${escapeHtml(isParallelBed ? `SHELL-LESS ${arch.parallelBed.pipeCount}×${arch.parallelBed.pipeNomIn}" UNISEAL` : "SINGLE COLUMN")}</text>`;
         out += `<text x="${tbX + 252}" y="${tbY + 51}" fill="#7dd3fc" font-family="monospace" font-size="10">ENVELOPE: ${escapeHtml(fmtPlanLen(lenIn, true))} × ${escapeHtml(fmtPlanLen(widIn, true))}</text>`;
         out += `<text x="${tbX + 252}" y="${tbY + 66}" fill="#cbd5e1" font-family="monospace" font-size="10">HEIGHT: ${escapeHtml(fmtPlanLen(hgtIn, true))} · UNITS: ${planState.unit.toUpperCase()}</text>`;
-        out += `<text x="${tbX + 12}" y="${tbY + 98}" fill="#94a3b8" font-family="monospace" font-size="10">KILNSCRUB PHASE 7 SHOP BLUEPRINT</text>`;
+        out += `<text x="${tbX + 12}" y="${tbY + 98}" fill="#94a3b8" font-family="monospace" font-size="10">KILNSCRUB PHASE 8 SHOP BLUEPRINT</text>`;
         out += `<text x="${tbX + 252}" y="${tbY + 98}" fill="#86efac" font-family="monospace" font-size="10">ZERO CAD REQUIRED · READY TO PRINT</text>`;
         out += `</g>`;
 
@@ -5297,23 +5882,43 @@
         });
       }
 
-      function drawPlanPackedBedSVG(pX, pTopY, pW, pH, isParallel, pipeCount, isSelected) {
+      function drawPlanPackedBedSVG(pX, pTopY, pW, pH, isParallel, pipeCount, pipeNomIn, isSelected) {
         const stroke = isSelected ? "#f97316" : "#06b6d4";
         const sw = isSelected ? 2.6 : 1.7;
+        const pIn = normalizeParallelPipeSize(pipeNomIn || 4);
         let out = `<g stroke="${stroke}" stroke-width="${sw}" fill="rgba(6,182,212,0.12)">`;
         if (isParallel) {
-          // Bottom & top collector plenums + bundle of vertical 4" pipes
-          const plenH = 34;
-          out += `<rect x="${pX}" y="${pTopY + pH - plenH}" width="${pW}" height="${plenH}"/>`;
-          out += `<rect x="${pX}" y="${pTopY}" width="${pW}" height="${plenH}"/>`;
-          const visPipes = Math.min(6, Math.max(4, Math.round(Math.sqrt(pipeCount || 8) + 2)));
-          const gap = (pW - 12) / visPipes;
-          const pipeW = Math.max(8, gap * 0.66);
+          // Shell-Less Uniseal Flat-Plate Pipe Bundle (NO outer drum/casing around bare pipes!)
+          const basePlenH = 26;
+          const topHoodH = 20;
+          const plateH = 7;
+          const botPlateY = pTopY + pH - basePlenH - plateH;
+          const topPlateY = pTopY + topHoodH;
+          const pipeTopY = topPlateY + plateH;
+          const pipeBodyH = Math.max(40, botPlateY - pipeTopY);
+
+          // Compact lower sump collector box & upper demister collector cap
+          out += `<rect x="${pX}" y="${pTopY + pH - basePlenH}" width="${pW}" height="${basePlenH}" fill="rgba(14,165,233,0.16)"/>`;
+          out += `<rect x="${pX}" y="${pTopY}" width="${pW}" height="${topHoodH}" fill="rgba(125,211,252,0.16)"/>`;
+          // Flat HDPE/CPVC Uniseal collector plates (wider overhang to read clearly as clamped flat plates)
+          out += `<rect x="${pX - 5}" y="${botPlateY}" width="${pW + 10}" height="${plateH}" fill="#1e3a5f" stroke="${stroke}" stroke-width="1.5"/>`;
+          out += `<rect x="${pX - 5}" y="${topPlateY}" width="${pW + 10}" height="${plateH}" fill="#1e3a5f" stroke="${stroke}" stroke-width="1.5"/>`;
+          // Perimeter threaded tie-rods clamping top & bottom flat plates (no outer shell!)
+          out += `<line x1="${pX - 2}" y1="${topPlateY}" x2="${pX - 2}" y2="${botPlateY + plateH}" stroke="#94a3b8" stroke-width="1.1" stroke-dasharray="3 2"/>`;
+          out += `<line x1="${pX + pW + 2}" y1="${topPlateY}" x2="${pX + pW + 2}" y2="${botPlateY + plateH}" stroke="#94a3b8" stroke-width="1.1" stroke-dasharray="3 2"/>`;
+
+          // Exposed bare parallel pipes scaled cleanly by pipe size (2", 3", 4") with rubber Uniseal grommets
+          const visPipes = pIn === 2 ? 8 : (pIn === 3 ? 6 : 5);
+          const gap = (pW - 8) / visPipes;
+          const pipeW = Math.max(5.5, gap * (pIn === 2 ? 0.56 : (pIn === 3 ? 0.64 : 0.72)));
           for (let i = 0; i < visPipes; i++) {
-            const px = pX + 6 + i * gap + (gap - pipeW) * 0.5;
-            out += `<rect x="${px.toFixed(1)}" y="${pTopY + plenH}" width="${pipeW.toFixed(1)}" height="${pH - plenH * 2}" fill="rgba(20,184,166,0.22)"/>`;
+            const px = pX + 4 + i * gap + (gap - pipeW) * 0.5;
+            out += `<rect x="${px.toFixed(1)}" y="${pipeTopY}" width="${pipeW.toFixed(1)}" height="${pipeBodyH}" fill="rgba(20,184,166,0.24)" stroke="${stroke}" stroke-width="1.2"/>`;
+            // Black rubber Uniseal grommet collars at top & bottom flat plate penetrations
+            out += `<rect x="${(px - 1.5).toFixed(1)}" y="${(pipeTopY - 2).toFixed(1)}" width="${(pipeW + 3).toFixed(1)}" height="5" fill="#0f172a" stroke="#64748b" stroke-width="0.9"/>`;
+            out += `<rect x="${(px - 1.5).toFixed(1)}" y="${(botPlateY - 3).toFixed(1)}" width="${(pipeW + 3).toFixed(1)}" height="5" fill="#0f172a" stroke="#64748b" stroke-width="0.9"/>`;
           }
-          out += `<text x="${pX + pW * 0.5}" y="${pTopY + pH - 12}" text-anchor="middle" stroke="none" fill="#67e8f9" font-family="monospace" font-size="9">${pipeCount || 10}×4" MANIFOLD</text>`;
+          out += `<text x="${pX + pW * 0.5}" y="${pTopY + pH - 9}" text-anchor="middle" stroke="none" fill="#67e8f9" font-family="monospace" font-size="8.5" font-weight="700">${pipeCount || 11}×${pIn}" UNISEAL</text>`;
         } else {
           out += `<rect x="${pX}" y="${pTopY}" width="${pW}" height="${pH}"/>`;
           // Sump, packing crosshatch, demister
@@ -5326,16 +5931,21 @@
         return out;
       }
 
-      function drawPlanTopPackedBedSVG(cx, cy, r, isParallel) {
+      function drawPlanTopPackedBedSVG(cx, cy, r, isParallel, pipeNomIn) {
+        const pIn = normalizeParallelPipeSize(pipeNomIn || 4);
         let out = `<g stroke="#06b6d4" stroke-width="1.6" fill="rgba(6,182,212,0.16)">`;
-        out += `<circle cx="${cx}" cy="${cy}" r="${r}"/>`;
         if (isParallel) {
-          const sr = r * 0.24;
-          out += `<circle cx="${cx}" cy="${cy}" r="${sr}" fill="rgba(20,184,166,0.35)"/>`;
-          for (let k = 0; k < 6; k++) {
-            const a = (k * Math.PI * 2) / 6;
-            out += `<circle cx="${(cx + Math.cos(a) * r * 0.58).toFixed(1)}" cy="${(cy + Math.sin(a) * r * 0.58).toFixed(1)}" r="${sr}" fill="rgba(20,184,166,0.35)"/>`;
+          // Flat collector plate outline (dashed = shell-less exposed bundle)
+          out += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="rgba(15,23,42,0.55)" stroke="#64748b" stroke-dasharray="3 2" stroke-width="1.3"/>`;
+          const sr = pIn === 2 ? r * 0.14 : (pIn === 3 ? r * 0.19 : r * 0.24);
+          const ringN = pIn === 2 ? 10 : (pIn === 3 ? 8 : 6);
+          out += `<circle cx="${cx}" cy="${cy}" r="${sr.toFixed(1)}" fill="rgba(20,184,166,0.38)" stroke="#06b6d4" stroke-width="1.2"/>`;
+          for (let k = 0; k < ringN; k++) {
+            const a = (k * Math.PI * 2) / ringN;
+            out += `<circle cx="${(cx + Math.cos(a) * r * 0.62).toFixed(1)}" cy="${(cy + Math.sin(a) * r * 0.62).toFixed(1)}" r="${sr.toFixed(1)}" fill="rgba(20,184,166,0.38)" stroke="#06b6d4" stroke-width="1.2"/>`;
           }
+        } else {
+          out += `<circle cx="${cx}" cy="${cy}" r="${r}"/>`;
         }
         out += `</g>`;
         return out;
@@ -5650,7 +6260,8 @@
         const isParallelVent = studioState.venturiLayout === "parallel_mini_venturis";
         const isCompact = !!(el("in-compact-footprint")?.checked ?? studioState.compactFootprint);
         const arch = getEffectiveArchitectureData(studioState.evaluation);
-        const pipeCount = arch.parallelBed?.pipeCount || 10;
+        const pipeCount = arch.parallelBed?.pipeCount || 11;
+        const pipeNomIn = normalizeParallelPipeSize(arch.parallelBed?.pipeNomIn || studioState.parallelPipeSizeIn || 4);
 
         const floorY = h - 54;
         const maxH = Math.max(q.tower_height_m || 1.2, p.column_height_m || 2.2, 1.5);
@@ -5683,35 +6294,53 @@
           ctx.restore();
         }
 
-        // Helper to render Stage 3 Packed Bed (Single Column OR Parallel 4" Pipe Manifold)
+        // Helper to render Stage 3 Packed Bed (Single Column OR Shell-Less 2"-4" Uniseal Pipe Bundle)
         function draw2DPackedBed(px, pTopY, pw, ph, sumpH, neckY, vY, outR) {
           ctx.save();
           ctx.globalAlpha = hi("packed") ? 1.0 : 0.35;
           ctx.strokeStyle = "#06b6d4";
           ctx.lineWidth = state.selectedStage === "packed" ? 3 : 2;
           if (isParallelBed) {
-            const plenH = Math.max(24, sumpH + 8);
-            const topPlenH = 22;
+            const basePlenH = Math.max(20, sumpH + 4);
+            const topHoodH = 18;
+            const plateH = 6;
+            const botPlateY = floorY - basePlenH - plateH;
+            const topPlateY = pTopY + topHoodH;
+            const pipeTopY = topPlateY + plateH;
+            const pipeBodyH = Math.max(32, botPlateY - pipeTopY);
+
+            // Compact lower sump collector box & top demister hood
             ctx.fillStyle = state.cutaway ? "rgba(6, 182, 212, 0.15)" : "#286e8a";
-            // Bottom collector plenum (sump + gas inlet)
-            ctx.fillRect(px, floorY - plenH, pw, plenH);
-            ctx.strokeRect(px, floorY - plenH, pw, plenH);
-            // Top demister collector plenum
-            ctx.fillRect(px, pTopY, pw, topPlenH);
-            ctx.strokeRect(px, pTopY, pw, topPlenH);
-            // Bundle of parallel 4" CPVC vertical pipes
-            const nVis = Math.min(6, Math.max(4, Math.round(Math.sqrt(pipeCount) + 1)));
-            const gap = (pw - 8) / nVis;
-            const colW = Math.max(7, gap * 0.64);
+            ctx.fillRect(px, floorY - basePlenH, pw, basePlenH);
+            ctx.strokeRect(px, floorY - basePlenH, pw, basePlenH);
+            ctx.fillRect(px, pTopY, pw, topHoodH);
+            ctx.strokeRect(px, pTopY, pw, topHoodH);
+            // Flat HDPE/CPVC collector plates (clamping bare pipes — NO external drum/casing!)
+            ctx.fillStyle = "#1e3a5f";
+            ctx.fillRect(px - 5, botPlateY, pw + 10, plateH);
+            ctx.strokeRect(px - 5, botPlateY, pw + 10, plateH);
+            ctx.fillRect(px - 5, topPlateY, pw + 10, plateH);
+            ctx.strokeRect(px - 5, topPlateY, pw + 10, plateH);
+            // Exposed bare vertical pipes scaled by pipeNomIn (2", 3", 4") with rubber Uniseal grommets
+            const nVis = pipeNomIn === 2 ? 7 : (pipeNomIn === 3 ? 6 : 5);
+            const gap = (pw - 6) / nVis;
+            const colW = Math.max(5, gap * (pipeNomIn === 2 ? 0.56 : (pipeNomIn === 3 ? 0.64 : 0.72)));
+            const mediaFill = studioState.packingMediaOption === "diy_ceramic_rings"
+              ? "rgba(194, 129, 90, 0.34)"
+              : (studioState.packingMediaOption === "aquaculture_bioballs" ? "rgba(56, 189, 248, 0.25)" : "rgba(20, 184, 166, 0.28)");
             for (let i = 0; i < nVis; i++) {
-              const cx = px + 4 + i * gap + (gap - colW) * 0.5;
-              ctx.fillStyle = state.cutaway ? "rgba(20, 184, 166, 0.28)" : "#286e8a";
-              ctx.fillRect(cx, pTopY + topPlenH, colW, ph - plenH - topPlenH);
-              ctx.strokeRect(cx, pTopY + topPlenH, colW, ph - plenH - topPlenH);
+              const cx = px + 3 + i * gap + (gap - colW) * 0.5;
+              ctx.fillStyle = state.cutaway ? mediaFill : "#286e8a";
+              ctx.fillRect(cx, pipeTopY, colW, pipeBodyH);
+              ctx.strokeRect(cx, pipeTopY, colW, pipeBodyH);
+              // Black rubber Uniseal grommet collars at top & bottom plates
+              ctx.fillStyle = "#0f172a";
+              ctx.fillRect(cx - 1.5, pipeTopY - 2, colW + 3, 4);
+              ctx.fillRect(cx - 1.5, botPlateY - 2, colW + 3, 4);
             }
             if (state.cutaway) {
               ctx.fillStyle = "rgba(14, 165, 233, 0.36)";
-              ctx.fillRect(px + 2, floorY - sumpH * 0.75, pw - 4, sumpH * 0.75 - 2);
+              ctx.fillRect(px + 2, floorY - sumpH * 0.72, pw - 4, sumpH * 0.72 - 2);
             }
           } else {
             ctx.fillStyle = state.cutaway ? "rgba(6, 182, 212, 0.11)" : "#286e8a";
@@ -5726,7 +6355,9 @@
               const availPack = Math.max(24, packBaseY - (demTop + demH + 14));
               const packH = Math.min(availPack, Math.max(24, ph * 0.42));
               const packTop = packBaseY - packH;
-              ctx.fillStyle = "rgba(20, 184, 166, 0.28)";
+              ctx.fillStyle = studioState.packingMediaOption === "diy_ceramic_rings"
+                ? "rgba(194, 129, 90, 0.34)"
+                : "rgba(20, 184, 166, 0.28)";
               ctx.fillRect(px + 3, packTop, pw - 6, packH);
               ctx.strokeStyle = "rgba(45, 212, 191, 0.65)";
               ctx.lineWidth = 1;
@@ -5755,10 +6386,10 @@
           draw2DFlange(ctx, px + pw * 0.5, neckY, ductW + 8, false, "#67e8f9");
           ctx.fillStyle = "#67e8f9";
           ctx.font = "bold 11px monospace";
-          ctx.fillText(isParallelBed ? `3. ${pipeCount}×4" BED` : "3. PACKED BED", px - 4, floorY + 16);
+          ctx.fillText(isParallelBed ? `3. ${pipeCount}×${pipeNomIn}" BUNDLE` : "3. PACKED BED", px - 4, floorY + 16);
           ctx.fillStyle = "#94a3b8";
           ctx.font = "10px monospace";
-          ctx.fillText(isParallelBed ? `Sch80 CPVC` : `Ø${fmt(mToMm(p.column_diameter_m), 0)}×${fmt(p.column_height_m, 2)}m`, px - 4, floorY + 29);
+          ctx.fillText(isParallelBed ? "Shell-Less Uniseal" : `Ø${fmt(mToMm(p.column_diameter_m), 0)}×${fmt(p.column_height_m, 2)}m`, px - 4, floorY + 29);
           ctx.restore();
         }
 
@@ -6349,6 +6980,7 @@
         const inputIds = [
           "in-studio-name", "in-kiln-vol", "in-peak-temp", "in-salt-rate", "in-fuel-type",
           "in-firing-hours", "in-salting-hours", "in-property-line", "in-ambient-winter", "in-garden-hose",
+          "in-blower-drive", "in-compressor-scfm",
           "in-compact-footprint", "in-shared-baffled-sump",
           "in-snap-cots", "in-include-silencer", "in-include-plume-diluter",
           "in-excess-air", "in-venturi-vel", "in-venturi-lg", "in-hcl-target",
@@ -6367,6 +6999,12 @@
             } else if (id === "in-salting-hours") {
               const v = parseFloat(node.value);
               if (v > 0) studioState.lastSaltingHours = v;
+            } else if (id === "in-blower-drive") {
+              studioState.blowerDriveOption = normalizeBlowerDriveOption(node.value);
+              syncSegmentedButtons();
+              refreshVisualGeometryImmediate();
+            } else if (id === "in-compressor-scfm") {
+              studioState.shopCompressorScfm = Math.max(5, Math.min(40, parseFloat(node.value) || 15));
             } else if (id === "in-compact-footprint") {
               studioState.compactFootprint = !!node.checked;
               refreshVisualGeometryImmediate();
@@ -6379,7 +7017,13 @@
             scheduleEvaluate();
           });
           node.addEventListener("change", () => {
-            if (id === "in-compact-footprint") {
+            if (id === "in-blower-drive") {
+              studioState.blowerDriveOption = normalizeBlowerDriveOption(node.value);
+              syncSegmentedButtons();
+              refreshVisualGeometryImmediate();
+            } else if (id === "in-compressor-scfm") {
+              studioState.shopCompressorScfm = Math.max(5, Math.min(40, parseFloat(node.value) || 15));
+            } else if (id === "in-compact-footprint") {
               studioState.compactFootprint = !!node.checked;
               refreshVisualGeometryImmediate();
             } else if (id === "in-shared-baffled-sump") {
@@ -6463,6 +7107,52 @@
             scheduleEvaluate();
           });
         });
+
+        // Phase 8: Parallel Pipe Size (2", 3", 4") Shell-Less Uniseal Bundle buttons
+        document.querySelectorAll("[data-parallel-pipe-size]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            studioState.parallelPipeSizeIn = normalizeParallelPipeSize(btn.dataset.parallelPipeSize);
+            studioState.packedBedLayout = "parallel_manifold";
+            syncSegmentedButtons();
+            refreshVisualGeometryImmediate();
+            scheduleEvaluate();
+          });
+        });
+
+        // Phase 8: Packing Media Option buttons
+        document.querySelectorAll("[data-packing-media]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            studioState.packingMediaOption = normalizePackingMediaOption(btn.dataset.packingMedia);
+            syncSegmentedButtons();
+            refreshVisualGeometryImmediate();
+            scheduleEvaluate();
+          });
+        });
+
+        // Phase 8: One-Click "Apply Budget Studio Combo" Button
+        const budgetBtn = el("btn-apply-budget-combo");
+        if (budgetBtn) {
+          budgetBtn.addEventListener("click", () => {
+            studioState.packedBedLayout = "parallel_manifold";
+            studioState.parallelPipeSizeIn = 4;
+            studioState.packingMediaOption = "diy_ceramic_rings";
+            studioState.blowerDriveOption = "compressor_air_atomize";
+            if (!Number.isFinite(studioState.shopCompressorScfm) || studioState.shopCompressorScfm < 10) {
+              studioState.shopCompressorScfm = 15.0;
+              el("in-compressor-scfm").value = 15;
+            }
+            studioState.compactFootprint = true;
+            el("in-compact-footprint").checked = true;
+            studioState.sharedBaffledSump = true;
+            el("in-shared-baffled-sump").checked = true;
+            studioState.controlTier = "electromechanical_only";
+            syncSegmentedButtons();
+            updateControlLabels();
+            refreshVisualGeometryImmediate();
+            requestEvaluateOrSize();
+            showToast("Applied Budget Studio Combo: Shell-Less 4\" Bundle + DIY Ceramic Rings + Air-Atomize Fan + U-Turn + Hardwired Safety!");
+          });
+        }
 
         // Phase 7: Wet Venturi Layout buttons
         document.querySelectorAll("[data-venturi-layout]").forEach((btn) => {
@@ -7864,49 +8554,109 @@
         const demH = clamp(p.demister_height_m || 0.18, 0.08, 0.32);
         const sumpH = Math.min(0.28, Math.max(0.16, pH * 0.12));
 
-        // Helper: Build Stage 3 Packed Bed (Single Column OR Parallel 4" CPVC Pipe Manifold!)
+        // Helper: Build Stage 3 Packed Bed (Single Column OR Shell-Less 2"-4" Uniseal Pipe Bundle!)
         function buildPackedBedAt(cx, cz, entryY) {
           const g = new THREE.Group();
           g.position.set(cx, 0, cz);
           const bundleR = isParallelBed ? Math.max(pR * 1.18, 0.34) : pR;
+          const mediaOpt = String(studio.packingMediaOption || "pp_pall_rings").toLowerCase();
+          const matMediaFill = mediaOpt === "diy_ceramic_rings"
+            ? new THREE.MeshStandardMaterial({ color: 0xc2815a, metalness: 0.06, roughness: 0.85 })
+            : (mediaOpt === "aquaculture_bioballs"
+              ? new THREE.MeshStandardMaterial({ color: 0x1e3a5f, metalness: 0.14, roughness: 0.68 })
+              : matPacking);
+          const matRubber = new THREE.MeshStandardMaterial({ color: 0x161b22, metalness: 0.08, roughness: 0.82 });
+          const matPlate = new THREE.MeshStandardMaterial({ color: 0x334e68, metalness: 0.25, roughness: 0.42, side: THREE.DoubleSide });
 
           if (isParallelBed) {
-            const rawCount = Number.isFinite(pbRaw.pipe_count) ? pbRaw.pipe_count : Math.max(6, Math.round((pR * 2 / 0.0254) ** 2 / 14.6));
-            const visPipes = Math.max(6, Math.min(13, rawCount));
-            const botPlenH = Math.max(sumpH + vOutR * 2.1 + 0.14, 0.54);
-            const topPlenH = Math.max(demH + 0.22, 0.38);
-            const pipeLen = Math.max(0.75, pH - botPlenH - topPlenH);
+            const pipeNomIn = [2, 3, 4].includes(Math.round(Number(pbRaw.pipe_nominal_in || studio.parallelPipeSizeIn || 4)))
+              ? Math.round(Number(pbRaw.pipe_nominal_in || studio.parallelPipeSizeIn || 4))
+              : 4;
+            const innerIn = pipeNomIn === 2 ? 1.939 : (pipeNomIn === 3 ? 2.900 : 3.826);
+            const rawCount = Number.isFinite(pbRaw.pipe_count)
+              ? pbRaw.pipe_count
+              : Math.max(6, Math.ceil((pR * 2 / 0.0254) ** 2 / (innerIn * innerIn)));
 
-            // Bottom collector/sump plenum
+            // Compact bottom sump collector + top demister collector cap, separated by FLAT collector plates
+            // with completely bare exposed parallel pipes (NO outer drum/casing around the bundle!).
+            const botPlenH = Math.max(sumpH + vOutR * 1.85 + 0.08, 0.44);
+            const topPlenH = Math.max(demH + 0.14, 0.30);
+            const plateT = 0.036;
+            const pipeLen = Math.max(0.85, pH - botPlenH - topPlenH);
+
+            // Low-profile bottom sump / gas distribution box
             const botPlen = new THREE.Mesh(new THREE.CylinderGeometry(bundleR, bundleR, botPlenH, 36, 1, cut, thetaStart, thetaLen), matCPVC);
             botPlen.position.y = botPlenH * 0.5;
             g.add(botPlen);
             const sumpM = new THREE.Mesh(new THREE.CylinderGeometry(bundleR * 0.94, bundleR * 0.94, sumpH, 28), matSump);
             sumpM.position.y = sumpH * 0.5 + 0.04;
             g.add(sumpM);
-            addBoltedFlange(g, 0, botPlenH, 0, "y", bundleR, matCPVCFlange, matBolt, 12);
+            // Bottom flat HDPE/CPVC collector plate (solid plate with Uniseal penetrations, no outer pipe drum above!)
+            const botPlate = new THREE.Mesh(new THREE.CylinderGeometry(bundleR * 1.07, bundleR * 1.07, plateT, 36), matPlate);
+            botPlate.position.y = botPlenH + plateT * 0.5;
+            g.add(botPlate);
 
-            // Top demister/header collector plenum
+            // Top flat HDPE/CPVC collector plate + short demister/transition hood above
+            const topPlateY = pH - topPlenH - plateT * 0.5;
+            const topPlate = new THREE.Mesh(new THREE.CylinderGeometry(bundleR * 1.07, bundleR * 1.07, plateT, 36), matPlate);
+            topPlate.position.y = topPlateY;
+            g.add(topPlate);
             const topPlen = new THREE.Mesh(new THREE.CylinderGeometry(bundleR, bundleR, topPlenH, 36, 1, cut, thetaStart, thetaLen), matCPVC);
             topPlen.position.y = pH - topPlenH * 0.5;
             g.add(topPlen);
             const demM = new THREE.Mesh(new THREE.CylinderGeometry(bundleR * 0.93, bundleR * 0.93, demH, 28), matDemister);
-            demM.position.y = pH - demH * 0.5 - 0.10;
+            demM.position.y = pH - demH * 0.5 - 0.06;
             g.add(demM);
-            addBoltedFlange(g, 0, pH - topPlenH, 0, "y", bundleR, matCPVCFlange, matBolt, 12);
 
-            // Bundle of N parallel 4" Sch 80 CPVC pipes in a neat concentric cluster
-            const pipeR = clamp(bundleR * 0.18, 0.045, 0.064);
-            const positions = [[0, 0]];
-            const outerN = visPipes - 1;
-            const ringR = bundleR * 0.64;
-            for (let k = 0; k < outerN; k++) {
-              const ang = (k / outerN) * Math.PI * 2;
-              positions.push([Math.cos(ang) * ringR, Math.sin(ang) * ringR]);
+            // Perimeter stainless tie-rods clamping top & bottom flat plates together (shell-less frame)
+            const rodR = bundleR * 1.01;
+            const rodSpan = (pH - topPlenH) - botPlenH;
+            for (let rIdx = 0; rIdx < 4; rIdx++) {
+              const rAng = (rIdx / 4) * Math.PI * 2 + Math.PI * 0.25;
+              const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, rodSpan + 0.08, 8), matBolt);
+              rod.position.set(Math.cos(rAng) * rodR, botPlenH + rodSpan * 0.5, Math.sin(rAng) * rodR);
+              g.add(rod);
             }
+
+            // Concentric layout of bare exposed 2", 3", or 4" pipes (NO enclosing outer casing!)
+            const pipeR = pipeNomIn === 2
+              ? clamp(bundleR * 0.095, 0.024, 0.036)
+              : (pipeNomIn === 3 ? clamp(bundleR * 0.135, 0.035, 0.049) : clamp(bundleR * 0.175, 0.046, 0.062));
+            const positions = [[0, 0]];
+            if (pipeNomIn === 2) {
+              const innerN = 6;
+              const outerN = Math.min(12, Math.max(8, rawCount - 7));
+              for (let k = 0; k < innerN; k++) {
+                const ang = (k / innerN) * Math.PI * 2;
+                positions.push([Math.cos(ang) * bundleR * 0.36, Math.sin(ang) * bundleR * 0.36]);
+              }
+              for (let k = 0; k < outerN; k++) {
+                const ang = (k / outerN) * Math.PI * 2 + 0.25;
+                positions.push([Math.cos(ang) * bundleR * 0.76, Math.sin(ang) * bundleR * 0.76]);
+              }
+            } else if (pipeNomIn === 3) {
+              const innerN = 5;
+              const outerN = Math.min(10, Math.max(7, rawCount - 6));
+              for (let k = 0; k < innerN; k++) {
+                const ang = (k / innerN) * Math.PI * 2;
+                positions.push([Math.cos(ang) * bundleR * 0.38, Math.sin(ang) * bundleR * 0.38]);
+              }
+              for (let k = 0; k < outerN; k++) {
+                const ang = (k / outerN) * Math.PI * 2 + 0.3;
+                positions.push([Math.cos(ang) * bundleR * 0.76, Math.sin(ang) * bundleR * 0.76]);
+              }
+            } else {
+              const outerN = Math.max(6, Math.min(10, rawCount - 1));
+              const ringR = bundleR * 0.66;
+              for (let k = 0; k < outerN; k++) {
+                const ang = (k / outerN) * Math.PI * 2;
+                positions.push([Math.cos(ang) * ringR, Math.sin(ang) * ringR]);
+              }
+            }
+
             const pipeCenterY = botPlenH + pipeLen * 0.5;
             for (const [ox, oz] of positions) {
-              // Cutaway front pipes expose internal 1/2" PP packing
+              // Cutaway front pipes expose internal packing media (PP Pall / Bio-Balls / DIY Ceramic)
               const cutThis = cut && oz > 0.02;
               const pTube = new THREE.Mesh(
                 new THREE.CylinderGeometry(pipeR, pipeR, pipeLen + 0.04, 18, 1, cutThis, cutThis ? Math.PI * 0.5 : 0, cutThis ? Math.PI : Math.PI * 2),
@@ -7915,22 +8665,22 @@
               pTube.position.set(ox, pipeCenterY, oz);
               g.add(pTube);
               if (cutThis) {
-                const pFill = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 0.84, pipeR * 0.84, pipeLen * 0.84, 14), matPacking);
+                const pFill = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 0.84, pipeR * 0.84, pipeLen * 0.84, 14), matMediaFill);
                 pFill.position.set(ox, pipeCenterY, oz);
                 g.add(pFill);
               }
-              // Socket collars top & bottom
-              const colBot = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 1.18, pipeR * 1.18, 0.05, 16), matCPVCFlange);
-              colBot.position.set(ox, botPlenH + 0.025, oz);
-              g.add(colBot);
-              const colTop = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 1.18, pipeR * 1.18, 0.05, 16), matCPVCFlange);
-              colTop.position.set(ox, pH - topPlenH - 0.025, oz);
-              g.add(colTop);
+              // Black rubber Uniseal grommet seals at bottom & top flat collector plate penetrations
+              const sealBot = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 1.24, pipeR * 1.28, 0.042, 16), matRubber);
+              sealBot.position.set(ox, botPlenH + plateT + 0.012, oz);
+              g.add(sealBot);
+              const sealTop = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 1.28, pipeR * 1.24, 0.042, 16), matRubber);
+              sealTop.position.set(ox, pH - topPlenH - plateT - 0.012, oz);
+              g.add(sealTop);
             }
-            // Top liquid distribution header ring
-            const distH = new THREE.Mesh(new THREE.TorusGeometry(ringR, 0.018, 10, 28), matDark);
+            // Top liquid distribution header ring inside hood
+            const distH = new THREE.Mesh(new THREE.TorusGeometry(bundleR * 0.62, 0.016, 10, 28), matDark);
             distH.rotation.x = Math.PI / 2;
-            distH.position.y = pH - topPlenH + 0.06;
+            distH.position.y = pH - topPlenH + 0.05;
             g.add(distH);
           } else {
             // Classic Single Large Column
@@ -7948,7 +8698,7 @@
             supportPlate.position.y = packBaseY - 0.012;
             g.add(supportPlate);
 
-            const packMesh = new THREE.Mesh(new THREE.CylinderGeometry(bundleR * 0.92, bundleR * 0.92, clampedPackH, 28), matPacking);
+            const packMesh = new THREE.Mesh(new THREE.CylinderGeometry(bundleR * 0.92, bundleR * 0.92, clampedPackH, 28), matMediaFill);
             packMesh.position.y = packBaseY + clampedPackH * 0.5;
             g.add(packMesh);
 
