@@ -116,6 +116,24 @@ func TestCalvertFSmallXStability(t *testing.T) {
 	}
 }
 
+func TestVenturiDropletAccelFactor(t *testing.T) {
+	// 24 cu.ft. reference case: L_t = 0.08 m, d_d = 50 um, v_t = 70 m/s, rho_g = 0.806, rho_L = 998.2, mu_g = 1.54e-5.
+	beta := VenturiDropletAccelFactor(0.08, 50e-6, 70.0, 0.806, 998.2, 1.54e-5)
+	if beta < 0.70 || beta > 0.75 {
+		t.Errorf("VenturiDropletAccelFactor(ref) = %.4f, want in [0.70, 0.75]", beta)
+	}
+	// Longer throat must accelerate droplets further (monotonically increasing, bounded <= 1.0).
+	betaLong := VenturiDropletAccelFactor(0.15, 50e-6, 70.0, 0.806, 998.2, 1.54e-5)
+	if betaLong <= beta || betaLong > 1.0 {
+		t.Errorf("expected beta(0.15m)=%.4f in (%.4f, 1.0]", betaLong, beta)
+	}
+	// Larger droplets accelerate less over the same throat length.
+	betaCoarse := VenturiDropletAccelFactor(0.08, 109e-6, 70.0, 0.806, 998.2, 1.54e-5)
+	if betaCoarse >= beta || betaCoarse <= 0 {
+		t.Errorf("expected beta(109um)=%.4f in (0, %.4f)", betaCoarse, beta)
+	}
+}
+
 func TestDefault24CuFtWoodSaltKilnDesign(t *testing.T) {
 	d := NewDesigner()
 	input := model.DefaultSaltKilnInput()
@@ -170,10 +188,19 @@ func TestDefault24CuFtWoodSaltKilnDesign(t *testing.T) {
 	if design.Venturi.OverallNaClFumeEfficiency <= 0 || design.Venturi.OverallNaClFumeEfficiency > 1 {
 		t.Errorf("OverallNaClFumeEfficiency out of (0, 1]: %v", design.Venturi.OverallNaClFumeEfficiency)
 	}
+	// A2: Yung-Calvert (1977) throat droplet acceleration gives ~18.5-19.5 inWC for 50 um droplet / 80 mm throat.
+	if design.Venturi.PressureDropInWC < 17.5 || design.Venturi.PressureDropInWC > 20.5 {
+		t.Errorf("Venturi PressureDropInWC = %.2f, want realistic Yung-Calvert band [17.5, 20.5] inWC", design.Venturi.PressureDropInWC)
+	}
 
 	// 4. Stage 3 Packed-Bed checks: flooding <= 75% (0..100 scale), HCl removal >= 0.98 (0..1 scale).
 	if design.PackedBed.PercentOfFlood <= 0 || design.PackedBed.PercentOfFlood > 75.0 {
 		t.Errorf("PercentOfFlood = %.2f%%, must be in (0, 75.0]", design.PackedBed.PercentOfFlood)
+	}
+	// A1: Irrigated Sauter-diameter Ergun bed dP must land in the Eckert GPDC irrigated band (~1.2-2.0 inWC).
+	bedDPInWC := design.PackedBed.BedPressureDrop.InWC()
+	if bedDPInWC < 1.20 || bedDPInWC > 2.00 {
+		t.Errorf("PackedBed BedPressureDrop = %.3f inWC, want GPDC irrigated band [1.20, 2.00] inWC", bedDPInWC)
 	}
 	if design.PackedBed.HClRemovalEfficiency < 0.98 || design.PackedBed.HClRemovalEfficiency > 1.0 {
 		t.Errorf("HClRemovalEfficiency = %.4f, must be in [0.98, 1.0]", design.PackedBed.HClRemovalEfficiency)
@@ -209,8 +236,21 @@ func TestDefault24CuFtWoodSaltKilnDesign(t *testing.T) {
 	if b.RecommendedMotorHP < b.ShaftPowerHP {
 		t.Errorf("RecommendedMotorHP (%v) < ShaftPowerHP (%v)", b.RecommendedMotorHP, b.ShaftPowerHP)
 	}
+	// Combined A1+A2 realistic 24 cu.ft. total static pressure (~20.5-22.5 inWC) and motor (2.0-3.0 HP).
+	if b.TotalStaticPressureInWC < 20.0 || b.TotalStaticPressureInWC > 23.0 {
+		t.Errorf("Blower TotalStaticPressureInWC = %.2f, want realistic band [20.0, 23.0] inWC", b.TotalStaticPressureInWC)
+	}
+	if b.RecommendedMotorHP < 2.0 || b.RecommendedMotorHP > 3.0 {
+		t.Errorf("Blower RecommendedMotorHP = %.2f HP, want [2.0, 3.0] HP", b.RecommendedMotorHP)
+	}
 	if len(b.FanCurve) < 10 || len(b.SystemCurve) != len(b.FanCurve) {
 		t.Errorf("unexpected fan/system curve lengths: %d / %d", len(b.FanCurve), len(b.SystemCurve))
+	}
+
+	// A4: Verify exact 2400 F reference temperature scaling (1588.7056 - 293.15 K).
+	wantRefDeltaT := float64(model.FahrenheitToKelvin(2400.0)) - 293.15
+	if math.Abs(refPeakDeltaTK-wantRefDeltaT) > 1e-12 {
+		t.Errorf("refPeakDeltaTK = %.12f, want %.12f", refPeakDeltaTK, wantRefDeltaT)
 	}
 
 	// 6. Envelope dimensions positive.

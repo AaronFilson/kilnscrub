@@ -214,6 +214,47 @@ func logNormalOverallEfficiency(
 	return eff
 }
 
+// VenturiDropletAccelFactor computes the droplet momentum transfer fraction beta = u_L,exit / v_t
+// across a finite venturi throat length using the Yung, Barbarika & Calvert (1977) analytical
+// throat acceleration correlation (matching Boll 1973 1D droplet drag ODE):
+//
+//	Re_0 = rho_g * v_t * d_d / mu_g
+//	C_D0 = max(24/Re_0 + 4/Re_0^(1/3), 0.44)
+//	x*   = 3 * L_t * C_D0 * rho_g / (16 * d_d * rho_L)
+//	s    = 1 / (1 + x* + sqrt(x*^2 + 2*x*))
+//	beta = 1 - s^2   (algebraically identical to 2*(1 - X^2 + sqrt(X^4 - X^2)) for X = 1 + x*)
+//
+// Clamped to (0, 1.0].
+func VenturiDropletAccelFactor(throatLen, dDroplet, vThroat, rhoG, rhoL, muG float64) float64 {
+	if throatLen <= 0 || dDroplet <= 0 || vThroat <= 0 || rhoG <= 0 || rhoL <= 0 || muG <= 0 {
+		return 1.0
+	}
+	re0 := (rhoG * vThroat * dDroplet) / muG
+	if re0 <= 0 || math.IsNaN(re0) || math.IsInf(re0, 0) {
+		return 1.0
+	}
+	cd0 := 24.0/re0 + 4.0/math.Cbrt(re0)
+	if cd0 < 0.44 {
+		cd0 = 0.44
+	}
+	xStar := (3.0 * throatLen * cd0 * rhoG) / (16.0 * dDroplet * rhoL)
+	if xStar <= 0 || math.IsNaN(xStar) {
+		return 1e-6
+	}
+	if math.IsInf(xStar, 1) {
+		return 1.0
+	}
+	s := 1.0 / (1.0 + xStar + math.Sqrt(xStar*xStar+2.0*xStar))
+	beta := 1.0 - s*s
+	if beta <= 0 {
+		return 1e-6
+	}
+	if beta > 1.0 {
+		return 1.0
+	}
+	return beta
+}
+
 // SizeVenturi computes Stage 2 (316L SS Wet Venturi Scrubber) geometry, Calvert cut diameters,
 // fractional efficiency curve (0.1-2.0 um), overall efficiencies, and throat pressure drop.
 func SizeVenturi(
@@ -299,8 +340,10 @@ func SizeVenturi(
 
 	liquidFlow := model.CubicMetersPerSec(lgRatio * qGas)
 
-	// Calvert throat pressure drop: droplet acceleration (f * rho_L * v_t^2 * L/G) + gas diffuser loss.
-	dpAccel := DefaultCalvertFactor * rhoL * vThroat * vThroat * lgRatio
+	// Throat pressure drop: droplet momentum acceleration (beta * rho_L * v_t^2 * L/G)
+	// using the Yung-Calvert (1977) throat acceleration factor beta, plus gas diffuser loss.
+	beta := VenturiDropletAccelFactor(throatLen, dDropM, vThroat, rhoG, rhoL, muG)
+	dpAccel := beta * rhoL * vThroat * vThroat * lgRatio
 	dpDiffuser := venturiDiffuserLossK * 0.5 * rhoG * vThroat * vThroat
 	venturiDP := model.Pascal(dpAccel + dpDiffuser)
 

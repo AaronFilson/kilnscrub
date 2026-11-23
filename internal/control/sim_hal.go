@@ -54,7 +54,7 @@ type SimHALConfig struct {
 func DefaultSimHALConfig() SimHALConfig {
 	return SimHALConfig{
 		NominalInletTemp:    model.FahrenheitToKelvin(1800.0), // ~1255.37 K
-		BaselineQuenchTemp:  model.FahrenheitToKelvin(165.0),  // ~347.04 K
+		BaselineQuenchTemp:  model.FahrenheitToKelvin(188.0),  // ~359.82 K (above 183.9 F adiabatic T_sat at 2400 F)
 		MaxWaterFlowGPM:     2.5,
 		NominalWaterFlowGPM: 1.0,
 		BlowerMaxSuctionPa:  30.0,
@@ -62,7 +62,7 @@ func DefaultSimHALConfig() SimHALConfig {
 		DraftTimeConst:      300 * time.Millisecond,
 		ValveTimeConst:      300 * time.Millisecond,
 		QuenchTimeConst:     2 * time.Second,
-		HeatSensitivityK:    75.0,
+		HeatSensitivityK:    55.0,
 		CoolingGainKPerGPM:  22.0,
 		DryGasOutletTemp:    model.FahrenheitToKelvin(380.0), // ~466.48 K (> 210 F)
 		InitialSumpPH:       8.0,
@@ -508,8 +508,17 @@ func (s *SimHAL) stepLocked(dt time.Duration) {
 		targetOutTemp = float64(s.cfg.BaselineQuenchTemp) +
 			s.cfg.HeatSensitivityK*(heatLoad-1.0) -
 			s.cfg.CoolingGainKPerGPM*(s.waterFlowGPM-s.cfg.NominalWaterFlowGPM)
-		// Clamp physical equilibrium between spray water minimum (~315 K) and dry gas temperature.
-		targetOutTemp = clampFloat(targetOutTemp, 315.0, float64(s.cfg.DryGasOutletTemp))
+		// Adiabatic saturation temperature floor rises with inlet flue gas load
+		// (~177.5 F at 1800 F nominal -> ~183.9 F at 2400 F peak), while still permitting
+		// custom lower BaselineQuenchTemp configs in unit tests.
+		tSat1800 := float64(model.FahrenheitToKelvin(177.5))
+		tSat2400 := float64(model.FahrenheitToKelvin(183.9))
+		tSatFloor := tSat1800 + clampFloat((heatLoad-1.0)/0.35, -0.5, 1.0)*(tSat2400-tSat1800)
+		minFloor := math.Min(tSatFloor, float64(s.cfg.BaselineQuenchTemp)-2.0)
+		if minFloor < 315.0 {
+			minFloor = 315.0
+		}
+		targetOutTemp = clampFloat(targetOutTemp, minFloor, float64(s.cfg.DryGasOutletTemp))
 	}
 	alphaQuench := expAlpha(dtSec, s.cfg.QuenchTimeConst.Seconds())
 	s.quenchOutletTemp = model.Kelvin(float64(s.quenchOutletTemp) + alphaQuench*(targetOutTemp-float64(s.quenchOutletTemp)))

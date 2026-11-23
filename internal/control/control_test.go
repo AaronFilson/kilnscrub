@@ -18,7 +18,7 @@ func nominalReadings(now time.Time) model.SensorReadings {
 		DraftPa:             draft,
 		DraftInWC:           draft.InWC(),
 		QuenchInletTemp:     model.FahrenheitToKelvin(1800.0),
-		QuenchOutletTemp:    model.FahrenheitToKelvin(165.0),
+		QuenchOutletTemp:    model.FahrenheitToKelvin(188.0),
 		WaterFlow:           water,
 		WaterFlowGPM:        water.GPM(),
 		SumpPH:              8.0,
@@ -338,23 +338,23 @@ func TestDirectActingPIDSignNoRunaway(t *testing.T) {
 	}
 
 	// Quench cooling direct-acting check:
-	// Higher quench outlet temp (e.g. 190 F vs 165 F) -> MUST INCREASE QuenchSprayValve.
+	// Higher quench outlet temp (e.g. 202 F vs 188 F) -> MUST INCREASE QuenchSprayValve.
 	hotQuenchCtrl, _ := NewController(cfg)
 	rHot := nominalReadings(now)
-	rHot.QuenchOutletTemp = model.FahrenheitToKelvin(190.0)
+	rHot.QuenchOutletTemp = model.FahrenheitToKelvin(202.0)
 	cmdHot := hotQuenchCtrl.Step(rHot, nil, cfg.LoopInterval, now)
 	if cmdHot.QuenchSprayValve <= baseCmd.QuenchSprayValve {
-		t.Fatalf("quench PID sign inverted! hotter outlet (190 F vs 165 F) produced QuenchSprayValve=%.4f <= baseline %.4f",
+		t.Fatalf("quench PID sign inverted! hotter outlet (202 F vs 188 F) produced QuenchSprayValve=%.4f <= baseline %.4f",
 			cmdHot.QuenchSprayValve, baseCmd.QuenchSprayValve)
 	}
 
-	// Cooler quench outlet temp (e.g. 140 F vs 165 F) -> MUST DECREASE QuenchSprayValve.
+	// Cooler quench outlet temp (e.g. 170 F vs 188 F) -> MUST DECREASE QuenchSprayValve.
 	coolQuenchCtrl, _ := NewController(cfg)
 	rCool := nominalReadings(now)
-	rCool.QuenchOutletTemp = model.FahrenheitToKelvin(140.0)
+	rCool.QuenchOutletTemp = model.FahrenheitToKelvin(170.0)
 	cmdCool := coolQuenchCtrl.Step(rCool, nil, cfg.LoopInterval, now)
 	if cmdCool.QuenchSprayValve >= baseCmd.QuenchSprayValve {
-		t.Fatalf("quench PID sign inverted! cooler outlet (140 F vs 165 F) produced QuenchSprayValve=%.4f >= baseline %.4f",
+		t.Fatalf("quench PID sign inverted! cooler outlet (170 F vs 188 F) produced QuenchSprayValve=%.4f >= baseline %.4f",
 			cmdCool.QuenchSprayValve, baseCmd.QuenchSprayValve)
 	}
 
@@ -417,9 +417,14 @@ func TestClosedLoopWoodStokingHeatSpikeRejection(t *testing.T) {
 	}
 
 	// Phase 1: 5 seconds nominal warm-up to steady state.
-	_, _, _, baseCmd := runSteps(50)
+	_, _, baseReadings, baseCmd := runSteps(50)
 	if ctrl.Status().InterlockActive {
 		t.Fatalf("unexpected interlock trip during nominal warm-up: %+v", ctrl.Status())
+	}
+	// Verify PID modulates cleanly around 188 F without saturating the spray valve at 100%.
+	if baseCmd.QuenchSprayValve >= 0.85 || baseCmd.QuenchSprayValve <= cfg.QuenchPID.MinOutput {
+		t.Fatalf("expected nominal spray valve to modulate cleanly off saturation bounds, got %.3f (temp=%.2f F)",
+			baseCmd.QuenchSprayValve, baseReadings.QuenchOutletTemp.Fahrenheit())
 	}
 
 	// Phase 2: Inject severe wood-stoking heat spike (+333 K inlet surge -> 2400 F)
@@ -447,8 +452,11 @@ func TestClosedLoopWoodStokingHeatSpikeRejection(t *testing.T) {
 	// Verify closed-loop regulation settled close to setpoints under sustained stoking disturbance.
 	tempErrK := math.Abs(float64(spikeReadings.QuenchOutletTemp - cfg.QuenchSetpoint))
 	if tempErrK > 2.0 {
-		t.Fatalf("quench temp did not settle near 165 F setpoint: got %.2f F (err=%.2f K)",
+		t.Fatalf("quench temp did not settle near 188 F setpoint: got %.2f F (err=%.2f K)",
 			spikeReadings.QuenchOutletTemp.Fahrenheit(), tempErrK)
+	}
+	if spikeCmd.QuenchSprayValve >= 0.99 {
+		t.Fatalf("expected spray valve to remain unsaturated under 2400 F stoking load at 188 F setpoint, got %.3f", spikeCmd.QuenchSprayValve)
 	}
 	draftErrPa := math.Abs(float64(ctrl.Status().FilteredDraftPa - cfg.TargetDraftPa))
 	if draftErrPa > 1.5 {
@@ -523,6 +531,24 @@ func TestClosedLoopWaterLossFailSafeAndRecovery(t *testing.T) {
 	cmd = ctrl.Step(r, nil, dt, simNow)
 	if cmd.BypassDamperOpen || cmd.AlarmLatched || ctrl.Status().InterlockActive {
 		t.Fatalf("expected normal operation after ResetInterlock, got cmd=%+v status=%+v", cmd, ctrl.Status())
+	}
+
+	// Verify a severe unmitigated thermal spike still trips >= 210 F (TripHighQuenchTemp).
+	hal.InjectHeatSpike(model.Kelvin(900.0), model.Pascal(0), 0)
+	trippedHighTemp := false
+	for i := 0; i < 100; i++ {
+		simNow = simNow.Add(dt)
+		r, _ = hal.ReadSensors(ctx)
+		cmd = ctrl.Step(r, nil, dt, simNow)
+		_ = hal.ApplyCommands(ctx, cmd)
+		hal.Step(dt)
+		if cmd.BypassDamperOpen && cmd.TripReason == model.TripHighQuenchTemp {
+			trippedHighTemp = true
+			break
+		}
+	}
+	if !trippedHighTemp {
+		t.Fatalf("expected severe thermal spike to trip %s (>= 210 F), last status=%+v", model.TripHighQuenchTemp, ctrl.Status())
 	}
 }
 

@@ -1339,16 +1339,16 @@
           <div class="control">
             <div class="control-row">
               <label for="in-ctrl-quench">Quench Outlet Setpoint (°F)</label>
-              <span class="control-val" id="val-ctrl-quench">165 °F</span>
+              <span class="control-val" id="val-ctrl-quench">188 °F</span>
             </div>
-            <input id="in-ctrl-quench" type="range" min="150" max="195" step="1" value="165" />
+            <input id="in-ctrl-quench" type="range" min="150" max="198" step="1" value="188" />
           </div>
 
           <div class="ctrl-btn-row">
             <button id="btn-apply-setpoints" class="btn btn-primary" type="button">Apply Setpoints</button>
             <button id="btn-sync-setpoints" class="btn btn-ghost" type="button">Sync Active Config</button>
           </div>
-          <p class="ctrl-note">Draft range: -0.25 to -0.01 inWC (negative suction). Quench range: 150 to 195 °F (below 210 °F CPVC trip threshold).</p>
+          <p class="ctrl-note">Draft range: -0.25 to -0.01 inWC (negative suction). Quench range: 150 to 198 °F (default 188 °F, above 183.9 °F adiabatic saturation floor and below 210 °F CPVC trip threshold).</p>
         </div>
       </div>
 
@@ -2378,7 +2378,7 @@
           el("in-ctrl-draft").value = clampedDraft.toFixed(2);
         }
         if (Number.isFinite(cfg.quench_setpoint_k) && cfg.quench_setpoint_k > 273.15) {
-          const qF = Math.max(150, Math.min(195, Math.round(kToF(cfg.quench_setpoint_k))));
+          const qF = Math.max(150, Math.min(198, Math.round(kToF(cfg.quench_setpoint_k))));
           el("in-ctrl-quench").value = String(qF);
         }
         ctrlState.setpointDirty = false;
@@ -2450,7 +2450,7 @@
         const targetDraftInWC = Number.isFinite(cfg.target_draft_in_wc) ? cfg.target_draft_in_wc : -0.05;
         const quenchSpF = (Number.isFinite(cfg.quench_setpoint_k) && cfg.quench_setpoint_k > 273.15)
           ? kToF(cfg.quench_setpoint_k)
-          : 165.0;
+          : 188.0;
         const maxTempF = (Number.isFinite(safety.max_quench_outlet_temp_k) && safety.max_quench_outlet_temp_k > 273.15)
           ? kToF(safety.max_quench_outlet_temp_k)
           : 210.0;
@@ -2640,7 +2640,7 @@
         const targetDraft = Number.isFinite(cfg.target_draft_in_wc) ? cfg.target_draft_in_wc : -0.05;
         const quenchSpF = (Number.isFinite(cfg.quench_setpoint_k) && cfg.quench_setpoint_k > 273.15)
           ? kToF(cfg.quench_setpoint_k)
-          : 165.0;
+          : 188.0;
         const maxTempF = (Number.isFinite(safety.max_quench_outlet_temp_k) && safety.max_quench_outlet_temp_k > 273.15)
           ? kToF(safety.max_quench_outlet_temp_k)
           : 210.0;

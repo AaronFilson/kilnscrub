@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"syscall"
+	"time"
 
 	"github.com/AaronFilson/kilnscrub/internal/control"
 	"github.com/AaronFilson/kilnscrub/internal/web"
@@ -283,14 +284,75 @@ func runExport(args []string, stdout, stderr io.Writer) error {
 	return nil
 }
 
+func resolveDaemonConfig(
+	configPath string,
+	halMode string,
+	halExplicit bool,
+	draft *float64,
+	quenchTempF *float64,
+	interval *time.Duration,
+) (control.DaemonConfig, error) {
+	var (
+		dcfg control.DaemonConfig
+		err  error
+	)
+	if strings.TrimSpace(configPath) != "" {
+		dcfg, err = control.LoadDaemonConfig(configPath)
+		if err != nil {
+			return control.DaemonConfig{}, err
+		}
+	} else {
+		dcfg = control.DefaultDaemonConfig()
+	}
+
+	if halExplicit {
+		dcfg.HALMode = strings.ToLower(strings.TrimSpace(halMode))
+	}
+	if draft != nil {
+		dcfg.Control.SetTargetDraftInWC(*draft)
+	}
+	if quenchTempF != nil {
+		dcfg.Control.QuenchSetpoint = model.FahrenheitToKelvin(*quenchTempF)
+	}
+	if interval != nil {
+		dcfg.Control.LoopInterval = *interval
+	}
+	dcfg.Control.Sync()
+	if err := dcfg.Validate(); err != nil {
+		return control.DaemonConfig{}, err
+	}
+	return dcfg, nil
+}
+
+func openControlHAL(dcfg control.DaemonConfig) (model.HardwareHAL, io.Closer, error) {
+	switch dcfg.HALMode {
+	case control.HALModeSim:
+		simCfg := dcfg.Sim
+		if simCfg.AutoStepInterval == 0 {
+			simCfg.AutoStepInterval = dcfg.Control.LoopInterval
+		}
+		return control.NewSimHAL(simCfg), nil, nil
+	case control.HALModeModbus:
+		mbHAL, err := control.OpenModbusHAL(dcfg.Modbus)
+		if err != nil {
+			return nil, nil, fmt.Errorf("open modbus HAL (%s): %w", dcfg.Modbus.Device, err)
+		}
+		return mbHAL, mbHAL, nil
+	default:
+		return nil, nil, fmt.Errorf("unsupported hal mode %q (expected %q or %q)", dcfg.HALMode, control.HALModeSim, control.HALModeModbus)
+	}
+}
+
 func runDaemon(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	fs := flag.NewFlagSet("daemon", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 
-	cfg := model.DefaultControlConfig()
-	draft := fs.Float64("draft", cfg.TargetDraftInWC, "Target kiln draft (inWC, negative = suction)")
-	quenchTempF := fs.Float64("quench-temp-f", cfg.QuenchSetpoint.Fahrenheit(), "Target quench outlet temperature (F)")
-	interval := fs.Duration("interval", cfg.LoopInterval, "Closed-loop control tick interval")
+	defaults := model.DefaultControlConfig()
+	configPath := fs.String("config", "", "Path to JSON daemon configuration file")
+	halMode := fs.String("hal", control.HALModeSim, "Hardware abstraction layer backend: sim or modbus")
+	draft := fs.Float64("draft", defaults.TargetDraftInWC, "Target kiln draft (inWC, negative = suction)")
+	quenchTempF := fs.Float64("quench-temp-f", defaults.QuenchSetpoint.Fahrenheit(), "Target quench outlet temperature (F)")
+	interval := fs.Duration("interval", defaults.LoopInterval, "Closed-loop control tick interval")
 	duration := fs.Duration("duration", 0, "Optional bounded run duration (0 = run until SIGINT/SIGTERM)")
 
 	if err := fs.Parse(args); err != nil {
@@ -303,22 +365,42 @@ func runDaemon(ctx context.Context, args []string, stdout, stderr io.Writer) err
 		return fmt.Errorf("duration must be >= 0, got %v", *duration)
 	}
 
-	cfg.SetTargetDraftInWC(*draft)
-	cfg.QuenchSetpoint = model.FahrenheitToKelvin(*quenchTempF)
-	cfg.LoopInterval = *interval
-	cfg.Sync()
-	if err := cfg.Validate(); err != nil {
+	setFlags := make(map[string]bool)
+	fs.Visit(func(f *flag.Flag) {
+		setFlags[f.Name] = true
+	})
+
+	var draftOpt, quenchOpt *float64
+	var intervalOpt *time.Duration
+	if setFlags["draft"] {
+		draftOpt = draft
+	}
+	if setFlags["quench-temp-f"] {
+		quenchOpt = quenchTempF
+	}
+	if setFlags["interval"] {
+		intervalOpt = interval
+	}
+
+	dcfg, err := resolveDaemonConfig(*configPath, *halMode, setFlags["hal"], draftOpt, quenchOpt, intervalOpt)
+	if err != nil {
 		return err
 	}
 
-	simCfg := control.DefaultSimHALConfig()
-	simCfg.AutoStepInterval = cfg.LoopInterval
-	hal := control.NewSimHAL(simCfg)
+	hal, closer, err := openControlHAL(dcfg)
+	if err != nil {
+		return err
+	}
+	if closer != nil {
+		defer closer.Close()
+	}
 
+	cfg := dcfg.Control
 	var tickNum atomic.Uint64
 	daemon, err := control.NewDaemon(
 		cfg,
 		hal,
+		control.WithHALMode(dcfg.HALMode),
 		control.WithTelemetryCallback(func(st model.ControlStatus) {
 			n := tickNum.Add(1)
 			fmt.Fprintf(stdout, "tick=%d state=%s draft=%.4f inWC (%.2f Pa) quench_out=%.1f F water=%.2f GPM vfd=%.1f%% valve=%.1f%% bypass=%v\n",
@@ -349,8 +431,8 @@ func runDaemon(ctx context.Context, args []string, stdout, stderr io.Writer) err
 	if *duration > 0 {
 		mode = fmt.Sprintf("for %v", *duration)
 	}
-	fmt.Fprintf(stdout, "kilnscrub daemon starting (%s): target_draft=%.3f inWC (%.2f Pa) quench_sp=%.1f F interval=%v\n",
-		mode, cfg.TargetDraftInWC, cfg.TargetDraftPa, cfg.QuenchSetpoint.Fahrenheit(), cfg.LoopInterval)
+	fmt.Fprintf(stdout, "kilnscrub daemon starting (%s, hal=%s): target_draft=%.3f inWC (%.2f Pa) quench_sp=%.1f F interval=%v\n",
+		mode, dcfg.HALMode, cfg.TargetDraftInWC, cfg.TargetDraftPa, cfg.QuenchSetpoint.Fahrenheit(), cfg.LoopInterval)
 
 	if err := daemon.Run(runCtx); err != nil {
 		return err
@@ -367,6 +449,9 @@ func runUI(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	fs.SetOutput(stderr)
 
 	addr := fs.String("addr", ":8080", "HTTP listen address")
+	configPath := fs.String("config", "", "Path to JSON daemon configuration file for embedded live control")
+	halMode := fs.String("hal", control.HALModeSim, "Hardware abstraction layer backend for embedded control: sim or modbus")
+	noControl := fs.Bool("no-control", false, "Disable embedded live control daemon and telemetry backend")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -377,13 +462,77 @@ func runUI(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("addr must not be empty")
 	}
 
+	setFlags := make(map[string]bool)
+	fs.Visit(func(f *flag.Flag) {
+		setFlags[f.Name] = true
+	})
+
 	srv := web.NewServer(scrubber.NewDesigner(), cad.NewExporter())
 
 	sigCtx, stopSignals := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
 
+	var (
+		daemonCancel context.CancelFunc
+		daemonDone   chan struct{}
+		halCloser    io.Closer
+		controlDesc  = "disabled"
+	)
+
+	if !*noControl {
+		dcfg, err := resolveDaemonConfig(*configPath, *halMode, setFlags["hal"], nil, nil, nil)
+		if err != nil {
+			return err
+		}
+		hal, closer, err := openControlHAL(dcfg)
+		if err != nil {
+			return err
+		}
+		halCloser = closer
+
+		daemon, err := control.NewDaemon(
+			dcfg.Control,
+			hal,
+			control.WithHALMode(dcfg.HALMode),
+			control.WithErrorCallback(func(err error) {
+				fmt.Fprintf(stderr, "ui control hal error: %v\n", err)
+			}),
+		)
+		if err != nil {
+			if halCloser != nil {
+				_ = halCloser.Close()
+			}
+			return err
+		}
+
+		srv.SetControlBackend(daemon)
+		controlDesc = dcfg.HALMode
+
+		var dCtx context.Context
+		dCtx, daemonCancel = context.WithCancel(sigCtx)
+		daemonDone = make(chan struct{})
+		go func() {
+			defer close(daemonDone)
+			if err := daemon.Run(dCtx); err != nil {
+				fmt.Fprintf(stderr, "ui control daemon error: %v\n", err)
+			}
+		}()
+	}
+
+	defer func() {
+		if daemonCancel != nil {
+			daemonCancel()
+		}
+		if daemonDone != nil {
+			<-daemonDone
+		}
+		if halCloser != nil {
+			_ = halCloser.Close()
+		}
+	}()
+
 	displayURL := formatListenURL(*addr)
-	fmt.Fprintf(stdout, "kilnscrub ui listening on %s (addr %s)\n", displayURL, *addr)
+	fmt.Fprintf(stdout, "kilnscrub ui listening on %s (addr %s, control=%s)\n", displayURL, *addr, controlDesc)
 
 	return srv.ListenAndServe(sigCtx, *addr)
 }

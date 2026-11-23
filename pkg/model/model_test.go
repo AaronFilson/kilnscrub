@@ -22,6 +22,7 @@ func TestUnitConversions(t *testing.T) {
 			{210.0, 372.0388888888889},
 			{2400.0, 1588.7055555555555},
 			{165.0, 347.0388888888889},
+			{188.0, 359.81666666666666},
 		}
 		for _, tc := range cases {
 			gotK := FahrenheitToKelvin(tc.f)
@@ -189,6 +190,9 @@ func TestDefaultsAndValidation(t *testing.T) {
 	}
 	if cfg.TargetDraftInWC != -0.05 {
 		t.Errorf("expected control target draft -0.05 inWC, got %v", cfg.TargetDraftInWC)
+	}
+	if !almostEqual(cfg.QuenchSetpoint.Fahrenheit(), 188.0, 1e-9) {
+		t.Errorf("expected default QuenchSetpoint 188.0 F (above 183.9 F adiabatic floor), got %.2f F", cfg.QuenchSetpoint.Fahrenheit())
 	}
 	if !almostEqual(cfg.TargetDraftPa.InWC(), -0.05, 1e-9) {
 		t.Errorf("control target draft Pa/inWC mismatch: %v", cfg.TargetDraftPa.InWC())

@@ -23,7 +23,6 @@ func NewDesigner() *Designer {
 const (
 	// Reference studio ceramic kiln peak firing heat load (~18,400 BTU/hr per cu.ft. at 2400 F).
 	refHeatLoadWattsPerCuFt = 5400.0
-	refPeakDeltaTK          = 1588.15 - 293.15 // 2400 F - 68 F
 
 	// Wood combustion (seasoned hardwood, ~15% moisture as-fired, dry formula C1 H1.44 O0.66):
 	// Dry unit MW = 24.022 g/mol C; as-fired (15% H2O) = 28.261 g/mol C; LHV_as_fired = 16.0 MJ/kg.
@@ -42,6 +41,9 @@ const (
 	// Salt volatilization stoichiometry: 2 NaCl + H2O + SiO2 -> Na2SiO3 + 2 HCl (1 mol HCl per mol NaCl).
 	naclMWKgPerMol = 0.0584428
 )
+
+// Exact reference firing temperature rise from 20 C (68 F / 293.15 K) to 2400 F (1588.7056 K).
+var refPeakDeltaTK = float64(model.FahrenheitToKelvin(2400.0)) - 293.15
 
 // computeInletFlueGas derives kiln exit gas composition, molar flow, and thermophysical state
 // from firing volume, temperature, fuel type, excess air, and salt introduction rate.

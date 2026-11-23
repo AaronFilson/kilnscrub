@@ -31,6 +31,12 @@ func TestLoadExampleDaemonConfig(t *testing.T) {
 	if cfg.Modbus.Registers.OutputScale != 10000 {
 		t.Fatalf("example modbus output_scale = %d, want 10000", cfg.Modbus.Registers.OutputScale)
 	}
+	if math.Abs(cfg.Control.QuenchSetpoint.Fahrenheit()-188.0) > 1e-4 {
+		t.Fatalf("example control quench_setpoint = %.2f F, want 188.0 F", cfg.Control.QuenchSetpoint.Fahrenheit())
+	}
+	if math.Abs(cfg.Sim.BaselineQuenchTemp.Fahrenheit()-188.0) > 1e-4 {
+		t.Fatalf("example sim baseline_quench_temp = %.2f F, want 188.0 F", cfg.Sim.BaselineQuenchTemp.Fahrenheit())
+	}
 }
 
 func TestParsePartialDaemonConfigInheritsDefaultsAndSyncs(t *testing.T) {

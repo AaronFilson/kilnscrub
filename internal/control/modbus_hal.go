@@ -108,7 +108,7 @@ func DefaultModbusConfig() ModbusConfig {
 			},
 			QuenchOutletTemp: ModbusRegisterSpec{
 				Address: 2,
-				Scale:   0.1, // 1650 -> 165.0 F
+				Scale:   0.1, // 1880 -> 188.0 F
 				Signed:  true,
 			},
 			WaterFlowGPM: ModbusRegisterSpec{

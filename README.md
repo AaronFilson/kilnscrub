@@ -147,7 +147,7 @@ kilnscrub design --kiln-volume 24 --peak-temp 2400 --salt-rate 2.0
 Kiln Scrub 4-Stage Engineering Summary
 ======================================
 Kiln Input : 24.0 cu.ft. | Peak 2400 F | Salt 2.00 lbs/hr | Fuel wood_salt | Draft -0.050 inWC
-Inlet Gas  : 579.5 ACFM (0.0610 kg/s) @ 2400 F | Quenched: 256.0 ACFM @ 183.9 F
+Inlet Gas  : 579.2 ACFM (0.0610 kg/s) @ 2400 F | Quenched: 255.9 ACFM @ 183.9 F
 
 Stage 1 - Adiabatic Quench Tower (316L Stainless Steel)
   Tsat / Outlet / Dew Point : 183.9 F (357.5 K) / 183.9 F / 183.9 F
@@ -157,19 +157,19 @@ Stage 1 - Adiabatic Quench Tower (316L Stainless Steel)
 Stage 2 - Wet Venturi Scrubber (316L Stainless Steel)
   Throat & Spray            : D_th=0.047 m (1.85 in) | v_th=70.0 m/s | L/G=0.0012 (2.30 GPM)
   Calvert d50               : NaCl fume 0.214 um | Wood ash 0.199 um
-  Overall Capture & dP      : NaCl 84.2% | Wood ash 96.5% | dP=13.76 inWC (3429 Pa)
+  Overall Capture & dP      : NaCl 84.2% | Wood ash 96.5% | dP=18.88 inWC (4703 Pa)
 
 Stage 3 - Packed-Bed HCl Absorber & Demister (CPVC / Polypropylene)
   Column & Packing          : D=0.300 m (11.8 in) x H=2.950 m (9.68 ft) | Z_pack=1.050 m (1" PP Pall Rings)
-  Hydraulics & HCl Removal  : 55.5% of flood | HCl 99.04% (1047 -> 10.0 ppm) | NaHCO3 1.49 kg/hr | Recirc 5.36 GPM
-  Pressure Drop             : Bed 0.09 inWC + Demister 0.26 inWC = 0.35 inWC (88 Pa)
+  Hydraulics & HCl Removal  : 55.5% of flood | HCl 99.04% (1048 -> 10.0 ppm) | NaHCO3 1.49 kg/hr | Recirc 5.36 GPM
+  Pressure Drop             : Bed 1.44 inWC + Demister 0.26 inWC = 1.70 inWC (425 Pa)
 
 Stage 4 - Induced-Draft Blower (FRP / Polypropylene Housing, 316L SS Wheel)
-  Duty Point                : 255.7 ACFM @ 14.75 inWC (3673 Pa) | Kiln draft setpoint -0.050 inWC
-  dP Breakdown (inWC)       : Duct 0.17 | Quench 0.41 | Venturi 13.76 | Bed 0.09 | Demister 0.26 | Draft 0.05
-  Power & Wheel             : 0.96 shaft HP -> 1.50 HP motor (eta 62%) | Wheel 0.700 m (27.6 in) @ 3513 RPM
+  Duty Point                : 255.6 ACFM @ 21.21 inWC (5284 Pa) | Kiln draft setpoint -0.050 inWC
+  dP Breakdown (inWC)       : Duct 0.17 | Quench 0.41 | Venturi 18.88 | Bed 1.44 | Demister 0.26 | Draft 0.05
+  Power & Wheel             : 1.38 shaft HP -> 2.00 HP motor (eta 62%) | Wheel 0.840 m (33.1 in) @ 3511 RPM
 
-Skid Envelope               : L=3.72 m x W=1.45 m x H=3.25 m (12.2 x 4.8 x 10.7 ft) | Duct D=0.178 m (7.0 in) | Area=5.39 m2
+Skid Envelope               : L=3.94 m x W=1.66 m x H=3.25 m (12.9 x 5.4 x 10.7 ft) | Duct D=0.178 m (7.0 in) | Area=6.54 m2
 Warnings                    : none
 ```
 
@@ -211,7 +211,7 @@ wrote out/scrubber.stl (332384 bytes)
 wrote out/scrubber.dxf (13398 bytes)
 wrote out/bom.csv (3435 bytes)
 wrote out/bom.md (4464 bytes)
-BOM summary: 18 items | 313.3 kg total | $9103.68 est. USD
+BOM summary: 18 items | 325.8 kg total | $9457.10 est. USD
 ```
 
 ---
@@ -230,7 +230,7 @@ Runs the active closed-loop PID controller managing:
 | `--config` | *(none)* | Path to JSON daemon configuration file (e.g., `configs/kilnscrub.example.json`) |
 | `--hal` | `sim` | Hardware abstraction layer backend: `sim` (built-in kiln/scrubber plant simulator) or `modbus` (pure-Go Modbus RTU over RS-485 serial) |
 | `--draft` | `-0.05` | Target kiln draft setpoint (`inWC`, negative = suction) |
-| `--quench-temp-f` | `165.0` | Target quench outlet temperature setpoint (`°F`) |
+| `--quench-temp-f` | `188.0` | Target quench outlet temperature setpoint (`°F`, above `183.9°F` adiabatic saturation floor) |
 | `--interval` | `100ms` | Closed-loop control tick interval |
 | `--duration` | `0` | Optional bounded run duration (`0` = run until `SIGINT`/`SIGTERM`) |
 
@@ -247,11 +247,11 @@ kilnscrub daemon --config configs/kilnscrub.example.json --hal modbus
 **Sample Output (Simulation Mode):**
 
 ```text
-kilnscrub daemon starting (for 350ms): target_draft=-0.050 inWC (-12.45 Pa) quench_sp=165.0 F interval=100ms
-tick=1 state=NORMAL draft=-0.0500 inWC (-12.45 Pa) quench_out=165.0 F water=1.00 GPM vfd=40.5% valve=44.0% bypass=false
-tick=2 state=NORMAL draft=-0.0500 inWC (-12.45 Pa) quench_out=164.9 F water=1.03 GPM vfd=40.5% valve=43.9% bypass=false
-tick=3 state=NORMAL draft=-0.0499 inWC (-12.44 Pa) quench_out=164.9 F water=1.05 GPM vfd=40.6% valve=43.7% bypass=false
-tick=4 state=NORMAL draft=-0.0499 inWC (-12.42 Pa) quench_out=164.7 F water=1.06 GPM vfd=40.7% valve=43.5% bypass=false
+kilnscrub daemon starting (for 350ms, hal=sim): target_draft=-0.050 inWC (-12.45 Pa) quench_sp=188.0 F interval=100ms
+tick=1 state=NORMAL draft=-0.0500 inWC (-12.45 Pa) quench_out=188.0 F water=1.00 GPM vfd=40.5% valve=44.0% bypass=false
+tick=2 state=NORMAL draft=-0.0500 inWC (-12.45 Pa) quench_out=187.9 F water=1.03 GPM vfd=40.5% valve=43.9% bypass=false
+tick=3 state=NORMAL draft=-0.0499 inWC (-12.44 Pa) quench_out=187.9 F water=1.05 GPM vfd=40.6% valve=43.7% bypass=false
+tick=4 state=NORMAL draft=-0.0499 inWC (-12.42 Pa) quench_out=187.7 F water=1.06 GPM vfd=40.7% valve=43.5% bypass=false
 kilnscrub daemon stopped cleanly after 4 ticks (final state=NORMAL, interlock=false)
 ```
 
@@ -271,18 +271,28 @@ Hard interlock trips latch `BypassDamperOpen = true` and `AlarmLatched = true`. 
 
 ### `kilnscrub ui`
 
-Launches the embedded single-binary HTTP dashboard on `http://localhost:8080` (with zero external build step or asset server).
+Launches the embedded single-binary HTTP dashboard on `http://localhost:8080` (with zero external build step or asset server). By default, an embedded `control.Daemon` starts in the background (using `SimHAL` unless `--config` / `--hal modbus` selects Modbus RTU) so the **Live Control & Telemetry** tab streams live SSE telemetry immediately.
 
 **Flags:**
 
 | Flag | Default | Description |
 |---|---|---|
 | `--addr` | `:8080` | HTTP listen address (e.g., `127.0.0.1:8080` or `:8080`) |
+| `--config` | *(none)* | Path to JSON daemon configuration file for embedded live control |
+| `--hal` | `sim` | Embedded control HAL backend: `sim` or `modbus` |
+| `--no-control` | `false` | Disable embedded live control daemon and telemetry backend |
 
-**Example:**
+**Examples:**
 
 ```bash
+# Dashboard with live simulated control & SSE telemetry out of the box
 kilnscrub ui --addr 127.0.0.1:8080
+
+# Dashboard backed by config file / Modbus RTU hardware
+kilnscrub ui --addr 127.0.0.1:8080 --config configs/kilnscrub.example.json
+
+# Design-only mode without live control backend
+kilnscrub ui --addr 127.0.0.1:8080 --no-control
 ```
 
 ---

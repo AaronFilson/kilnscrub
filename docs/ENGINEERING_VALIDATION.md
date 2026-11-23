@@ -330,3 +330,27 @@ A rigorous engineering tool must separate what is **fixed by conservation laws**
 15. **Haaland, S. E. (1983).** "Simple and Explicit Formulas for the Friction Factor in Turbulent Pipe Flow," *J. Fluids Engineering*, 105(1), 89–90.
 16. **Green, D. W., & Southard, M. Z. (2019).** *Perry's Chemical Engineers' Handbook*, 9th Ed., McGraw-Hill (Sections 14, 17, 25: Packed Towers, Scrubbers, Corrosion / Alloy C-276 vs. 316L SS in HCl).
 17. **Jorgensen, R. (1999).** *Fan Engineering*, 9th Ed., Howden Buffalo; **Bleier, F. P. (1998).** *Fan Handbook*, McGraw-Hill.
+
+---
+
+## Post-Audit Resolution (A1–A4 Fixed)
+
+All four Category A physics and control defects identified in this audit have been resolved while preserving exact `<= 1e-6` relative agreement against all committed `testdata/oracle_fixtures.json` benchmarks (`ErgunPressureDrop` and `CalvertCutDiameter` remain unchanged):
+
+- **A1 (`pkg/scrubber/packedbed.go`):** `SizePackedBed` now evaluates packing bed $\Delta P$ using the Sauter equivalent sphere diameter $d_{p,\text{eq}} = 6(1-\varepsilon)/a_p$ (with specific surface area $a_p = 207.0 \times (0.0254 / d_p)\text{ m}^2/\text{m}^3$ scaled from 1" PP Pall rings) multiplied by the Eckert GPDC irrigated liquid-holdup factor (`1.70`).
+- **A2 (`pkg/scrubber/venturi.go`):** Replaced `DefaultCalvertFactor` (`f = 0.5`) in `dpAccel` with the Yung, Barbarika & Calvert (1977) analytical throat droplet-acceleration factor `VenturiDropletAccelFactor(L_t, d_d, v_t, rho_g, rho_L, mu_g)` ($\beta \approx 0.717$ for $d_d = 50\,\mu\text{m}$, $L_t = 80\text{ mm}$), clamped to `(0, 1.0]`.
+- **A3 (`pkg/model/types.go`, `internal/control/sim_hal.go`, `configs/kilnscrub.example.json`, `internal/web/static/index.html`):** Raised default `QuenchSetpoint` and `SimHAL` `BaselineQuenchTemp` from the physically unreachable `165.0°F` to `188.0°F` (`359.82 K`), safely above the `183.9°F` adiabatic saturation floor at `2400°F` and below the `210.0°F` CPVC trip limit. Added a load-dependent adiabatic saturation floor (`177.5°F–183.9°F`) in `SimHAL` so closed-loop PID modulates cleanly around `188.0°F` without saturating at 100%, while still tripping `>= 210°F` on water loss or severe unmitigated thermal spikes.
+- **A4 (`pkg/scrubber/scrubber.go`):** Corrected `refPeakDeltaTK` to `float64(model.FahrenheitToKelvin(2400.0)) - 293.15` (`1588.7056 - 293.15 K`), eliminating the $+0.043\%$ thermal scaling bias.
+
+### Verified Before / After Metrics (24 cu.ft. Reference Wood/Salt Kiln, 2400°F, 2.0 lbs/hr NaCl)
+
+| Metric | Before (Pre-Fix Baseline) | After (A1–A4 Fixed) | Engineering Validation Target |
+| :--- | :---: | :---: | :---: |
+| **Inlet / Quenched Gas Flow** | 579.5 / 256.0 ACFM | **579.2 / 255.9 ACFM** | Exact `2400°F` scaling (A4) |
+| **Venturi Throat $\Delta P$** | 13.76 inWC (3429 Pa, $\beta=0.500$) | **18.88 inWC (4703 Pa, $\beta=0.717$)** | 18.75–18.88 inWC (Boll / Yung–Calvert) |
+| **Packed-Bed $\Delta P_{\text{bed}}$** | 0.094 inWC (23.5 Pa) | **1.44 inWC (360 Pa)** | 1.20–2.07 inWC (Irrigated GPDC) |
+| **Stage 3 Total $\Delta P$ (Bed + Demister)** | 0.35 inWC (88 Pa) | **1.70 inWC (425 Pa)** | Realistic irrigated tower + chevron |
+| **Blower Total Static Pressure** | 14.75 inWC (3673 Pa) | **21.21 inWC (5284 Pa)** | 20.5–22.5 inWC |
+| **Blower Shaft / NEMA Motor HP** | 0.96 / 1.50 HP | **1.38 / 2.00 HP** | 2.0–3.0 HP motor |
+| **Default Control `QuenchSetpoint`** | 165.0°F (below $183.9°F$ $T_{\text{sat}}$) | **188.0°F (359.82 K)** | $> 183.9°F$ $T_{\text{sat}}$, $< 210°F$ trip |
+| **Oracle Fixtures (`Ergun`, `Calvert d50`, `Shomate`, `Lucas`, `IAPWS-95`)** | Pass ($\le 10^{-6}$) | **Pass ($\le 10^{-6}$)** | Unchanged ground-truth accuracy |

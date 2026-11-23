@@ -24,7 +24,7 @@
     },
     "draft_filter_cutoff_hz": 0.5,
     "draft_filter_time_const_ns": 318309886,
-    "quench_setpoint_k": 347.0388888888889,
+    "quench_setpoint_k": 359.81666666666666,
     "loop_interval_ns": 100000000,
     "safety": {
       "max_quench_outlet_temp_k": 372.0388888888889,
@@ -82,7 +82,7 @@
   },
   "sim": {
     "nominal_inlet_temp_k": 1255.3722222222223,
-    "baseline_quench_temp_k": 347.0388888888889,
+    "baseline_quench_temp_k": 359.81666666666666,
     "max_water_flow_gpm": 2.5,
     "nominal_water_flow_gpm": 1.0,
     "blower_max_suction_pa": 30.0,
@@ -90,7 +90,7 @@
     "draft_time_const_ns": 300000000,
     "valve_time_const_ns": 300000000,
     "quench_time_const_ns": 2000000000,
-    "heat_sensitivity_k": 75.0,
+    "heat_sensitivity_k": 55.0,
     "cooling_gain_k_per_gpm": 22.0,
     "dry_gas_outlet_temp_k": 466.48333333333335,
     "initial_sump_ph": 8.0,

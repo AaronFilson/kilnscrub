@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -157,7 +160,7 @@ func TestRunDaemonBoundedDuration(t *testing.T) {
 	err := run(context.Background(), []string{
 		"daemon",
 		"--draft", "-0.05",
-		"--quench-temp-f", "165",
+		"--quench-temp-f", "188",
 		"--interval", "50ms",
 		"--duration", "250ms",
 	}, &stdout, &stderr)
@@ -190,6 +193,180 @@ func TestRunUIStartsAndStopsCleanly(t *testing.T) {
 	if !strings.Contains(stdout.String(), "kilnscrub ui listening on") {
 		t.Errorf("ui output missing listening banner: %q", stdout.String())
 	}
+}
+
+func TestRunDaemonWithConfigFile(t *testing.T) {
+	cfgPath := filepath.Join("..", "..", "configs", "kilnscrub.example.json")
+	var stdout, stderr bytes.Buffer
+	err := run(context.Background(), []string{
+		"daemon",
+		"--config", cfgPath,
+		"--duration", "200ms",
+	}, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("daemon --config failed: %v (stderr: %s)", err, stderr.String())
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "hal=sim") || !strings.Contains(out, "quench_sp=188.0 F") {
+		t.Errorf("daemon --config output missing expected hal/setpoint:\n%s", out)
+	}
+	if !strings.Contains(out, "tick=1") || !strings.Contains(out, "stopped cleanly") {
+		t.Errorf("daemon --config output missing ticks or clean stop:\n%s", out)
+	}
+}
+
+func TestRunDaemonModbusUnavailableDeviceReturnsCleanError(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	err := run(context.Background(), []string{
+		"daemon",
+		"--hal", "modbus",
+		"--duration", "100ms",
+	}, &stdout, &stderr)
+	if err == nil {
+		t.Fatalf("expected error when modbus serial device is unavailable, got nil")
+	}
+	if !strings.Contains(err.Error(), "modbus") {
+		t.Errorf("expected error mentioning modbus, got: %v", err)
+	}
+}
+
+func reserveEphemeralAddr(t *testing.T) string {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen ephemeral: %v", err)
+	}
+	addr := ln.Addr().String()
+	_ = ln.Close()
+	return addr
+}
+
+func TestRunUILiveControlWiringAndNoControl(t *testing.T) {
+	t.Run("default_live_sim_control_and_sse", func(t *testing.T) {
+		addr := reserveEphemeralAddr(t)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		var stdout, stderr bytes.Buffer
+		errCh := make(chan error, 1)
+		go func() {
+			errCh <- run(ctx, []string{"ui", "--addr", addr}, &stdout, &stderr)
+		}()
+
+		client := &http.Client{Timeout: 2 * time.Second}
+		statusURL := "http://" + addr + "/api/control/status"
+		var statusBody struct {
+			Enabled                bool                `json:"enabled"`
+			HALMode                string              `json:"hal_mode"`
+			SupportsFaultInjection bool                `json:"supports_fault_injection"`
+			Config                 model.ControlConfig `json:"config"`
+		}
+
+		deadline := time.Now().Add(3 * time.Second)
+		ready := false
+		for time.Now().Before(deadline) {
+			resp, err := client.Get(statusURL)
+			if err == nil {
+				err = json.NewDecoder(resp.Body).Decode(&statusBody)
+				resp.Body.Close()
+				if err == nil && resp.StatusCode == http.StatusOK {
+					ready = true
+					break
+				}
+			}
+			time.Sleep(20 * time.Millisecond)
+		}
+		if !ready {
+			cancel()
+			t.Fatalf("ui server did not become ready on %s (stderr=%q)", addr, stderr.String())
+		}
+		if !statusBody.Enabled || statusBody.HALMode != "sim" || !statusBody.SupportsFaultInjection {
+			t.Fatalf("unexpected live control status: %+v", statusBody)
+		}
+		if gotF := statusBody.Config.QuenchSetpoint.Fahrenheit(); gotF < 187.9 || gotF > 188.1 {
+			t.Errorf("live UI control QuenchSetpoint = %.2f F, want 188.0 F", gotF)
+		}
+
+		// Verify SSE /api/control/stream emits a valid JSON telemetry frame.
+		sseCtx, sseCancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer sseCancel()
+		req, _ := http.NewRequestWithContext(sseCtx, http.MethodGet, "http://"+addr+"/api/control/stream", nil)
+		sseResp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			cancel()
+			t.Fatalf("GET /api/control/stream failed: %v", err)
+		}
+		scanner := bufio.NewScanner(sseResp.Body)
+		gotEvent := false
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.HasPrefix(line, "data: ") {
+				var st model.ControlStatus
+				if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &st); err != nil {
+					t.Errorf("invalid SSE JSON payload: %v", err)
+				}
+				gotEvent = true
+				break
+			}
+		}
+		sseResp.Body.Close()
+		if !gotEvent {
+			t.Errorf("did not receive SSE data event from /api/control/stream")
+		}
+
+		cancel()
+		select {
+		case runErr := <-errCh:
+			if runErr != nil {
+				t.Fatalf("ui returned unexpected error on shutdown: %v", runErr)
+			}
+		case <-time.After(3 * time.Second):
+			t.Fatalf("ui did not shut down cleanly after context cancel")
+		}
+	})
+
+	t.Run("no_control_flag_disables_backend", func(t *testing.T) {
+		addr := reserveEphemeralAddr(t)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		var stdout, stderr bytes.Buffer
+		errCh := make(chan error, 1)
+		go func() {
+			errCh <- run(ctx, []string{"ui", "--addr", addr, "--no-control"}, &stdout, &stderr)
+		}()
+
+		client := &http.Client{Timeout: 2 * time.Second}
+		var statusBody struct {
+			Enabled bool `json:"enabled"`
+		}
+		deadline := time.Now().Add(3 * time.Second)
+		ready := false
+		for time.Now().Before(deadline) {
+			resp, err := client.Get("http://" + addr + "/api/control/status")
+			if err == nil {
+				err = json.NewDecoder(resp.Body).Decode(&statusBody)
+				resp.Body.Close()
+				if err == nil && resp.StatusCode == http.StatusOK {
+					ready = true
+					break
+				}
+			}
+			time.Sleep(20 * time.Millisecond)
+		}
+		if !ready {
+			cancel()
+			t.Fatalf("ui --no-control did not become ready")
+		}
+		if statusBody.Enabled {
+			t.Errorf("expected enabled=false with --no-control, got true")
+		}
+
+		cancel()
+		if runErr := <-errCh; runErr != nil {
+			t.Fatalf("ui --no-control shutdown error: %v", runErr)
+		}
+	})
 }
 
 func TestRunErrorCases(t *testing.T) {

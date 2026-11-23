@@ -22,9 +22,9 @@ func isFinite(v float64) bool {
 // DesignInput specifies all kiln firing, aerodynamic, and scrubbing parameters
 // for sizing a 4-stage studio kiln exhaust scrubber.
 type DesignInput struct {
-	KilnVolumeCuFt float64 `json:"kiln_volume_cu_ft"`
-	PeakExitTempF  float64 `json:"peak_exit_temp_f"`
-	SaltRateLbsPerHr float64 `json:"salt_rate_lbs_per_hr"`
+	KilnVolumeCuFt    float64 `json:"kiln_volume_cu_ft"`
+	PeakExitTempF     float64 `json:"peak_exit_temp_f"`
+	SaltRateLbsPerHr  float64 `json:"salt_rate_lbs_per_hr"`
 	ExcessAirFraction float64 `json:"excess_air_fraction"`
 	// FuelType selects combustion stoichiometry: "wood_salt" (default when empty),
 	// "wood", "gas_salt", or "gas".
@@ -582,7 +582,7 @@ func DefaultControlConfig() ControlConfig {
 		},
 		DraftFilterCutoffHz:  cutoffHz,
 		DraftFilterTimeConst: CutoffHzToTimeConst(cutoffHz), // ~318.31 ms for 0.5 Hz
-		QuenchSetpoint:       FahrenheitToKelvin(165.0),
+		QuenchSetpoint:       FahrenheitToKelvin(188.0),     // ~359.82 K (above 183.9 F T_sat at 2400 F, below 210 F CPVC trip)
 		LoopInterval:         100 * time.Millisecond,
 		Safety:               DefaultSafetyLimits(),
 	}

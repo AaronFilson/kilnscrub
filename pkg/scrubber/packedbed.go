@@ -10,22 +10,25 @@ import (
 
 // Stage 3 packed-bed HCl absorber & chevron mist eliminator engineering constants.
 const (
-	packedBedTargetFloodFrac  = 0.65   // Design target 65% of flooding velocity (safely <= 75% constraint)
-	packedBedMaxFloodPct      = 75.0   // Hard upper bound on PercentOfFlood (0..100 scale)
-	packedBedMinDiamM         = 0.25   // Minimum practical CPVC/PP column diameter [m]
-	packedBedMinHeightM       = 0.60   // Minimum practical packing depth [m]
-	packedBedLGRatioVol       = 0.0028 // Counter-current scrubbing liquor-to-gas ratio [m^3/m^3] (~21 gal/1000 ft^3)
-	packedBedMinWettingFlux   = 0.0014 // Minimum wetting liquid flux [m^3/(m^2*s)] (~2.0 GPM/ft^2)
-	packedBedSumpResTimeSec   = 240.0  // 4-minute recirculation sump holdup time [s]
-	packedBedMinSumpVolM3     = 0.06   // Minimum sump volume [m^3] (~16 US gal)
-	packedBedWallThinM        = 0.006  // 6 mm CPVC/PP shell thickness
-	packedBedWallThickM       = 0.008  // 8 mm CPVC/PP shell thickness for larger columns
-	packedBedDemisterHeightM  = 0.20   // 3-pass polypropylene chevron vane mist eliminator height [m]
-	packedBedDemisterLossK    = 55.0   // 3-pass chevron mist eliminator velocity-head loss factor
-	packedBedMaterialSpec     = "CPVC / Polypropylene"
-	nahco3MWKgPerMol          = 0.0840066 // NaHCO3 molar mass [kg/mol]
-	nahco3ExcessFactor        = 1.15      // 15% excess alkalinity buffer for pH 7.5-8.5 control
-	liquidWaterViscosityPaSec = 0.001     // Reference scrubbing solution viscosity at ~20 C [Pa*s]
+	packedBedTargetFloodFrac     = 0.65   // Design target 65% of flooding velocity (safely <= 75% constraint)
+	packedBedMaxFloodPct         = 75.0   // Hard upper bound on PercentOfFlood (0..100 scale)
+	packedBedMinDiamM            = 0.25   // Minimum practical CPVC/PP column diameter [m]
+	packedBedMinHeightM          = 0.60   // Minimum practical packing depth [m]
+	packedBedLGRatioVol          = 0.0028 // Counter-current scrubbing liquor-to-gas ratio [m^3/m^3] (~21 gal/1000 ft^3)
+	packedBedMinWettingFlux      = 0.0014 // Minimum wetting liquid flux [m^3/(m^2*s)] (~2.0 GPM/ft^2)
+	packedBedSumpResTimeSec      = 240.0  // 4-minute recirculation sump holdup time [s]
+	packedBedMinSumpVolM3        = 0.06   // Minimum sump volume [m^3] (~16 US gal)
+	packedBedWallThinM           = 0.006  // 6 mm CPVC/PP shell thickness
+	packedBedWallThickM          = 0.008  // 8 mm CPVC/PP shell thickness for larger columns
+	packedBedDemisterHeightM     = 0.20   // 3-pass polypropylene chevron vane mist eliminator height [m]
+	packedBedDemisterLossK       = 55.0   // 3-pass chevron mist eliminator velocity-head loss factor
+	packedBedMaterialSpec        = "CPVC / Polypropylene"
+	packedBedRefSpecificAreaM2M3 = 207.0     // Specific surface area a_p [m^2/m^3] for 1" (0.0254 m) PP Pall rings
+	packedBedRefNominalDiamM     = 0.0254    // Reference nominal ring size [m] (1 inch)
+	packedBedIrrigatedFactor     = 1.70      // Eckert GPDC irrigated-to-dry liquid holdup pressure drop multiplier
+	nahco3MWKgPerMol             = 0.0840066 // NaHCO3 molar mass [kg/mol]
+	nahco3ExcessFactor           = 1.15      // 15% excess alkalinity buffer for pH 7.5-8.5 control
+	liquidWaterViscosityPaSec    = 0.001     // Reference scrubbing solution viscosity at ~20 C [Pa*s]
 )
 
 // ErgunPressureDrop computes total dry packed-bed pressure drop [Pa] using the Ergun equation,
@@ -179,11 +182,17 @@ func SizePackedBed(
 	nHClRemoved := nHClIn * hclEff
 	nahco3KgPerHr := nHClRemoved * nahco3ExcessFactor * nahco3MWKgPerMol * 3600.0
 
-	// Ergun packing bed pressure drop + 3-pass chevron demister pressure drop.
-	bedDP, err := ErgunPressureDrop(float64(input.PackingDiameter), input.PackingVoidage, vSup, rhoG, muG, packingHeight)
+	// Irrigated packing bed pressure drop using Sauter equivalent sphere diameter
+	// d_p,eq = 6*(1 - eps)/a_p (with specific surface area a_p scaled from 207 m^2/m^3
+	// for 1" PP Pall rings) multiplied by the Eckert GPDC irrigated liquid-holdup factor,
+	// plus 3-pass chevron demister pressure drop.
+	specificArea := packedBedRefSpecificAreaM2M3 * (packedBedRefNominalDiamM / float64(input.PackingDiameter))
+	sauterDp := 6.0 * (1.0 - input.PackingVoidage) / specificArea
+	dryBedDP, err := ErgunPressureDrop(sauterDp, input.PackingVoidage, vSup, rhoG, muG, packingHeight)
 	if err != nil {
 		return model.GasComposition{}, model.PackedBedResult{}, fmt.Errorf("packed-bed Ergun dP: %w", err)
 	}
+	bedDP := model.Pascal(float64(dryBedDP) * packedBedIrrigatedFactor)
 	demisterDP := model.Pascal(math.Max(35.0, packedBedDemisterLossK*0.5*rhoG*vSup*vSup))
 	totalDP := bedDP + demisterDP
 
