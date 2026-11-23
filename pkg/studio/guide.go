@@ -23,8 +23,8 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 	fmt.Fprintf(&b, "> **Kiln Profile:** %.1f cu.ft. | **Firing:** %s (%.0f F peak, %.0f hrs; %.1f hr salting) | **Glaze Mode:** `%s` | **Build Path:** `%s` | **Corrosion Tier:** %s (`%s`)\n",
 		d.Input.KilnVolumeCuFt, p.FiringCone, d.Input.PeakExitTempF, p.FiringDurationHours, p.EffectiveSaltingHours(),
 		p.VaporGlazeMode, p.BuildPath, CorrosionTierLabel(p.CorrosionTier), p.CorrosionTier)
-	fmt.Fprintf(&b, "> **Stage Architecture:** Alignment=`%s` | Packed Bed=`%s` | Venturi=`%s` | Compact U-Turn=`%v` | Shared Baffled Sump=`%v` | Controls=`%s`\n\n",
-		p.StageAlignment, p.PackedBedLayout, p.VenturiLayout, p.CompactFootprint, p.SharedBaffledSump, p.ControlTier)
+	fmt.Fprintf(&b, "> **Stage Architecture:** Alignment=`%s` | Packed Bed=`%s` (%.0f\" pipe) | Venturi=`%s` | Blower Drive=`%s` | Packing Media=`%s` | Shop Compressor=`%.0f SCFM` | Compact U-Turn=`%v` | Shared Baffled Sump=`%v` | Controls=`%s`\n\n",
+		p.StageAlignment, p.PackedBedLayout, p.ParallelPipeSizeIn, p.VenturiLayout, p.BlowerDriveOption, p.PackingMediaOption, p.ShopCompressorSCFM, p.CompactFootprint, p.SharedBaffledSump, p.ControlTier)
 
 	// 1. Key Dimensions at a Glance (inches + mm).
 	b.WriteString("## 1. Key Dimensions at a Glance\n\n")
@@ -54,9 +54,9 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 			d.Venturi.ThroatVelocity, d.Venturi.CutDiameterD50Microns)
 	}
 	if a.ParallelBed.Enabled {
-		fmt.Fprintf(&b, "| Stage 3: Parallel Bed Manifold | %d × %.0f\" Sch 80 CPVC (ID %.3f\") × %.1f ft | %d × %.1f mm × %.0f mm | %.1f%% flood, D/d_p=%.2f, %.2f inWC dP |\n",
-			a.ParallelBed.PipeCount, a.ParallelBed.PipeNominalIn, a.ParallelBed.PipeActualIDIn, d.PackedBed.ColumnHeight.Feet(),
-			a.ParallelBed.PipeCount, a.ParallelBed.PipeActualIDIn*25.4, d.PackedBed.ColumnHeight.Millimeters(),
+		fmt.Fprintf(&b, "| Stage 3: Shell-Less Uniseal Bundle | %d × %.0f\" %s (ID %.3f\") | %d × %.1f mm ID (NO external large pipe) | %.1f%% flood, D/d_p=%.2f, %.2f inWC bed dP |\n",
+			a.ParallelBed.PipeCount, a.ParallelBed.PipeNominalIn, a.ParallelBed.PipeMaterial, a.ParallelBed.PipeActualIDIn,
+			a.ParallelBed.PipeCount, a.ParallelBed.PipeActualIDIn*25.4,
 			a.ParallelBed.ActualFloodPct, a.ParallelBed.WallRatioDToDp, a.ParallelBed.BedDPInWC)
 	} else {
 		fmt.Fprintf(&b, "| Stage 3: Packed Column | %.1f\" COTS (calc %.1f\") × %.1f ft | %.0f mm × %.0f mm | %.1f%% of flood (limit <=75%%) |\n",
@@ -64,16 +64,16 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 			d.PackedBed.ColumnDiameter.Millimeters(), d.PackedBed.ColumnHeight.Millimeters(),
 			c.ActualPercentOfFlood)
 	}
-	fmt.Fprintf(&b, "| Packing Bed Depth | %.1f\" depth | %.0f mm (%.2f m) | %s |\n",
-		d.PackedBed.PackingHeight.Inches(), d.PackedBed.PackingHeight.Millimeters(), float64(d.PackedBed.PackingHeight),
-		c.PackingMedia.Name)
-	if a.Eductor.Enabled {
+	fmt.Fprintf(&b, "| Packing Bed Depth & Media | %.1f\" depth (%s) | %.0f mm (%.2f m) | voidage %.0f%%, %.2f inWC Ergun dP |\n",
+		d.PackedBed.PackingHeight.Inches(), a.PackingMedia.Label, d.PackedBed.PackingHeight.Millimeters(), float64(d.PackedBed.PackingHeight),
+		a.PackingMedia.Voidage*100.0, a.PackingMedia.BedDPInWC)
+	if a.Eductor.Enabled && p.BlowerDriveOption == BlowerDriveIndustrialRadialVFD {
 		fmt.Fprintf(&b, "| Stage 4: Dry Motive Fan & Stack | %.2g HP dry fan, %.0f CFM @ %.1f inWC | Clean ambient air (zero acid contact) | +%.2f inWC bed pressure; min stack %.0f ft |\n",
 			a.Eductor.DryFanMotorHP, a.Eductor.MotiveAirCFM, a.Eductor.DryFanStaticInWC, a.Eductor.PositivePressureInWC, u.Plume.MinStackHeightFt)
 	} else {
-		fmt.Fprintf(&b, "| Stage 4: ID Blower & Stack | %.2g HP, %.0f ACFM @ %.1f inWC | Wheel %.0f mm @ %.0f RPM | Min stack height %.0f ft |\n",
-			d.Blower.RecommendedMotorHP, d.Blower.FlowACFM, d.Blower.TotalStaticPressureInWC,
-			d.Blower.WheelDiameter.Millimeters(), d.Blower.OperatingRPM, u.Plume.MinStackHeightFt)
+		fmt.Fprintf(&b, "| Stage 4: %s | %.2g HP (%dV), %.0f ACFM @ %.1f inWC | $%.0f (%+.0f USD vs baseline) | Feasible=%v; min stack %.0f ft |\n",
+			a.BlowerDrive.Label, a.BlowerDrive.MotorHP, a.BlowerDrive.Voltage, d.Blower.FlowACFM, a.BlowerDrive.RequiredStaticInWC,
+			a.BlowerDrive.FanCostUSD, a.BlowerDrive.CostDeltaUSD, a.BlowerDrive.Feasible, u.Plume.MinStackHeightFt)
 	}
 	fpNote := fmt.Sprintf("Estimated COTS total: **$%.2f**", c.EstimatedTotalUSD)
 	if a.CostDeltaUSD != 0 {
@@ -114,6 +114,14 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 	fmt.Fprintf(&b, "- **Selected Tier (%s):** %s\n", CorrosionTierLabel(p.CorrosionTier), u.Corrosion.MaterialSummary)
 	fmt.Fprintf(&b, "- **Maintenance Guidance:** %s\n", u.Corrosion.SodaComparison)
 	fmt.Fprintf(&b, "- **Inspection Schedule:** %s\n", u.Corrosion.InspectionInterval)
+	fmt.Fprintf(&b, "- **Blower / Motive Drive (`%s`):** %s\n", a.BlowerDrive.Option, a.BlowerDrive.Summary)
+	for _, cav := range a.BlowerDrive.Caveats {
+		fmt.Fprintf(&b, "  - *Blower Note:* %s\n", cav)
+	}
+	fmt.Fprintf(&b, "- **Packing Media (`%s`):** %s\n", a.PackingMedia.Option, a.PackingMedia.Summary)
+	fmt.Fprintf(&b, "- **Shop Compressor Evaluation (`%.0f SCFM @ 90 PSI`):**\n", a.Compressor.AvailableSCFM)
+	fmt.Fprintf(&b, "  - *Main Airflow Eductor (`feasible=%v`, needs %.1f SCFM / %.1f HP):* %s\n", a.Compressor.EductorFeasible, a.Compressor.EductorSCFMNeeded, a.Compressor.EductorHPNeeded, a.Compressor.EductorVerdict)
+	fmt.Fprintf(&b, "  - *Twin-Fluid Air-Atomizing Nozzle (`feasible=%v`, needs %.1f SCFM @ 40 PSI, saves %.1f inWC & $%.0f):* %s\n", a.Compressor.AtomizeFeasible, a.Compressor.AtomizeSCFMNeeded, a.Compressor.AtomizeDPSavedInWC, a.Compressor.AtomizeCostSavedUSD, a.Compressor.AtomizeVerdict)
 	for _, s := range a.SavingsSummary {
 		fmt.Fprintf(&b, "- **Selected Option:** %s\n", s)
 	}
@@ -168,8 +176,13 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 				d.Venturi.ConvergingLength.Millimeters(), d.Venturi.ThroatLength.Millimeters(),
 				d.Venturi.ThroatDiameter.Millimeters(), d.Venturi.DivergingLength.Millimeters())
 		}
-		fmt.Fprintf(&b, "2. Mount 2 opposed spray injection ports right at the venturi throat entry (`%.2f GPM` liquid flow) so high-velocity `%.0f m/s` gas shears the water into fine droplets that capture submicron ash and salt fume (`d50 = %.2f um`).\n",
-			d.Venturi.LiquidFlowGPM, d.Venturi.ThroatVelocity, d.Venturi.CutDiameterD50Microns)
+		if p.BlowerDriveOption == BlowerDriveCompressorAirAtomize {
+			fmt.Fprintf(&b, "2. **Twin-Fluid Air-Atomizing Venturi Nozzle (`%.1f SCFM @ 40 PSI`):** Mount the `$75` 316L twin-fluid air-atomizing nozzle cross-flow/counter-current at the venturi throat entry (`%.2f GPM` water + `%.1f SCFM` shop air through an inline regulator & moisture trap) to generate **`25 um` SMD droplets** at reduced `%.0f m/s` throat velocity (active twin-fluid jet shear `v_rel ~75 m/s` achieves Calvert `d50 = %.2f um` parity while slashing total static pressure to `%.1f inWC`).\n",
+				a.Compressor.AtomizeSCFMNeeded, d.Venturi.LiquidFlowGPM, a.Compressor.AtomizeSCFMNeeded, d.Venturi.ThroatVelocity, activeTwinFluidD50Microns(d), a.BlowerDrive.RequiredStaticInWC)
+		} else {
+			fmt.Fprintf(&b, "2. Mount 2 opposed spray injection ports right at the venturi throat entry (`%.2f GPM` liquid flow) so high-velocity `%.0f m/s` gas shears the water into fine droplets that capture submicron ash and salt fume (`d50 = %.2f um`).\n",
+				d.Venturi.LiquidFlowGPM, d.Venturi.ThroatVelocity, d.Venturi.CutDiameterD50Microns)
+		}
 		b.WriteString("3. Bolt the venturi exit into the lower gas inlet plenum of Stage 3 using an expanded PTFE full-face gasket.\n\n")
 	}
 
@@ -183,13 +196,16 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 	}
 	b.WriteString("2. **CPVC Solvent-Welding Best Practice:** Chamfer pipe edges, wipe clean, apply purple ASTM F656 primer liberally to both pipe and socket, apply heavy-bodied Schedule 80 CPVC cement, seat with a 1/4-turn twist, hold 30 seconds, and allow **24 hours full cure** before hot-water or firing service.\n")
 	if a.ParallelBed.Enabled {
-		fmt.Fprintf(&b, "3. **Parallel %.0f\" Pipe Manifold Assembly:** Cut **%d equal risers** of `%.0f\"` Sch 80 CPVC (`ID %.3f\"`), seat packing support screens at the bottom of every pipe, fill each riser to **%.1f\" depth** with **%s** (`D/d_p = %.2f >= 7.5` prevents wall channeling), and install the **balanced %d-port calibrated liquid distribution header** at the top so every riser receives equal wetting flow (`%.1f GPM` total).\n",
-			a.ParallelBed.PipeNominalIn, a.ParallelBed.PipeCount, a.ParallelBed.PipeNominalIn, a.ParallelBed.PipeActualIDIn,
+		fmt.Fprintf(&b, "3. **Shell-Less Uniseal %.0f\" Parallel Pipe Bundle (NO External Large Pipe):** Hole-saw **%d ports** in the top and bottom `1/2\"` HDPE/CPVC flat collector plates (`$95`), press in **%d rubber Uniseals** (`$5.50` each), slide in **%d bare risers** of `%.0f\"` %s (`ID %.3f\"`), seat packing support screens at the bottom of every pipe, fill each riser to **%.1f\" depth** with **%s** (`D/d_p = %.2f >= 7.5`), and mount the **balanced %d-port calibrated liquid spray manifold** (`$65`, `%.1f GPM` total) above the top plate.\n",
+			a.ParallelBed.PipeNominalIn, a.ParallelBed.PipeCount, 2*a.ParallelBed.PipeCount, a.ParallelBed.PipeCount, a.ParallelBed.PipeNominalIn, a.ParallelBed.PipeMaterial, a.ParallelBed.PipeActualIDIn,
 			d.PackedBed.PackingHeight.Inches(), c.PackingMedia.Name, a.ParallelBed.WallRatioDToDp, a.ParallelBed.PipeCount, d.PackedBed.RecirculationFlowGPM)
 	} else {
 		fmt.Fprintf(&b, "3. Install the lower polypropylene/FRP packing support grate at least `12\"` above the gas inlet port, pour in **%s** to a bed depth of **%.1f\" (%.2f m)**, and pin the top hold-down grid so gas surges cannot fluidize the rings.\n",
 			c.PackingMedia.Name, d.PackedBed.PackingHeight.Inches(), float64(d.PackedBed.PackingHeight))
 		fmt.Fprintf(&b, "4. Mount the top liquid distributor nozzle/header (`%.1f GPM` counter-current recirculation from the mag-drive pump via a 50-mesh inline Y-strainer).\n", d.PackedBed.RecirculationFlowGPM)
+	}
+	if p.PackingMediaOption == PackingMediaDIYCeramicRings {
+		b.WriteString("   - **DIY Stoneware Rings Support Note:** Unglazed kiln-fired stoneware rings (~46 lb/cu.ft., 70% voidage) are acid-proof and 2000 F-proof, but heavy — reinforce the lower packing support screen with FRP bar grating or 316L stainless cross-rods.\n")
 	}
 	fmt.Fprintf(&b, "5. Seat the **3-pass polypropylene chevron mist eliminator** (`%.1f\"` thick) above the spray distributor so clean exhaust exits mist-free.\n\n", d.PackedBed.DemisterHeight.Inches())
 

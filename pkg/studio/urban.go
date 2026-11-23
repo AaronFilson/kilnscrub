@@ -167,12 +167,30 @@ func diluterAmps120V(design model.ScrubberDesign) float64 {
 func assessElectrical(project StudioProject, design model.ScrubberDesign) ElectricalAssessment {
 	hp := design.Blower.RecommendedMotorHP
 	blowerRole := "blower"
-	if project.StageAlignment == StageAlignmentEductorDryFan {
+	if project.StageAlignment == StageAlignmentEductorDryFan && project.BlowerDriveOption == BlowerDriveIndustrialRadialVFD {
 		ed := analyzeEductor(project, design)
 		if ed.DryFanMotorHP > 0 {
 			hp = ed.DryFanMotorHP
 		}
 		blowerRole = "dry motive fan"
+	} else if project.BlowerDriveOption != "" && project.BlowerDriveOption != BlowerDriveIndustrialRadialVFD {
+		baseDesign := resolveBaselineDesign(project, design)
+		ed := analyzeEductor(project, design)
+		comp, atomizeDesign := analyzeCompressor(project, design, baseDesign)
+		drive := analyzeBlowerDrive(project, design, baseDesign, ed, comp, atomizeDesign)
+		if drive.MotorHP > 0 {
+			hp = drive.MotorHP
+		}
+		switch project.BlowerDriveOption {
+		case BlowerDriveRegenSideChannel:
+			blowerRole = "side-channel ring blower"
+		case BlowerDriveDualBypassBlowers:
+			blowerRole = "dual 3-stage tangential bypass blowers"
+		case BlowerDriveCompressorAirAtomize:
+			blowerRole = "medium-pressure air-atomized radial blower"
+		case BlowerDriveCompressorEductor:
+			blowerRole = "shop compressor eductor drive"
+		}
 	}
 	if hp <= 0 {
 		hp = 0.5
@@ -341,6 +359,9 @@ func assessNoise(project StudioProject, design model.ScrubberDesign) NoiseAssess
 	}
 
 	bare3Ft := round1(74.0 + 6.5*math.Log10(shaftHP) + 0.18*spInWC)
+	if project.BlowerDriveOption == BlowerDriveDualBypassBlowers && bare3Ft < 83.5 {
+		bare3Ft = 83.5 // high-RPM (~18,000 RPM) tangential bypass blowers need acoustic box for urban yards
+	}
 	silenced3Ft := round1(bare3Ft - silencerDropDBA)
 
 	d2 := math.Max(refDistFt, project.PropertyLineFt)

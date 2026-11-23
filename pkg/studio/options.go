@@ -37,10 +37,13 @@ type EductorAnalysis struct {
 }
 
 // ParallelBedAnalysis quantifies replacing a single large industrial packed column
-// with N parallel 3" or 4" Schedule 80 CPVC stock plumbing pipes and smaller packing
+// with a shell-less Uniseal flat-plate bundle of N parallel 2", 3", or 4" stock
+// plumbing pipes (NO external large pipe shell or industrial flanges) and packing
 // sized to keep wall-channeling ratio D/d_p >= 7.5.
 type ParallelBedAnalysis struct {
 	Enabled             bool     `json:"enabled"`
+	ShelllessPlenum     bool     `json:"shellless_plenum"`
+	PipeMaterial        string   `json:"pipe_material"`
 	PipeNominalIn       float64  `json:"pipe_nominal_in"`
 	PipeActualIDIn      float64  `json:"pipe_actual_id_in"`
 	PipeCount           int      `json:"pipe_count"`
@@ -74,8 +77,61 @@ type ParallelVenturiAnalysis struct {
 	Notes            []string `json:"notes"`
 }
 
-// ArchitectureOptionsResult summarizes all Phase 7 selectable cost, time, footprint,
-// and stage-design options and their exact impact on BOM total, footprint, and physics.
+// BlowerDriveAnalysis evaluates the selected Phase 8 blower / motive drive architecture
+// (industrial radial+VFD, side-channel ring blower, dual 3-stage tangential bypass blowers,
+// shop-compressor twin-fluid air-atomize + medium-pressure radial blower, or compressor eductor).
+type BlowerDriveAnalysis struct {
+	Option             string   `json:"option"`
+	Label              string   `json:"label"`
+	FanCostUSD         float64  `json:"fan_cost_usd"`
+	BaselineFanCostUSD float64  `json:"baseline_fan_cost_usd"`
+	CostDeltaUSD       float64  `json:"cost_delta_usd"`
+	RequiredStaticInWC float64  `json:"required_static_inwc"`
+	ThroatVelocityMS   float64  `json:"throat_velocity_m_s"`
+	DropletUm          float64  `json:"droplet_um"`
+	MotorHP            float64  `json:"motor_hp"`
+	Voltage            int      `json:"voltage"`
+	Feasible           bool     `json:"feasible"`
+	Summary            string   `json:"summary"`
+	Caveats            []string `json:"caveats"`
+}
+
+// CompressorAnalysis evaluates a studio's existing shop air compressor in BOTH roles:
+// (1) driving main scrubber airflow via an air-amplifier eductor (usually infeasible at
+// studio scale due to backpressure entrainment collapse), and (2) powering a $75 twin-fluid
+// air-atomizing venturi nozzle (25 um droplets, ~4-6 SCFM @ 40 PSI, slashing venturi dP
+// and blower cost by $1,000+). Always evaluated on every StudioEvaluation.
+type CompressorAnalysis struct {
+	AvailableSCFM       float64 `json:"available_scfm"`
+	EductorSCFMNeeded   float64 `json:"eductor_scfm_needed"`
+	EductorHPNeeded     float64 `json:"eductor_hp_needed"`
+	EductorFeasible     bool    `json:"eductor_feasible"`
+	EductorVerdict      string  `json:"eductor_verdict"`
+	AtomizeSCFMNeeded   float64 `json:"atomize_scfm_needed"`
+	AtomizeFeasible     bool    `json:"atomize_feasible"`
+	AtomizeDropletUm    float64 `json:"atomize_droplet_um"`
+	AtomizeDPSavedInWC  float64 `json:"atomize_dp_saved_inwc"`
+	AtomizeCostSavedUSD float64 `json:"atomize_cost_saved_usd"`
+	AtomizeVerdict      string  `json:"atomize_verdict"`
+}
+
+// PackingMediaAnalysis evaluates Stage 3 random packing media choices:
+// commercial PP Pall rings, bulk aquaculture bio-balls, or DIY potter-extruded stoneware
+// ceramic Raschig rings (honestly computing higher irrigated Ergun bed dP and weight).
+type PackingMediaAnalysis struct {
+	Option               string  `json:"option"`
+	Label                string  `json:"label"`
+	DiameterIn           float64 `json:"diameter_in"`
+	Voidage              float64 `json:"voidage"`
+	BedDPInWC            float64 `json:"bed_dp_inwc"`
+	MediaCostUSD         float64 `json:"media_cost_usd"`
+	BaselineMediaCostUSD float64 `json:"baseline_media_cost_usd"`
+	CostDeltaUSD         float64 `json:"cost_delta_usd"`
+	Summary              string  `json:"summary"`
+}
+
+// ArchitectureOptionsResult summarizes all Phase 7 & Phase 8 selectable cost, time,
+// footprint, blower drive, packing media, compressor, and stage-design options.
 type ArchitectureOptionsResult struct {
 	StageAlignment      string                  `json:"stage_alignment"`
 	PackedBedLayout     string                  `json:"packed_bed_layout"`
@@ -96,6 +152,9 @@ type ArchitectureOptionsResult struct {
 	Eductor             EductorAnalysis         `json:"eductor"`
 	ParallelBed         ParallelBedAnalysis     `json:"parallel_bed"`
 	ParallelVenturi     ParallelVenturiAnalysis `json:"parallel_venturi"`
+	BlowerDrive         BlowerDriveAnalysis     `json:"blower_drive"`
+	Compressor          CompressorAnalysis      `json:"compressor"`
+	PackingMedia        PackingMediaAnalysis    `json:"packing_media"`
 	SavingsSummary      []string                `json:"savings_summary"`
 	Warnings            []string                `json:"warnings"`
 }
@@ -134,6 +193,56 @@ func dryFanUnitCost(hp float64) (fanCost, vfdCost, weightKg float64) {
 	default:
 		return round2(1180 + 210*(hp-5.0)), round2(520 + nema4X + 110*(hp-5.0)), round2(62.0 + 10.0*(hp-5.0))
 	}
+}
+
+// mediumPressureAirAtomizeBlowerCost returns budgetary COTS pricing for the medium-pressure
+// cast-aluminum radial blower (~10-14 inWC) + simple VFD/NEMA 4X + $75 twin-fluid air-atomizing nozzle.
+func mediumPressureAirAtomizeBlowerCost(project StudioProject, hp float64) (totalCost, weightKg float64) {
+	const (
+		twinFluidNozzleCost = 75.0 // COTS 316L twin-fluid air-atomizing venturi nozzle + 40 PSI regulator
+	)
+	var blowerCost, vfdDamperCost float64
+	switch {
+	case hp <= 0.5:
+		blowerCost, vfdDamperCost, weightKg = 295.0, 255.0, 15.0
+	case hp <= 1.5:
+		blowerCost, vfdDamperCost, weightKg = 360.0, 315.0, 20.0
+	case hp <= 2.0:
+		blowerCost, vfdDamperCost, weightKg = 440.0, 360.0, 26.0
+	default:
+		blowerCost = round2(440.0 + 140.0*(hp-2.0))
+		vfdDamperCost = round2(360.0 + 95.0*(hp-2.0))
+		weightKg = round2(26.0 + 7.0*(hp-2.0))
+	}
+	if project.CorrosionTier == CorrosionTierHeavyC276FRP {
+		blowerCost = round2(blowerCost * 1.30)
+	}
+	return round2(blowerCost + vfdDamperCost + twinFluidNozzleCost), weightKg
+}
+
+func baselineProjectFor(p StudioProject) StudioProject {
+	baseProj := p.Normalize()
+	baseProj.StageAlignment = StageAlignmentInlineIDBlower
+	baseProj.PackedBedLayout = PackedBedLayoutSingleColumn
+	baseProj.VenturiLayout = VenturiLayoutSingleThroat
+	baseProj.CompactFootprint = false
+	baseProj.SharedBaffledSump = true
+	baseProj.ControlTier = ControlTierRPiModbus
+	baseProj.BlowerDriveOption = BlowerDriveIndustrialRadialVFD
+	baseProj.ParallelPipeSizeIn = 4.0
+	baseProj.PackingMediaOption = PackingMediaPPPallRings
+	return baseProj
+}
+
+func resolveBaselineDesign(p StudioProject, activeDesign model.ScrubberDesign) model.ScrubberDesign {
+	if p.BlowerDriveOption != BlowerDriveCompressorAirAtomize {
+		return activeDesign
+	}
+	baseProj := baselineProjectFor(p)
+	if baseDesign, err := scrubber.NewDesigner().Design(baseProj.EffectiveDesignInput()); err == nil {
+		return baseDesign
+	}
+	return activeDesign
 }
 
 // solveMixedAirState solves the psychrometric equilibrium temperature T_mix [K],
@@ -312,7 +421,7 @@ func analyzeEductor(project StudioProject, design model.ScrubberDesign) EductorA
 
 	fanCost, vfdCost, _ := dryFanUnitCost(dryFanMotorHP)
 	dryFanCostUSD := round2(fanCost + vfdCost)
-	wetBlowerPart := selectWetBlowerVFD(project, design)
+	wetBlowerPart := selectWetBlowerVFD(project, resolveBaselineDesign(project, design))
 	wetBlowerSavedUSD := wetBlowerPart.UnitCostUSD
 	netBlowerDeltaUSD := round2(dryFanCostUSD - wetBlowerSavedUSD)
 
@@ -360,8 +469,107 @@ func analyzeEductor(project StudioProject, design model.ScrubberDesign) EductorA
 	}
 }
 
+type parallelPipeGeom struct {
+	nominalIn     float64
+	actualIDIn    float64
+	packingDiamIn float64
+	fpSmall       float64
+	epsSmall      float64
+	costPerFt     float64
+	packUnitCost  float64
+	pipeMaterial  string
+	isPVC         bool
+}
+
+func resolveParallelPipeGeom(project StudioProject, eductor EductorAnalysis) parallelPipeGeom {
+	sizeIn := project.ParallelPipeSizeIn
+	if sizeIn != 2.0 && sizeIn != 3.0 && sizeIn != 4.0 {
+		sizeIn = 4.0
+	}
+	usePVC := eductor.Enabled && eductor.MixedTempF <= 140.0 && project.CorrosionTier != CorrosionTierHeavyC276FRP
+
+	switch sizeIn {
+	case 2.0:
+		if usePVC {
+			return parallelPipeGeom{
+				nominalIn:     2.0,
+				actualIDIn:    2.067,
+				packingDiamIn: 0.25, // D/d_p = 8.27 >= 7.5
+				fpSmall:       520.0,
+				epsSmall:      0.82,
+				costPerFt:     1.35,
+				packUnitCost:  112.0,
+				pipeMaterial:  "Schedule 40 PVC (ASTM D1785, <=140 F Eductor-Cooled)",
+				isPVC:         true,
+			}
+		}
+		return parallelPipeGeom{
+			nominalIn:     2.0,
+			actualIDIn:    1.939,
+			packingDiamIn: 0.25, // D/d_p = 7.76 >= 7.5
+			fpSmall:       520.0,
+			epsSmall:      0.82,
+			costPerFt:     4.20,
+			packUnitCost:  112.0,
+			pipeMaterial:  "Schedule 80 CPVC (ASTM F441, 200 F max)",
+			isPVC:         false,
+		}
+	case 3.0:
+		if usePVC {
+			return parallelPipeGeom{
+				nominalIn:     3.0,
+				actualIDIn:    3.068,
+				packingDiamIn: 0.375, // D/d_p = 8.18 >= 7.5
+				fpSmall:       390.0,
+				epsSmall:      0.85,
+				costPerFt:     2.25,
+				packUnitCost:  104.0,
+				pipeMaterial:  "Schedule 40 PVC (ASTM D1785, <=140 F Eductor-Cooled)",
+				isPVC:         true,
+			}
+		}
+		return parallelPipeGeom{
+			nominalIn:     3.0,
+			actualIDIn:    2.900,
+			packingDiamIn: 0.375, // D/d_p = 7.73 >= 7.5
+			fpSmall:       390.0,
+			epsSmall:      0.85,
+			costPerFt:     6.20,
+			packUnitCost:  104.0,
+			pipeMaterial:  "Schedule 80 CPVC (ASTM F441, 200 F max)",
+			isPVC:         false,
+		}
+	default: // 4.0" sweet spot
+		if usePVC {
+			return parallelPipeGeom{
+				nominalIn:     4.0,
+				actualIDIn:    4.026,
+				packingDiamIn: 0.50, // D/d_p = 8.05 >= 7.5
+				fpSmall:       310.0,
+				epsSmall:      0.87,
+				costPerFt:     3.20,
+				packUnitCost:  98.0,
+				pipeMaterial:  "Schedule 40 PVC (ASTM D1785, <=140 F Eductor-Cooled)",
+				isPVC:         true,
+			}
+		}
+		return parallelPipeGeom{
+			nominalIn:     4.0,
+			actualIDIn:    3.826,
+			packingDiamIn: 0.50, // D/d_p = 7.65 >= 7.5
+			fpSmall:       310.0,
+			epsSmall:      0.87,
+			costPerFt:     8.50,
+			packUnitCost:  98.0,
+			pipeMaterial:  "Schedule 80 CPVC (ASTM F441, 200 F max)",
+			isPVC:         false,
+		}
+	}
+}
+
 func analyzeParallelBed(project StudioProject, design model.ScrubberDesign, eductor EductorAnalysis) ParallelBedAnalysis {
-	enabled := project.PackedBedLayout == PackedBedLayoutParallelManifold
+	p := project.Normalize()
+	enabled := p.PackedBedLayout == PackedBedLayoutParallelManifold
 
 	// Determine active volumetric flow & gas properties (accounts for eductor mixed flow if both are selected).
 	qGas := float64(design.QuenchedGas.VolumetricFlow)
@@ -390,33 +598,15 @@ func analyzeParallelBed(project StudioProject, design model.ScrubberDesign, educ
 		qGas, rhoG, gMass = qMix, rhoMix, mMix
 	}
 
-	// Pick 3" Sch 80 CPVC (2.900" ID) for tiny kilns (<= 8 cu.ft.) or 4" Sch 80 CPVC (3.826" ID) standard.
-	pipeNominalIn := 4.0
-	pipeActualIDIn := 3.826
-	packingDiamIn := 0.50 // 1/2" PP Pall rings/saddles -> D/d_p = 7.65 >= 7.5
-	fpSmall := 310.0      // 1/2" PP random packing factor [1/m]
-	epsSmall := 0.87
-	pipeCostPerFt := 10.50
-	packingCostPerCuFt := 62.0
-
-	if design.Input.KilnVolumeCuFt <= 8.0 && !eductor.Enabled {
-		pipeNominalIn = 3.0
-		pipeActualIDIn = 2.900
-		packingDiamIn = 0.375 // 3/8" PP saddles/rings -> D/d_p = 7.73 >= 7.5
-		fpSmall = 390.0
-		epsSmall = 0.85
-		pipeCostPerFt = 7.50
-		packingCostPerCuFt = 68.0
-	}
-
-	wallRatio := round2(pipeActualIDIn / packingDiamIn)
-	pipeIDM := float64(model.InchesToMeters(pipeActualIDIn))
+	geom := resolveParallelPipeGeom(p, eductor)
+	wallRatio := round2(geom.actualIDIn / geom.packingDiamIn)
+	pipeIDM := float64(model.InchesToMeters(geom.actualIDIn))
 	pipeAreaM2 := math.Pi * pipeIDM * pipeIDM / 4.0
 	rhoL := float64(model.WaterDensity)
 	qRecirc := math.Max(0.0028*qGas, float64(design.PackedBed.RecirculationFlow))
 
 	vFlood := 1.8
-	if vf, err := scrubber.EckertFloodingVelocity(qRecirc*rhoL, gMass, rhoG, rhoL, fpSmall, 0.001); err == nil && vf > 0 {
+	if vf, err := scrubber.EckertFloodingVelocity(qRecirc*rhoL, gMass, rhoG, rhoL, geom.fpSmall, 0.001); err == nil && vf > 0 {
 		vFlood = float64(vf)
 	}
 
@@ -439,51 +629,69 @@ func analyzeParallelBed(project StudioProject, design model.ScrubberDesign, educ
 	if packHeightM <= 0 {
 		packHeightM = 0.65
 	}
-	packDiamM := float64(model.InchesToMeters(packingDiamIn))
+	packDiamM := float64(model.InchesToMeters(geom.packingDiamIn))
 	specArea := 207.0 * (0.0254 / packDiamM)
-	sauterDp := 6.0 * (1.0 - epsSmall) / specArea
+	sauterDp := 6.0 * (1.0 - geom.epsSmall) / specArea
 	bedDPInWC := design.PackedBed.BedPressureDrop.InWC()
-	if dryDP, err := scrubber.ErgunPressureDrop(sauterDp, epsSmall, vSup, rhoG, muG, packHeightM); err == nil {
+	if dryDP, err := scrubber.ErgunPressureDrop(sauterDp, geom.epsSmall, vSup, rhoG, muG, packHeightM); err == nil {
 		bedDPInWC = round2(model.Pascal(float64(dryDP) * 1.70).InWC())
 	}
 	singleDPInWC := round2(design.PackedBed.BedPressureDrop.InWC())
 
-	// Economics comparison: N stock Sch 80 CPVC pipes + top/bottom manifold plenums + liquid distribution header + smaller packing
-	// vs single large column + 1" Pall rings.
-	singleColPart, singleIDIn, _ := selectSinglePackedColumn(project, design, eductor)
+	// Shell-less Uniseal / flat-plate manifold bundle economics (NO external 14" pipe, NO $250 industrial flanges!).
+	// Riser pipe length only spans packing bed depth + 1.0 ft freeboard/spray clearance (bottom plate sits over sump plenum).
+	singleColPart, singleIDIn, _ := selectSinglePackedColumn(p, design, eductor)
 	singlePackPart, singlePackCuFt := selectPackingMedia(singleIDIn, design)
 	singleCost := round2(singleColPart.UnitCostUSD + singlePackCuFt*singlePackPart.UnitCostUSD)
 
-	colHeightFt := math.Max(4.0, design.PackedBed.ColumnHeight.Feet())
-	pipesCost := float64(pipeCount) * colHeightFt * pipeCostPerFt
-	if project.CorrosionTier == CorrosionTierHeavyC276FRP {
-		pipesCost *= 1.35 // heavy chemical-grade Sch 80 CPVC / FRP-wrapped risers
+	riserHeightFt := math.Max(3.5, model.Meters(packHeightM).Feet()+1.0)
+	pipesCost := float64(pipeCount) * riserHeightFt * geom.costPerFt
+	if p.CorrosionTier == CorrosionTierHeavyC276FRP {
+		pipesCost *= 1.25 // chemical-grade CPVC / FRP-wrapped risers
 	}
-	manifoldPlenumsCost := 135.0 + 24.0*float64(pipeCount) // top/bottom collector headers + bulkheads/unions
-	liquidHeaderCost := 45.0 + 11.0*float64(pipeCount)     // equal-flow orifice/spray header for each riser
+	const (
+		collectorPlatesCost = 95.0 // flat 1/2" HDPE/CPVC top & bottom collector plates (no external drum/shell!)
+		unisealUnitCost     = 5.50 // rubber pipe-to-plate Uniseal seals (2 per pipe: top + bottom)
+		sprayManifoldCost   = 65.0 // balanced PVC/CPVC calibrated spray distribution header
+	)
+	unisealsCost := 2.0 * float64(pipeCount) * unisealUnitCost
+	manifoldHardwareCost := round2(pipesCost + collectorPlatesCost + unisealsCost + sprayManifoldCost)
+
 	packVolCuFt := math.Max(1.0, math.Ceil(model.CubicMeters(totalArea*packHeightM).CuFt()))
-	smallPackCost := packVolCuFt * packingCostPerCuFt
-	manifoldCost := round2(pipesCost + manifoldPlenumsCost + liquidHeaderCost + smallPackCost)
+	// Evaluate packing cost for parallel bed using baseline PP small rings so parallel_bed.cost_delta_usd
+	// cleanly isolates shell-less manifold savings vs single column (packing_media.cost_delta_usd isolates media swap).
+	smallPackCost := packVolCuFt * geom.packUnitCost
+	manifoldCost := round2(manifoldHardwareCost + smallPackCost)
 	costDelta := round2(manifoldCost - singleCost)
 
 	notes := []string{
-		fmt.Sprintf("Wall-channeling check: %.3f\" pipe ID / %.3f\" packing = D/d_p %.2f (>= 7.5 required to prevent gas bypassing down the pipe wall).", pipeActualIDIn, packingDiamIn, wallRatio),
-		fmt.Sprintf("MANDATORY LIQUID DISTRIBUTION HEADER: Install a balanced %.0f-port calibrated orifice/nozzle spray header at the top of the manifold so every %.0f\" riser receives equal %.2f GPM wetting flow (prevents dry channeling in one pipe while another floods).", float64(pipeCount), pipeNominalIn, (qRecirc/model.CubicMetersPerSecPerGPM)/float64(pipeCount)),
-		fmt.Sprintf("Pressure drop trade-off: %.3f\" packing raises irrigated Ergun bed dP from %.2f inWC (single column, 1\" rings) to %.2f inWC.", packingDiamIn, singleDPInWC, bedDPInWC),
+		fmt.Sprintf("SHELL-LESS UNISEAL BUNDLE (NO EXTERNAL LARGE PIPE): %d bare %.0f\" %s risers (%.1f ft each) held between top & bottom 1/2\" HDPE/CPVC flat collector plates ($95) with %d Uniseal rubber pipe seals ($5.50 ea = $%.0f) and a $65 spray header — eliminates specialty 14\"–16\" pipe, $250 industrial flanges, and LTL pallet freight.",
+			pipeCount, geom.nominalIn, geom.pipeMaterial, riserHeightFt, 2*pipeCount, unisealsCost),
+		fmt.Sprintf("Wall-channeling check: %.3f\" pipe ID / %.3f\" packing = D/d_p %.2f (>= 7.5 required to prevent gas bypassing down the pipe wall).", geom.actualIDIn, geom.packingDiamIn, wallRatio),
+		fmt.Sprintf("MANDATORY LIQUID DISTRIBUTION HEADER: Install the balanced %d-port calibrated orifice/nozzle spray header ($65) above the top collector plate so every %.0f\" riser receives equal %.2f GPM wetting flow (prevents dry channeling in one pipe while another floods).", pipeCount, geom.nominalIn, (qRecirc/model.CubicMetersPerSecPerGPM)/float64(pipeCount)),
+		fmt.Sprintf("Pressure drop trade-off: %.3f\" packing raises irrigated Ergun bed dP from %.2f inWC (single column, 1\" rings) to %.2f inWC.", geom.packingDiamIn, singleDPInWC, bedDPInWC),
+	}
+	if geom.isPVC {
+		notes = append(notes, fmt.Sprintf("CONSERVATIVE THERMAL WARNING (Sch 40 PVC @ $%.2f/ft): Standard PVC softens above 140 F (ASTM D1785). Permitted here ONLY because dry-fan eductor air dilution cools Stage 3 inlet to %.1f F — keep the hardwired safety bypass active and switch to Sch 80 CPVC if ambient studio temps exceed 95 F.", geom.costPerFt, eductor.MixedTempF))
+	}
+	if geom.nominalIn == 2.0 && pipeCount >= 30 {
+		notes = append(notes, fmt.Sprintf("HIGH PIPE-COUNT / LABOR WARNING (2\" pipes): %d parallel 2\" pipes require %d hole-saw cuts and %d Uniseals ($%.0f in seals alone) plus tighter 1/4\" packing (%.2f inWC bed dP). Switch to the 4\" pipe sweet spot (~11–12 pipes) for lower labor and real net cost savings!", pipeCount, 2*pipeCount, 2*pipeCount, unisealsCost, bedDPInWC))
 	}
 
 	summary := fmt.Sprintf(
-		"%d × %.0f\" Sch 80 CPVC stock plumbing pipes (ID %.3f\") filled with %.3g\" PP packing (D/d_p = %.2f, %.1f%% flood, %.2f inWC bed dP). Manifold total $%.0f vs $%.0f single %.0f\" column (%+.0f USD) — eliminates specialty large-diameter pipe lead times and freight.",
-		pipeCount, pipeNominalIn, pipeActualIDIn, packingDiamIn, wallRatio, actualFloodPct, bedDPInWC,
+		"Shell-less Uniseal bundle of %d × %.0f\" %s risers (ID %.3f\", NO external large pipe) with %.3g\" packing (D/d_p = %.2f, %.1f%% flood, %.2f inWC bed dP). Total $%.0f vs $%.0f single %.0f\" column (%+.0f USD).",
+		pipeCount, geom.nominalIn, geom.pipeMaterial, geom.actualIDIn, geom.packingDiamIn, wallRatio, actualFloodPct, bedDPInWC,
 		manifoldCost, singleCost, singleColPart.NominalIn, costDelta,
 	)
 
 	return ParallelBedAnalysis{
 		Enabled:             enabled,
-		PipeNominalIn:       pipeNominalIn,
-		PipeActualIDIn:      pipeActualIDIn,
+		ShelllessPlenum:     true,
+		PipeMaterial:        geom.pipeMaterial,
+		PipeNominalIn:       geom.nominalIn,
+		PipeActualIDIn:      geom.actualIDIn,
 		PipeCount:           pipeCount,
-		PackingDiameterIn:   packingDiamIn,
+		PackingDiameterIn:   geom.packingDiamIn,
 		WallRatioDToDp:      wallRatio,
 		BedDPInWC:           bedDPInWC,
 		SingleColumnDPInWC:  singleDPInWC,
@@ -605,24 +813,593 @@ func analyzeParallelVenturi(project StudioProject, design model.ScrubberDesign) 
 	}
 }
 
-// EvaluateArchitectureOptions computes the complete Phase 7 trade-off summary,
-// exact baseline-vs-selected COTS cost delta, footprint savings, and warnings.
+// activeTwinFluidD50Microns computes the Calvert NaCl fume cut diameter d_50 [um]
+// under active 40 PSI twin-fluid air-atomizing nozzle injection (counter-current/cross-flow
+// relative jet velocity v_rel = max(75 m/s, v_throat + 27 m/s) on 25 um SMD droplets).
+func activeTwinFluidD50Microns(atomizeDesign model.ScrubberDesign) float64 {
+	muG := float64(atomizeDesign.QuenchedGas.Viscosity)
+	if muG <= 0 {
+		muG = 1.85e-5
+	}
+	dDropM := float64(atomizeDesign.Venturi.DropletDiameter)
+	if dDropM <= 0 {
+		dDropM = float64(model.MicronsToMeters(25.0))
+	}
+	lg := atomizeDesign.Venturi.LGRatio
+	if lg <= 0 {
+		lg = 0.0012
+	}
+	vRel := math.Max(75.0, float64(atomizeDesign.Venturi.ThroatVelocity)+27.0)
+	if d50M, err := scrubber.CalvertCutDiameter(muG, dDropM, vRel, float64(model.NaClParticleDensity), lg, float64(model.WaterDensity), scrubber.DefaultCalvertFactor, scrubber.DefaultMeanFreePathM); err == nil && d50M > 0 {
+		return round2(model.Meters(d50M).Microns())
+	}
+	return round2(atomizeDesign.Venturi.CutDiameterD50Microns)
+}
+
+func eductorEntrainmentRatio(dpInWC float64) float64 {
+	switch {
+	case dpInWC <= 4.0:
+		return 3.5
+	case dpInWC >= 15.0:
+		return 1.5
+	default:
+		// Entrainment collapses smoothly from ~3.5:1 @ 4 inWC down to ~1.5:1 @ 15+ inWC.
+		return 3.5 - (dpInWC-4.0)*(2.0/11.0)
+	}
+}
+
+// analyzeCompressor evaluates the studio's existing shop air compressor in BOTH roles:
+// (1) main airflow compressed-air eductor, and (2) twin-fluid 25 um air-atomizing venturi nozzle.
+// Always computed on every Evaluate() call.
+func analyzeCompressor(project StudioProject, activeDesign, baseDesign model.ScrubberDesign) (CompressorAnalysis, model.ScrubberDesign) {
+	p := project.Normalize()
+	availSCFM := round1(p.ShopCompressorSCFM)
+	if availSCFM <= 0 {
+		availSCFM = 15.0
+	}
+
+	// Role 1: Main scrubber airflow via air amplifier / compressed-air eductor.
+	qACFM := baseDesign.Blower.FlowACFM
+	if qACFM <= 0 {
+		qACFM = 100.0
+	}
+	baseDPInWC := baseDesign.Blower.TotalStaticPressureInWC
+	if baseDPInWC <= 0 {
+		baseDPInWC = 15.0
+	}
+	entRatio := eductorEntrainmentRatio(baseDPInWC)
+	edSCFM := round1(qACFM / entRatio)
+	edHP := round1(edSCFM / 3.8)
+	edFeasible := edSCFM <= availSCFM
+
+	var edVerdict string
+	if edFeasible {
+		edVerdict = fmt.Sprintf(
+			"FEASIBLE on this small low-dP kiln: moving %.0f ACFM against %.1f inWC (%.1f:1 entrainment) requires %.1f SCFM (~%.1f HP) vs your %.1f SCFM shop compressor — verify 100%% continuous-duty rating and add an inline moisture/oil separator.",
+			qACFM, baseDPInWC, entRatio, edSCFM, edHP, availSCFM,
+		)
+	} else {
+		edVerdict = fmt.Sprintf(
+			"NOT FEASIBLE for main scrubber airflow: moving %.0f ACFM against %.1f inWC backpressure collapses air-amplifier entrainment to %.1f:1, requiring %.1f SCFM (~%.1f HP industrial rotary-screw compressor) vs your %.1f SCFM studio compressor (%.1fx shortfall). Use your shop compressor for a 25 um twin-fluid air-atomizing nozzle instead!",
+			qACFM, baseDPInWC, entRatio, edSCFM, edHP, availSCFM, edSCFM/math.Max(availSCFM, 1.0),
+		)
+	}
+
+	// Role 2: Twin-fluid air-atomizing venturi nozzle (4-6 SCFM @ 40 PSI -> 25 um SMD droplets, 48 m/s throat).
+	var atomizeDesign model.ScrubberDesign
+	if p.BlowerDriveOption == BlowerDriveCompressorAirAtomize {
+		atomizeDesign = activeDesign
+	} else {
+		atomProj := p
+		atomProj.BlowerDriveOption = BlowerDriveCompressorAirAtomize
+		if d, err := scrubber.NewDesigner().Design(atomProj.EffectiveDesignInput()); err == nil {
+			atomizeDesign = d
+		} else {
+			atomizeDesign = baseDesign
+		}
+	}
+
+	ventGPM := atomizeDesign.Venturi.LiquidFlowGPM
+	atomizeSCFM := round1(math.Max(4.0, math.Min(6.0, 4.0+1.5*ventGPM)))
+	atomizeFeasible := availSCFM >= atomizeSCFM
+	atomizeDropletUm := round1(atomizeDesign.Venturi.DropletDiameter.Microns())
+	if atomizeDropletUm <= 0 {
+		atomizeDropletUm = 25.0
+	}
+	dpSaved := round2(math.Max(0.0, baseDesign.Blower.TotalStaticPressureInWC-atomizeDesign.Blower.TotalStaticPressureInWC))
+
+	baseFan := selectWetBlowerVFD(baselineProjectFor(p), baseDesign)
+	atomFanCost, _ := mediumPressureAirAtomizeBlowerCost(p, atomizeDesign.Blower.RecommendedMotorHP)
+	costSaved := round2(math.Max(0.0, baseFan.UnitCostUSD-atomFanCost))
+
+	activeD50 := activeTwinFluidD50Microns(atomizeDesign)
+	var atomVerdict string
+	if atomizeFeasible {
+		atomVerdict = fmt.Sprintf(
+			"FEASIBLE & HIGH SAVINGS: A $75 twin-fluid air-atomizing nozzle needs only %.1f SCFM @ 40 PSI (%.0f%% of your %.1f SCFM compressor), makes %.0f um SMD droplets at %.0f m/s throat velocity (active twin-fluid jet shear v_rel~75 m/s achieves Calvert d50 = %.2f um parity vs %.2f um baseline; passive u_L0=0 would slip to %.2f um, so aim nozzle cross-flow/counter-current!), cuts venturi dP %.1f -> %.1f inWC (total static %.1f -> %.1f inWC, saving %.1f inWC), and unlocks a $360 medium-pressure cast-aluminum blower saving $%.0f!",
+			atomizeSCFM, (atomizeSCFM/availSCFM)*100.0, availSCFM, atomizeDropletUm,
+			float64(atomizeDesign.Venturi.ThroatVelocity), activeD50, baseDesign.Venturi.CutDiameterD50Microns, atomizeDesign.Venturi.CutDiameterD50Microns,
+			baseDesign.Venturi.PressureDropInWC, atomizeDesign.Venturi.PressureDropInWC,
+			baseDesign.Blower.TotalStaticPressureInWC, atomizeDesign.Blower.TotalStaticPressureInWC,
+			dpSaved, costSaved,
+		)
+	} else {
+		atomVerdict = fmt.Sprintf(
+			"Requires %.1f SCFM @ 40 PSI for 25 um air-atomizing (slightly above your %.1f SCFM setting) — upgrade to a standard 5 HP 60-gal studio compressor (>= 10 SCFM) to unlock %.1f inWC dP reduction and $%.0f blower savings.",
+			atomizeSCFM, availSCFM, dpSaved, costSaved,
+		)
+	}
+
+	return CompressorAnalysis{
+		AvailableSCFM:       availSCFM,
+		EductorSCFMNeeded:   edSCFM,
+		EductorHPNeeded:     edHP,
+		EductorFeasible:     edFeasible,
+		EductorVerdict:      edVerdict,
+		AtomizeSCFMNeeded:   atomizeSCFM,
+		AtomizeFeasible:     atomizeFeasible,
+		AtomizeDropletUm:    atomizeDropletUm,
+		AtomizeDPSavedInWC:  dpSaved,
+		AtomizeCostSavedUSD: costSaved,
+		AtomizeVerdict:      atomVerdict,
+	}, atomizeDesign
+}
+
+func voltageForHP(project StudioProject, hp float64) int {
+	if hp <= 0.5 || (hp <= 1.0 && project.AvailableVoltage < 240) {
+		return 120
+	}
+	return 240
+}
+
+func analyzeBlowerDrive(
+	project StudioProject,
+	activeDesign model.ScrubberDesign,
+	baseDesign model.ScrubberDesign,
+	eductor EductorAnalysis,
+	comp CompressorAnalysis,
+	atomizeDesign model.ScrubberDesign,
+) BlowerDriveAnalysis {
+	p := project.Normalize()
+	baseFan := selectWetBlowerVFD(baselineProjectFor(p), baseDesign)
+	baseFanCost := baseFan.UnitCostUSD
+
+	switch p.BlowerDriveOption {
+	case BlowerDriveRegenSideChannel:
+		qCFM := activeDesign.Blower.FlowACFM
+		reqStatic := round1(activeDesign.Blower.TotalStaticPressureInWC)
+		if eductor.Enabled {
+			qCFM = eductor.MotiveAirCFM
+			reqStatic = eductor.DryFanStaticInWC
+		}
+		var hp, cost float64
+		switch {
+		case qCFM <= 120.0:
+			hp, cost = 1.5, 380.0
+		case qCFM <= 280.0:
+			hp, cost = 3.0, 460.0
+		default:
+			hp, cost = 5.0, 520.0
+		}
+		feasible := qCFM <= 340.0 && reqStatic <= 65.0
+		voltage := 240
+		if hp <= 1.5 && p.AvailableVoltage == 120 {
+			voltage = 120
+		}
+		delta := round2(cost - baseFanCost)
+		var caveats []string
+		if !eductor.Enabled {
+			caveats = append(caveats, "DRY-AIR CORROSION CAVEAT: Cast-aluminum side-channel regenerative blowers have tight (~0.005\") impeller clearances intended for dry clean air. Using one wet on acidic HCl exhaust without the Dry-Fan Eductor risks rapid aluminum pitting and salt-crystal seizure — pair with Stage Alignment = eductor_dry_fan or flush/purge dry after every firing.")
+		} else {
+			caveats = append(caveats, "Dry-air side placement (paired with Vertical Downflow Eductor): 100% dry ambient air avoids wet HCl contact on the cast-aluminum impeller while leveraging 60+ inWC static headroom.")
+		}
+		caveats = append(caveats, "Use a bleed/relief blast-gate damper (never dead-head) and coarse intake filter; ring blowers run at fixed speed unless paired with a VFD.")
+		if !feasible {
+			caveats = append(caveats, fmt.Sprintf("Required airflow (%.0f CFM) exceeds single 3 HP side-channel ring blower capacity (~280–340 CFM); use dual parallel ring blowers or an industrial radial blower.", qCFM))
+		}
+		summary := fmt.Sprintf(
+			"COTS %.2g HP cast-aluminum side-channel regenerative ring blower ($%.0f vs $%.0f baseline -> %+.0f USD) delivers 60+ inWC static headroom for %.0f CFM @ %.1f inWC.",
+			hp, cost, baseFanCost, delta, qCFM, reqStatic,
+		)
+		return BlowerDriveAnalysis{
+			Option:             BlowerDriveRegenSideChannel,
+			Label:              "Side-Channel Regenerative Ring Blower (2–3 HP)",
+			FanCostUSD:         cost,
+			BaselineFanCostUSD: baseFanCost,
+			CostDeltaUSD:       delta,
+			RequiredStaticInWC: reqStatic,
+			ThroatVelocityMS:   round1(float64(activeDesign.Venturi.ThroatVelocity)),
+			DropletUm:          round1(activeDesign.Venturi.DropletDiameter.Microns()),
+			MotorHP:            hp,
+			Voltage:            voltage,
+			Feasible:           feasible,
+			Summary:            summary,
+			Caveats:            caveats,
+		}
+
+	case BlowerDriveDualBypassBlowers:
+		qCFM := activeDesign.Blower.FlowACFM
+		reqStatic := round1(activeDesign.Blower.TotalStaticPressureInWC)
+		var cost, hp float64
+		switch {
+		case qCFM <= 130.0:
+			cost, hp = 380.0, 1.5
+		case qCFM <= 280.0:
+			cost, hp = 420.0, 2.0
+		default:
+			cost, hp = 460.0, 2.5
+		}
+		feasible := qCFM <= 285.0 && reqStatic <= 35.0
+		voltage := 120
+		if p.AvailableVoltage >= 240 {
+			voltage = 240
+		}
+		delta := round2(cost - baseFanCost)
+		caveats := []string{
+			"Tangential bypass discharge keeps cooling air over the motor windings completely isolated from wet acidic exhaust (never substitute thru-flow shop-vac motors!).",
+			"CARBON BRUSH WEAR ITEM: Universal-motor carbon brushes last ~650–800 hrs (~45 sixteen-hour firings); budget $15/pair for a quick brush swap every ~45 firings.",
+			"High-RPM (~18,000 RPM) tangential fans emit higher-pitched whine (~82–86 dBA bare) — pair with the insulated acoustic blower box/silencer for residential yards.",
+		}
+		if !feasible {
+			caveats = append(caveats, fmt.Sprintf("Kiln exhaust flow (%.0f ACFM) exceeds 2x Ametek Lamb 3-stage parallel capacity (~240–260 CFM @ 25+ inWC); use 4x staged units or an industrial radial blower.", qCFM))
+		}
+		summary := fmt.Sprintf(
+			"2× COTS Ametek Lamb 3-stage tangential bypass blowers in parallel (~240–260 CFM @ 25+ inWC, $%.0f total vs $%.0f baseline -> %+.0f USD). Tangential discharge isolates motor windings from wet exhaust; swap $15 brushes every ~45 firings.",
+			cost, baseFanCost, delta,
+		)
+		return BlowerDriveAnalysis{
+			Option:             BlowerDriveDualBypassBlowers,
+			Label:              "Dual 3-Stage Tangential Bypass Blowers (2× Ametek Lamb)",
+			FanCostUSD:         cost,
+			BaselineFanCostUSD: baseFanCost,
+			CostDeltaUSD:       delta,
+			RequiredStaticInWC: reqStatic,
+			ThroatVelocityMS:   round1(float64(activeDesign.Venturi.ThroatVelocity)),
+			DropletUm:          round1(activeDesign.Venturi.DropletDiameter.Microns()),
+			MotorHP:            hp,
+			Voltage:            voltage,
+			Feasible:           feasible,
+			Summary:            summary,
+			Caveats:            caveats,
+		}
+
+	case BlowerDriveCompressorAirAtomize:
+		hp := atomizeDesign.Blower.RecommendedMotorHP
+		if hp <= 0 {
+			hp = 1.0
+		}
+		cost, _ := mediumPressureAirAtomizeBlowerCost(p, hp)
+		delta := round2(cost - baseFanCost)
+		reqStatic := round1(atomizeDesign.Blower.TotalStaticPressureInWC)
+		vThroat := round1(float64(atomizeDesign.Venturi.ThroatVelocity))
+		dropletUm := round1(atomizeDesign.Venturi.DropletDiameter.Microns())
+		voltage := voltageForHP(p, hp)
+		activeD50 := activeTwinFluidD50Microns(atomizeDesign)
+		caveats := []string{
+			fmt.Sprintf("Requires %.1f SCFM @ 40 PSI continuous from your existing studio shop compressor (%.0f%% of %.1f SCFM capacity) through an inline air-pressure regulator & moisture trap.", comp.AtomizeSCFMNeeded, (comp.AtomizeSCFMNeeded/math.Max(comp.AvailableSCFM, 1.0))*100.0, comp.AvailableSCFM),
+			fmt.Sprintf("Calvert physics parity verified: 25 um twin-fluid jet shear (v_rel ~75 m/s @ 40 PSI in a %.0f m/s throat) achieves d50 = %.2f um (beating %.2f um @ 70 m/s baseline; passive u_L0=0 would slip to %.2f um) while cutting venturi dP %.1f -> %.1f inWC and total static %.1f -> %.1f inWC.", vThroat, activeD50, baseDesign.Venturi.CutDiameterD50Microns, atomizeDesign.Venturi.CutDiameterD50Microns, baseDesign.Venturi.PressureDropInWC, atomizeDesign.Venturi.PressureDropInWC, baseDesign.Blower.TotalStaticPressureInWC, atomizeDesign.Blower.TotalStaticPressureInWC),
+			"If compressed air fails mid-firing, venturi particulate efficiency temporarily drops until air returns (Stage 1 quench cooling and Stage 3 HCl absorption continue normally).",
+		}
+		summary := fmt.Sprintf(
+			"$75 twin-fluid air-atomizing nozzle (%.1f SCFM @ 40 PSI -> 25 um SMD) slashes total static %.1f -> %.1f inWC at 48 m/s (active twin-fluid d50=%.2f um parity), unlocking a $360 medium-pressure cast-aluminum radial blower + simple VFD ($%.0f total vs $%.0f baseline -> %+.0f USD).",
+			comp.AtomizeSCFMNeeded, baseDesign.Blower.TotalStaticPressureInWC, reqStatic, activeD50, cost, baseFanCost, delta,
+		)
+		return BlowerDriveAnalysis{
+			Option:             BlowerDriveCompressorAirAtomize,
+			Label:              "Shop Compressor Air-Atomize (25 µm) + Medium-Pressure Radial Blower",
+			FanCostUSD:         cost,
+			BaselineFanCostUSD: baseFanCost,
+			CostDeltaUSD:       delta,
+			RequiredStaticInWC: reqStatic,
+			ThroatVelocityMS:   vThroat,
+			DropletUm:          dropletUm,
+			MotorHP:            hp,
+			Voltage:            voltage,
+			Feasible:           comp.AtomizeFeasible,
+			Summary:            summary,
+			Caveats:            caveats,
+		}
+
+	case BlowerDriveCompressorEductor:
+		const eductorNozzleCost = 185.0 // COTS 316L air amplifier / venturi eductor hardware only (assumes existing compressor)
+		delta := round2(eductorNozzleCost - baseFanCost)
+		voltage := 240
+		if comp.EductorHPNeeded <= 2.0 {
+			voltage = 120
+		}
+		caveats := []string{
+			comp.EductorVerdict,
+			"Compressed-air amplification has only ~15–20% overall wire-to-air thermodynamic efficiency (vs ~62% for a direct radial blower), consuming 3–4× more electricity per firing.",
+			"Only viable for tiny <= 6 cu.ft. low-dP test kilns; for 14–48 cu.ft. studio kilns, use your shop compressor for a 25 um twin-fluid air-atomizing nozzle instead (4–6 SCFM).",
+		}
+		summary := fmt.Sprintf(
+			"Shop compressor main-airflow eductor needs %.1f SCFM (~%.1f HP) vs %.1f SCFM available (feasible=%v). Hardware nozzle is $%.0f, but backpressure entrainment collapse makes main airflow impractical above tiny <= 6 cu.ft. low-dP test kilns.",
+			comp.EductorSCFMNeeded, comp.EductorHPNeeded, comp.AvailableSCFM, comp.EductorFeasible, eductorNozzleCost,
+		)
+		return BlowerDriveAnalysis{
+			Option:             BlowerDriveCompressorEductor,
+			Label:              "Shop Compressor Main Eductor / Air Amplifier (Feasibility Check)",
+			FanCostUSD:         eductorNozzleCost,
+			BaselineFanCostUSD: baseFanCost,
+			CostDeltaUSD:       delta,
+			RequiredStaticInWC: round1(baseDesign.Blower.TotalStaticPressureInWC),
+			ThroatVelocityMS:   round1(float64(baseDesign.Venturi.ThroatVelocity)),
+			DropletUm:          round1(baseDesign.Venturi.DropletDiameter.Microns()),
+			MotorHP:            comp.EductorHPNeeded,
+			Voltage:            voltage,
+			Feasible:           comp.EductorFeasible,
+			Summary:            summary,
+			Caveats:            caveats,
+		}
+
+	default: // BlowerDriveIndustrialRadialVFD
+		if eductor.Enabled {
+			dryPart := selectDryMotiveBlowerVFD(p, eductor)
+			delta := round2(dryPart.UnitCostUSD - baseFanCost)
+			return BlowerDriveAnalysis{
+				Option:             BlowerDriveIndustrialRadialVFD,
+				Label:              "Clean Dry-Air Industrial Radial Blower + VFD (Eductor Motive)",
+				FanCostUSD:         dryPart.UnitCostUSD,
+				BaselineFanCostUSD: baseFanCost,
+				CostDeltaUSD:       delta,
+				RequiredStaticInWC: eductor.DryFanStaticInWC,
+				ThroatVelocityMS:   round1(float64(activeDesign.Venturi.ThroatVelocity)),
+				DropletUm:          round1(activeDesign.Venturi.DropletDiameter.Microns()),
+				MotorHP:            eductor.DryFanMotorHP,
+				Voltage:            voltageForHP(p, eductor.DryFanMotorHP),
+				Feasible:           eductor.Feasible,
+				Summary:            fmt.Sprintf("Clean dry-air %.2g HP radial blower + GS21 VFD in NEMA 4X ($%.0f vs $%.0f wet baseline -> %+.0f USD) driving vertical downflow eductor at %.1f inWC.", eductor.DryFanMotorHP, dryPart.UnitCostUSD, baseFanCost, delta, eductor.DryFanStaticInWC),
+				Caveats:            []string{"Mounted strictly on dry ambient intake side (zero acid contact); Stage 3 downstream operates under positive pressure (outdoor-only)."},
+			}
+		}
+		hp := activeDesign.Blower.RecommendedMotorHP
+		if hp <= 0 {
+			hp = 1.0
+		}
+		return BlowerDriveAnalysis{
+			Option:             BlowerDriveIndustrialRadialVFD,
+			Label:              "Industrial Radial Pressure Blower + VFD (Baseline)",
+			FanCostUSD:         baseFanCost,
+			BaselineFanCostUSD: baseFanCost,
+			CostDeltaUSD:       0.0,
+			RequiredStaticInWC: round1(activeDesign.Blower.TotalStaticPressureInWC),
+			ThroatVelocityMS:   round1(float64(activeDesign.Venturi.ThroatVelocity)),
+			DropletUm:          round1(activeDesign.Venturi.DropletDiameter.Microns()),
+			MotorHP:            hp,
+			Voltage:            voltageForHP(p, hp),
+			Feasible:           true,
+			Summary:            fmt.Sprintf("Baseline %.2g HP corrosion-duty radial pressure blower + GS21 VFD in NEMA 4X ($%.0f) delivering %.0f ACFM @ %.1f inWC with smooth PID kiln draft control.", hp, baseFanCost, activeDesign.Blower.FlowACFM, activeDesign.Blower.TotalStaticPressureInWC),
+			Caveats:            []string{"Highest upfront fan cost; select Compressor Air-Atomize, Dual 3-Stage Bypass, or Side-Channel Ring Blower to save $1,000–$1,400."},
+		}
+	}
+}
+
+type packingMediaSpec struct {
+	option       string
+	label        string
+	sku          string
+	diameterIn   float64
+	voidage      float64
+	specAreaRef  float64 // specific surface area a_p at 1" reference [m^2/m^3]
+	unitCostUSD  float64
+	weightKgCuFt float64
+	material     string
+	source       string
+}
+
+func resolvePackingMediaSpec(option string, parallelBed ParallelBedAnalysis) (sel packingMediaSpec, base packingMediaSpec) {
+	if parallelBed.Enabled {
+		baseUnitCost := 98.0
+		baseVoidage := 0.87
+		baseSKU := "PACK-PP-PALL-050IN"
+		if parallelBed.PackingDiameterIn < 0.30 {
+			baseUnitCost = 112.0
+			baseVoidage = 0.82
+			baseSKU = "PACK-PP-SAD-025IN"
+		} else if parallelBed.PackingDiameterIn < 0.45 {
+			baseUnitCost = 104.0
+			baseVoidage = 0.85
+			baseSKU = "PACK-PP-SAD-0375IN"
+		}
+		base = packingMediaSpec{
+			option:       PackingMediaPPPallRings,
+			label:        fmt.Sprintf(`Commercial %.3g" PP Pall Rings / Saddles`, parallelBed.PackingDiameterIn),
+			sku:          baseSKU,
+			diameterIn:   parallelBed.PackingDiameterIn,
+			voidage:      baseVoidage,
+			specAreaRef:  207.0,
+			unitCostUSD:  baseUnitCost,
+			weightKgCuFt: 2.8,
+			material:     fmt.Sprintf("Polypropylene (PP), %.0f%% Voidage, D/d_p=%.2f", baseVoidage*100.0, parallelBed.WallRatioDToDp),
+			source:       "McMaster-Carr / Jaeger / US Plastic",
+		}
+		switch option {
+		case PackingMediaAquacultureBioballs:
+			sel = packingMediaSpec{
+				option:       PackingMediaAquacultureBioballs,
+				label:        fmt.Sprintf(`Aquaculture PP Bio-Media (%.3g" Mini Bio-Balls)`, parallelBed.PackingDiameterIn),
+				sku:          "PACK-BIOBALL-MINI",
+				diameterIn:   parallelBed.PackingDiameterIn,
+				voidage:      0.85,
+				specAreaRef:  185.0,
+				unitCostUSD:  38.0,
+				weightKgCuFt: 2.9,
+				material:     fmt.Sprintf("Bulk Aquaculture Polypropylene Bio-Media, 85%% Voidage, D/d_p=%.2f", parallelBed.WallRatioDToDp),
+				source:       "Pentair AES / Bulk Aquaculture Supply",
+			}
+		case PackingMediaDIYCeramicRings:
+			sel = packingMediaSpec{
+				option:       PackingMediaDIYCeramicRings,
+				label:        fmt.Sprintf(`DIY Kiln-Fired Stoneware Raschig Rings (%.3g")`, parallelBed.PackingDiameterIn),
+				sku:          "PACK-DIY-CERAMIC-RING",
+				diameterIn:   parallelBed.PackingDiameterIn,
+				voidage:      0.70,
+				specAreaRef:  240.0,
+				unitCostUSD:  18.0,
+				weightKgCuFt: 21.0, // heavy unglazed stoneware rings (~46 lb/cu.ft.)
+				material:     fmt.Sprintf("Unglazed Stoneware Ceramic Raschig Rings (70%% Voidage, 2000 F & Acid Proof, D/d_p=%.2f)", parallelBed.WallRatioDToDp),
+				source:       "Studio Clay Extruder + Kiln Bisque/Stoneware Firing",
+			}
+		default:
+			sel = base
+		}
+		return sel, base
+	}
+
+	base = packingMediaSpec{
+		option:       PackingMediaPPPallRings,
+		label:        `Commercial 1" PP Pall Rings`,
+		sku:          "PACK-PP-PALL-1IN",
+		diameterIn:   1.0,
+		voidage:      0.90,
+		specAreaRef:  207.0,
+		unitCostUSD:  88.0, // small-lot US distributor 1-10 cu.ft. pricing
+		weightKgCuFt: 2.5,
+		material:     "Polypropylene (PP), 90% Voidage, Fp=52/ft",
+		source:       "McMaster-Carr / Jaeger / US Plastic",
+	}
+	switch option {
+	case PackingMediaAquacultureBioballs:
+		sel = packingMediaSpec{
+			option:       PackingMediaAquacultureBioballs,
+			label:        `Aquaculture PP Bio-Media (1"–1.25" Bio-Balls)`,
+			sku:          "PACK-BIOBALL-1IN",
+			diameterIn:   1.125,
+			voidage:      0.85,
+			specAreaRef:  185.0,
+			unitCostUSD:  38.0,
+			weightKgCuFt: 2.9,
+			material:     "Bulk Aquaculture Polypropylene Bio-Balls (85% Voidage, <=200 F)",
+			source:       "Pentair AES / Bulk Pond & Aquaculture Supply",
+		}
+	case PackingMediaDIYCeramicRings:
+		sel = packingMediaSpec{
+			option:       PackingMediaDIYCeramicRings,
+			label:        `DIY Kiln-Fired Stoneware Ceramic Raschig Rings (3/4")`,
+			sku:          "PACK-DIY-CERAMIC-075",
+			diameterIn:   0.75,
+			voidage:      0.70,
+			specAreaRef:  240.0,
+			unitCostUSD:  18.0,
+			weightKgCuFt: 21.0, // heavy unglazed stoneware (~46 lb/cu.ft.)
+			material:     "Potter-Extruded Unglazed Stoneware Ceramic Rings (70% Voidage, Acid-Proof & 2000 F-Proof)",
+			source:       "Studio Clay Extruder + Potter's Kiln ($18/cu.ft. clay + firing)",
+		}
+	default:
+		sel = base
+	}
+	return sel, base
+}
+
+func analyzePackingMedia(
+	project StudioProject,
+	design model.ScrubberDesign,
+	eductor EductorAnalysis,
+	parallelBed ParallelBedAnalysis,
+) (PackingMediaAnalysis, packingMediaSpec, float64) {
+	p := project.Normalize()
+	sel, base := resolvePackingMediaSpec(p.PackingMediaOption, parallelBed)
+
+	// Determine active gas flow, cross-sectional area, and packing volume.
+	qGas := float64(design.QuenchedGas.VolumetricFlow)
+	rhoG := float64(design.QuenchedGas.Density)
+	muG := float64(design.QuenchedGas.Viscosity)
+	if qGas <= 0 {
+		qGas = 0.10
+	}
+	if rhoG <= 0 {
+		rhoG = 0.90
+	}
+	if muG <= 0 {
+		muG = 1.85e-5
+	}
+	if eductor.Enabled {
+		pAmb := float64(design.Input.AmbientPressurePa)
+		if pAmb <= 0 {
+			pAmb = float64(model.StandardPressurePa)
+		}
+		qMotive := float64(model.CFMToCubicMetersPerSec(eductor.MotiveAirCFM))
+		_, qMix, rhoMix, _ := solveMixedAirState(design.QuenchedGas, qMotive, pAmb)
+		qGas, rhoG = qMix, rhoMix
+	}
+
+	packHeightM := float64(design.PackedBed.PackingHeight)
+	if packHeightM <= 0 {
+		packHeightM = 0.65
+	}
+	var totalAreaM2 float64
+	if parallelBed.Enabled {
+		pipeIDM := float64(model.InchesToMeters(parallelBed.PipeActualIDIn))
+		totalAreaM2 = float64(parallelBed.PipeCount) * math.Pi * pipeIDM * pipeIDM / 4.0
+	} else {
+		_, actualIDIn, _ := selectSinglePackedColumn(p, design, eductor)
+		colDiaM := float64(model.InchesToMeters(actualIDIn))
+		totalAreaM2 = math.Pi * colDiaM * colDiaM / 4.0
+	}
+	vSup := qGas / math.Max(totalAreaM2, 1e-6)
+	packCuFt := math.Max(1.0, math.Ceil(model.CubicMeters(totalAreaM2*packHeightM).CuFt()))
+
+	// Exact irrigated Sauter/Ergun bed pressure drop for selected packing media.
+	dM := float64(model.InchesToMeters(sel.diameterIn))
+	specArea := sel.specAreaRef * (0.0254 / dM)
+	sauterDp := 6.0 * (1.0 - sel.voidage) / specArea
+	bedDPInWC := round2(design.PackedBed.BedPressureDrop.InWC())
+	if dryDP, err := scrubber.ErgunPressureDrop(sauterDp, sel.voidage, vSup, rhoG, muG, packHeightM); err == nil {
+		bedDPInWC = round2(model.Pascal(float64(dryDP) * 1.70).InWC())
+	}
+
+	mediaCost := round2(packCuFt * sel.unitCostUSD)
+	baseCost := round2(packCuFt * base.unitCostUSD)
+	costDelta := round2(mediaCost - baseCost)
+	totalWeightLbs := round1(packCuFt * sel.weightKgCuFt / model.KgPerLb)
+
+	var summary string
+	switch sel.option {
+	case PackingMediaAquacultureBioballs:
+		summary = fmt.Sprintf(
+			"%.0f cu.ft. bulk aquaculture PP bio-media ($38/cu.ft., %.0f%% voidage, %.2f inWC irrigated Ergun bed dP, ~%.0f lbs): $%.0f vs $%.0f commercial PP Pall rings (%+.0f USD savings).",
+			packCuFt, sel.voidage*100.0, bedDPInWC, totalWeightLbs, mediaCost, baseCost, costDelta,
+		)
+	case PackingMediaDIYCeramicRings:
+		summary = fmt.Sprintf(
+			"%.0f cu.ft. potter-extruded unglazed stoneware Raschig rings (%.3g\", $18/cu.ft. clay+firing, 70%% voidage): 100%% acid-proof & 2000 F-proof ($%.0f vs $%.0f -> %+.0f USD). Trade-off: lower 70%% voidage raises irrigated Ergun bed dP to %.2f inWC and adds ~%.0f lbs bed weight (use reinforced FRP/316L support grate!).",
+			packCuFt, sel.diameterIn, mediaCost, baseCost, costDelta, bedDPInWC, totalWeightLbs,
+		)
+	default:
+		summary = fmt.Sprintf(
+			"%.0f cu.ft. %s ($%.0f/cu.ft., %.0f%% voidage, %.2f inWC irrigated Ergun bed dP, ~%.0f lbs): lowest bed pressure drop and highest HCl transfer efficiency.",
+			packCuFt, sel.label, sel.unitCostUSD, sel.voidage*100.0, bedDPInWC, totalWeightLbs,
+		)
+	}
+
+	return PackingMediaAnalysis{
+		Option:               sel.option,
+		Label:                sel.label,
+		DiameterIn:           sel.diameterIn,
+		Voidage:              sel.voidage,
+		BedDPInWC:            bedDPInWC,
+		MediaCostUSD:         mediaCost,
+		BaselineMediaCostUSD: baseCost,
+		CostDeltaUSD:         costDelta,
+		Summary:              summary,
+	}, sel, packCuFt
+}
+
+// EvaluateArchitectureOptions computes the complete Phase 7 & Phase 8 trade-off summary,
+// exact baseline-vs-selected COTS cost delta, footprint savings, blower drive, packing media,
+// shop compressor feasibility, and warnings.
 func EvaluateArchitectureOptions(project StudioProject, design model.ScrubberDesign, selectedCOTS COTSSummary) ArchitectureOptionsResult {
 	p := project.Normalize()
+	baseProj := baselineProjectFor(p)
+	baseDesign := resolveBaselineDesign(p, design)
 
-	// Build baseline (all default Phase 7 options) COTS summary for exact apples-to-apples cost delta.
-	baseProj := p
-	baseProj.StageAlignment = StageAlignmentInlineIDBlower
-	baseProj.PackedBedLayout = PackedBedLayoutSingleColumn
-	baseProj.VenturiLayout = VenturiLayoutSingleThroat
-	baseProj.CompactFootprint = false
-	baseProj.SharedBaffledSump = true
-	baseProj.ControlTier = ControlTierRPiModbus
-
-	baseCOTS := BuildCOTSSummary(baseProj, design)
+	baseCOTS := BuildCOTSSummary(baseProj, baseDesign)
 	eductor := analyzeEductor(p, design)
 	parallelBed := analyzeParallelBed(p, design, eductor)
 	parallelVenturi := analyzeParallelVenturi(p, design)
+	compressor, atomizeDesign := analyzeCompressor(p, design, baseDesign)
+	blowerDrive := analyzeBlowerDrive(p, design, baseDesign, eductor, compressor, atomizeDesign)
+	packingMedia, _, _ := analyzePackingMedia(p, design, eductor, parallelBed)
 
 	// Individual control-tier and shared-sump deltas for transparent breakdown.
 	controlDelta := 0.0
@@ -658,15 +1435,35 @@ func EvaluateArchitectureOptions(project StudioProject, design model.ScrubberDes
 	var savings []string
 	var warnings []string
 
+	if blowerDrive.Option != BlowerDriveIndustrialRadialVFD {
+		savings = append(savings, fmt.Sprintf("%s: %+.0f USD vs industrial radial+VFD ($%.0f vs $%.0f; %.1f inWC static, feasible=%v).",
+			blowerDrive.Label, blowerDrive.CostDeltaUSD, blowerDrive.FanCostUSD, blowerDrive.BaselineFanCostUSD, blowerDrive.RequiredStaticInWC, blowerDrive.Feasible))
+		if !blowerDrive.Feasible {
+			warnings = append(warnings, fmt.Sprintf("Blower Drive Feasibility Warning (%s): %s", blowerDrive.Label, blowerDrive.Summary))
+		}
+		if blowerDrive.Option == BlowerDriveRegenSideChannel && !eductor.Enabled {
+			warnings = append(warnings, blowerDrive.Caveats[0])
+		}
+	}
 	if eductor.Enabled {
 		savings = append(savings, fmt.Sprintf("Dry-Fan Downflow Eductor: %+.0f USD blower delta (eliminates wet acid-duty blower; +%.1f F CPVC thermal margin; Stage 3 enlarged to %.0f\" @ %.1f%% flood).",
 			eductor.NetBlowerDeltaUSD, eductor.ThermalMarginGainF, eductor.EnlargedBedDiameterIn, eductor.EnlargedBedFloodPct))
 		warnings = append(warnings, eductor.Warnings...)
 	}
 	if parallelBed.Enabled {
-		savings = append(savings, fmt.Sprintf("Parallel %.0f\" Pipe Packed-Bed Manifold (%d risers, %.3g\" packing): %+.0f USD vs single column; D/d_p = %.2f, %.2f inWC bed dP.",
-			parallelBed.PipeNominalIn, parallelBed.PipeCount, parallelBed.PackingDiameterIn, parallelBed.CostDeltaUSD, parallelBed.WallRatioDToDp, parallelBed.BedDPInWC))
+		savings = append(savings, fmt.Sprintf("Shell-Less Uniseal %.0f\" Parallel Bundle (%d risers, %s): %+.0f USD vs single column; D/d_p = %.2f, %.2f inWC bed dP.",
+			parallelBed.PipeNominalIn, parallelBed.PipeCount, parallelBed.PipeMaterial, parallelBed.CostDeltaUSD, parallelBed.WallRatioDToDp, parallelBed.BedDPInWC))
 		warnings = append(warnings, fmt.Sprintf("Parallel Bed Distribution: Use calibrated %d-port top liquid distributor so no riser runs dry while another floods.", parallelBed.PipeCount))
+		if parallelBed.PipeNominalIn == 2.0 && parallelBed.PipeCount >= 30 {
+			warnings = append(warnings, fmt.Sprintf("Parallel 2\" Pipe Count Warning: %d pipes require %d Uniseals — consider 4\" pipes for lower labor and maximum savings.", parallelBed.PipeCount, 2*parallelBed.PipeCount))
+		}
+	}
+	if packingMedia.Option != PackingMediaPPPallRings {
+		savings = append(savings, fmt.Sprintf("%s: %+.0f USD vs commercial PP Pall rings ($%.0f vs $%.0f; voidage %.0f%%, bed dP %.2f inWC).",
+			packingMedia.Label, packingMedia.CostDeltaUSD, packingMedia.MediaCostUSD, packingMedia.BaselineMediaCostUSD, packingMedia.Voidage*100.0, packingMedia.BedDPInWC))
+		if packingMedia.Option == PackingMediaDIYCeramicRings {
+			warnings = append(warnings, fmt.Sprintf("DIY Ceramic Rings Trade-Off: 70%% voidage raises irrigated bed dP to %.2f inWC and adds heavy stoneware weight (~46 lb/cu.ft.) — use a reinforced FRP/316L support grate.", packingMedia.BedDPInWC))
+		}
 	}
 	if parallelVenturi.Enabled && !eductor.Enabled {
 		savings = append(savings, fmt.Sprintf("Parallel COTS Mini-Venturis (%d × %.2f\" throats): %+.0f USD, zero cone rolling, staged low-fire turndown.",
@@ -689,7 +1486,7 @@ func EvaluateArchitectureOptions(project StudioProject, design model.ScrubberDes
 			math.Abs(controlDelta)))
 	}
 	if len(savings) == 0 {
-		savings = append(savings, "Standard baseline inline configuration active (toggle eductor, parallel manifold, U-turn skid, or electromechanical controls to compare savings).")
+		savings = append(savings, "Standard baseline inline configuration active (toggle budget blower drive, shell-less 4\" parallel bundle, DIY ceramic rings, U-turn skid, or electromechanical controls to compare savings).")
 	}
 
 	return ArchitectureOptionsResult{
@@ -712,6 +1509,9 @@ func EvaluateArchitectureOptions(project StudioProject, design model.ScrubberDes
 		Eductor:             eductor,
 		ParallelBed:         parallelBed,
 		ParallelVenturi:     parallelVenturi,
+		BlowerDrive:         blowerDrive,
+		Compressor:          compressor,
+		PackingMedia:        packingMedia,
 		SavingsSummary:      savings,
 		Warnings:            warnings,
 	}

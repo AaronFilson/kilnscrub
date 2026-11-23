@@ -190,21 +190,23 @@ func BuildShopPlan(
 	stage3DimsIn := fmt.Sprintf(`%.1f" nom × %.1f" H (%.1f" packing)`, colDiaIn, colHIn, design.PackedBed.PackingHeight.Inches())
 	stage3DimsMM := fmt.Sprintf("%.0f mm × %.0f mm H (%.0f mm packing)", colDiaIn*25.4, colHIn*25.4, design.PackedBed.PackingHeight.Millimeters())
 	stage3Qty := 1.0
-	stage3Notes := fmt.Sprintf("%.1f%% of Eckert flooding velocity (limit <= 75%%); includes %s & 3-pass chevron demister.", cots.ActualPercentOfFlood, cots.PackingMedia.Name)
+	stage3Notes := fmt.Sprintf("%.1f%% of Eckert flooding velocity (limit <= 75%%); media: %s (voidage %.0f%%, %.2f inWC bed dP) & 3-pass chevron demister.",
+		cots.ActualPercentOfFlood, arch.PackingMedia.Label, arch.PackingMedia.Voidage*100.0, arch.PackingMedia.BedDPInWC)
 	if arch.ParallelBed.Enabled {
-		stage3Label = fmt.Sprintf(`Stage 3: Parallel Manifold (%d × %.0f" Sch 80 CPVC Pipes)`, arch.ParallelBed.PipeCount, arch.ParallelBed.PipeNominalIn)
-		stage3DimsIn = fmt.Sprintf(`%d × %.0f" (ID %.3f") × %.1f" H`, arch.ParallelBed.PipeCount, arch.ParallelBed.PipeNominalIn, arch.ParallelBed.PipeActualIDIn, colHIn)
-		stage3DimsMM = fmt.Sprintf("%d × %.1f mm ID × %.0f mm H", arch.ParallelBed.PipeCount, arch.ParallelBed.PipeActualIDIn*25.4, colHIn*25.4)
+		riserHIn := round1(math.Max(42.0, design.PackedBed.PackingHeight.Inches()+12.0))
+		stage3Label = fmt.Sprintf(`Stage 3: Shell-Less Uniseal Bundle (%d × %.0f" %s)`, arch.ParallelBed.PipeCount, arch.ParallelBed.PipeNominalIn, arch.ParallelBed.PipeMaterial)
+		stage3DimsIn = fmt.Sprintf(`%d × %.0f" (ID %.3f") × %.1f" H + 2× flat plates + %d Uniseals`, arch.ParallelBed.PipeCount, arch.ParallelBed.PipeNominalIn, arch.ParallelBed.PipeActualIDIn, riserHIn, 2*arch.ParallelBed.PipeCount)
+		stage3DimsMM = fmt.Sprintf("%d × %.1f mm ID × %.0f mm H (NO external large shell)", arch.ParallelBed.PipeCount, arch.ParallelBed.PipeActualIDIn*25.4, riserHIn*25.4)
 		stage3Qty = float64(arch.ParallelBed.PipeCount)
-		stage3Notes = fmt.Sprintf("%.1f%% flood, D/d_p=%.2f with %.3g\" PP packing, %.2f inWC bed dP; requires balanced %d-port top liquid distributor.",
-			arch.ParallelBed.ActualFloodPct, arch.ParallelBed.WallRatioDToDp, arch.ParallelBed.PackingDiameterIn, arch.ParallelBed.BedDPInWC, arch.ParallelBed.PipeCount)
+		stage3Notes = fmt.Sprintf("Shell-less flat-plate Uniseal bundle (%.1f%% flood, D/d_p=%.2f, %.2f inWC bed dP) with %s and balanced %d-port top liquid spray manifold.",
+			arch.ParallelBed.ActualFloodPct, arch.ParallelBed.WallRatioDToDp, arch.PackingMedia.BedDPInWC, arch.PackingMedia.Label, arch.ParallelBed.PipeCount)
 	}
 
 	stage4Label := fmt.Sprintf("Stage 4: %s", cots.BlowerVFD.Name)
-	stage4DimsIn := fmt.Sprintf(`%.1f" wheel, %.0f ACFM @ %.1f inWC`, cots.BlowerVFD.NominalIn, design.Blower.FlowACFM, design.Blower.TotalStaticPressureInWC)
-	stage4DimsMM := fmt.Sprintf("%.0f mm wheel, %.2g HP VFD", cots.BlowerVFD.NominalIn*25.4, design.Blower.RecommendedMotorHP)
+	stage4DimsIn := fmt.Sprintf(`%.1f" wheel, %.0f ACFM @ %.1f inWC`, cots.BlowerVFD.NominalIn, design.Blower.FlowACFM, arch.BlowerDrive.RequiredStaticInWC)
+	stage4DimsMM := fmt.Sprintf("%.0f mm wheel, %.2g HP (%dV)", cots.BlowerVFD.NominalIn*25.4, arch.BlowerDrive.MotorHP, arch.BlowerDrive.Voltage)
 	stage4Notes := cots.BlowerVFD.Notes
-	if arch.Eductor.Enabled {
+	if arch.Eductor.Enabled && p.BlowerDriveOption == BlowerDriveIndustrialRadialVFD {
 		stage4Label = fmt.Sprintf("Stage 4 (Upstream Dry Motive): %s", cots.BlowerVFD.Name)
 		stage4DimsIn = fmt.Sprintf(`%.0f CFM dry motive @ %.1f inWC (%.2g HP)`, arch.Eductor.MotiveAirCFM, arch.Eductor.DryFanStaticInWC, arch.Eductor.DryFanMotorHP)
 		stage4DimsMM = fmt.Sprintf("%.0f m3/hr dry clean air, %.2g HP", arch.Eductor.MotiveAirCFM*1.699, arch.Eductor.DryFanMotorHP)
@@ -421,16 +423,28 @@ func BuildShopPlan(
 	}
 
 	if arch.ParallelBed.Enabled {
+		riserHIn := round1(math.Max(42.0, design.PackedBed.PackingHeight.Inches()+12.0))
+		plateSideIn := round1(math.Max(16.0, math.Ceil(math.Sqrt(float64(arch.ParallelBed.PipeCount)))*(arch.ParallelBed.PipeNominalIn+1.25)+4.0))
 		cutList = append(cutList,
 			CutSheetItem{
 				PartNum:      4,
-				Name:         fmt.Sprintf(`Parallel %.0f" Sch 80 CPVC Absorber Risers`, arch.ParallelBed.PipeNominalIn),
+				Name:         fmt.Sprintf(`Shell-Less Parallel %.0f" Risers (%s)`, arch.ParallelBed.PipeNominalIn, arch.ParallelBed.PipeMaterial),
 				Shape:        "pipe",
-				Material:     "Schedule 80 CPVC (ASTM F441)",
+				Material:     arch.ParallelBed.PipeMaterial,
 				FlatWidthIn:  round2(math.Pi * arch.ParallelBed.PipeActualIDIn),
-				FlatHeightIn: colHIn,
+				FlatHeightIn: riserHIn,
 				Qty:          arch.ParallelBed.PipeCount,
-				Notes:        fmt.Sprintf(`Cut %d equal lengths of %.0f" Sch 80 CPVC pipe to %.1f" each; fill %.1f" depth with %.3g" PP packing.`, arch.ParallelBed.PipeCount, arch.ParallelBed.PipeNominalIn, colHIn, design.PackedBed.PackingHeight.Inches(), arch.ParallelBed.PackingDiameterIn),
+				Notes:        fmt.Sprintf(`Cut %d equal lengths of %.0f" stock pipe to %.1f" each (NO external large shell); fill %.1f" depth with %s.`, arch.ParallelBed.PipeCount, arch.ParallelBed.PipeNominalIn, riserHIn, design.PackedBed.PackingHeight.Inches(), arch.PackingMedia.Label),
+			},
+			CutSheetItem{
+				PartNum:      4,
+				Name:         `Top & Bottom Flat Collector Plates (1/2" HDPE/CPVC + Uniseal Ports)`,
+				Shape:        "plate",
+				Material:     `1/2" HDPE / CPVC Flat Sheet + Rubber Uniseals`,
+				FlatWidthIn:  plateSideIn,
+				FlatHeightIn: plateSideIn,
+				Qty:          2,
+				Notes:        fmt.Sprintf(`Cut 2× %.1f" × %.1f" flat plates and hole-saw %d ports per plate for %d Uniseal rubber pipe seals ($5.50 ea).`, plateSideIn, plateSideIn, arch.ParallelBed.PipeCount, 2*arch.ParallelBed.PipeCount),
 			},
 		)
 	} else {
