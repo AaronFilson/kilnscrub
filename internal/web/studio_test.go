@@ -415,6 +415,8 @@ func TestEmbeddedHTMLStudioUXAndJSIntegrity(t *testing.T) {
 		"dilution_reheat_kw",
 		"bare_plume_length_ft",
 		"diluted_plume_length_ft",
+		".sidebar > details.adv-drawer",
+		"flex-shrink: 0;",
 		"CPVC 210°F Cutoff",
 		`<span class="unit-literal">Na₂CO₃</span>`,
 		`<span class="unit-literal">NaCl</span>`,

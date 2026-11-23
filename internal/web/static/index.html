@@ -249,6 +249,11 @@
       overflow-y: auto;
       padding-right: 2px;
     }
+    .sidebar > *,
+    .sidebar > .panel,
+    .sidebar > details.adv-drawer {
+      flex-shrink: 0;
+    }
     @media (max-width: 1080px) {
       .sidebar { position: static; max-height: none; }
     }
