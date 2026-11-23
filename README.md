@@ -1,2 +1,428 @@
-# kilnscrub
-Design a kiln scrubber for urban studio potters
+# `kilnscrub`
+
+**Pure-Go Kiln Exhaust Scrubber Designer, CAD/BOM Exporter & Active Closed-Loop Controller**
+
+`kilnscrub` is a zero-runtime-dependency Go (`go 1.24+`) engineering toolkit and hardware controller for urban studio potters firing wood, gas, and salt kilns. It sizes a 4-stage wet scrubbing train from first-principles thermochemistry, exports fabrication-ready 3D meshes (`.stl`), unfolded sheet-metal cut templates (`.dxf`), and Bills of Materials (CSV/Markdown), serves an interactive embedded 3D & live-telemetry web dashboard, and runs a closed-loop PID + fail-safe bypass controller daemon over simulated or industrial Modbus RTU hardware.
+
+---
+
+## Table of Contents
+
+- [4-Stage Scrubber Architecture](#4-stage-scrubber-architecture)
+- [Requirements & Build](#requirements--build)
+- [CLI Reference](#cli-reference)
+  - [`kilnscrub design`](#kilnscrub-design)
+  - [`kilnscrub export`](#kilnscrub-export)
+  - [`kilnscrub daemon`](#kilnscrub-daemon)
+  - [`kilnscrub ui`](#kilnscrub-ui)
+- [Web Dashboard & HTTP API](#web-dashboard--http-api)
+- [Fabrication & Safety Guide](#fabrication--safety-guide)
+- [Testing & Verification](#testing--verification)
+- [Deployment (systemd)](#deployment-systemd)
+- [Repository Layout](#repository-layout)
+- [License](#license)
+
+---
+
+## 4-Stage Scrubber Architecture
+
+Studio wood/salt firings combine extreme flue temperatures (up to `2400°F` / `1588 K`), submicron wood fly ash and condensed `NaCl` salt fume (`0.1–2.0 µm`), and corrosive hydrogen chloride (`HCl`) gas. `kilnscrub` models and controls a four-stage wet scrubber train protected by a spring-return fail-safe hot-gas bypass damper:
+
+```mermaid
+flowchart LR
+    K["Kiln Flue<br/>Up to 2400°F (1588 K)<br/>Ash + NaCl Fume + HCl"]
+    BYP["Fail-Safe Bypass Damper<br/>316L SS, Spring-Return Fail-Open<br/>Trips: >=210°F | <0.25 GPM | Sensor/Power Fault"]
+    S1["Stage 1: Adiabatic Spray Quench<br/>316L Stainless Steel<br/>Cools flue gas to Tsat (~184°F)"]
+    S2["Stage 2: Wet Venturi Scrubber<br/>316L Stainless Steel<br/>50-90 m/s throat, Calvert d50 capture"]
+    S3["Stage 3: Packed-Bed HCl Absorber + Demister<br/>CPVC / Polypropylene<br/>NaHCO3 pH 7.5-8.5, >=98% HCl removal"]
+    S4["Stage 4: Induced-Draft (ID) Blower<br/>FRP/PP Housing, 316L SS Wheel + VFD<br/>Maintains -0.05 inWC kiln draft"]
+    ST["Clean Exhaust Stack"]
+
+    K --> S1
+    K -. "Interlock Trip / Fail-Open" .-> BYP
+    BYP -. "Direct Exhaust Relief" .-> ST
+    S1 --> S2 --> S3 --> S4 --> ST
+```
+
+```text
+                        [Fail-Safe Spring-Return Bypass Damper]
+                         (Trips OPEN: >=210°F, <0.25 GPM, fault)
+                           +-------------------------------+
+                           |                               |
+                           | (bypass on trip/power loss)   v
+[Kiln Flue] ----+-----> [Stage 1] ---> [Stage 2] ---> [Stage 3] ---> [Stage 4] ---> [Stack]
+ 2400°F peak    |      Adiabatic       Wet Venturi    Packed-Bed     ID Blower
+ Wood/Salt      |      Spray Quench    Scrubber       HCl Absorber   + VFD PID
+ -0.05 inWC     |      (316L SS)       (316L SS)      + Demister     (FRP/316L)
+                +----------------------------------   (CPVC / PP)
+                         Interlock monitors T_out,    NaHCO3 Sump
+                         spray water GPM & draft      (pH 7.5-8.5)
+```
+
+| Stage | Equipment | Material of Construction | Engineering Model & Purpose |
+|---|---|---|---|
+| **Stage 1** | Adiabatic Spray Quench Tower | 316L Stainless Steel | NIST 7-coeff Shomate `Cp`/`H`, IAPWS-95 `Psat`, 1D Brent adiabatic saturation balance; cools `2400°F` flue gas below CPVC limits (`<= 210°F`) |
+| **Stage 2** | High-Velocity Wet Venturi | 316L Stainless Steel | Calvert (1970, 1972) cut diameter `d50` with Davies/Allen-Raabe Cunningham slip; captures submicron wood ash (`2400 kg/m³`) and condensed `NaCl` fume (`2160 kg/m³`) |
+| **Stage 3** | Counter-Current Packed-Bed Absorber & Chevron Demister | CPVC / Polypropylene (`1"` PP Pall Rings) | Souders-Brown / Eckert flooding (`<= 75%` of flood), Ergun bed `ΔP`, NTU-HTU `HCl` absorption (`>= 98%`) with recirculating `NaHCO3` (`pH 7.5–8.5`), chevron mist eliminator |
+| **Stage 4** | Induced-Draft (ID) Centrifugal Blower & VFD | FRP/PP Housing, 316L SS Wheel | Static pressure summation (`duct + quench + venturi + bed + demister + |draft|`), fan/system curves, shaft & motor HP sizing, PID draft regulation |
+
+---
+
+## Requirements & Build
+
+- **Go toolchain:** Go `1.24+` (module targets `go 1.24.13`).
+- **Pure-Go static binary:** `CGO_ENABLED=0` is fully supported across Linux, macOS, and Windows (including the pure-Go Modbus RTU serial HAL).
+- **Zero Python runtime dependencies:** Neither the `kilnscrub` binary nor `go test` invokes Python.
+- **C compiler (test-time only):** `gcc` / `build-essential` is only required when running the Go race detector (`CGO_ENABLED=1 go test -race`).
+
+### Offline Scientific Oracle Fixtures
+
+Thermophysical and chemical engineering correlations in `pkg/thermo` and `pkg/scrubber` were validated offline against peer-reviewed Python libraries (`chemicals 1.5.2`, `fluids 1.3.1`, `scipy`) using [`scripts/generate_oracle.py`](scripts/generate_oracle.py) to produce the committed ground-truth fixture file [`testdata/oracle_fixtures.json`](testdata/oracle_fixtures.json):
+
+- NIST 7-coefficient Shomate `Cp(T)` and `H(T) - H(298.15)` for `N2`, `CO2`, `H2O`, `O2`, `HCl` (`350–1588.15 K`)
+- Lucas gas viscosity (`chemicals.viscosity.Lucas_gas`)
+- IAPWS-95 water saturation vapor pressure (`300–373.15 K`)
+- Ergun packed-bed pressure drop (`1"` Pall rings, voidage `0.90`, `L = 1.2 m`)
+- Calvert venturi cut diameter `d50` with Cunningham slip (`NaCl` density `2160 kg/m³`)
+
+Go unit tests read only `testdata/oracle_fixtures.json` and assert `<= 1e-6` relative tolerance — no Python environment is needed to build or test `kilnscrub`.
+
+### Building
+
+```bash
+# Static pure-Go binary for the current host
+CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/kilnscrub ./cmd/kilnscrub
+
+# Or using the Makefile
+make build
+
+# Cross-compile static binaries for linux/amd64, linux/arm64, darwin/arm64, windows/amd64
+make release-all
+```
+
+---
+
+## CLI Reference
+
+```text
+kilnscrub - Pure-Go Kiln Exhaust Scrubber Designer & Active Controller
+
+Usage:
+  kilnscrub <command> [flags]
+
+Commands:
+  design   Size a 4-stage kiln exhaust scrubber from firing parameters
+  export   Export fabrication .stl mesh, unfolded .dxf patterns, and BOM
+  daemon   Run the closed-loop PID draft & quench safety controller
+  ui       Launch the interactive web dashboard (default :8080)
+```
+
+### `kilnscrub design`
+
+Sizes all four scrubber stages from kiln firing parameters and prints either a formatted engineering summary or the full `ScrubberDesign` JSON document.
+
+**Flags:**
+
+| Flag | Default | Description |
+|---|---|---|
+| `--kiln-volume` | `24` | Kiln interior volume (`cu.ft.`) |
+| `--peak-temp` | `2400` | Peak kiln exit gas temperature (`°F`) |
+| `--salt-rate` | `2.0` | `NaCl` salt introduction rate (`lbs/hr`) |
+| `--fuel` | `wood_salt` | Fuel stoichiometry: `wood_salt`, `wood`, `gas_salt`, `gas` |
+| `--throat-vel` | `70` | Venturi throat gas velocity (`m/s`, typical `50–90 m/s`) |
+| `--lg` | `0.0012` | Venturi liquid-to-gas volumetric ratio (`m³/m³`) |
+| `--hcl-removal` | `0.99` | Target fractional `HCl` removal efficiency in `(0, 1)` |
+| `--draft` | `-0.05` | Target kiln draft setpoint (`inWC`, negative = suction) |
+| `--json` | `false` | Output complete `ScrubberDesign` as indented JSON |
+
+**Example (24 cu.ft. Reference Wood/Salt Kiln):**
+
+```bash
+kilnscrub design --kiln-volume 24 --peak-temp 2400 --salt-rate 2.0
+```
+
+**Sample Output:**
+
+```text
+Kiln Scrub 4-Stage Engineering Summary
+======================================
+Kiln Input : 24.0 cu.ft. | Peak 2400 F | Salt 2.00 lbs/hr | Fuel wood_salt | Draft -0.050 inWC
+Inlet Gas  : 579.5 ACFM (0.0610 kg/s) @ 2400 F | Quenched: 256.0 ACFM @ 183.9 F
+
+Stage 1 - Adiabatic Quench Tower (316L Stainless Steel)
+  Tsat / Outlet / Dew Point : 183.9 F (357.5 K) / 183.9 F / 183.9 F
+  Spray Water               : 0.58 GPM evap | 1.16 GPM total (2.0x overspray, 2 nozzles)
+  Geometry & dP             : D=0.350 m (13.8 in) x H=2.400 m (7.87 ft) | dP=0.41 inWC (102 Pa)
+
+Stage 2 - Wet Venturi Scrubber (316L Stainless Steel)
+  Throat & Spray            : D_th=0.047 m (1.85 in) | v_th=70.0 m/s | L/G=0.0012 (2.30 GPM)
+  Calvert d50               : NaCl fume 0.214 um | Wood ash 0.199 um
+  Overall Capture & dP      : NaCl 84.2% | Wood ash 96.5% | dP=13.76 inWC (3429 Pa)
+
+Stage 3 - Packed-Bed HCl Absorber & Demister (CPVC / Polypropylene)
+  Column & Packing          : D=0.300 m (11.8 in) x H=2.950 m (9.68 ft) | Z_pack=1.050 m (1" PP Pall Rings)
+  Hydraulics & HCl Removal  : 55.5% of flood | HCl 99.04% (1047 -> 10.0 ppm) | NaHCO3 1.49 kg/hr | Recirc 5.36 GPM
+  Pressure Drop             : Bed 0.09 inWC + Demister 0.26 inWC = 0.35 inWC (88 Pa)
+
+Stage 4 - Induced-Draft Blower (FRP / Polypropylene Housing, 316L SS Wheel)
+  Duty Point                : 255.7 ACFM @ 14.75 inWC (3673 Pa) | Kiln draft setpoint -0.050 inWC
+  dP Breakdown (inWC)       : Duct 0.17 | Quench 0.41 | Venturi 13.76 | Bed 0.09 | Demister 0.26 | Draft 0.05
+  Power & Wheel             : 0.96 shaft HP -> 1.50 HP motor (eta 62%) | Wheel 0.700 m (27.6 in) @ 3513 RPM
+
+Skid Envelope               : L=3.72 m x W=1.45 m x H=3.25 m (12.2 x 4.8 x 10.7 ft) | Duct D=0.178 m (7.0 in) | Area=5.39 m2
+Warnings                    : none
+```
+
+Emit machine-readable JSON for downstream tooling:
+
+```bash
+kilnscrub design --kiln-volume 24 --peak-temp 2400 --salt-rate 2.0 --json > design.json
+```
+
+---
+
+### `kilnscrub export`
+
+Generates fabrication deliverables from the sized scrubber design:
+
+- `scrubber.stl` — Binary STL 3D assembly mesh in millimeters with outward unit normals.
+- `scrubber.dxf` — AutoCAD R12 DXF with unfolded sheet-metal cylinder wraps and exact frustum/cone developments for the venturi converging/diverging transitions.
+- `bom.csv` — Spreadsheet-ready Bill of Materials with quantities, materials, total line-item weights (`kg`), and budgetary USD estimates.
+- `bom.md` — Formatted Markdown Bill of Materials with fabrication and safety notes.
+
+**Flags:**
+
+Accepts all sizing flags from `kilnscrub design` (`--kiln-volume`, `--peak-temp`, `--salt-rate`, `--fuel`, `--throat-vel`, `--lg`, `--hcl-removal`, `--draft`) plus:
+
+| Flag | Default | Description |
+|---|---|---|
+| `--out` | `.` | Output directory for `scrubber.stl`, `scrubber.dxf`, `bom.csv`, and `bom.md` |
+
+**Example:**
+
+```bash
+kilnscrub export --kiln-volume 24 --peak-temp 2400 --salt-rate 2.0 --out ./out
+```
+
+**Sample Output:**
+
+```text
+wrote out/scrubber.stl (332384 bytes)
+wrote out/scrubber.dxf (13398 bytes)
+wrote out/bom.csv (3435 bytes)
+wrote out/bom.md (4464 bytes)
+BOM summary: 18 items | 313.3 kg total | $9103.68 est. USD
+```
+
+---
+
+### `kilnscrub daemon`
+
+Runs the active closed-loop PID controller managing:
+- **Kiln draft loop:** Low-pass filtered (`0.5 Hz` / `318.3 ms`) differential pressure feedback driving the blower VFD (`0–100%`) via anti-windup PID.
+- **Quench cooling loop:** Quench outlet RTD feedback driving the modulating spray water valve (`0–100%`) via anti-windup PID.
+- **Fail-safe bypass interlock:** Continuously evaluates sensor validity, quench outlet temperature, spray water flow, and draft magnitude before applying actuator commands.
+
+**Flags:**
+
+| Flag | Default | Description |
+|---|---|---|
+| `--config` | *(none)* | Path to JSON daemon configuration file (e.g., `configs/kilnscrub.example.json`) |
+| `--hal` | `sim` | Hardware abstraction layer backend: `sim` (built-in kiln/scrubber plant simulator) or `modbus` (pure-Go Modbus RTU over RS-485 serial) |
+| `--draft` | `-0.05` | Target kiln draft setpoint (`inWC`, negative = suction) |
+| `--quench-temp-f` | `165.0` | Target quench outlet temperature setpoint (`°F`) |
+| `--interval` | `100ms` | Closed-loop control tick interval |
+| `--duration` | `0` | Optional bounded run duration (`0` = run until `SIGINT`/`SIGTERM`) |
+
+**Examples:**
+
+```bash
+# Quick simulation smoke run (350 ms)
+kilnscrub daemon --hal sim --duration 350ms
+
+# Production controller driven by JSON config and Modbus RTU serial HAL
+kilnscrub daemon --config configs/kilnscrub.example.json --hal modbus
+```
+
+**Sample Output (Simulation Mode):**
+
+```text
+kilnscrub daemon starting (for 350ms): target_draft=-0.050 inWC (-12.45 Pa) quench_sp=165.0 F interval=100ms
+tick=1 state=NORMAL draft=-0.0500 inWC (-12.45 Pa) quench_out=165.0 F water=1.00 GPM vfd=40.5% valve=44.0% bypass=false
+tick=2 state=NORMAL draft=-0.0500 inWC (-12.45 Pa) quench_out=164.9 F water=1.03 GPM vfd=40.5% valve=43.9% bypass=false
+tick=3 state=NORMAL draft=-0.0499 inWC (-12.44 Pa) quench_out=164.9 F water=1.05 GPM vfd=40.6% valve=43.7% bypass=false
+tick=4 state=NORMAL draft=-0.0499 inWC (-12.42 Pa) quench_out=164.7 F water=1.06 GPM vfd=40.7% valve=43.5% bypass=false
+kilnscrub daemon stopped cleanly after 4 ticks (final state=NORMAL, interlock=false)
+```
+
+#### Fail-Safe Interlock Limits
+
+| Condition | Default Threshold | Trip Code | Action |
+|---|---|---|---|
+| **High Quench Outlet Temp** (CPVC/PP protection) | `>= 210.0°F` (`372.04 K`) | `HIGH_QUENCH_OUTLET_TEMP` | **Hard latch:** opens hot-gas bypass damper & latches alarm |
+| **Quench Water Loss** | `< 0.25 GPM` (`1.577e-5 m³/s`) | `QUENCH_WATER_LOSS` | **Hard latch:** opens hot-gas bypass damper & latches alarm |
+| **Sensor Fault / Stale Telemetry** | HAL read error, `NaN`/`Inf`, Modbus CRC/timeout/exception, or timestamp age `> 5s` | `SENSOR_FAULT` | **Hard latch:** opens hot-gas bypass damper & latches alarm |
+| **Excessive Draft Magnitude** | `|draft| > 1.0 inWC` (`248.84 Pa`) | `EXCESSIVE_DRAFT` | **Hard latch:** opens hot-gas bypass damper & latches alarm |
+| **Sump pH Excursion** | `< 6.5` or `> 9.5` | *(Warning only)* | **Warning/alarm only:** alerts operator for `NaHCO3` dosing; does **not** open hot-gas bypass damper |
+
+Hard interlock trips latch `BypassDamperOpen = true` and `AlarmLatched = true`. Clearing a latch requires **both** that all hard faults have cleared in the latest sensor evaluation **and** an explicit operator reset (`ResetInterlock()` / `POST /api/control/reset`).
+
+---
+
+### `kilnscrub ui`
+
+Launches the embedded single-binary HTTP dashboard on `http://localhost:8080` (with zero external build step or asset server).
+
+**Flags:**
+
+| Flag | Default | Description |
+|---|---|---|
+| `--addr` | `:8080` | HTTP listen address (e.g., `127.0.0.1:8080` or `:8080`) |
+
+**Example:**
+
+```bash
+kilnscrub ui --addr 127.0.0.1:8080
+```
+
+---
+
+## Web Dashboard & HTTP API
+
+The embedded web application (`internal/web/static/index.html`) provides two workspace tabs:
+
+1. **Design & 3D Studio**
+   - Live interactive sliders for kiln volume, peak firing temperature, salt rate, fuel stoichiometry, venturi throat velocity, `L/G` ratio, `HCl` removal target, and draft setpoint.
+   - Parametric **Three.js** (`0.170.0`) 3D cutaway visualization with animated flow particles, orbit controls, and per-stage material/geometry inspector.
+   - Real-time engineering charts: venturi fractional capture efficiency (`0.1–2.0 µm` for wood ash and condensed `NaCl` fume) and blower fan vs. system resistance curves.
+   - Direct browser downloads for `.stl`, `.dxf`, `bom.csv`, `bom.md`, and `bom.json`.
+2. **Live Control & Telemetry**
+   - Real-time **Server-Sent Events (SSE)** stream (`SSE LIVE` / `CONNECTING` / `OFFLINE`) with active HAL mode badge (`SIM` / `MODBUS`).
+   - High-visibility safety interlock banner (`NORMAL`, `WARNING (pH)`, or `INTERLOCK TRIPPED — BYPASS DAMPER OPEN` with exact `trip_reason`) and **Reset Interlock** action.
+   - Live KPI cards (filtered draft in `inWC` & `Pa`, quench outlet temperature vs. `210°F` CPVC cutoff, spray water flow vs. `0.25 GPM` floor, sump `pH`, blower VFD `%`, quench spray valve `%`, bypass damper state).
+   - Rolling real-time SVG strip charts for draft vs. setpoint, quench outlet temperature vs. `210°F` trip threshold, and actuator outputs (`VFD %` & `Valve %`).
+   - Live setpoint controls (draft & quench outlet temperature) and simulation fault-injection buttons (wood-stoking heat spike, water loss, sensor fault, low `pH` warning, clear all faults) when running against `sim` HAL.
+
+### HTTP API Summary
+
+| Method & Endpoint | Description |
+|---|---|
+| `GET /` | Embedded single-file web dashboard (Design & 3D Studio + Live Control & Telemetry) |
+| `GET /favicon.ico` | Embedded SVG favicon |
+| `GET /api/health` | Health check (`{"status":"ok"}`) |
+| `GET /api/defaults` | Default 24 cu.ft. wood/salt `DesignInput` JSON |
+| `POST /api/size` | Compute `ScrubberDesign` JSON (partial JSON payloads inherit defaults from `DefaultSaltKilnInput()`) |
+| `POST /api/export?format=...` | Export CAD/BOM attachment (`format` in `stl`, `dxf`, `bom_csv`, `bom_md`, `bom_json`) |
+| `GET /api/control/status` | Live controller snapshot, active `ControlConfig`, `hal_mode`, and `supports_fault_injection` (`{"enabled":false}` when no control backend is attached) |
+| `GET /api/control/stream` | Server-Sent Events (`text/event-stream`) live `ControlStatus` telemetry feed (`503` if control backend disabled) |
+| `POST /api/control/setpoint` | Update live `target_draft_in_wc` and/or `quench_setpoint_f` (`400` on out-of-range input) |
+| `POST /api/control/reset` | Reset a latched fail-safe interlock (`409 Conflict` if any hard fault remains active) |
+| `POST /api/control/fault` | Trigger or clear simulation faults (`heat_spike`, `water_loss`, `clear_water_loss`, `sensor_fault`, `clear_sensor_fault`, `sump_ph`, `clear_all`) |
+
+---
+
+## Fabrication & Safety Guide
+
+> **Engineering Validation:** Before fabricating or purchasing hardware, review [`docs/ENGINEERING_VALIDATION.md`](docs/ENGINEERING_VALIDATION.md) for the independent first-principles physics audit, comparison against EPA Air Pollution Control Cost Manual / Perry's Chemical Engineers' Handbook design guidelines, and conservative engineering margins.
+
+### Material Selection & Service Cautions
+
+- **316L Stainless Steel (Stages 1 & 2 — Inlet Duct, Quench Tower, Wet Venturi):**
+  - Selected for high-temperature thermal shock resistance and wet particulate impingement durability in studio-scale intermittent firings.
+  - **Chloride corrosion warning:** Hot, wet `HCl`/`NaCl` environments can cause **chloride pitting and chloride stress-corrosion cracking (CSCC)** in 316L SS, especially at welds and wet/dry transition zones. Maintain continuous spray wetting during salt firing, flush thoroughly with fresh water after each firing, inspect welds regularly, and consider upgrading hot wet-acid zones to **Alloy C-276 (Hastelloy)** or refractory-lined quench vessels for frequent commercial salt production.
+- **CPVC & Polypropylene (Stage 3 — Packed-Bed Column, Pall Rings, Chevron Demister, Sump):**
+  - Provides excellent corrosion resistance against dilute `HCl` and neutralized `NaCl`/`NaHCO3` brine at reasonable studio cost.
+  - **Strict thermal ceiling (`<= 210°F`):** CPVC loses structural rigidity near `212°F` (`100°C`) and polypropylene softens even lower. Stage 3 **must always** be protected by an independent, hardware-wired **24 VDC spring-return fail-open hot-gas bypass damper** driven by a physical high-temperature switch (`<= 210°F`), water-flow switch (`>= 0.25 GPM`), and power-loss fail-safe relay — never rely exclusively on software PID or Modbus polling for thermal protection.
+- **Seals, Fasteners & Chemical Sump:**
+  - Use acid- and temperature-rated **expanded PTFE or Viton** full-face flange gaskets and **316 stainless steel** fasteners.
+  - Maintain sump neutralization (`NaHCO3` dosing to `pH 7.5–8.5`), provide a blowdown/drain strategy for dissolved `NaCl` buildup, and dispose of neutralized scrubber effluent in compliance with local municipal wastewater regulations.
+- **Blower & Electrical Safety:**
+  - Use a NEMA 4X VFD and corrosion-resistant FRP/PP blower housing with a 316L SS wheel downstream of the chevron demister. Ensure proper grounding, emergency stop (E-Stop), and interlock wiring per NEC/local electrical codes.
+
+### Disclaimer
+
+`kilnscrub` is open-source engineering software provided for educational, prototyping, and preliminary design purposes under the MIT License. **Studio kiln exhaust systems involve extreme temperatures, toxic/corrosive combustion gases (`CO`, `HCl`), rotating machinery, and municipal air/water emissions.** Fabrication, installation, electrical/interlock wiring, structural support, wastewater disposal, and air-quality exhaust permitting must comply with all applicable local building, fire, mechanical, and environmental codes and should be reviewed by a licensed **Professional Engineer (PE)** or qualified industrial ventilation contractor before commissioning.
+
+---
+
+## Testing & Verification
+
+Run the full formatting, static analysis, race-detector test suite, and CLI smoke checks with zero Python dependencies:
+
+```bash
+# Formatting check
+gofmt -l .
+
+# Static analysis
+go vet ./...
+
+# Full test suite with Go race detector across all packages
+CGO_ENABLED=1 go test -race -count=1 ./...
+
+# Or run via Makefile targets
+make vet
+make test
+make smoke
+```
+
+### Makefile Targets
+
+| Target | Description |
+|---|---|
+| `make build` | Compile static pure-Go binary (`CGO_ENABLED=0`) to `bin/kilnscrub` |
+| `make test` | Run `CGO_ENABLED=1 go test -race -count=1 ./...` |
+| `make vet` | Run `go vet ./...` |
+| `make fmt` | Format all Go source files with `gofmt -w .` |
+| `make smoke` | Build binary and run `design` + `export` verification (`.stl`, `.dxf`, `bom.csv`, `bom.md`) |
+| `make release-all` | Cross-compile static binaries to `dist/` (`linux/amd64`, `linux/arm64`, `darwin/arm64`, `windows/amd64`) |
+| `make clean` | Remove `bin/` and `dist/` build outputs |
+
+---
+
+## Deployment (`systemd`)
+
+For dedicated studio controllers (e.g., Raspberry Pi / Debian connected to an RS-485 USB Modbus RTU adapter), a hardened `systemd` unit is provided at [`packaging/systemd/kilnscrub-daemon.service`](packaging/systemd/kilnscrub-daemon.service).
+
+Quick install summary (see unit file comments for full steps):
+
+```bash
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin --groups dialout kilnscrub
+sudo install -m 0755 bin/kilnscrub /usr/local/bin/kilnscrub
+sudo install -d -m 0750 -o root -g kilnscrub /etc/kilnscrub
+sudo install -m 0640 -o root -g kilnscrub configs/kilnscrub.example.json /etc/kilnscrub/daemon.json
+sudo install -d -m 0750 -o kilnscrub -g kilnscrub /var/lib/kilnscrub
+sudo install -m 0644 packaging/systemd/kilnscrub-daemon.service /etc/systemd/system/kilnscrub-daemon.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now kilnscrub-daemon.service
+sudo journalctl -u kilnscrub-daemon.service -f
+```
+
+---
+
+## Repository Layout
+
+```text
+kilnscrub/
+├── cmd/kilnscrub/              # CLI entrypoints (design, export, daemon, ui)
+├── pkg/
+│   ├── model/                  # Shared SI unit types, DesignInput, ControlConfig, HAL interfaces
+│   ├── thermo/                 # NIST Shomate Cp/H, Lucas viscosity, IAPWS-95 Psat, Brent quench solver
+│   ├── scrubber/               # Venturi (Calvert), Packed Bed (Eckert/Ergun/NTU-HTU), ID Blower
+│   └── cad/                    # Binary .stl mesh, unfolded R12 .dxf patterns, CSV/Markdown BOM
+├── internal/
+│   ├── control/                # PID draft/quench loops, LPF filter, fail-safe interlock, Sim & Modbus RTU HALs
+│   └── web/                    # Embedded HTTP server, JSON/SSE APIs, Three.js + Live Telemetry UI
+├── configs/                    # Example JSON daemon & Modbus RTU configuration
+├── docs/                       # Independent physics & engineering validation report
+├── packaging/systemd/          # Hardened systemd service unit for studio controllers
+├── scripts/generate_oracle.py  # One-time offline Python oracle fixture generator
+├── testdata/oracle_fixtures.json # Committed ground-truth scientific test fixtures
+├── .github/workflows/ci.yml    # GitHub Actions CI (gofmt, vet, race tests, smoke, cross-platform builds)
+└── Makefile                    # Ergonomic build, test, smoke, and cross-compile targets
+```
+
+---
+
+## License
+
+MIT License — see [`LICENSE`](LICENSE).

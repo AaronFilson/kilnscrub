@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Format, Vet, Race Tests & CLI Smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go 1.24.x
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Check gofmt formatting
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "${unformatted}" ]; then
+            echo "The following Go files are not properly formatted with gofmt:"
+            echo "${unformatted}"
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run unit and race tests (zero Python dependency)
+        env:
+          CGO_ENABLED: '1'
+        run: go test -race -count=1 ./...
+
+      - name: CLI end-to-end smoke test (design & export)
+        env:
+          CGO_ENABLED: '0'
+        run: |
+          set -euo pipefail
+          smoke_dir="$(mktemp -d)"
+          trap 'rm -rf "${smoke_dir}"' EXIT
+
+          go build -trimpath -ldflags="-s -w" -o "${smoke_dir}/kilnscrub" ./cmd/kilnscrub
+
+          "${smoke_dir}/kilnscrub" design --kiln-volume 24 --peak-temp 2400 --salt-rate 2.0
+          "${smoke_dir}/kilnscrub" export --kiln-volume 24 --peak-temp 2400 --salt-rate 2.0 --out "${smoke_dir}/out"
+
+          for artifact in scrubber.stl scrubber.dxf bom.csv bom.md; do
+            file="${smoke_dir}/out/${artifact}"
+            if [ ! -s "${file}" ]; then
+              echo "ERROR: expected non-empty export artifact: ${file}"
+              exit 1
+            fi
+          done
+
+          grep -q "EOF" "${smoke_dir}/out/scrubber.dxf"
+          ls -lh "${smoke_dir}/out"
+
+  build:
+    name: Build (${{ matrix.goos }}/${{ matrix.goarch }})
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            ext: ''
+          - goos: linux
+            goarch: arm64
+            ext: ''
+          - goos: darwin
+            goarch: arm64
+            ext: ''
+          - goos: windows
+            goarch: amd64
+            ext: '.exe'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go 1.24.x
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Build static binary (${{ matrix.goos }}/${{ matrix.goarch }})
+        env:
+          CGO_ENABLED: '0'
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p dist
+          go build -trimpath -ldflags="-s -w" \
+            -o "dist/kilnscrub-${GOOS}-${GOARCH}${{ matrix.ext }}" \
+            ./cmd/kilnscrub
+          ls -lh "dist/kilnscrub-${GOOS}-${GOARCH}${{ matrix.ext }}"
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kilnscrub-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/kilnscrub-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+          if-no-files-found: error

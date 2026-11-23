@@ -1,0 +1,72 @@
+# Hardened systemd unit for the kilnscrub closed-loop scrubber controller daemon.
+# Designed for dedicated studio controllers (e.g., Raspberry Pi OS / Debian) with
+# RS-485 / USB-serial Modbus RTU instrumentation or simulation HAL.
+#
+# Installation steps:
+#   1. Create a dedicated unprivileged system user with serial port (dialout) access:
+#        sudo useradd --system --no-create-home --shell /usr/sbin/nologin --groups dialout kilnscrub
+#   2. Install the static kilnscrub binary:
+#        sudo install -m 0755 bin/kilnscrub /usr/local/bin/kilnscrub
+#   3. Create config and state directories and install daemon.json:
+#        sudo install -d -m 0750 -o root -g kilnscrub /etc/kilnscrub
+#        sudo install -m 0640 -o root -g kilnscrub configs/kilnscrub.example.json /etc/kilnscrub/daemon.json
+#        sudo install -d -m 0750 -o kilnscrub -g kilnscrub /var/lib/kilnscrub
+#      (Edit /etc/kilnscrub/daemon.json to match your RS-485 serial device, slave ID,
+#       register map, draft setpoint, and safety limits.)
+#   4. Install and enable this service unit:
+#        sudo install -m 0644 packaging/systemd/kilnscrub-daemon.service /etc/systemd/system/kilnscrub-daemon.service
+#        sudo systemctl daemon-reload
+#        sudo systemctl enable --now kilnscrub-daemon.service
+#   5. Verify status and live telemetry logs:
+#        sudo systemctl status kilnscrub-daemon.service
+#        sudo journalctl -u kilnscrub-daemon.service -f
+#
+# Safety Note:
+#   Always back up software interlocks with an independent, hard-wired 24 VDC
+#   spring-return fail-open hot-gas bypass damper (<= 210 F CPVC protection,
+#   quench water-flow switch, and power-loss relief).
+
+[Unit]
+Description=kilnscrub Closed-Loop Kiln Exhaust Scrubber Controller
+Documentation=https://github.com/AaronFilson/kilnscrub
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kilnscrub
+Group=kilnscrub
+SupplementaryGroups=dialout
+WorkingDirectory=/var/lib/kilnscrub
+ExecStart=/usr/local/bin/kilnscrub daemon --config /etc/kilnscrub/daemon.json
+
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=15s
+KillSignal=SIGTERM
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=kilnscrub-daemon
+
+# Filesystem & privilege hardening.
+# PrivateDevices is intentionally NOT enabled so RS-485 / USB-serial Modbus RTU
+# devices (e.g., /dev/ttyUSB0, /dev/ttyAMA0) remain accessible via SupplementaryGroups=dialout.
+# For tighter device isolation, you may add DevicePolicy=closed and DeviceAllow=/dev/ttyUSB0 rw.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/kilnscrub
+ReadOnlyPaths=/etc/kilnscrub
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target
