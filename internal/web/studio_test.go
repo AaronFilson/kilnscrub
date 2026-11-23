@@ -47,9 +47,9 @@ func newMockStudioBackend(t *testing.T) *mockStudioBackend {
 		t.Fatalf("close zip writer: %v", err)
 	}
 
-	presets := []byte(`{"presets":[{"id":"wood_salt_24","name":"Reference Studio Wood / Salt Kiln","tagline":"24 cu.ft. Cone 11 studio reference","audience":"Studio Potters","badge":"Reference","project":{"preset_id":"wood_salt_24","studio_name":"Reference Studio","firing_cone":"Cone 11","firing_duration_hours":10,"vapor_glaze_mode":"salt","build_path":"cots_no_weld","corrosion_tier":"hobby_316l","snap_to_cots":true,"include_silencer":true,"include_plume_diluter":false,"property_line_ft":35,"ambient_winter_f":35,"available_voltage":240,"garden_hose_gpm":5}}]}`)
+	presets := []byte(`{"presets":[{"id":"wood_salt_24","name":"Reference Studio Wood / Salt Kiln","tagline":"24 cu.ft. Cone 11 studio reference","audience":"Studio Potters","badge":"Reference","project":{"preset_id":"wood_salt_24","studio_name":"Reference Studio","firing_cone":"Cone 11","firing_duration_hours":10,"salting_hours":3.0,"vapor_glaze_mode":"salt","build_path":"cots_no_weld","corrosion_tier":"standard_316l","stage_alignment":"inline_id_blower","packed_bed_layout":"single_column","venturi_layout":"single_throat","compact_footprint":false,"shared_baffled_sump":true,"control_tier":"rpi_modbus","snap_to_cots":true,"include_silencer":true,"include_plume_diluter":false,"property_line_ft":35,"ambient_winter_f":35,"available_voltage":240,"garden_hose_gpm":5}}]}`)
 
-	evalResp := []byte(`{"project":{"preset_id":"wood_salt_24","studio_name":"Reference Studio"},"cots":{"snapped":true,"actual_percent_of_flood":54.2,"estimated_total_usd":3450,"bom":{"title":"COTS BOM","items":[],"total_cost_usd":3450,"total_weight_kg":112}},"urban":{"overall_status":"ok","electrical":{"status":"ok","required_voltage":240,"required_amps":14.2,"circuit_label":"240V 20A single-phase VFD","summary":"Fits 240V studio circuit","fits_available_voltage":true},"water":{"status":"ok","required_gpm":2.3,"total_firing_gallons":180,"summary":"Garden hose OK"},"noise":{"status":"ok","bare_dba_3ft":82,"silenced_dba_3ft":68,"property_line_dba":50.5,"property_line_ft":35,"urban_limit_dba":60,"silencer_recommended":true,"summary":"Below 60 dBA urban limit"},"plume":{"status":"caution","exhaust_temp_f":184,"dew_point_f":184,"visible_plume_risk":"high","min_stack_height_ft":10,"dilution_cfm_needed":1500,"dilution_reheat_kw":21.5,"cold_dilution_works":false,"bare_plume_length_ft":28,"diluted_plume_length_ft":9,"squirrel_cage_verdict":"120V squirrel-cage blower works downstream with HV cone; unheated cold air alone stays supersaturated.","summary":"Clean condensed steam mist in winter"},"drain":{"status":"ok","baking_soda_lbs_per_firing":16,"baking_soda_4lb_boxes":4,"target_drain_ph":"6.5-8.5","summary":"Neutralized salt brine"},"corrosion":{"status":"caution","tier":"hobby_316l","material_summary":"316L SS with alkaline quench","soda_comparison":"Switching to Soda eliminates HCl","inspection_interval":"Every 5 firings"}},"build_guide_md":"# Build Guide\n\n- [ ] Bolt flanges","operations_checklist_md":"# Firing Checklist\n\n- [ ] Test 210F trip"}`)
+	evalResp := []byte(`{"project":{"preset_id":"wood_salt_24","studio_name":"Reference Studio","salting_hours":3.0,"corrosion_tier":"standard_316l","stage_alignment":"inline_id_blower","packed_bed_layout":"single_column","venturi_layout":"single_throat","compact_footprint":false,"shared_baffled_sump":true,"control_tier":"rpi_modbus"},"cots":{"snapped":true,"actual_percent_of_flood":54.2,"estimated_total_usd":3450,"bom":{"title":"COTS BOM","items":[],"total_cost_usd":3450,"total_weight_kg":112}},"urban":{"overall_status":"ok","electrical":{"status":"ok","required_voltage":240,"required_amps":14.2,"circuit_label":"240V 20A single-phase VFD","summary":"Fits 240V studio circuit","fits_available_voltage":true},"water":{"status":"ok","required_gpm":2.3,"total_firing_gallons":180,"summary":"Garden hose OK"},"noise":{"status":"ok","bare_dba_3ft":82,"silenced_dba_3ft":68,"property_line_dba":50.5,"property_line_ft":35,"urban_limit_dba":60,"silencer_recommended":true,"summary":"Below 60 dBA urban limit"},"plume":{"status":"caution","exhaust_temp_f":184,"dew_point_f":184,"visible_plume_risk":"high","min_stack_height_ft":10,"dilution_cfm_needed":1500,"dilution_reheat_kw":21.5,"cold_dilution_works":false,"bare_plume_length_ft":28,"diluted_plume_length_ft":9,"squirrel_cage_verdict":"120V squirrel-cage blower works downstream with HV cone; unheated cold air alone stays supersaturated.","summary":"Clean condensed steam mist in winter"},"drain":{"status":"ok","salting_hours":3.0,"baking_soda_lbs_per_firing":9.8,"baking_soda_15lb_bags":1,"baking_soda_50lb_sacks":1,"bulk_packaging_label":"1 x 15 lb bulk bag (~9.8 lbs over 3.0 hr salting; 1 x 50 lb sack covers ~5 firings)","target_drain_ph":"6.5-8.5","summary":"Neutralized salt brine"},"corrosion":{"status":"caution","tier":"standard_316l","material_summary":"Standard 316L SS (Light / Occasional) with alkaline-buffered spray","soda_comparison":"Post-firing buffered pH 8 flush and flange weld check keeps 316L spools serviceable.","inspection_interval":"Every 5-10 firings"}},"architecture_options":{"cost_delta_usd":0,"footprint_length_ft":9.5,"footprint_width_ft":3.0,"footprint_area_sqft":28.5,"footprint_savings_pct":0,"savings_summary":[],"warnings":[]},"recirculation":{"sump_volume_gal":45,"once_through_water_gal":1260,"recirc_makeup_water_gal":235,"water_saved_pct":81.3,"salting_hours":3.0,"hcl_neutralized_lbs":4.2,"baking_soda_lbs_per_firing":9.8,"baking_soda_15lb_bags":1,"baking_soda_50lb_sacks":1,"initial_charge_lbs":11.3,"end_of_firing_tds_g_l":26.4,"dump_tds_limit_g_l":150,"dump_specific_gravity":1.105,"firings_before_full_dump":5,"top_up_soda_lbs_between_firings":9.8,"dump_triggers":["Hydrometer SG >= 1.105","pH < 7.0","Cool <= 140F per IPC 702.5"],"schedule_steps":["Charge initial pH 8 buffer","Top up 9.8 lbs between firings"],"summary":"Saves 81% water across 5 firings before full dump."},"shop_plan":{"title":"Reference Studio Shop Plan","stage_alignment":"inline_id_blower","compact_footprint":false,"overall_length_in":114,"overall_width_in":36,"overall_height_in":122,"parts":[{"num":1,"id":"quench_tower","label":"Stage 1 Quench","stage":"Stage 1","material":"316L SS","dimensions_in":"18 x 54 in","dimensions_mm":"457 x 1372 mm","sku":"Q-316L","qty":1,"cost_usd":580,"notes":"Bolted top"}],"cut_list":[{"part_num":2,"name":"Venturi Cone","shape":"cone_frustum","material":"316L SS","flat_width_in":0,"flat_height_in":0,"outer_radius_in":18.4,"inner_radius_in":7.2,"sweep_deg":112,"qty":1,"notes":"Converging frustum"}],"clearances":{"flue_to_combustibles_in":36,"property_line_min_ft":30,"stack_above_roof_ft":6,"service_aisle_in":36}},"build_guide_md":"# Build Guide\n\n- [ ] Bolt flanges","operations_checklist_md":"# Firing Checklist\n\n- [ ] Test 210F trip"}`)
 
 	return &mockStudioBackend{
 		presetsJSON:    presets,
@@ -214,7 +214,7 @@ func TestStudioEvaluateEndpoint(t *testing.T) {
 		if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 			t.Fatalf("unmarshal evaluation: %v", err)
 		}
-		for _, key := range []string{"project", "cots", "urban", "build_guide_md", "operations_checklist_md"} {
+		for _, key := range []string{"project", "cots", "urban", "architecture_options", "recirculation", "shop_plan", "build_guide_md", "operations_checklist_md"} {
 			if _, ok := out[key]; !ok {
 				t.Errorf("StudioEvaluation missing key %q", key)
 			}
@@ -385,16 +385,56 @@ func TestEmbeddedHTMLStudioUXAndJSIntegrity(t *testing.T) {
 	}
 	body := rec.Body.String()
 
-	// 1. Verify 3 tabs, potter-friendly Studio UX, Build Guide tab, plume diluter, tooltips, and unit literals.
+	// 1. Verify all 4 tabs, potter-friendly Studio UX, Phase 7 selectable options, bulk soda, recirculation,
+	//    complete Shop Plans & Cut Sheets tab, plume diluter, tooltips, unit literals, and 3D builders.
 	requiredMarkers := []string{
 		"Design &amp; 3D Studio",
 		"Build &amp; Firing Guide",
 		"Live Control &amp; Telemetry",
+		"Shop Plans &amp; Cut Sheets",
+		`id="tab-plans"`,
+		`id="view-plans"`,
+		`id="plan-svg"`,
+		`id="plan-cutsheet-svg"`,
+		`id="plan-parts-tbody"`,
+		`id="btn-plan-download-svg"`,
+		`id="btn-plan-print"`,
+		`id="btn-plan-unit-in"`,
+		`id="btn-plan-unit-mm"`,
 		"/api/studio/presets",
 		"/api/studio/evaluate",
 		"/api/studio/packet",
 		`id="preset-picker-list"`,
 		`id="readiness-bar"`,
+		`id="panel-stage-options"`,
+		"Stage Design &amp; Cost-Saving Options",
+		`data-stage-alignment="inline_id_blower"`,
+		`data-stage-alignment="eductor_dry_fan"`,
+		`data-packed-bed-layout="single_column"`,
+		`data-packed-bed-layout="parallel_manifold"`,
+		`data-venturi-layout="single_throat"`,
+		`data-venturi-layout="parallel_mini_venturis"`,
+		`data-control-tier="rpi_modbus"`,
+		`data-control-tier="electromechanical_only"`,
+		`id="in-compact-footprint"`,
+		`id="in-shared-baffled-sump"`,
+		`id="in-salting-hours"`,
+		"Active Salting Window",
+		"Standard 316L SS (Light / Occasional)",
+		`data-corrosion="standard_316l"`,
+		"15 lb",
+		"50 lb",
+		"baking_soda_15lb_bags",
+		"baking_soda_50lb_sacks",
+		"salting_hours",
+		"bulk_packaging_label",
+		"architecture_options",
+		"recirculation",
+		"shop_plan",
+		"Sump Recirculation &amp; Dump Schedule",
+		"Architecture Cost &amp; Trade-Off Comparison",
+		"1.105",
+		"NFPA 211",
 		`id="advanced-engineering-drawer"`,
 		"Advanced Engineering Parameters",
 		"Download Complete Build Packet (.zip)",
@@ -437,6 +477,21 @@ func TestEmbeddedHTMLStudioUXAndJSIntegrity(t *testing.T) {
 	for _, needle := range requiredMarkers {
 		if !strings.Contains(body, needle) {
 			t.Errorf("embedded index.html missing studio marker %q", needle)
+		}
+	}
+
+	// Verify removed terminology & nag strings do NOT appear anywhere in embedded HTML.
+	forbiddenMarkers := []string{
+		"Hobby 316L",
+		"4-lb",
+		"4lb",
+		"Grocery 4-lb",
+		"Switching from Salt (NaCl) to Soda",
+		"Switching to Soda",
+	}
+	for _, bad := range forbiddenMarkers {
+		if strings.Contains(body, bad) {
+			t.Errorf("embedded index.html must NOT contain deprecated string %q", bad)
 		}
 	}
 
