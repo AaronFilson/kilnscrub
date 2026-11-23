@@ -28,8 +28,8 @@ const (
 var faviconSVG = []byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f97316"/><stop offset="0.6" stop-color="#06b6d4"/><stop offset="1" stop-color="#10b981"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="url(#g)"/><text x="32" y="43" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="30" font-weight="800" letter-spacing="-1.5" fill="#081018">KS</text></svg>`)
 
 // Server serves the embedded kilnscrub engineering dashboard and JSON/CAD HTTP API.
-// It is decoupled from solver, CAD, and control implementations via model.Designer,
-// model.CADExporter, and ControlBackend.
+// It is decoupled from solver, CAD, control, and studio kit implementations via
+// model.Designer, model.CADExporter, ControlBackend, and StudioBackend.
 type Server struct {
 	designer             model.Designer
 	exporter             model.CADExporter
@@ -37,6 +37,8 @@ type Server struct {
 	mux                  *http.ServeMux
 	ctrlMu               sync.RWMutex
 	control              ControlBackend
+	studioMu             sync.RWMutex
+	studio               StudioBackend
 	sseKeepaliveInterval time.Duration
 }
 
@@ -67,6 +69,9 @@ func NewServer(designer model.Designer, exporter model.CADExporter) *Server {
 	s.mux.HandleFunc("/api/control/reset", s.handleControlReset)
 	s.mux.HandleFunc("/api/control/setpoint", s.handleControlSetpoint)
 	s.mux.HandleFunc("/api/control/fault", s.handleControlFault)
+	s.mux.HandleFunc("/api/studio/presets", s.handleStudioPresets)
+	s.mux.HandleFunc("/api/studio/evaluate", s.handleStudioEvaluate)
+	s.mux.HandleFunc("/api/studio/packet", s.handleStudioPacket)
 
 	return s
 }
@@ -90,6 +95,22 @@ func (s *Server) getControlBackend() ControlBackend {
 	s.ctrlMu.RLock()
 	b := s.control
 	s.ctrlMu.RUnlock()
+	return b
+}
+
+// SetStudioBackend attaches or clears the studio kit backend (presets, COTS/urban
+// evaluation, build guides, and build packet zip generation).
+// It is safe to call concurrently with active HTTP requests.
+func (s *Server) SetStudioBackend(b StudioBackend) {
+	s.studioMu.Lock()
+	s.studio = b
+	s.studioMu.Unlock()
+}
+
+func (s *Server) getStudioBackend() StudioBackend {
+	s.studioMu.RLock()
+	b := s.studio
+	s.studioMu.RUnlock()
 	return b
 }
 

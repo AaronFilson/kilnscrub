@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>kilnscrub — 4-Stage Kiln Wet Scrubber Engineering Workstation</title>
+  <title>kilnscrub — Studio Kiln Exhaust Scrubber Designer &amp; Build Kit</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cdefs%3E%3ClinearGradient%20id='g'%20x1='0'%20y1='0'%20x2='1'%20y2='1'%3E%3Cstop%20offset='0'%20stop-color='%23f97316'/%3E%3Cstop%20offset='0.6'%20stop-color='%2306b6d4'/%3E%3Cstop%20offset='1'%20stop-color='%2310b981'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='url(%23g)'/%3E%3Ctext%20x='32'%20y='43'%20text-anchor='middle'%20font-family='ui-monospace,SFMono-Regular,Menlo,Consolas,monospace'%20font-size='30'%20font-weight='800'%20letter-spacing='-1.5'%20fill='%23081018'%3EKS%3C/text%3E%3C/svg%3E" />
   <script type="importmap">
   {
@@ -54,9 +54,9 @@
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 10px 14px;
       padding: 10px 18px;
-      background: rgba(12, 17, 24, 0.94);
+      background: rgba(12, 17, 24, 0.95);
       backdrop-filter: blur(8px);
       border-bottom: 1px solid var(--border);
     }
@@ -130,6 +130,7 @@
       color: var(--text);
       padding: 6px 11px;
       border-radius: 6px;
+      font-family: var(--sans);
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
@@ -141,12 +142,26 @@
     .btn:hover { background: #223044; border-color: #4b6588; }
     .btn:active { transform: translateY(1px); }
     .btn:disabled { opacity: 0.5; cursor: wait; }
+    .btn-sm { padding: 4px 8px; font-size: 11px; }
     .btn-primary {
       background: rgba(6, 182, 212, 0.16);
       border-color: rgba(6, 182, 212, 0.5);
       color: #67e8f9;
     }
     .btn-primary:hover { background: rgba(6, 182, 212, 0.25); }
+    .btn-cta {
+      background: linear-gradient(135deg, rgba(249, 115, 22, 0.24) 0%, rgba(6, 182, 212, 0.24) 100%);
+      border-color: rgba(56, 189, 248, 0.72);
+      color: #f0f9ff;
+      padding: 8px 15px;
+      font-size: 12.5px;
+      font-weight: 700;
+      box-shadow: 0 2px 12px rgba(6, 182, 212, 0.18);
+    }
+    .btn-cta:hover {
+      background: linear-gradient(135deg, rgba(249, 115, 22, 0.34) 0%, rgba(6, 182, 212, 0.34) 100%);
+      border-color: #7dd3fc;
+    }
     .btn-ghost {
       background: transparent;
       border-color: var(--border);
@@ -156,10 +171,10 @@
 
     .workspace {
       display: grid;
-      grid-template-columns: 336px 1fr;
+      grid-template-columns: 356px 1fr;
       gap: 14px;
       padding: 14px 18px 24px;
-      max-width: 1840px;
+      max-width: 1860px;
       margin: 0 auto;
     }
 
@@ -196,6 +211,32 @@
       letter-spacing: normal;
     }
 
+    /* Friendly Jargon Tooltip Badge */
+    .tip-badge {
+      display: inline-grid;
+      place-items: center;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1px solid var(--border-hi);
+      background: rgba(56, 189, 248, 0.12);
+      color: #7dd3fc;
+      font-family: var(--mono);
+      font-size: 9.5px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: help;
+      margin-left: 3px;
+      vertical-align: middle;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+    .tip-badge:hover {
+      background: rgba(56, 189, 248, 0.28);
+      border-color: #7dd3fc;
+      color: #e0f2fe;
+    }
+
     /* Left Parameter Sidebar */
     .sidebar {
       display: flex;
@@ -210,6 +251,76 @@
     }
     @media (max-width: 1080px) {
       .sidebar { position: static; max-height: none; }
+    }
+
+    /* Studio Preset Cards */
+    .preset-actions {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .preset-list {
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .preset-card {
+      appearance: none;
+      width: 100%;
+      text-align: left;
+      padding: 9px 11px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(12, 17, 24, 0.72);
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color 0.14s, background 0.14s, transform 0.08s;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .preset-card:hover {
+      border-color: var(--border-hi);
+      background: rgba(25, 35, 49, 0.9);
+    }
+    .preset-card.active {
+      border-color: rgba(56, 189, 248, 0.78);
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.14) 0%, rgba(25, 35, 49, 0.95) 100%);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.25);
+    }
+    .preset-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+    .preset-card-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .preset-badge {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.14);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #7dd3fc;
+      white-space: nowrap;
+    }
+    .preset-card-tagline {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+    .preset-fallback-note {
+      font-size: 11.5px;
+      color: var(--muted);
+      padding: 4px 2px;
+      margin: 0;
     }
 
     .param-section {
@@ -261,7 +372,28 @@
       font-size: 10px;
       color: var(--muted);
     }
+    .control-hint {
+      font-size: 10.5px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+    .control-hint.ok { color: #86efac; }
+    .control-hint.warn { color: #fcd34d; }
 
+    input[type="text"] {
+      width: 100%;
+      padding: 6px 9px;
+      border-radius: 6px;
+      border: 1px solid var(--border-hi);
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 12px;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
     input[type="range"] {
       width: 100%;
       height: 5px;
@@ -280,6 +412,98 @@
       font-family: var(--sans);
       font-size: 12px;
       cursor: pointer;
+    }
+
+    /* Segmented Quick-Choice Buttons */
+    .seg-group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+      gap: 5px;
+    }
+    .seg-btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--muted);
+      padding: 5px 6px;
+      border-radius: 6px;
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.14s;
+      line-height: 1.25;
+    }
+    .seg-btn:hover { color: var(--text); border-color: var(--border-hi); }
+    .seg-btn.active {
+      background: rgba(56, 189, 248, 0.16);
+      border-color: rgba(56, 189, 248, 0.65);
+      color: #e0f2fe;
+    }
+    .seg-btn .seg-sub {
+      display: block;
+      font-family: var(--mono);
+      font-size: 9.5px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .seg-btn.active .seg-sub { color: #bae6fd; }
+
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      background: rgba(12, 17, 24, 0.55);
+      border: 1px solid rgba(37, 51, 71, 0.8);
+      cursor: pointer;
+      font-size: 11.5px;
+      color: #cbd5e1;
+    }
+    .check-row input[type="checkbox"] {
+      margin-top: 2px;
+      accent-color: #38bdf8;
+      cursor: pointer;
+    }
+    .check-row span small {
+      display: block;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    /* Collapsible Advanced Engineering Drawer */
+    details.adv-drawer {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    details.adv-drawer > summary {
+      list-style: none;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(25, 35, 49, 0.72);
+      border-bottom: 1px solid transparent;
+    }
+    details.adv-drawer > summary::-webkit-details-marker { display: none; }
+    details.adv-drawer[open] > summary {
+      border-bottom-color: var(--border);
+    }
+    .adv-chevron {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: #7dd3fc;
+      transition: transform 0.16s ease;
+    }
+    details.adv-drawer[open] .adv-chevron {
+      transform: rotate(90deg);
     }
 
     /* Main Content Column */
@@ -312,6 +536,105 @@
     }
     .warnings-banner.visible { display: block; }
     .warnings-banner ul { margin: 4px 0 0 18px; padding: 0; }
+
+    /* Studio Readiness & Urban Neighbor Summary Bar */
+    .readiness-panel {
+      background: linear-gradient(135deg, rgba(19, 26, 36, 0.98) 0%, rgba(20, 32, 46, 0.96) 100%);
+      border: 1px solid var(--border-hi);
+      border-radius: 10px;
+      padding: 11px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .readiness-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .readiness-head-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .readiness-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #e2e8f0;
+    }
+    .readiness-pills {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+    }
+    @media (max-width: 1460px) {
+      .readiness-pills { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 680px) {
+      .readiness-pills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .readiness-chip {
+      padding: 7px 9px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(12, 17, 24, 0.72);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .readiness-chip.status-ok {
+      border-color: rgba(34, 197, 94, 0.42);
+      background: rgba(34, 197, 94, 0.08);
+    }
+    .readiness-chip.status-caution {
+      border-color: rgba(245, 158, 11, 0.48);
+      background: rgba(245, 158, 11, 0.09);
+    }
+    .readiness-chip.status-action {
+      border-color: rgba(239, 68, 68, 0.52);
+      background: rgba(239, 68, 68, 0.11);
+    }
+    .readiness-chip-top {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+    }
+    .traffic-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #64748b;
+      flex-shrink: 0;
+    }
+    .status-ok .traffic-dot { background: var(--ok); box-shadow: 0 0 6px rgba(34, 197, 94, 0.7); }
+    .status-caution .traffic-dot { background: var(--warn); box-shadow: 0 0 6px rgba(245, 158, 11, 0.7); }
+    .status-action .traffic-dot { background: var(--danger); box-shadow: 0 0 6px rgba(239, 68, 68, 0.8); }
+    .readiness-chip-val {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .readiness-chip-sub {
+      font-size: 10.5px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
     /* KPI Strip */
     .kpi-grid {
@@ -632,6 +955,7 @@
       border-radius: 8px;
       background: var(--surface);
       border: 1px solid var(--border);
+      flex-wrap: wrap;
     }
     .tab-btn {
       appearance: none;
@@ -665,6 +989,285 @@
     .tab-dot.live { background: var(--ok); box-shadow: 0 0 6px rgba(34, 197, 94, 0.7); }
     .tab-dot.warn { background: var(--warn); box-shadow: 0 0 6px rgba(245, 158, 11, 0.7); }
     .tab-dot.tripped { background: var(--danger); box-shadow: 0 0 8px rgba(239, 68, 68, 0.85); }
+
+    /* ===================== BUILD & FIRING GUIDE TAB ===================== */
+    .guide-workspace {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 16px 18px 32px;
+      max-width: 1640px;
+      margin: 0 auto;
+    }
+
+    .guide-hero {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 16px 20px;
+      border-radius: 11px;
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      background: linear-gradient(125deg, rgba(249, 115, 22, 0.11) 0%, rgba(19, 26, 36, 0.96) 42%, rgba(6, 182, 212, 0.12) 100%);
+    }
+    .guide-hero-info h1 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: -0.01em;
+    }
+    .guide-hero-info p {
+      margin: 0;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+    .guide-hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .guide-hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* COTS Hardware Highlights Grid */
+    .cots-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    @media (max-width: 1280px) {
+      .cots-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .cots-cards-grid { grid-template-columns: 1fr; }
+    }
+    .cots-part-card {
+      background: rgba(12, 17, 24, 0.72);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .cots-part-role {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #7dd3fc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+    .cots-part-name {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .cots-part-meta {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--muted);
+    }
+    .cots-part-notes {
+      font-size: 11px;
+      color: #cbd5e1;
+      line-height: 1.35;
+    }
+
+    /* BOM Table */
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+    .bom-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .bom-table th {
+      text-align: left;
+      padding: 9px 12px;
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      background: rgba(25, 35, 49, 0.55);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .bom-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(37, 51, 71, 0.55);
+      vertical-align: top;
+    }
+    .bom-table tr:hover td {
+      background: rgba(56, 189, 248, 0.04);
+    }
+    .bom-table .num {
+      text-align: right;
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .bom-table tfoot td {
+      font-weight: 700;
+      background: rgba(25, 35, 49, 0.72);
+      border-top: 1px solid var(--border-hi);
+      border-bottom: none;
+      color: #e0f2fe;
+    }
+
+    /* Urban Detailed Cards */
+    .urban-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    @media (max-width: 1220px) {
+      .urban-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 720px) {
+      .urban-grid { grid-template-columns: 1fr; }
+    }
+    .urban-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .urban-card.status-ok { border-top: 3px solid var(--ok); }
+    .urban-card.status-caution { border-top: 3px solid var(--warn); }
+    .urban-card.status-action { border-top: 3px solid var(--danger); }
+    .urban-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .urban-card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .urban-card-summary {
+      font-size: 12px;
+      color: #cbd5e1;
+      margin: 0;
+      line-height: 1.48;
+    }
+    .urban-card-note {
+      font-size: 11.5px;
+      color: #bae6fd;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 6px;
+      padding: 7px 9px;
+      line-height: 1.42;
+    }
+
+    /* Markdown Guide Reader */
+    .doc-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 14px;
+      background: rgba(25, 35, 49, 0.72);
+      border-bottom: 1px solid var(--border);
+    }
+    .doc-toggle-group {
+      display: inline-flex;
+      gap: 5px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 3px;
+      border-radius: 7px;
+    }
+    .doc-content {
+      padding: 18px 24px 24px;
+      max-width: 980px;
+      color: #dde6f2;
+      font-size: 13.5px;
+      line-height: 1.62;
+    }
+    .doc-content h1 { font-size: 20px; margin: 4px 0 12px; color: #f8fafc; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    .doc-content h2 { font-size: 16px; margin: 20px 0 8px; color: #7dd3fc; }
+    .doc-content h3 { font-size: 14px; margin: 14px 0 6px; color: #fdba74; }
+    .doc-content h4 { font-size: 13px; margin: 12px 0 4px; color: #cbd5e1; }
+    .doc-content p { margin: 0 0 10px; }
+    .doc-content ul, .doc-content ol { margin: 0 0 12px 22px; padding: 0; }
+    .doc-content li { margin-bottom: 5px; }
+    .doc-content li.md-task { list-style: none; margin-left: -18px; display: flex; align-items: flex-start; gap: 8px; }
+    .doc-content li.md-task input[type="checkbox"] { margin-top: 4px; accent-color: #22c55e; }
+    .doc-content code {
+      font-family: var(--mono);
+      font-size: 12px;
+      background: rgba(12, 17, 24, 0.85);
+      border: 1px solid var(--border);
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: #7dd3fc;
+    }
+    .doc-content pre {
+      background: #090e15;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 11px 13px;
+      overflow-x: auto;
+      margin: 10px 0 14px;
+    }
+    .doc-content pre code {
+      border: none;
+      background: transparent;
+      padding: 0;
+      color: #cbd5e1;
+    }
+    .doc-content blockquote {
+      margin: 10px 0 14px;
+      padding: 8px 13px;
+      border-left: 3px solid var(--warn);
+      background: rgba(245, 158, 11, 0.08);
+      color: #fde68a;
+      border-radius: 0 6px 6px 0;
+    }
+    .doc-content hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 16px 0;
+    }
+    .doc-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 14px;
+      font-size: 12px;
+    }
+    .doc-content th, .doc-content td {
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      text-align: left;
+    }
+    .doc-content th {
+      background: rgba(25, 35, 49, 0.72);
+      color: #e2e8f0;
+    }
 
     /* Live Control & Telemetry Workspace */
     .control-workspace {
@@ -871,6 +1474,19 @@
       color: var(--muted);
       margin: 0;
     }
+
+    @media print {
+      body { background: #ffffff; color: #111827; }
+      .topbar, .guide-hero-actions, .doc-toolbar .ctrl-btn-row, .toast { display: none !important; }
+      .panel, .urban-card, .cots-part-card, .guide-hero {
+        background: #ffffff !important;
+        color: #111827 !important;
+        border-color: #cbd5e1 !important;
+      }
+      .doc-content, .doc-content h1, .doc-content h2, .doc-content h3, .urban-card-summary, .urban-card-title {
+        color: #111827 !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -879,12 +1495,13 @@
       <div class="brand-mark">KS</div>
       <div>
         <div class="brand-title">kilnscrub</div>
-        <div class="brand-sub">4-Stage Studio Kiln Exhaust Scrubber Designer</div>
+        <div class="brand-sub">Studio Kiln Scrubber Designer &amp; Build Kit</div>
       </div>
     </div>
 
     <nav class="tab-nav" role="tablist" aria-label="Workstation Mode">
       <button id="tab-design" class="tab-btn active" role="tab" aria-selected="true" aria-controls="view-design" data-tab="design" type="button">Design &amp; 3D Studio</button>
+      <button id="tab-guide" class="tab-btn" role="tab" aria-selected="false" aria-controls="view-guide" data-tab="guide" type="button"><span class="tab-dot" id="tab-guide-dot"></span>Build &amp; Firing Guide</button>
       <button id="tab-control" class="tab-btn" role="tab" aria-selected="false" aria-controls="view-control" data-tab="control" type="button"><span class="tab-dot" id="tab-control-dot"></span>Live Control &amp; Telemetry</button>
     </nav>
 
@@ -898,38 +1515,89 @@
       <button class="btn btn-primary" data-export="dxf" title="Download unfolded sheet-metal patterns (.dxf)">Download DXF</button>
       <button class="btn" data-export="bom_csv" title="Download Bill of Materials (CSV)">BOM CSV</button>
       <button class="btn" data-export="bom_md" title="Download Bill of Materials (Markdown)">BOM MD</button>
-      <button class="btn btn-ghost" id="btn-reset" title="Reset all inputs to 24 cu.ft. wood/salt kiln defaults">Reset</button>
+      <button class="btn btn-ghost" id="btn-reset" title="Reset all inputs to active studio preset defaults">Reset</button>
     </div>
   </header>
 
+  <input id="in-load-project" type="file" accept=".json,application/json" class="hidden" aria-label="Load Studio project JSON file" />
+
+  <!-- ===================== TAB 1: DESIGN & 3D STUDIO ===================== -->
   <div id="view-design" class="workspace" role="tabpanel" aria-labelledby="tab-design">
-    <!-- Left Parameter Controls -->
+    <!-- Left Parameter Sidebar (Potter-Friendly by Default + Collapsible Advanced Engineering Drawer) -->
     <aside class="sidebar">
-      <section class="panel">
+      <!-- Studio Preset Picker + Save/Load Project -->
+      <section class="panel" aria-label="Studio Preset Picker">
         <div class="panel-header">
-          <span class="panel-title">Design Parameters</span>
-          <span class="control-sub">Live /api/size</span>
+          <span class="panel-title">Studio Presets</span>
+          <div class="preset-actions">
+            <button id="btn-save-project" class="btn btn-sm" type="button" title="Save your current studio configuration as project.json">Save JSON</button>
+            <button id="btn-load-project" class="btn btn-sm btn-ghost" type="button" title="Load a previously saved project.json">Load</button>
+          </div>
+        </div>
+        <div id="preset-picker-list" class="preset-list">
+          <p class="preset-fallback-note">Loading studio presets...</p>
+        </div>
+      </section>
+
+      <!-- Potter-Friendly Studio Controls -->
+      <section class="panel" aria-label="Studio Kiln & Site Setup">
+        <div class="panel-header">
+          <span class="panel-title">Your Kiln &amp; Studio</span>
+          <span class="control-sub" id="sidebar-api-badge">Studio Mode</span>
         </div>
         <div class="param-section">
-          <div class="param-group-label"><span class="stage-dot" style="background:var(--accent-quench)"></span>Kiln &amp; Firing</div>
+          <div class="control">
+            <div class="control-row">
+              <label for="in-studio-name">Studio / Kiln Name</label>
+              <span class="control-sub">For packet &amp; guide</span>
+            </div>
+            <input id="in-studio-name" type="text" value="Studio Kiln Scrubber" placeholder="e.g. Backyard Wood-Salt Kiln" maxlength="80" />
+          </div>
 
           <div class="control">
             <div class="control-row">
-              <label for="in-kiln-vol">Kiln Volume</label>
+              <label for="in-kiln-vol">Kiln Size (Interior Volume)</label>
               <span class="control-val" id="val-kiln-vol">24 cu.ft.</span>
             </div>
             <input id="in-kiln-vol" type="range" min="4" max="120" step="1" value="24" />
+            <span class="control-hint" id="hint-kiln-size">Studio standard (18–30 cu.ft. wood/gas kiln)</span>
           </div>
 
           <div class="control">
             <div class="control-row">
-              <label for="in-peak-temp">Peak Exit Temp</label>
-              <span class="control-val" id="val-peak-temp">2400 °F</span>
+              <label>Firing Cone Quick-Select</label>
+              <span class="control-sub" id="val-firing-cone">Cone 11</span>
             </div>
-            <input id="in-peak-temp" type="range" min="1200" max="2500" step="25" value="2400" />
+            <div class="seg-group" role="group" aria-label="Firing Cone Presets">
+              <button class="seg-btn" type="button" data-cone="Cone 06" data-temp-f="1830">Cone 06<span class="seg-sub">1830°F</span></button>
+              <button class="seg-btn" type="button" data-cone="Cone 6" data-temp-f="2232">Cone 6<span class="seg-sub">2232°F</span></button>
+              <button class="seg-btn" type="button" data-cone="Cone 10" data-temp-f="2381">Cone 10<span class="seg-sub">2381°F</span></button>
+              <button class="seg-btn active" type="button" data-cone="Cone 11" data-temp-f="2400">Cone 11<span class="seg-sub">2400°F</span></button>
+            </div>
           </div>
 
           <div class="control">
+            <div class="control-row">
+              <label for="in-peak-temp">Peak Flue Exit Temp</label>
+              <span class="control-val" id="val-peak-temp">2400 °F</span>
+            </div>
+            <input id="in-peak-temp" type="range" min="1200" max="2500" step="1" value="2400" />
+          </div>
+
+          <div class="control">
+            <div class="control-row">
+              <label>Glaze Vapor Mode</label>
+              <span class="control-sub">Acid vs. Soda</span>
+            </div>
+            <div class="seg-group" role="group" aria-label="Glaze Vapor Mode">
+              <button class="seg-btn" type="button" data-vapor="none">None<span class="seg-sub">Clean / Ash</span></button>
+              <button class="seg-btn" type="button" data-vapor="soda">Soda<span class="seg-sub"><span class="unit-literal">Na₂CO₃</span></span></button>
+              <button class="seg-btn active" type="button" data-vapor="salt">Salt<span class="seg-sub"><span class="unit-literal">NaCl</span></span></button>
+            </div>
+            <span class="control-hint" id="hint-vapor-mode">Salt (<span class="unit-literal">NaCl</span>) creates <span class="unit-literal">HCl</span> vapor neutralized by baking soda in Stage 3.</span>
+          </div>
+
+          <div class="control" id="ctrl-salt-rate-wrap">
             <div class="control-row">
               <label for="in-salt-rate">Salt Introduction Rate</label>
               <span class="control-val" id="val-salt-rate">2.0 lbs/hr</span>
@@ -939,20 +1607,115 @@
 
           <div class="control">
             <div class="control-row">
-              <label for="in-fuel-type">Fuel Type</label>
-              <span class="control-sub">Stoichiometry</span>
+              <label for="in-fuel-type">Kiln Fuel</label>
+              <span class="control-sub">Exhaust chemistry</span>
             </div>
             <select id="in-fuel-type">
               <option value="wood_salt">Wood + Salt (wood_salt)</option>
               <option value="wood">Wood Only (wood)</option>
-              <option value="gas_salt">Gas + Salt (gas_salt)</option>
-              <option value="gas">Gas Only (gas)</option>
+              <option value="gas_salt">Gas / Propane + Salt (gas_salt)</option>
+              <option value="gas">Gas / Electric Hood (gas)</option>
             </select>
           </div>
 
           <div class="control">
             <div class="control-row">
-              <label for="in-excess-air">Excess Air</label>
+              <label for="in-firing-hours">Typical Firing Length</label>
+              <span class="control-val" id="val-firing-hours">10 hrs</span>
+            </div>
+            <input id="in-firing-hours" type="range" min="2" max="36" step="1" value="10" />
+          </div>
+
+          <div class="param-group-label"><span class="stage-dot" style="background:var(--accent-packed)"></span>Build Path &amp; Materials</div>
+
+          <div class="control">
+            <div class="control-row">
+              <label>How Will You Build It?</label>
+            </div>
+            <div class="seg-group" role="group" aria-label="Build Path">
+              <button class="seg-btn active" type="button" data-build-path="cots_no_weld">No-Weld COTS<span class="seg-sub">Clamps &amp; Pipe</span></button>
+              <button class="seg-btn" type="button" data-build-path="welded_dxf">Welded Sheet Metal<span class="seg-sub">Shop DXF</span></button>
+            </div>
+          </div>
+
+          <div class="control">
+            <div class="control-row">
+              <label>Budget &amp; Corrosion Tier</label>
+            </div>
+            <div class="seg-group" role="group" aria-label="Corrosion Tier">
+              <button class="seg-btn active" type="button" data-corrosion="hobby_316l">Hobby 316L<span class="seg-sub">Buffered Spray</span></button>
+              <button class="seg-btn" type="button" data-corrosion="heavy_c276_frp">Heavy Salt<span class="seg-sub">C-276 / FRP</span></button>
+            </div>
+          </div>
+
+          <div class="param-group-label"><span class="stage-dot" style="background:var(--accent-blower)"></span>Urban Site &amp; Neighbors</div>
+
+          <div class="control">
+            <div class="control-row">
+              <label for="in-property-line">Distance to Property Line</label>
+              <span class="control-val" id="val-property-line">35 ft</span>
+            </div>
+            <input id="in-property-line" type="range" min="10" max="200" step="5" value="35" />
+          </div>
+
+          <div class="control">
+            <div class="control-row">
+              <label for="in-ambient-winter">Coldest Firing Weather</label>
+              <span class="control-val" id="val-ambient-winter">35 °F</span>
+            </div>
+            <input id="in-ambient-winter" type="range" min="0" max="70" step="5" value="35" />
+          </div>
+
+          <div class="control">
+            <div class="control-row">
+              <label>Available Studio Power</label>
+            </div>
+            <div class="seg-group" role="group" aria-label="Available Voltage">
+              <button class="seg-btn" type="button" data-voltage="120">120V Outlet<span class="seg-sub">Standard 20A</span></button>
+              <button class="seg-btn active" type="button" data-voltage="240">240V Circuit<span class="seg-sub">Kiln / Dryer</span></button>
+            </div>
+          </div>
+
+          <div class="control">
+            <div class="control-row">
+              <label for="in-garden-hose">Garden Hose Flow (<span class="unit-literal">GPM</span>)</label>
+              <span class="control-val" id="val-garden-hose">5.0 GPM</span>
+            </div>
+            <input id="in-garden-hose" type="range" min="2.0" max="12.0" step="0.5" value="5.0" />
+          </div>
+
+          <label class="check-row" for="in-snap-cots">
+            <input id="in-snap-cots" type="checkbox" checked />
+            <span>Snap to Off-the-Shelf (COTS) Sizes<small>Rounds column/flue diameters up to standard pipe &amp; 55-gal drum sizes</small></span>
+          </label>
+
+          <label class="check-row" for="in-include-silencer">
+            <input id="in-include-silencer" type="checkbox" checked />
+            <span>Include Acoustic Blower Silencer<small>Cuts blower noise by ~12–15 dBA for close neighbors</small></span>
+          </label>
+
+          <label class="check-row" for="in-include-plume-diluter" title="Adds a downstream 120V squirrel-cage dilution blower and mixing tee for warm kiln-jacket air plume suppression. Does not replace the high-pressure Stage 4 ID blower.">
+            <input id="in-include-plume-diluter" type="checkbox" />
+            <span>Include Plume Dilution Blower (120V)<small>Squirrel-cage blower + stack mixing tee for winter steam suppression</small></span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Collapsible Advanced Engineering Parameters Drawer (Collapsed by Default!) -->
+      <details id="advanced-engineering-drawer" class="adv-drawer">
+        <summary>
+          <div>
+            <span class="panel-title">Advanced Engineering Parameters</span>
+            <div class="control-sub">Venturi, Packing &amp; Draft Tuning</div>
+          </div>
+          <span class="adv-chevron" aria-hidden="true">&#9656;</span>
+        </summary>
+        <div class="param-section">
+          <div class="param-group-label"><span class="stage-dot" style="background:var(--accent-quench)"></span>Combustion</div>
+
+          <div class="control">
+            <div class="control-row">
+              <label for="in-excess-air">Excess Air <span class="tip-badge" title="Extra combustion air beyond theoretical stoichiometric burn. Higher excess air increases total flue gas volume.">?</span></label>
               <span class="control-val" id="val-excess-air">30%</span>
             </div>
             <input id="in-excess-air" type="range" min="0" max="150" step="5" value="30" />
@@ -962,7 +1725,7 @@
 
           <div class="control">
             <div class="control-row">
-              <label for="in-venturi-vel">Throat Velocity</label>
+              <label for="in-venturi-vel">Venturi Throat Velocity <span class="tip-badge" title="Gas speed through the narrow venturi throat. Faster speed catches finer smoke/fume particles but needs more blower horsepower.">?</span></label>
               <span class="control-val" id="val-venturi-vel">70 m/s</span>
             </div>
             <input id="in-venturi-vel" type="range" min="40" max="110" step="1" value="70" />
@@ -970,7 +1733,7 @@
 
           <div class="control">
             <div class="control-row">
-              <label for="in-venturi-lg">Venturi L/G Ratio</label>
+              <label for="in-venturi-lg">Venturi L/G Ratio <span class="tip-badge" title="Liquid-to-Gas volume ratio injected into the venturi throat (m³ water per m³ gas). Higher L/G improves fine fume capture.">?</span></label>
               <span class="control-val" id="val-venturi-lg">0.0012 m³/m³</span>
             </div>
             <input id="in-venturi-lg" type="range" min="0.0004" max="0.0030" step="0.0001" value="0.0012" />
@@ -980,7 +1743,7 @@
 
           <div class="control">
             <div class="control-row">
-              <label for="in-hcl-target">Target HCl Removal</label>
+              <label for="in-hcl-target">Target <span class="unit-literal">HCl</span> Removal <span class="tip-badge" title="Target percentage of hydrochloric acid vapor neutralized by the baking-soda packed bed (recommended >= 98%).">?</span></label>
               <span class="control-val" id="val-hcl-target">99.0%</span>
             </div>
             <input id="in-hcl-target" type="range" min="90.0" max="99.9" step="0.1" value="99.0" />
@@ -988,7 +1751,7 @@
 
           <div class="control">
             <div class="control-row">
-              <label for="in-packing-void">Packing Voidage (ε)</label>
+              <label for="in-packing-void">Packing Voidage (ε) <span class="tip-badge" title="Fraction of open air space inside the plastic Pall ring packing bed. Typical 1-inch PP Pall rings have 0.90 voidage.">?</span></label>
               <span class="control-val" id="val-packing-void">0.90</span>
             </div>
             <input id="in-packing-void" type="range" min="0.70" max="0.95" step="0.01" value="0.90" />
@@ -1006,13 +1769,13 @@
 
           <div class="control">
             <div class="control-row">
-              <label for="in-kiln-draft">Target Kiln Draft</label>
+              <label for="in-kiln-draft">Target Kiln Draft <span class="tip-badge" title="Gentle negative suction pulled at the kiln flue in inches of water column (inWC). -0.05 inWC pulls fumes cleanly without starving reduction firings.">?</span></label>
               <span class="control-val" id="val-kiln-draft">-0.05 inWC</span>
             </div>
             <input id="in-kiln-draft" type="range" min="-0.50" max="-0.01" step="0.01" value="-0.05" />
           </div>
         </div>
-      </section>
+      </details>
     </aside>
 
     <!-- Right Main Dashboard -->
@@ -1020,38 +1783,84 @@
       <div id="error-banner" class="error-banner" role="alert"></div>
       <div id="warnings-banner" class="warnings-banner" role="status"></div>
 
+      <!-- Studio Readiness & Urban Neighbor Summary Bar -->
+      <section id="readiness-bar" class="readiness-panel" aria-label="Studio Readiness and Urban Neighbor Summary">
+        <div class="readiness-head">
+          <div class="readiness-head-left">
+            <span class="readiness-title">Studio Readiness &amp; Neighbor Check</span>
+            <span id="readiness-overall-pill" class="pill"><span class="dot"></span><span id="readiness-overall-text">Checking...</span></span>
+            <span id="readiness-cost-pill" class="pill">Est. COTS: —</span>
+          </div>
+          <div class="preset-actions">
+            <button id="btn-jump-guide" class="btn btn-sm btn-primary" type="button">Build &amp; Firing Guide &rarr;</button>
+          </div>
+        </div>
+        <div class="readiness-pills">
+          <div class="readiness-chip" id="readiness-power">
+            <div class="readiness-chip-top"><span class="traffic-dot"></span>Power</div>
+            <div class="readiness-chip-val" id="readiness-power-val">—</div>
+            <div class="readiness-chip-sub" id="readiness-power-sub">Checking circuit...</div>
+          </div>
+          <div class="readiness-chip" id="readiness-water">
+            <div class="readiness-chip-top"><span class="traffic-dot"></span>Water</div>
+            <div class="readiness-chip-val" id="readiness-water-val">—</div>
+            <div class="readiness-chip-sub" id="readiness-water-sub">Garden hose check</div>
+          </div>
+          <div class="readiness-chip" id="readiness-noise">
+            <div class="readiness-chip-top"><span class="traffic-dot"></span>Neighbor Noise</div>
+            <div class="readiness-chip-val" id="readiness-noise-val">—</div>
+            <div class="readiness-chip-sub" id="readiness-noise-sub">At property line</div>
+          </div>
+          <div class="readiness-chip" id="readiness-soda">
+            <div class="readiness-chip-top"><span class="traffic-dot"></span>Baking Soda</div>
+            <div class="readiness-chip-val" id="readiness-soda-val">—</div>
+            <div class="readiness-chip-sub" id="readiness-soda-sub">Per firing</div>
+          </div>
+          <div class="readiness-chip" id="readiness-plume">
+            <div class="readiness-chip-top"><span class="traffic-dot"></span>Winter Plume</div>
+            <div class="readiness-chip-val" id="readiness-plume-val">—</div>
+            <div class="readiness-chip-sub" id="readiness-plume-sub">Steam condensation</div>
+          </div>
+          <div class="readiness-chip" id="readiness-corrosion">
+            <div class="readiness-chip-top"><span class="traffic-dot"></span>Corrosion / Soda</div>
+            <div class="readiness-chip-val" id="readiness-corrosion-val">—</div>
+            <div class="readiness-chip-sub" id="readiness-corrosion-sub">Alloy &amp; glaze note</div>
+          </div>
+        </div>
+      </section>
+
       <!-- KPI Strip -->
       <section class="kpi-grid" aria-label="Key Engineering KPIs">
         <div class="kpi-card" style="--kpi-accent: var(--accent-quench)">
-          <div class="kpi-label">Quench Outlet Temp</div>
+          <div class="kpi-label">Quench Outlet Temp <span class="tip-badge" title="CPVC 210°F Cutoff: Plastic CPVC pipe softens above 210°F. Stage 1 water spray cools hot kiln exhaust below 190°F, and the safety damper opens automatically at 210°F.">?</span></div>
           <div class="kpi-value" id="kpi-quench-temp">—</div>
           <div class="kpi-sub" id="kpi-quench-sub">Spray: —</div>
           <span class="kpi-badge badge-ok" id="kpi-quench-badge">CPVC &lt; 210°F</span>
         </div>
 
         <div class="kpi-card" style="--kpi-accent: var(--accent-venturi)">
-          <div class="kpi-label">Venturi Cut <span class="unit-literal">d₅₀</span> (<span class="unit-literal">NaCl</span>)</div>
+          <div class="kpi-label">Venturi Cut <span class="unit-literal">d₅₀</span> (<span class="unit-literal">NaCl</span>) <span class="tip-badge" title="d₅₀ (Cut Diameter): 50% of smoke/fume particles of this size — and nearly all larger ash particles — are caught by the venturi water mist. Smaller µm means finer capture.">?</span></div>
           <div class="kpi-value" id="kpi-d50">—</div>
           <div class="kpi-sub" id="kpi-venturi-sub">NaCl — · Ash —</div>
           <span class="kpi-badge badge-ok" id="kpi-venturi-badge">Calvert Model</span>
         </div>
 
         <div class="kpi-card" style="--kpi-accent: var(--accent-packed)">
-          <div class="kpi-label"><span class="unit-literal">HCl</span> Removal</div>
+          <div class="kpi-label"><span class="unit-literal">HCl</span> Removal <span class="tip-badge" title="Hydrogen chloride (HCl) acid gas from salt glazing is neutralized by baking soda solution trickling through the Stage 3 packed tower.">?</span></div>
           <div class="kpi-value" id="kpi-hcl">—</div>
           <div class="kpi-sub" id="kpi-hcl-sub">NTU — · Z —</div>
           <span class="kpi-badge badge-ok" id="kpi-hcl-badge">Target &ge; 98%</span>
         </div>
 
         <div class="kpi-card" style="--kpi-accent: var(--accent-packed)">
-          <div class="kpi-label">Column % of Flood</div>
+          <div class="kpi-label">Column % of Flood <span class="tip-badge" title="% of Flood: How close upward exhaust speed is to pushing wash water back up the tower. Keeping this <= 75% prevents liquid carryover and surging.">?</span></div>
           <div class="kpi-value" id="kpi-flood">—</div>
           <div class="kpi-sub" id="kpi-flood-sub">v_s — / v_f —</div>
           <span class="kpi-badge badge-ok" id="kpi-flood-badge">Limit &le; 75%</span>
         </div>
 
         <div class="kpi-card" style="--kpi-accent: var(--accent-blue)">
-          <div class="kpi-label">Total Static Pressure</div>
+          <div class="kpi-label">Total Static Pressure <span class="tip-badge" title="inWC (Inches of Water Column): Total suction resistance the blower must pull across all scrubber stages plus your kiln draft (1 inWC ≈ 249 Pa).">?</span></div>
           <div class="kpi-value" id="kpi-dp-total">—</div>
           <div class="kpi-sub" id="kpi-dp-sub">Draft — · Flow —</div>
           <span class="kpi-badge badge-ok" id="kpi-dp-badge">6-Stage Sum</span>
@@ -1184,7 +1993,90 @@
     </main>
   </div>
 
-  <!-- Live Control & Telemetry Tab Panel -->
+  <!-- ===================== TAB 2: BUILD & FIRING GUIDE ===================== -->
+  <div id="view-guide" class="guide-workspace hidden" role="tabpanel" aria-labelledby="tab-guide">
+    <section class="guide-hero" aria-label="Build Packet Download and Project Summary">
+      <div class="guide-hero-info">
+        <h1 id="guide-project-title">Studio Kiln Scrubber — Build &amp; Firing Kit</h1>
+        <p id="guide-project-sub">Complete off-the-shelf shopping list, urban neighbor readiness report, step-by-step build instructions, and firing-day checklist.</p>
+        <div class="guide-hero-meta">
+          <span id="guide-overall-pill" class="pill"><span class="dot"></span><span id="guide-overall-text">Evaluating...</span></span>
+          <span id="guide-cost-pill" class="pill">Est. COTS Hardware: —</span>
+          <span id="guide-flood-pill" class="pill">Snapped % of Flood: —</span>
+        </div>
+      </div>
+      <div class="guide-hero-actions">
+        <button id="btn-download-packet" class="btn btn-cta" type="button" title="Download STL, DXF, COTS BOM, Build Guide, Firing Checklist, project.json, and daemon.json in one ZIP archive">Download Complete Build Packet (.zip)</button>
+        <button id="btn-guide-save" class="btn" type="button" title="Export your studio project configuration as project.json">Save project.json</button>
+        <button id="btn-guide-load" class="btn btn-ghost" type="button" title="Import a saved project.json file">Load project.json</button>
+      </div>
+    </section>
+
+    <div id="guide-error-banner" class="error-banner" role="alert"></div>
+
+    <section id="guide-disabled-card" class="ctrl-disabled-card hidden" aria-label="Studio Kit Backend Disabled">
+      <div>
+        <h2>Studio Kit Backend Not Attached</h2>
+        <p>Start the dashboard with the Studio Kit enabled (default in <code>kilnscrub ui</code>) to generate COTS shopping lists, urban neighbor checks, tailored build guides, and complete <code>.zip</code> Build Packets. You can still save/load <code>project.json</code> and download STL/DXF/BOM files from the Design tab.</p>
+      </div>
+      <button id="btn-guide-retry" class="btn btn-primary" type="button">Retry Studio API</button>
+    </section>
+
+    <!-- COTS Parts & Shopping List -->
+    <section class="panel" id="guide-cots-panel" aria-label="COTS Parts and Shopping List">
+      <div class="panel-header">
+        <span class="panel-title">COTS Parts &amp; Shopping List</span>
+        <div class="preset-actions">
+          <span id="guide-cots-snapped-badge" class="pill ok">Snapped to COTS</span>
+          <span id="guide-cots-weight" class="control-sub">Weight: —</span>
+        </div>
+      </div>
+      <div id="guide-cots-cards" class="cots-cards-grid"></div>
+      <div class="table-wrap">
+        <table class="bom-table" aria-label="Complete COTS Bill of Materials">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Item &amp; Spec</th>
+              <th>Material</th>
+              <th class="num">Qty</th>
+              <th class="num">Unit USD</th>
+              <th class="num">Total USD</th>
+              <th class="num">Weight (kg)</th>
+            </tr>
+          </thead>
+          <tbody id="guide-bom-tbody">
+            <tr><td colspan="7" style="color:var(--muted)">Waiting for studio evaluation...</td></tr>
+          </tbody>
+          <tfoot id="guide-bom-tfoot"></tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- Urban Site & Neighbor Readiness Detailed Cards -->
+    <section id="guide-urban-section" aria-label="Urban Site and Neighbor Readiness">
+      <div class="urban-grid" id="guide-urban-grid"></div>
+    </section>
+
+    <!-- Step-by-Step Build Guide & Firing-Day Checklist Reader -->
+    <section class="panel" id="guide-doc-panel" aria-label="Step-by-Step Build Guide and Firing-Day Checklist">
+      <div class="doc-toolbar">
+        <div class="doc-toggle-group" role="tablist" aria-label="Guide Document Selector">
+          <button id="btn-doc-build" class="tab-btn active" type="button" role="tab" aria-selected="true" data-doc="build">Step-by-Step Build Guide</button>
+          <button id="btn-doc-ops" class="tab-btn" type="button" role="tab" aria-selected="false" data-doc="ops">Firing-Day How-To Checklist</button>
+        </div>
+        <div class="ctrl-btn-row">
+          <button id="btn-copy-md" class="btn btn-sm" type="button" title="Copy raw Markdown source to clipboard">Copy Markdown</button>
+          <button id="btn-print-guide" class="btn btn-sm btn-ghost" type="button" title="Print this guide or save as PDF">Print Guide</button>
+        </div>
+      </div>
+      <article id="guide-doc-content" class="doc-content">
+        <p style="color:var(--muted)">Loading tailored build instructions and firing checklist...</p>
+      </article>
+    </section>
+  </div>
+
+  <!-- ===================== TAB 3: LIVE CONTROL & TELEMETRY ===================== -->
   <div id="view-control" class="control-workspace hidden" role="tabpanel" aria-labelledby="tab-control">
     <div class="ctrl-header-strip">
       <div class="ctrl-header-left">
@@ -1388,6 +2280,14 @@
     (() => {
       "use strict";
 
+      const CONE_TEMPS = [
+        { cone: "Cone 06", tempF: 1830 },
+        { cone: "Cone 6", tempF: 2232 },
+        { cone: "Cone 8", tempF: 2305 },
+        { cone: "Cone 10", tempF: 2381 },
+        { cone: "Cone 11", tempF: 2400 },
+      ];
+
       const state = {
         defaults: null,
         input: null,
@@ -1402,11 +2302,27 @@
         debounceTimer: null,
       };
 
+      const studioState = {
+        enabled: false,
+        presets: [],
+        activePresetId: "wood_salt_24",
+        firingCone: "Cone 11",
+        vaporGlazeMode: "salt",
+        buildPath: "cots_no_weld",
+        corrosionTier: "hobby_316l",
+        availableVoltage: 240,
+        lastSaltRate: 2.0,
+        project: null,
+        evaluation: null,
+        activeDoc: "build",
+      };
+
       const el = (id) => document.getElementById(id);
       const kToF = (k) => (k - 273.15) * 9 / 5 + 32;
       const mToIn = (m) => m / 0.0254;
       const mToMm = (m) => m * 1000;
       const fmt = (v, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : "—");
+      const fmtUSD = (v) => (Number.isFinite(v) ? "$" + Math.round(v).toLocaleString("en-US") : "—");
 
       function showToast(msg) {
         const t = el("toast");
@@ -1433,6 +2349,18 @@
         banner.classList.add("visible");
       }
 
+      function setGuideError(msg) {
+        const banner = el("guide-error-banner");
+        if (!banner) return;
+        if (!msg) {
+          banner.classList.remove("visible");
+          banner.textContent = "";
+          return;
+        }
+        banner.textContent = msg;
+        banner.classList.add("visible");
+      }
+
       function setWarnings(warnings) {
         const banner = el("warnings-banner");
         if (!warnings || warnings.length === 0) {
@@ -1450,29 +2378,136 @@
           .replace(/&/g, "&amp;")
           .replace(/</g, "&lt;")
           .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;");
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function normalizeStatusClass(status) {
+        const s = String(status || "").toLowerCase();
+        if (s === "ok" || s === "pass" || s === "good") return "status-ok";
+        if (s === "action_needed" || s === "danger" || s === "fail" || s === "critical") return "status-action";
+        if (s === "caution" || s === "warn" || s === "warning") return "status-caution";
+        return "";
+      }
+
+      function statusToPillClass(status) {
+        const s = String(status || "").toLowerCase();
+        if (s === "ok" || s === "pass" || s === "good") return "ok";
+        if (s === "action_needed" || s === "danger" || s === "fail" || s === "critical") return "danger";
+        if (s === "caution" || s === "warn" || s === "warning") return "warn";
+        return "";
+      }
+
+      function statusLabel(status) {
+        const s = String(status || "").toLowerCase();
+        if (s === "ok") return "Studio Ready";
+        if (s === "caution") return "Review Notes";
+        if (s === "action_needed") return "Action Needed";
+        return status || "Pending";
+      }
+
+      function normalizeConeName(raw) {
+        const s = String(raw || "").trim().toLowerCase().replace(/^cone\s*/i, "");
+        if (s === "06") return "Cone 06";
+        if (s === "6") return "Cone 6";
+        if (s === "8") return "Cone 8";
+        if (s === "10") return "Cone 10";
+        if (s === "11") return "Cone 11";
+        return String(raw || "").trim() || "Custom";
+      }
+
+      function inferConeFromTemp(tempF) {
+        for (const c of CONE_TEMPS) {
+          if (Math.abs(tempF - c.tempF) <= 30) return c.cone;
+        }
+        return `${Math.round(tempF)}°F Custom`;
+      }
+
+      function syncSegmentedButtons() {
+        const normCone = normalizeConeName(studioState.firingCone);
+        el("val-firing-cone").textContent = normCone;
+        document.querySelectorAll("[data-cone]").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.cone === normCone);
+        });
+
+        document.querySelectorAll("[data-vapor]").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.vapor === studioState.vaporGlazeMode);
+        });
+        const saltWrap = el("ctrl-salt-rate-wrap");
+        const vaporHint = el("hint-vapor-mode");
+        if (studioState.vaporGlazeMode === "salt") {
+          saltWrap.classList.remove("hidden");
+          vaporHint.className = "control-hint warn";
+          vaporHint.innerHTML = `Salt (<span class="unit-literal">NaCl</span>) creates <span class="unit-literal">HCl</span> vapor neutralized by baking soda in Stage 3.`;
+        } else if (studioState.vaporGlazeMode === "soda") {
+          saltWrap.classList.add("hidden");
+          vaporHint.className = "control-hint ok";
+          vaporHint.innerHTML = `Soda (<span class="unit-literal">Na₂CO₃</span>) eliminates <span class="unit-literal">HCl</span> acid gas — dramatically lower corrosion &amp; baking soda use!`;
+        } else {
+          saltWrap.classList.add("hidden");
+          vaporHint.className = "control-hint";
+          vaporHint.textContent = "No salt/soda glaze vapor — scrubber focuses on cooling, smoke, and fly-ash capture.";
+        }
+
+        document.querySelectorAll("[data-build-path]").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.buildPath === studioState.buildPath);
+        });
+        document.querySelectorAll("[data-corrosion]").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.corrosion === studioState.corrosionTier);
+        });
+        document.querySelectorAll("[data-voltage]").forEach((btn) => {
+          btn.classList.toggle("active", Number(btn.dataset.voltage) === Number(studioState.availableVoltage));
+        });
       }
 
       function populateControlsFromInput(inp) {
-        el("in-kiln-vol").value = inp.kiln_volume_cu_ft;
-        el("in-peak-temp").value = inp.peak_exit_temp_f;
-        el("in-salt-rate").value = inp.salt_rate_lbs_per_hr;
+        if (!inp) return;
+        el("in-kiln-vol").value = inp.kiln_volume_cu_ft ?? 24;
+        el("in-peak-temp").value = inp.peak_exit_temp_f ?? 2400;
+        const saltRate = Number.isFinite(inp.salt_rate_lbs_per_hr) ? inp.salt_rate_lbs_per_hr : 2.0;
+        el("in-salt-rate").value = saltRate;
+        if (saltRate > 0) studioState.lastSaltRate = saltRate;
         el("in-fuel-type").value = inp.fuel_type || "wood_salt";
-        el("in-excess-air").value = Math.round((inp.excess_air_fraction || 0.30) * 100);
-        el("in-venturi-vel").value = inp.venturi_throat_velocity_m_s;
-        el("in-venturi-lg").value = inp.venturi_lg_ratio;
-        el("in-hcl-target").value = (inp.target_hcl_removal * 100).toFixed(1);
-        el("in-packing-void").value = inp.packing_voidage;
-        el("in-packing-diam").value = mToIn(inp.packing_diameter_m).toFixed(2);
-        el("in-kiln-draft").value = inp.target_kiln_draft_in_wc;
+        el("in-excess-air").value = Math.round((inp.excess_air_fraction ?? 0.30) * 100);
+        el("in-venturi-vel").value = inp.venturi_throat_velocity_m_s ?? 70;
+        el("in-venturi-lg").value = inp.venturi_lg_ratio ?? 0.0012;
+        el("in-hcl-target").value = ((inp.target_hcl_removal ?? 0.99) * 100).toFixed(1);
+        el("in-packing-void").value = inp.packing_voidage ?? 0.90;
+        el("in-packing-diam").value = mToIn(inp.packing_diameter_m || 0.0254).toFixed(2);
+        el("in-kiln-draft").value = inp.target_kiln_draft_in_wc ?? -0.05;
         updateControlLabels();
+      }
+
+      function populateControlsFromProject(proj) {
+        if (!proj) return;
+        studioState.activePresetId = proj.preset_id || "";
+        el("in-studio-name").value = proj.studio_name || "Studio Kiln Scrubber";
+        studioState.firingCone = proj.firing_cone || inferConeFromTemp(proj.input?.peak_exit_temp_f || 2400);
+        el("in-firing-hours").value = proj.firing_duration_hours ?? 10;
+        studioState.vaporGlazeMode = proj.vapor_glaze_mode || "salt";
+        studioState.buildPath = proj.build_path || "cots_no_weld";
+        studioState.corrosionTier = proj.corrosion_tier || "hobby_316l";
+        el("in-snap-cots").checked = proj.snap_to_cots !== false;
+        el("in-include-silencer").checked = proj.include_silencer !== false;
+        el("in-include-plume-diluter").checked = !!proj.include_plume_diluter;
+        el("in-property-line").value = proj.property_line_ft ?? 35;
+        el("in-ambient-winter").value = proj.ambient_winter_f ?? 35;
+        studioState.availableVoltage = proj.available_voltage === 120 ? 120 : 240;
+        el("in-garden-hose").value = proj.garden_hose_gpm ?? 5.0;
+
+        const mergedInput = Object.assign({}, state.defaults || {}, proj.input || {});
+        populateControlsFromInput(mergedInput);
+        syncSegmentedButtons();
+        highlightActivePresetCard();
       }
 
       function readInputFromControls() {
         const base = Object.assign({}, state.defaults || {});
         base.kiln_volume_cu_ft = parseFloat(el("in-kiln-vol").value);
         base.peak_exit_temp_f = parseFloat(el("in-peak-temp").value);
-        base.salt_rate_lbs_per_hr = parseFloat(el("in-salt-rate").value);
+        base.salt_rate_lbs_per_hr = studioState.vaporGlazeMode === "salt"
+          ? parseFloat(el("in-salt-rate").value)
+          : 0.0;
         base.fuel_type = el("in-fuel-type").value;
         base.excess_air_fraction = parseFloat(el("in-excess-air").value) / 100.0;
         base.venturi_throat_velocity_m_s = parseFloat(el("in-venturi-vel").value);
@@ -1486,10 +2521,34 @@
         return base;
       }
 
+      function readProjectFromControls() {
+        return {
+          preset_id: studioState.activePresetId || "custom",
+          studio_name: (el("in-studio-name").value || "").trim() || "Studio Kiln Scrubber",
+          firing_cone: studioState.firingCone || inferConeFromTemp(parseFloat(el("in-peak-temp").value)),
+          firing_duration_hours: parseFloat(el("in-firing-hours").value),
+          vapor_glaze_mode: studioState.vaporGlazeMode,
+          build_path: studioState.buildPath,
+          corrosion_tier: studioState.corrosionTier,
+          snap_to_cots: !!el("in-snap-cots").checked,
+          include_silencer: !!el("in-include-silencer").checked,
+          include_plume_diluter: !!el("in-include-plume-diluter").checked,
+          property_line_ft: parseFloat(el("in-property-line").value),
+          ambient_winter_f: parseFloat(el("in-ambient-winter").value),
+          available_voltage: Number(studioState.availableVoltage) === 120 ? 120 : 240,
+          garden_hose_gpm: parseFloat(el("in-garden-hose").value),
+          input: readInputFromControls(),
+        };
+      }
+
       function updateControlLabels() {
         const vol = parseFloat(el("in-kiln-vol").value);
         const temp = parseFloat(el("in-peak-temp").value);
         const salt = parseFloat(el("in-salt-rate").value);
+        const hrs = parseFloat(el("in-firing-hours").value);
+        const propFt = parseFloat(el("in-property-line").value);
+        const winterF = parseFloat(el("in-ambient-winter").value);
+        const hoseGpm = parseFloat(el("in-garden-hose").value);
         const air = parseFloat(el("in-excess-air").value);
         const vel = parseFloat(el("in-venturi-vel").value);
         const lg = parseFloat(el("in-venturi-lg").value);
@@ -1499,8 +2558,19 @@
         const draft = parseFloat(el("in-kiln-draft").value);
 
         el("val-kiln-vol").textContent = `${vol.toFixed(0)} cu.ft.`;
+        let sizeHint = "Studio standard (18–30 cu.ft. wood/gas kiln)";
+        if (vol <= 8) sizeHint = "Small electric / test / raku kiln (4–8 cu.ft.)";
+        else if (vol <= 17) sizeHint = "Backyard soda / gas / hobby kiln (9–17 cu.ft.)";
+        else if (vol > 36) sizeHint = "Large community / co-op / production kiln (37+ cu.ft.)";
+        el("hint-kiln-size").textContent = sizeHint;
+
         el("val-peak-temp").textContent = `${temp.toFixed(0)} °F`;
         el("val-salt-rate").textContent = `${salt.toFixed(1)} lbs/hr`;
+        el("val-firing-hours").textContent = `${hrs.toFixed(0)} hrs`;
+        el("val-property-line").textContent = `${propFt.toFixed(0)} ft`;
+        el("val-ambient-winter").textContent = `${winterF.toFixed(0)} °F`;
+        el("val-garden-hose").textContent = `${hoseGpm.toFixed(1)} GPM`;
+
         el("val-excess-air").textContent = `${air.toFixed(0)}%`;
         el("val-venturi-vel").textContent = `${vel.toFixed(0)} m/s (${(vel / 0.3048).toFixed(0)} ft/s)`;
         el("val-venturi-lg").textContent = `${lg.toFixed(4)} m³/m³`;
@@ -1510,11 +2580,130 @@
         el("val-kiln-draft").textContent = `${draft.toFixed(2)} inWC`;
       }
 
-      async function requestSize() {
-        const seq = ++state.requestSeq;
-        state.input = readInputFromControls();
-        setStatus("warn", "Sizing...");
+      /* ===================== STUDIO PRESETS & EVALUATION ===================== */
 
+      function highlightActivePresetCard() {
+        document.querySelectorAll(".preset-card").forEach((card) => {
+          card.classList.toggle("active", card.dataset.presetId === studioState.activePresetId);
+        });
+      }
+
+      function renderPresetCards() {
+        const list = el("preset-picker-list");
+        if (!studioState.enabled || !studioState.presets.length) {
+          list.innerHTML = `<p class="preset-fallback-note">Studio Kit presets unavailable — using direct <code>/api/size</code> mode. You can still configure your kiln below or save/load <code>project.json</code>.</p>`;
+          el("sidebar-api-badge").textContent = "Live /api/size";
+          return;
+        }
+        el("sidebar-api-badge").textContent = "Studio Kit";
+        list.innerHTML = studioState.presets.map((p) => {
+          const active = p.id === studioState.activePresetId ? " active" : "";
+          const badge = p.badge ? `<span class="preset-badge">${escapeHtml(p.badge)}</span>` : "";
+          const tag = p.tagline || p.audience || "";
+          return `
+            <button type="button" class="preset-card${active}" data-preset-id="${escapeHtml(p.id)}">
+              <div class="preset-card-top">
+                <span class="preset-card-name">${escapeHtml(p.name || p.id)}</span>
+                ${badge}
+              </div>
+              <div class="preset-card-tagline">${escapeHtml(tag)}</div>
+            </button>
+          `;
+        }).join("");
+
+        list.querySelectorAll(".preset-card").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const found = studioState.presets.find((x) => x.id === btn.dataset.presetId);
+            if (!found || !found.project) return;
+            const proj = Object.assign({}, found.project, { preset_id: found.id });
+            populateControlsFromProject(proj);
+            requestEvaluateOrSize();
+            showToast(`Loaded preset: ${found.name || found.id}`);
+          });
+        });
+      }
+
+      async function fetchStudioPresets() {
+        try {
+          const res = await fetch("/api/studio/presets", { cache: "no-store" });
+          if (!res.ok) {
+            studioState.enabled = false;
+            studioState.presets = [];
+            renderPresetCards();
+            renderGuideDisabledState();
+            return;
+          }
+          const data = await res.json();
+          if (data && data.enabled === false) {
+            studioState.enabled = false;
+            studioState.presets = [];
+          } else if (data && Array.isArray(data.presets)) {
+            studioState.enabled = true;
+            studioState.presets = data.presets;
+          } else {
+            studioState.enabled = false;
+            studioState.presets = [];
+          }
+        } catch (_) {
+          studioState.enabled = false;
+          studioState.presets = [];
+        }
+        renderPresetCards();
+        renderGuideDisabledState();
+      }
+
+      async function requestEvaluateOrSize() {
+        const seq = ++state.requestSeq;
+        studioState.project = readProjectFromControls();
+        state.input = studioState.project.input;
+
+        if (!studioState.enabled) {
+          await requestSizeOnly(seq);
+          return;
+        }
+
+        setStatus("warn", "Evaluating...");
+        try {
+          const res = await fetch("/api/studio/evaluate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(studioState.project),
+          });
+          const data = await res.json();
+          if (seq !== state.requestSeq) return;
+          if (!res.ok) {
+            if (res.status === 503) {
+              studioState.enabled = false;
+              renderPresetCards();
+              renderGuideDisabledState();
+              await requestSizeOnly(seq);
+              return;
+            }
+            setStatus("danger", "Validation Error");
+            setError(data.error || `HTTP ${res.status}`);
+            setGuideError(data.error || `HTTP ${res.status}`);
+            return;
+          }
+          setError("");
+          setGuideError("");
+          studioState.evaluation = data;
+          if (data.design) {
+            state.design = data.design;
+            if (data.design.input) state.input = data.design.input;
+            renderDesign(data.design);
+          }
+          renderStudioReadiness(data);
+          renderBuildGuideTab(data);
+          setStatus("ok", "Studio Ready");
+        } catch (err) {
+          if (seq !== state.requestSeq) return;
+          setStatus("danger", "Offline");
+          setError(`Failed to reach /api/studio/evaluate: ${err.message}`);
+        }
+      }
+
+      async function requestSizeOnly(seq) {
+        setStatus("warn", "Sizing...");
         try {
           const res = await fetch("/api/size", {
             method: "POST",
@@ -1532,6 +2721,7 @@
           state.design = data;
           setStatus("ok", "Live Design");
           renderDesign(data);
+          renderFallbackReadiness(data, studioState.project);
         } catch (err) {
           if (seq !== state.requestSeq) return;
           setStatus("danger", "Offline");
@@ -1539,14 +2729,585 @@
         }
       }
 
-      function scheduleSize() {
+      function scheduleEvaluate() {
         updateControlLabels();
         clearTimeout(state.debounceTimer);
-        state.debounceTimer = setTimeout(requestSize, 110);
+        state.debounceTimer = setTimeout(requestEvaluateOrSize, 120);
       }
 
+      function setReadinessChip(prefix, status, val, sub, tooltip) {
+        const card = el(prefix);
+        if (!card) return;
+        card.className = "readiness-chip " + normalizeStatusClass(status);
+        if (tooltip) card.title = tooltip;
+        el(prefix + "-val").textContent = val;
+        el(prefix + "-sub").textContent = sub;
+      }
+
+      function renderStudioReadiness(ev) {
+        const u = ev.urban || {};
+        const c = ev.cots || {};
+        const overall = u.overall_status || "ok";
+
+        const pill = el("readiness-overall-pill");
+        pill.className = "pill " + statusToPillClass(overall);
+        el("readiness-overall-text").textContent = statusLabel(overall);
+        el("readiness-cost-pill").textContent = `Est. COTS: ${fmtUSD(c.estimated_total_usd)}`;
+
+        const gDot = el("tab-guide-dot");
+        if (gDot) {
+          gDot.className = "tab-dot " + (overall === "ok" ? "live" : overall === "action_needed" ? "tripped" : "warn");
+        }
+
+        const elec = u.electrical || {};
+        setReadinessChip(
+          "readiness-power",
+          elec.status,
+          elec.circuit_label || `${elec.required_voltage || 240}V`,
+          elec.fits_available_voltage === false ? `Needs ${elec.required_voltage || 240}V circuit` : (elec.summary || "Fits studio power"),
+          elec.summary || ""
+        );
+
+        const water = u.water || {};
+        setReadinessChip(
+          "readiness-water",
+          water.status,
+          `${fmt(water.required_gpm, 2)} GPM`,
+          water.total_firing_gallons ? `~${Math.round(water.total_firing_gallons)} gal / firing` : (water.summary || "Garden hose check"),
+          water.summary || ""
+        );
+
+        const noise = u.noise || {};
+        setReadinessChip(
+          "readiness-noise",
+          noise.status,
+          Number.isFinite(noise.property_line_dba) ? `${fmt(noise.property_line_dba, 0)} dBA @ ${fmt(noise.property_line_ft, 0)} ft` : "—",
+          `Limit ${fmt(noise.urban_limit_dba || 60, 0)} dBA${noise.silencer_recommended ? " · Silencer rec." : ""}`,
+          noise.summary || ""
+        );
+
+        const drain = u.drain || {};
+        const lbs = drain.baking_soda_lbs_per_firing;
+        const boxes = drain.baking_soda_4lb_boxes;
+        setReadinessChip(
+          "readiness-soda",
+          drain.status,
+          Number.isFinite(lbs) ? (lbs <= 0.05 ? "0 lbs (No HCl)" : `${fmt(lbs, 1)} lbs (${boxes || 0}×4lb)`) : "—",
+          drain.target_drain_ph ? `Drain pH ${drain.target_drain_ph}` : (drain.summary || "Neutralized brine"),
+          drain.summary || ""
+        );
+
+        const plume = u.plume || {};
+        const plumeVal = plume.visible_plume_risk
+          ? `${String(plume.visible_plume_risk).replace(/^\w/, (ch) => ch.toUpperCase())} mist risk`
+          : (Number.isFinite(plume.exhaust_temp_f) ? `${fmt(plume.exhaust_temp_f, 0)}°F steam` : "—");
+        let plumeSub = plume.min_stack_height_ft ? `Stack >= ${fmt(plume.min_stack_height_ft, 0)} ft` : "Clean water vapor";
+        if (Number.isFinite(plume.dilution_cfm_needed) && plume.dilution_cfm_needed > 0) {
+          plumeSub = `Dilute: ${Math.round(plume.dilution_cfm_needed)} CFM${Number.isFinite(plume.dilution_reheat_kw) && plume.dilution_reheat_kw > 0 ? ` · ${fmt(plume.dilution_reheat_kw, 1)} kW` : ""}`;
+        }
+        const plumeTip = [plume.summary, plume.squirrel_cage_verdict].filter(Boolean).join(" — ");
+        setReadinessChip("readiness-plume", plume.status, plumeVal, plumeSub, plumeTip);
+
+        const corr = u.corrosion || {};
+        const tierLabel = corr.tier === "heavy_c276_frp" ? "C-276 / FRP" : "316L + Buffer";
+        setReadinessChip(
+          "readiness-corrosion",
+          corr.status,
+          tierLabel,
+          corr.inspection_interval || corr.soda_comparison || corr.material_summary || "Check welds",
+          [corr.material_summary, corr.soda_comparison].filter(Boolean).join(" — ")
+        );
+      }
+
+      function renderFallbackReadiness(d, proj) {
+        const b = d.blower || {};
+        const q = d.quench || {};
+        const p = d.packed_bed || {};
+        const hp = b.recommended_motor_hp || 0;
+        const reqV = hp <= 1.0 ? 120 : 240;
+        const availV = proj ? proj.available_voltage : 240;
+        const elecOk = availV >= reqV;
+
+        el("readiness-overall-pill").className = "pill";
+        el("readiness-overall-text").textContent = "Core Sizing Mode";
+        el("readiness-cost-pill").textContent = "Studio Kit: Offline";
+
+        setReadinessChip("readiness-power", elecOk ? "ok" : "action_needed", `${reqV}V (${fmt(hp, 1)} HP)`, elecOk ? "Fits selected power" : `Needs ${reqV}V VFD`);
+        const gpm = q.total_spray_water_gpm || 0;
+        setReadinessChip("readiness-water", gpm <= (proj?.garden_hose_gpm || 5) ? "ok" : "caution", `${fmt(gpm, 2)} GPM`, "Spray demand");
+        setReadinessChip("readiness-noise", "caution", "Silencer advised", "Enable Studio API for dBA");
+        const hrs = proj?.firing_duration_hours || 10;
+        const lbs = (p.nahco3_consumption_kg_hr || 0) * 2.20462 * hrs;
+        const boxes = Math.ceil(lbs / 4);
+        setReadinessChip("readiness-soda", "ok", lbs <= 0.05 ? "0 lbs" : `${fmt(lbs, 1)} lbs (${boxes}×4lb)`, `${hrs} hr firing`);
+        setReadinessChip("readiness-plume", "caution", `${fmt(kToF(q.outlet_temp_k || 360), 0)}°F sat. mist`, "Clean water vapor");
+        setReadinessChip("readiness-corrosion", (proj?.vapor_glaze_mode === "salt") ? "caution" : "ok", proj?.corrosion_tier === "heavy_c276_frp" ? "C-276 / FRP" : "316L SS", proj?.vapor_glaze_mode === "soda" ? "Soda: zero HCl" : "Buffered quench");
+      }
+
+      /* ===================== TAB 2: BUILD & FIRING GUIDE ===================== */
+
+      function renderGuideDisabledState() {
+        const disabled = !studioState.enabled;
+        el("guide-disabled-card").classList.toggle("hidden", !disabled);
+        el("guide-cots-panel").classList.toggle("hidden", disabled);
+        el("guide-urban-section").classList.toggle("hidden", disabled);
+        el("guide-doc-panel").classList.toggle("hidden", disabled);
+        el("btn-download-packet").disabled = disabled;
+      }
+
+      function renderBuildGuideTab(ev) {
+        if (!ev) return;
+        renderGuideDisabledState();
+        const proj = ev.project || studioState.project || {};
+        const cots = ev.cots || {};
+        const urban = ev.urban || {};
+        const overall = urban.overall_status || "ok";
+
+        el("guide-project-title").textContent = `${proj.studio_name || "Studio Kiln Scrubber"} — Build & Firing Kit`;
+        const pathLabel = proj.build_path === "welded_dxf" ? "Welded Sheet Metal (DXF)" : "No-Weld COTS Hardware";
+        const tierLabel = proj.corrosion_tier === "heavy_c276_frp" ? "Heavy Salt (C-276 / FRP)" : "Hobby 316L + Alkaline Buffer";
+        const vol = proj.input?.kiln_volume_cu_ft ?? ev.design?.input?.kiln_volume_cu_ft ?? 24;
+        el("guide-project-sub").textContent = `${fmt(vol, 0)} cu.ft. · ${proj.firing_cone || "Custom"} · ${pathLabel} · ${tierLabel}`;
+
+        const gPill = el("guide-overall-pill");
+        gPill.className = "pill " + statusToPillClass(overall);
+        el("guide-overall-text").textContent = statusLabel(overall);
+        el("guide-cost-pill").textContent = `Est. COTS Hardware: ${fmtUSD(cots.estimated_total_usd)}`;
+
+        const floodVal = Number.isFinite(cots.actual_percent_of_flood)
+          ? cots.actual_percent_of_flood
+          : (ev.design?.packed_bed?.percent_of_flood ?? NaN);
+        const fPill = el("guide-flood-pill");
+        fPill.className = "pill " + (floodVal <= 75 ? "ok" : "danger");
+        fPill.textContent = `Actual % of Flood: ${fmt(floodVal, 1)}% (limit <= 75%)`;
+
+        const snappedBadge = el("guide-cots-snapped-badge");
+        snappedBadge.className = "pill " + (cots.snapped ? "ok" : "warn");
+        snappedBadge.textContent = cots.snapped ? "Snapped to COTS Sizes" : "Exact Calculated Sizes";
+
+        const bom = cots.bom || {};
+        const totalKg = Number.isFinite(bom.total_weight_kg) ? bom.total_weight_kg : NaN;
+        el("guide-cots-weight").textContent = Number.isFinite(totalKg)
+          ? `Est. Weight: ${fmt(totalKg, 1)} kg (${fmt(totalKg * 2.20462, 0)} lbs)`
+          : "Weight: —";
+
+        // Key COTS Component Cards
+        const partSlots = [
+          ["Stage 1 Quench Vessel", cots.quench_vessel],
+          ["Stage 3 Packed Column", cots.packed_column],
+          ["Sump & Neutralizer Tank", cots.sump_tank],
+          ["Spray Nozzles", cots.spray_nozzle],
+          ["Packing Media", cots.packing_media],
+          ["ID Blower + VFD", cots.blower_vfd],
+          ["Acoustic Silencer", cots.silencer],
+          ["Plume Dilution Blower", cots.plume_diluter],
+          ["Sensor & Interlock Kit", cots.sensor_kit],
+        ].filter(([, part]) => part && part.name);
+
+        el("guide-cots-cards").innerHTML = partSlots.map(([role, part]) => {
+          const nom = Number.isFinite(part.nominal_in) && part.nominal_in > 0 ? `${fmt(part.nominal_in, 1)}" nom` : "";
+          const sku = part.sku ? `SKU: ${part.sku}` : "";
+          const src = part.source ? `Source: ${part.source}` : "";
+          const metaLine = [part.material, nom, sku].filter(Boolean).join(" · ");
+          const notesLine = [src, part.notes].filter(Boolean).join(" — ");
+          return `
+            <div class="cots-part-card">
+              <div class="cots-part-role">
+                <span>${escapeHtml(role)}</span>
+                <span style="font-family:var(--mono);color:#e2e8f0">${fmtUSD(part.unit_cost_usd)}</span>
+              </div>
+              <div class="cots-part-name">${escapeHtml(part.name)}</div>
+              <div class="cots-part-meta">${escapeHtml(metaLine)}</div>
+              ${notesLine ? `<div class="cots-part-notes">${escapeHtml(notesLine)}</div>` : ""}
+            </div>
+          `;
+        }).join("");
+
+        // Complete COTS BOM Table
+        const items = Array.isArray(bom.items) ? bom.items : [];
+        if (items.length === 0) {
+          el("guide-bom-tbody").innerHTML = `<tr><td colspan="7" style="color:var(--muted)">No BOM line items returned.</td></tr>`;
+          el("guide-bom-tfoot").innerHTML = "";
+        } else {
+          el("guide-bom-tbody").innerHTML = items.map((it) => `
+            <tr>
+              <td>${escapeHtml(it.category || "—")}</td>
+              <td><strong>${escapeHtml(it.name || "—")}</strong>${it.spec ? `<div style="font-size:11px;color:var(--muted)">${escapeHtml(it.spec)}</div>` : ""}</td>
+              <td style="font-family:var(--mono);font-size:11px">${escapeHtml(it.material || "—")}</td>
+              <td class="num">${fmt(it.quantity, it.quantity % 1 === 0 ? 0 : 1)} ${escapeHtml(it.unit || "")}</td>
+              <td class="num">${fmtUSD(it.unit_cost_usd)}</td>
+              <td class="num">${fmtUSD(it.total_cost_usd)}</td>
+              <td class="num">${fmt(it.weight_kg, 1)}</td>
+            </tr>
+          `).join("");
+
+          const totalCost = Number.isFinite(bom.total_cost_usd) ? bom.total_cost_usd : cots.estimated_total_usd;
+          el("guide-bom-tfoot").innerHTML = `
+            <tr>
+              <td colspan="5">Estimated Total Hardware Cost (${items.length} line items)</td>
+              <td class="num">${fmtUSD(totalCost)}</td>
+              <td class="num">${fmt(totalKg, 1)} kg</td>
+            </tr>
+          `;
+        }
+
+        // Urban Site & Neighbor Readiness Detailed Cards
+        renderUrbanDetailedCards(urban);
+
+        // Build Guide / Operations Checklist Reader
+        renderActiveGuideDocument();
+      }
+
+      function renderUrbanDetailedCards(u) {
+        const elec = u.electrical || {};
+        const water = u.water || {};
+        const noise = u.noise || {};
+        const plume = u.plume || {};
+        const drain = u.drain || {};
+        const corr = u.corrosion || {};
+
+        const plumeExtras = [];
+        if (Number.isFinite(plume.dilution_cfm_needed) && plume.dilution_cfm_needed > 0) {
+          plumeExtras.push(["Dilution Airflow", `${Math.round(plume.dilution_cfm_needed)} CFM`]);
+        }
+        if (Number.isFinite(plume.dilution_reheat_kw) && plume.dilution_reheat_kw > 0) {
+          plumeExtras.push(["Reheat / Waste Heat", `${fmt(plume.dilution_reheat_kw, 1)} kW`]);
+        }
+        if (typeof plume.cold_dilution_works === "boolean") {
+          plumeExtras.push(["Unheated Cold Air", plume.cold_dilution_works ? "Works alone" : "Creates more fog (needs heat/sub-cool)"]);
+        }
+
+        const cards = [
+          {
+            title: "Electrical & VFD Power",
+            status: elec.status,
+            rows: [
+              ["Required Circuit", elec.circuit_label || "—"],
+              ["Voltage / Amps", `${elec.required_voltage || "—"}V · ${fmt(elec.required_amps, 1)} A`],
+              ["Fits Studio Power", elec.fits_available_voltage === false ? "No — Upgrade Circuit" : "Yes"],
+            ],
+            summary: elec.summary,
+          },
+          {
+            title: "Water Supply & Firing Usage",
+            status: water.status,
+            rows: [
+              ["Peak Spray Demand", `${fmt(water.required_gpm, 2)} GPM`],
+              ["Total per Firing", Number.isFinite(water.total_firing_gallons) ? `~${Math.round(water.total_firing_gallons)} gallons` : "—"],
+            ],
+            summary: water.summary,
+          },
+          {
+            title: "Neighbor Noise & Silencer",
+            status: noise.status,
+            rows: [
+              ["At Property Line", `${fmt(noise.property_line_dba, 1)} dBA @ ${fmt(noise.property_line_ft, 0)} ft`],
+              ["Urban Night Limit", `${fmt(noise.urban_limit_dba || 60, 0)} dBA`],
+              ["Bare / Silenced @ 3 ft", `${fmt(noise.bare_dba_3ft, 0)} / ${fmt(noise.silenced_dba_3ft, 0)} dBA`],
+            ],
+            summary: noise.summary,
+          },
+          {
+            title: "Winter Steam Plume & Dilution",
+            status: plume.status,
+            rows: [
+              ["Exhaust / Dew Point", `${fmt(plume.exhaust_temp_f, 1)}°F / ${fmt(plume.dew_point_f, 1)}°F`],
+              ["Visible Mist Risk", plume.visible_plume_risk || "—"],
+              ["Min Stack Height", Number.isFinite(plume.min_stack_height_ft) ? `${fmt(plume.min_stack_height_ft, 0)} ft` : "—"],
+              ...plumeExtras,
+            ],
+            summary: plume.summary,
+            note: plume.squirrel_cage_verdict ? `Squirrel-Cage Diluter Verdict: ${plume.squirrel_cage_verdict}` : "",
+          },
+          {
+            title: "Baking Soda & Neutralized Drain",
+            status: drain.status,
+            rows: [
+              ["Baking Soda / Firing", Number.isFinite(drain.baking_soda_lbs_per_firing) ? `${fmt(drain.baking_soda_lbs_per_firing, 1)} lbs` : "—"],
+              ["Grocery 4-lb Boxes", Number.isFinite(drain.baking_soda_4lb_boxes) ? `${drain.baking_soda_4lb_boxes} box(es)` : "—"],
+              ["Target Drain pH", drain.target_drain_ph || "6.5–8.5"],
+            ],
+            summary: drain.summary,
+          },
+          {
+            title: "Corrosion & Soda vs. Salt",
+            status: corr.status,
+            rows: [
+              ["Selected Tier", corr.tier === "heavy_c276_frp" ? "Heavy Salt (C-276 / FRP)" : "Hobby 316L + Alkaline Buffer"],
+              ["Inspection Cadence", corr.inspection_interval || "—"],
+            ],
+            summary: corr.material_summary,
+            note: corr.soda_comparison || "",
+          },
+        ];
+
+        el("guide-urban-grid").innerHTML = cards.map((card) => `
+          <div class="urban-card ${normalizeStatusClass(card.status)}">
+            <div class="urban-card-head">
+              <span class="urban-card-title">${escapeHtml(card.title)}</span>
+              <span class="pill ${statusToPillClass(card.status)}"><span class="dot"></span>${escapeHtml(statusLabel(card.status))}</span>
+            </div>
+            <div class="kv-list">${kvHtml(card.rows)}</div>
+            ${card.summary ? `<p class="urban-card-summary">${escapeHtml(card.summary)}</p>` : ""}
+            ${card.note ? `<div class="urban-card-note">${escapeHtml(card.note)}</div>` : ""}
+          </div>
+        `).join("");
+      }
+
+      /* Safe Lightweight Markdown -> HTML Renderer (Zero XSS: escapes all HTML first) */
+      function formatInlineMarkdown(escapedLine) {
+        let s = escapedLine;
+        s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+        s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+        s = s.replace(/(^|[^*])\*([^*]+)\*(?!\*)/g, "$1<em>$2</em>");
+        return s;
+      }
+
+      function renderSafeMarkdown(rawMd) {
+        const lines = String(rawMd || "").replace(/\r\n/g, "\n").split("\n");
+        let html = "";
+        let inCode = false;
+        let inUl = false;
+        let inOl = false;
+        let inTable = false;
+
+        const closeLists = () => {
+          if (inUl) { html += "</ul>"; inUl = false; }
+          if (inOl) { html += "</ol>"; inOl = false; }
+        };
+        const closeTable = () => {
+          if (inTable) { html += "</tbody></table>"; inTable = false; }
+        };
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          const trimmed = line.trim();
+
+          if (trimmed.startsWith("```")) {
+            closeLists();
+            closeTable();
+            if (!inCode) {
+              inCode = true;
+              html += "<pre><code>";
+            } else {
+              inCode = false;
+              html += "</code></pre>";
+            }
+            continue;
+          }
+          if (inCode) {
+            html += escapeHtml(line) + "\n";
+            continue;
+          }
+
+          if (trimmed === "") {
+            closeLists();
+            closeTable();
+            continue;
+          }
+
+          // Markdown table detection
+          if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+            closeLists();
+            const cells = trimmed.slice(1, -1).split("|").map((c) => c.trim());
+            const nextTrim = (lines[i + 1] || "").trim();
+            if (!inTable && /^\|[\s:|-]+\|$/.test(nextTrim)) {
+              inTable = true;
+              html += "<table><thead><tr>" + cells.map((c) => `<th>${formatInlineMarkdown(escapeHtml(c))}</th>`).join("") + "</tr></thead><tbody>";
+              i++; // skip separator row
+              continue;
+            }
+            if (inTable) {
+              html += "<tr>" + cells.map((c) => `<td>${formatInlineMarkdown(escapeHtml(c))}</td>`).join("") + "</tr>";
+              continue;
+            }
+          } else {
+            closeTable();
+          }
+
+          // Horizontal rule
+          if (/^([-*_]){3,}$/.test(trimmed)) {
+            closeLists();
+            html += "<hr />";
+            continue;
+          }
+
+          // Headings
+          const hMatch = trimmed.match(/^(#{1,4})\s+(.*)$/);
+          if (hMatch) {
+            closeLists();
+            const lvl = hMatch[1].length;
+            html += `<h${lvl}>${formatInlineMarkdown(escapeHtml(hMatch[2]))}</h${lvl}>`;
+            continue;
+          }
+
+          // Blockquote
+          if (trimmed.startsWith(">")) {
+            closeLists();
+            html += `<blockquote>${formatInlineMarkdown(escapeHtml(trimmed.replace(/^>\s?/, "")))}</blockquote>`;
+            continue;
+          }
+
+          // Task checklist item: - [ ] or - [x]
+          const taskMatch = trimmed.match(/^[-*]\s+\[([ xX])\]\s+(.*)$/);
+          if (taskMatch) {
+            if (inOl) { html += "</ol>"; inOl = false; }
+            if (!inUl) { html += "<ul>"; inUl = true; }
+            const checked = taskMatch[1].toLowerCase() === "x" ? " checked" : "";
+            html += `<li class="md-task"><input type="checkbox"${checked} /><span>${formatInlineMarkdown(escapeHtml(taskMatch[2]))}</span></li>`;
+            continue;
+          }
+
+          // Unordered list
+          const ulMatch = trimmed.match(/^[-*]\s+(.*)$/);
+          if (ulMatch) {
+            if (inOl) { html += "</ol>"; inOl = false; }
+            if (!inUl) { html += "<ul>"; inUl = true; }
+            html += `<li>${formatInlineMarkdown(escapeHtml(ulMatch[1]))}</li>`;
+            continue;
+          }
+
+          // Ordered list
+          const olMatch = trimmed.match(/^\d+\.\s+(.*)$/);
+          if (olMatch) {
+            if (inUl) { html += "</ul>"; inUl = false; }
+            if (!inOl) { html += "<ol>"; inOl = true; }
+            html += `<li>${formatInlineMarkdown(escapeHtml(olMatch[1]))}</li>`;
+            continue;
+          }
+
+          closeLists();
+          html += `<p>${formatInlineMarkdown(escapeHtml(trimmed))}</p>`;
+        }
+
+        closeLists();
+        closeTable();
+        if (inCode) html += "</code></pre>";
+        return html;
+      }
+
+      function renderActiveGuideDocument() {
+        const container = el("guide-doc-content");
+        if (!container) return;
+        const ev = studioState.evaluation;
+        if (!ev) {
+          container.innerHTML = `<p style="color:var(--muted)">Waiting for studio evaluation...</p>`;
+          return;
+        }
+        const md = studioState.activeDoc === "ops"
+          ? (ev.operations_checklist_md || "# Firing-Day Checklist\n\nNo checklist returned.")
+          : (ev.build_guide_md || "# Step-by-Step Build Guide\n\nNo guide returned.");
+        container.innerHTML = renderSafeMarkdown(md);
+      }
+
+      function getCurrentMarkdownText() {
+        const ev = studioState.evaluation;
+        if (!ev) return "";
+        return studioState.activeDoc === "ops"
+          ? (ev.operations_checklist_md || "")
+          : (ev.build_guide_md || "");
+      }
+
+      async function handleDownloadBuildPacket() {
+        if (!studioState.enabled) {
+          showToast("Studio backend is not enabled");
+          return;
+        }
+        const btn = el("btn-download-packet");
+        const prevText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Building Packet (.zip)...";
+        try {
+          const proj = readProjectFromControls();
+          const res = await fetch("/api/studio/packet", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(proj),
+          });
+          if (!res.ok) {
+            let msg = `Packet download failed (HTTP ${res.status})`;
+            try {
+              const j = await res.json();
+              if (j.error) msg = j.error;
+            } catch (_) {}
+            setGuideError(msg);
+            showToast(msg);
+            return;
+          }
+          setGuideError("");
+          const blob = await res.blob();
+          const cd = res.headers.get("Content-Disposition") || "";
+          const match = cd.match(/filename="([^"]+)"/);
+          const filename = match ? match[1] : `kilnscrub-${proj.preset_id || "studio"}-packet.zip`;
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          showToast(`Downloaded ${filename} (${(blob.size / 1024).toFixed(1)} KB)`);
+        } catch (err) {
+          setGuideError(`Packet download error: ${err.message}`);
+        } finally {
+          btn.disabled = !studioState.enabled;
+          btn.textContent = prevText;
+        }
+      }
+
+      function handleSaveProjectJSON() {
+        const proj = readProjectFromControls();
+        const slug = String(proj.studio_name || proj.preset_id || "kilnscrub")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "") || "kilnscrub";
+        const filename = `${slug}-project.json`;
+        const blob = new Blob([JSON.stringify(proj, null, 2) + "\n"], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        showToast(`Saved ${filename}`);
+      }
+
+      function handleLoadProjectFile(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const parsed = JSON.parse(String(reader.result || ""));
+            if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+              throw new Error("Expected a JSON object");
+            }
+            // Accept either full StudioProject or raw DesignInput JSON gracefully
+            if (parsed.input && typeof parsed.input === "object") {
+              populateControlsFromProject(parsed);
+            } else if (Number.isFinite(parsed.kiln_volume_cu_ft)) {
+              const merged = readProjectFromControls();
+              merged.input = Object.assign({}, state.defaults || {}, parsed);
+              populateControlsFromProject(merged);
+            } else {
+              populateControlsFromProject(parsed);
+            }
+            requestEvaluateOrSize();
+            showToast(`Loaded project from ${file.name}`);
+          } catch (err) {
+            setError(`Invalid project.json: ${err.message}`);
+            showToast(`Could not load project.json: ${err.message}`);
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      /* ===================== CAD EXPORTS & DESIGN RENDERING ===================== */
+
       async function handleExport(format, btn) {
-        if (!state.input) state.input = readInputFromControls();
+        const exportInput = (state.design && state.design.input) || state.input || readInputFromControls();
         const prevText = btn.textContent;
         btn.disabled = true;
         btn.textContent = "Exporting...";
@@ -1554,7 +3315,7 @@
           const res = await fetch(`/api/export?format=${encodeURIComponent(format)}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(state.input),
+            body: JSON.stringify(exportInput),
           });
           if (!res.ok) {
             let msg = `Export failed (HTTP ${res.status})`;
@@ -1794,7 +3555,6 @@
 
         let out = `<rect x="${mL}" y="${mT}" width="${pW}" height="${pH}" fill="#0d131c" stroke="#243246" rx="3"/>`;
 
-        // Horizontal gridlines
         for (const pct of [0, 25, 50, 75, 100]) {
           const y = yMap(pct);
           const dash = pct === 50 ? 'stroke-dasharray="4 3" stroke="#64748b"' : 'stroke="#1c2738"';
@@ -1802,7 +3562,6 @@
           out += `<text x="${mL - 6}" y="${y + 3}" text-anchor="end" fill="#8ea0b8" font-size="10" font-family="monospace">${pct}%</text>`;
         }
 
-        // Vertical log gridlines
         for (const tick of [0.1, 0.2, 0.5, 1.0, 2.0]) {
           const x = xMap(tick);
           out += `<line x1="${x}" y1="${mT}" x2="${x}" y2="${mT + pH}" stroke="#1c2738" stroke-width="1"/>`;
@@ -1811,7 +3570,6 @@
         out += `<text x="${mL + pW / 2}" y="${H - 4}" text-anchor="middle" fill="#94a3b8" font-size="10">Particle Diameter (µm, log scale)</text>`;
 
         if (pts.length > 0) {
-          // CRITICAL: EfficiencyPoint.*Efficiency is 0..1 -> multiply by 100 for % display
           const ashPath = pts.map((pt, i) => `${i === 0 ? "M" : "L"}${xMap(pt.particle_diameter_um).toFixed(1)},${yMap(pt.wood_ash_efficiency * 100).toFixed(1)}`).join(" ");
           const naclPath = pts.map((pt, i) => `${i === 0 ? "M" : "L"}${xMap(pt.particle_diameter_um).toFixed(1)},${yMap(pt.nacl_fume_efficiency * 100).toFixed(1)}`).join(" ");
 
@@ -1824,7 +3582,6 @@
             out += `<circle cx="${x.toFixed(1)}" cy="${yMap(pt.nacl_fume_efficiency * 100).toFixed(1)}" r="2.4" fill="#06b6d4"/>`;
           }
 
-          // d50 markers
           const d50NaCl = d.venturi.cut_diameter_d50_um;
           if (d50NaCl >= 0.1 && d50NaCl <= 2.0) {
             const x50 = xMap(d50NaCl);
@@ -1882,7 +3639,6 @@
           out += `<path d="${sysPath}" fill="none" stroke="#f97316" stroke-width="2.1" stroke-dasharray="5 3"/>`;
         }
 
-        // Operating point crosshair & label
         const ox = xMap(op.flow_acfm);
         const oy = yMap(op.pressure_in_wc);
         out += `<line x1="${mL}" y1="${oy.toFixed(1)}" x2="${ox.toFixed(1)}" y2="${oy.toFixed(1)}" stroke="#38bdf8" stroke-dasharray="2 2" stroke-width="1"/>`;
@@ -1957,7 +3713,6 @@
         const ctx = canvas.getContext("2d");
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        // Background engineering grid
         ctx.fillStyle = "#0d1420";
         ctx.fillRect(0, 0, w, h);
         ctx.strokeStyle = "rgba(42, 60, 86, 0.28)";
@@ -1973,7 +3728,7 @@
         if (!d) {
           ctx.fillStyle = "#8ea0b8";
           ctx.font = "13px monospace";
-          ctx.fillText("Loading scrubber geometry from /api/size...", 24, h / 2);
+          ctx.fillText("Loading scrubber geometry...", 24, h / 2);
           return;
         }
 
@@ -1996,12 +3751,10 @@
 
         const hi = (stage) => state.selectedStage === "all" || state.selectedStage === stage;
 
-        // Ground line
         ctx.strokeStyle = "#334663";
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(24, floorY); ctx.lineTo(w - 24, floorY); ctx.stroke();
 
-        // Inlet flue duct from kiln
         ctx.strokeStyle = "#f97316";
         ctx.lineWidth = 10;
         ctx.beginPath();
@@ -2009,7 +3762,6 @@
         ctx.lineTo(qX, floorY - qH + 26);
         ctx.stroke();
 
-        // Stage 1: Quench Tower
         ctx.save();
         ctx.globalAlpha = hi("quench") ? 1.0 : 0.35;
         ctx.fillStyle = state.cutaway ? "rgba(249, 115, 22, 0.12)" : "#7c8ea4";
@@ -2018,7 +3770,6 @@
         ctx.fillRect(qX, floorY - qH, qW, qH);
         ctx.strokeRect(qX, floorY - qH, qW, qH);
         if (state.cutaway) {
-          // Spray nozzle header & mist cone
           ctx.strokeStyle = "#38bdf8";
           ctx.lineWidth = 2;
           ctx.beginPath();
@@ -2041,7 +3792,6 @@
         ctx.fillText(`Ø${fmt(mToMm(q.tower_diameter_m), 0)}mm`, qX, floorY + 29);
         ctx.restore();
 
-        // Stage 2: Wet Venturi (Horizontal converging -> throat -> diverging)
         const vY = floorY - 46;
         const inR = Math.max(14, (v.inlet_diameter_m || 0.2) * scale * 0.45);
         const thR = Math.max(6, (v.throat_diameter_m || 0.08) * scale * 0.45);
@@ -2050,7 +3800,6 @@
 
         ctx.save();
         ctx.globalAlpha = hi("venturi") ? 1.0 : 0.35;
-        // Connect Quench bottom to Venturi
         ctx.strokeStyle = "#94a3b8";
         ctx.lineWidth = 8;
         ctx.beginPath();
@@ -2086,7 +3835,6 @@
         ctx.fillText(`Øt=${fmt(mToMm(v.throat_diameter_m), 0)}mm`, vX + 6, floorY + 29);
         ctx.restore();
 
-        // Connect Venturi to Packed Bed lower plenum
         ctx.strokeStyle = "#06b6d4";
         ctx.lineWidth = 8;
         ctx.beginPath();
@@ -2094,7 +3842,6 @@
         ctx.lineTo(pX, vY);
         ctx.stroke();
 
-        // Stage 3: Packed-Bed Absorber
         ctx.save();
         ctx.globalAlpha = hi("packed") ? 1.0 : 0.35;
         ctx.fillStyle = state.cutaway ? "rgba(6, 182, 212, 0.11)" : "#286e8a";
@@ -2104,12 +3851,10 @@
         ctx.strokeRect(pX, floorY - pH, pW, pH);
 
         if (state.cutaway) {
-          // Sump
           const sumpH = Math.max(22, pH * 0.16);
           ctx.fillStyle = "rgba(14, 165, 233, 0.32)";
           ctx.fillRect(pX + 2, floorY - sumpH, pW - 4, sumpH - 2);
 
-          // Packing Bed Layer
           const packRatio = Math.min(0.55, Math.max(0.24, (p.packing_height_m || 1.0) / Math.max(1.0, p.column_height_m || 2.2)));
           const packH = pH * packRatio;
           const packTop = floorY - sumpH - 22 - packH;
@@ -2121,7 +3866,6 @@
             ctx.beginPath(); ctx.moveTo(pX + 4, yy); ctx.lineTo(pX + pW - 4, yy + 4); ctx.stroke();
           }
 
-          // Chevron Demister Pad
           const demH = Math.max(14, pH * 0.08);
           const demTop = floorY - pH + 18;
           ctx.fillStyle = "rgba(125, 211, 252, 0.3)";
@@ -2138,7 +3882,6 @@
         ctx.fillText(`Ø${fmt(mToMm(p.column_diameter_m), 0)}×${fmt(p.column_height_m, 2)}m`, pX - 4, floorY + 29);
         ctx.restore();
 
-        // Top duct from Packed Bed to ID Blower
         const bY = floorY - bR - 14;
         ctx.strokeStyle = "#10b981";
         ctx.lineWidth = 7;
@@ -2149,7 +3892,6 @@
         ctx.lineTo(bX, bY);
         ctx.stroke();
 
-        // Stage 4: ID Centrifugal Blower
         ctx.save();
         ctx.globalAlpha = hi("blower") ? 1.0 : 0.35;
         ctx.fillStyle = state.cutaway ? "rgba(16, 185, 129, 0.16)" : "#15803d";
@@ -2159,7 +3901,6 @@
         ctx.arc(bX, bY, bR, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        // Discharge stack
         ctx.fillRect(bX + bR * 0.35, bY - bR * 2.1, bR * 0.65, bR * 1.4);
         ctx.strokeRect(bX + bR * 0.35, bY - bR * 2.1, bR * 0.65, bR * 1.4);
 
@@ -2183,7 +3924,6 @@
         ctx.fillText(`${fmt(b.recommended_motor_hp, 1)} HP`, bX - 20, floorY + 29);
         ctx.restore();
 
-        // Animated flow particles along gas train
         if (state.particles) {
           const dt = p2d.lastTime ? Math.min(0.05, (ts - p2d.lastTime) / 1000) : 0.016;
           p2d.lastTime = ts;
@@ -2215,7 +3955,7 @@
       }
 
       function anim2DLoop(ts) {
-        if (state.viewMode === "2d") {
+        if (state.viewMode === "2d" && ctrlState.activeTab === "design") {
           draw2DSchematic(ts);
         }
         requestAnimationFrame(anim2DLoop);
@@ -2255,24 +3995,147 @@
 
       function bindUI() {
         const inputIds = [
-          "in-kiln-vol", "in-peak-temp", "in-salt-rate", "in-fuel-type",
+          "in-studio-name", "in-kiln-vol", "in-peak-temp", "in-salt-rate", "in-fuel-type",
+          "in-firing-hours", "in-property-line", "in-ambient-winter", "in-garden-hose",
+          "in-snap-cots", "in-include-silencer", "in-include-plume-diluter",
           "in-excess-air", "in-venturi-vel", "in-venturi-lg", "in-hcl-target",
           "in-packing-void", "in-packing-diam", "in-kiln-draft"
         ];
         for (const id of inputIds) {
           const node = el(id);
-          node.addEventListener("input", scheduleSize);
-          node.addEventListener("change", scheduleSize);
+          if (!node) continue;
+          node.addEventListener("input", () => {
+            if (id === "in-peak-temp") {
+              studioState.firingCone = inferConeFromTemp(parseFloat(node.value));
+              syncSegmentedButtons();
+            } else if (id === "in-salt-rate") {
+              const v = parseFloat(node.value);
+              if (v > 0) studioState.lastSaltRate = v;
+            }
+            scheduleEvaluate();
+          });
+          node.addEventListener("change", scheduleEvaluate);
         }
+
+        // Firing Cone quick buttons
+        document.querySelectorAll("[data-cone]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            studioState.firingCone = btn.dataset.cone;
+            el("in-peak-temp").value = btn.dataset.tempF;
+            syncSegmentedButtons();
+            scheduleEvaluate();
+          });
+        });
+
+        // Glaze Vapor Mode buttons
+        document.querySelectorAll("[data-vapor]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const mode = btn.dataset.vapor;
+            studioState.vaporGlazeMode = mode;
+            const fuelSel = el("in-fuel-type");
+            if (mode === "salt") {
+              if (parseFloat(el("in-salt-rate").value) <= 0) {
+                el("in-salt-rate").value = studioState.lastSaltRate > 0 ? studioState.lastSaltRate : 2.0;
+              }
+              if (fuelSel.value === "wood") fuelSel.value = "wood_salt";
+              else if (fuelSel.value === "gas") fuelSel.value = "gas_salt";
+            } else {
+              if (fuelSel.value === "wood_salt") fuelSel.value = "wood";
+              else if (fuelSel.value === "gas_salt") fuelSel.value = "gas";
+            }
+            syncSegmentedButtons();
+            scheduleEvaluate();
+          });
+        });
+
+        // Build Path buttons
+        document.querySelectorAll("[data-build-path]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            studioState.buildPath = btn.dataset.buildPath;
+            syncSegmentedButtons();
+            scheduleEvaluate();
+          });
+        });
+
+        // Corrosion Tier buttons
+        document.querySelectorAll("[data-corrosion]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            studioState.corrosionTier = btn.dataset.corrosion;
+            syncSegmentedButtons();
+            scheduleEvaluate();
+          });
+        });
+
+        // Available Voltage buttons
+        document.querySelectorAll("[data-voltage]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            studioState.availableVoltage = Number(btn.dataset.voltage) === 120 ? 120 : 240;
+            syncSegmentedButtons();
+            scheduleEvaluate();
+          });
+        });
+
+        // Save / Load project.json
+        el("btn-save-project").addEventListener("click", handleSaveProjectJSON);
+        el("btn-guide-save").addEventListener("click", handleSaveProjectJSON);
+        const triggerLoad = () => el("in-load-project").click();
+        el("btn-load-project").addEventListener("click", triggerLoad);
+        el("btn-guide-load").addEventListener("click", triggerLoad);
+        el("in-load-project").addEventListener("change", (ev) => {
+          const file = ev.target.files && ev.target.files[0];
+          if (file) handleLoadProjectFile(file);
+          ev.target.value = "";
+        });
+
+        // Guide tab actions
+        el("btn-jump-guide").addEventListener("click", () => switchTab("guide"));
+        el("btn-download-packet").addEventListener("click", handleDownloadBuildPacket);
+        el("btn-guide-retry").addEventListener("click", async () => {
+          await fetchStudioPresets();
+          await requestEvaluateOrSize();
+        });
+
+        document.querySelectorAll("[data-doc]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            studioState.activeDoc = btn.dataset.doc === "ops" ? "ops" : "build";
+            document.querySelectorAll("[data-doc]").forEach((b) => {
+              const active = b.dataset.doc === studioState.activeDoc;
+              b.classList.toggle("active", active);
+              b.setAttribute("aria-selected", String(active));
+            });
+            renderActiveGuideDocument();
+          });
+        });
+
+        el("btn-copy-md").addEventListener("click", async () => {
+          const text = getCurrentMarkdownText();
+          if (!text) {
+            showToast("Nothing to copy yet");
+            return;
+          }
+          try {
+            await navigator.clipboard.writeText(text);
+            showToast("Copied Markdown to clipboard");
+          } catch (_) {
+            showToast("Clipboard permission unavailable");
+          }
+        });
+
+        el("btn-print-guide").addEventListener("click", () => window.print());
 
         document.querySelectorAll("[data-export]").forEach((btn) => {
           btn.addEventListener("click", () => handleExport(btn.dataset.export, btn));
         });
 
         el("btn-reset").addEventListener("click", () => {
-          if (state.defaults) {
+          const preset = studioState.presets.find((p) => p.id === (studioState.activePresetId || "wood_salt_24")) || studioState.presets[0];
+          if (preset && preset.project) {
+            populateControlsFromProject(Object.assign({}, preset.project, { preset_id: preset.id }));
+            requestEvaluateOrSize();
+            showToast(`Reset to ${preset.name || preset.id}`);
+          } else if (state.defaults) {
             populateControlsFromInput(state.defaults);
-            requestSize();
+            requestEvaluateOrSize();
             showToast("Reset to 24 cu.ft. salt kiln defaults");
           }
         });
@@ -2470,7 +4333,6 @@
         const updatedText = st.updated_at ? new Date(st.updated_at).toLocaleTimeString() : "—";
         el("ctrl-meta-pill").textContent = `Samples: ${ctrlState.sampleCount} · Updated: ${updatedText}`;
 
-        // Safety & Interlock Banner
         const banner = el("ctrl-interlock-banner");
         const titleEl = el("ctrl-interlock-title");
         const detailEl = el("ctrl-interlock-detail");
@@ -2497,7 +4359,6 @@
           if (tabDot) tabDot.className = "tab-dot live";
         }
 
-        // KPI 1: Filtered Draft
         const filtInWC = st.filtered_draft_in_wc;
         const filtPa = st.filtered_draft_pa;
         el("ctrl-kpi-draft").textContent = `${fmt(filtInWC, 3)} inWC`;
@@ -2518,7 +4379,6 @@
           dBadge.textContent = `Deviation (Δ ${fmt(draftErr, 3)}")`;
         }
 
-        // KPI 2: Quench Outlet Temp
         const outF = (Number.isFinite(r.quench_outlet_temp_k) && r.quench_outlet_temp_k > 100) ? kToF(r.quench_outlet_temp_k) : NaN;
         const inF = (Number.isFinite(r.quench_inlet_temp_k) && r.quench_inlet_temp_k > 100) ? kToF(r.quench_inlet_temp_k) : NaN;
         el("ctrl-kpi-temp").textContent = Number.isFinite(outF) ? `${fmt(outF, 1)} °F` : "—";
@@ -2538,7 +4398,6 @@
           tBadge.textContent = `CPVC Safe (< ${fmt(maxTempF, 0)}°F)`;
         }
 
-        // KPI 3: Spray Water Flow
         const flowGPM = r.water_flow_gpm;
         el("ctrl-kpi-flow").textContent = Number.isFinite(flowGPM) ? `${fmt(flowGPM, 2)} GPM` : "—";
         el("ctrl-kpi-flow-sub").textContent = `Floor ${fmt(minFlowGPM, 2)} GPM`;
@@ -2554,7 +4413,6 @@
           flBadge.textContent = "Flow Nominal";
         }
 
-        // KPI 4: Sump pH
         el("ctrl-kpi-ph").textContent = Number.isFinite(phVal) && phVal > 0 ? fmt(phVal, 2) : "—";
         el("ctrl-kpi-ph-sub").textContent = `Band ${fmt(minPH, 1)}–${fmt(maxPH, 1)}`;
         const phBadge = el("ctrl-kpi-ph-badge");
@@ -2572,7 +4430,6 @@
           phBadge.textContent = "In Band";
         }
 
-        // KPI 5: Blower VFD
         const vfdPct = Number.isFinite(cmd.blower_vfd) ? cmd.blower_vfd * 100 : NaN;
         const speedFbPct = Number.isFinite(r.blower_speed_fraction) ? r.blower_speed_fraction * 100 : NaN;
         el("ctrl-kpi-vfd").textContent = Number.isFinite(vfdPct) ? `${fmt(vfdPct, 1)}%` : "—";
@@ -2586,7 +4443,6 @@
           vBadge.textContent = "Draft PID Active";
         }
 
-        // KPI 6: Quench Spray Valve
         const valvePct = Number.isFinite(cmd.quench_spray_valve) ? cmd.quench_spray_valve * 100 : NaN;
         el("ctrl-kpi-valve").textContent = Number.isFinite(valvePct) ? `${fmt(valvePct, 1)}%` : "—";
         el("ctrl-kpi-valve-sub").textContent = isTripped ? "Fail-Safe Full Spray" : "Direct-Acting PID";
@@ -2599,7 +4455,6 @@
           svBadge.textContent = "Quench PID Active";
         }
 
-        // KPI 7: Bypass Damper
         const damperOpen = !!cmd.bypass_damper_open;
         el("ctrl-kpi-damper").textContent = damperOpen ? "OPEN" : "CLOSED";
         el("ctrl-kpi-damper").style.color = damperOpen ? "#fca5a5" : "#86efac";
@@ -2679,7 +4534,6 @@
           out += `<text x="${mL - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end" fill="#8ea0b8" font-size="9.5" font-family="monospace">${val.toFixed(2)}</text>`;
         }
 
-        // Target setpoint dashed line
         const spY = yAt(targetDraft);
         out += `<line x1="${mL}" y1="${spY.toFixed(1)}" x2="${mL + pW}" y2="${spY.toFixed(1)}" stroke="#10b981" stroke-dasharray="5 3" stroke-width="1.4"/>`;
         out += `<text x="${mL + pW - 4}" y="${Math.max(mT + 11, spY - 4).toFixed(1)}" text-anchor="end" fill="#6ee7b7" font-size="9.5" font-family="monospace">SP ${targetDraft.toFixed(2)}"</text>`;
@@ -2725,12 +4579,10 @@
           out += `<text x="${mL - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end" fill="#8ea0b8" font-size="9.5" font-family="monospace">${val.toFixed(0)}°</text>`;
         }
 
-        // Red dashed 210°F CPVC interlock trip line
         const tripY = yAt(maxTempF);
         out += `<line x1="${mL}" y1="${tripY.toFixed(1)}" x2="${mL + pW}" y2="${tripY.toFixed(1)}" stroke="#ef4444" stroke-dasharray="5 3" stroke-width="1.6"/>`;
         out += `<text x="${mL + pW - 4}" y="${Math.max(mT + 11, tripY - 4).toFixed(1)}" text-anchor="end" fill="#fca5a5" font-size="9.5" font-family="monospace">${maxTempF.toFixed(0)}°F CPVC TRIP</text>`;
 
-        // Cyan dashed quench setpoint line
         const spY = yAt(quenchSpF);
         out += `<line x1="${mL}" y1="${spY.toFixed(1)}" x2="${mL + pW}" y2="${spY.toFixed(1)}" stroke="#06b6d4" stroke-dasharray="4 3" stroke-width="1.3"/>`;
         out += `<text x="${mL + 6}" y="${Math.min(mT + pH - 4, spY + 12).toFixed(1)}" text-anchor="start" fill="#67e8f9" font-size="9.5" font-family="monospace">SP ${quenchSpF.toFixed(0)}°F</text>`;
@@ -2971,40 +4823,51 @@
       }
 
       function switchTab(tab) {
-        const target = tab === "control" ? "control" : "design";
+        const target = (tab === "control" || tab === "guide") ? tab : "design";
         ctrlState.activeTab = target;
 
-        const designBtn = el("tab-design");
-        const controlBtn = el("tab-control");
-        const designView = el("view-design");
-        const controlView = el("view-control");
-        const designStatus = el("design-status-group");
-        const designExport = el("design-export-bar");
+        const tabs = [
+          { key: "design", btn: el("tab-design"), view: el("view-design") },
+          { key: "guide", btn: el("tab-guide"), view: el("view-guide") },
+          { key: "control", btn: el("tab-control"), view: el("view-control") },
+        ];
+        for (const t of tabs) {
+          const active = t.key === target;
+          if (t.btn) {
+            t.btn.classList.toggle("active", active);
+            t.btn.setAttribute("aria-selected", String(active));
+          }
+          if (t.view) {
+            t.view.classList.toggle("hidden", !active);
+          }
+        }
 
         const isDesign = target === "design";
-        designBtn.classList.toggle("active", isDesign);
-        designBtn.setAttribute("aria-selected", String(isDesign));
-        controlBtn.classList.toggle("active", !isDesign);
-        controlBtn.setAttribute("aria-selected", String(!isDesign));
-
-        designView.classList.toggle("hidden", !isDesign);
-        controlView.classList.toggle("hidden", isDesign);
+        const designStatus = el("design-status-group");
+        const designExport = el("design-export-bar");
         if (designStatus) designStatus.classList.toggle("hidden", !isDesign);
         if (designExport) designExport.classList.toggle("hidden", !isDesign);
 
-        if (isDesign) {
+        if (target === "design") {
           if (window.__kiln3D && state.threeReady) {
             window.__kiln3D.resize();
           }
           draw2DSchematic();
-        } else {
+        } else if (target === "guide") {
+          renderGuideDisabledState();
+          if (studioState.enabled && studioState.evaluation) {
+            renderBuildGuideTab(studioState.evaluation);
+          } else if (studioState.enabled) {
+            requestEvaluateOrSize();
+          }
+        } else if (target === "control") {
           renderControlUI();
           fetchControlStatus(true);
         }
       }
 
       function bindControlUI() {
-        document.querySelectorAll(".tab-btn").forEach((btn) => {
+        document.querySelectorAll(".tab-btn[data-tab]").forEach((btn) => {
           btn.addEventListener("click", () => switchTab(btn.dataset.tab));
         });
 
@@ -3045,6 +4908,8 @@
       async function boot() {
         bindUI();
         bindControlUI();
+        syncSegmentedButtons();
+        updateControlLabels();
         updateCtrlSetpointLabels();
         requestAnimationFrame(anim2DLoop);
 
@@ -3057,17 +4922,31 @@
         } catch (err) {
           setError(`Failed to load /api/defaults: ${err.message}`);
         }
-        await requestSize();
+
+        await fetchStudioPresets();
+        if (studioState.enabled && studioState.presets.length > 0) {
+          const defPreset = studioState.presets.find((p) => p.id === "wood_salt_24") || studioState.presets[0];
+          if (defPreset && defPreset.project) {
+            populateControlsFromProject(Object.assign({}, defPreset.project, { preset_id: defPreset.id }));
+          }
+        }
+
+        await requestEvaluateOrSize();
         await fetchControlStatus(false);
+
         if (window.location.hash === "#control") {
           switchTab("control");
+        } else if (window.location.hash === "#guide") {
+          switchTab("guide");
         }
       }
 
       window.__kilnState = state;
+      window.__kilnStudioState = studioState;
       window.__kilnCtrlState = ctrlState;
       window.__kilnSwitchTab = switchTab;
       window.__kilnSetViewMode = setViewMode;
+      window.__kilnRenderSafeMarkdown = renderSafeMarkdown;
       boot();
     })();
   </script>
@@ -3136,7 +5015,6 @@
       controls.dampingFactor = 0.07;
       controls.target.set(0.2, 1.0, 0);
 
-      // Studio lighting
       scene.add(new THREE.AmbientLight(0xbcd4f0, 0.7));
       const hemi = new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 0.65);
       scene.add(hemi);
@@ -3217,11 +5095,9 @@
         const matDark = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.55, roughness: 0.45 });
         const matSpray = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.28, side: THREE.DoubleSide });
 
-        // Clamp geometry dimensions to realistic visual bounds while staying faithfully parametric
         const clamp = (val, lo, hi) => Math.max(lo, Math.min(hi, val || lo));
         const ductR = clamp((env.duct_diameter_m || 0.2) * 0.5, 0.06, 0.22);
 
-        // Stage 1: Quench Tower (316L SS)
         const qR = clamp((q.tower_diameter_m || 0.45) * 0.5, 0.14, 0.75);
         const qH = clamp(q.tower_height_m || 1.35, 0.7, 3.2);
         const qX = -1.35;
@@ -3231,7 +5107,6 @@
         qShell.position.set(qX, qH * 0.5, 0);
         qGroup.add(qShell);
 
-        // Hot kiln inlet collar + duct
         const inletY = qH - ductR * 1.4;
         const inletLen = 0.55;
         const inletDuct = new THREE.Mesh(new THREE.CylinderGeometry(ductR, ductR, inletLen, 20), matHot);
@@ -3239,7 +5114,6 @@
         inletDuct.position.set(qX - qR - inletLen * 0.45, inletY, 0);
         qGroup.add(inletDuct);
 
-        // Quench flanges + top cap
         const qTop = new THREE.Mesh(new THREE.CylinderGeometry(qR * 1.07, qR * 1.07, 0.04, 32), matSS);
         qTop.position.set(qX, qH + 0.02, 0);
         qGroup.add(qTop);
@@ -3247,7 +5121,6 @@
         qBase.position.set(qX, 0.025, 0);
         qGroup.add(qBase);
 
-        // Internal spray lance & water mist cone
         const lance = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.28, 12), matDark);
         lance.position.set(qX, qH - 0.14, 0);
         qGroup.add(lance);
@@ -3256,7 +5129,6 @@
         qGroup.add(mistCone);
         assemblyGroup.add(qGroup);
 
-        // Stage 2: Wet Venturi (316L SS)
         const vInR = clamp((v.inlet_diameter_m || 0.22) * 0.5, 0.07, 0.35);
         const vThR = clamp((v.throat_diameter_m || 0.09) * 0.5, 0.032, 0.22);
         const vOutR = clamp((v.outlet_diameter_m || 0.24) * 0.5, 0.07, 0.38);
@@ -3266,25 +5138,21 @@
         const vY = Math.max(0.32, vOutR + 0.16);
         const vStartX = qX + qR + 0.18;
 
-        // Connector from Quench to Venturi
         const conn1 = new THREE.Mesh(new THREE.CylinderGeometry(vInR, vInR, 0.22, 20), matSS);
         conn1.rotation.z = Math.PI / 2;
         conn1.position.set(qX + qR + 0.09, vY, 0);
         assemblyGroup.add(conn1);
 
-        // Converging section (along +X)
         const vConv = new THREE.Mesh(new THREE.CylinderGeometry(vThR, vInR, vConvL, 28, 1, cut, thetaStart, thetaLen), matSS);
         vConv.rotation.z = -Math.PI / 2;
         vConv.position.set(vStartX + vConvL * 0.5, vY, 0);
         assemblyGroup.add(vConv);
 
-        // Throat section
         const vTh = new THREE.Mesh(new THREE.CylinderGeometry(vThR, vThR, vThL, 28, 1, cut, thetaStart, thetaLen), matHot);
         vTh.rotation.z = -Math.PI / 2;
         vTh.position.set(vStartX + vConvL + vThL * 0.5, vY, 0);
         assemblyGroup.add(vTh);
 
-        // Diverging diffuser
         const vDiv = new THREE.Mesh(new THREE.CylinderGeometry(vOutR, vThR, vDivL, 28, 1, cut, thetaStart, thetaLen), matSS);
         vDiv.rotation.z = -Math.PI / 2;
         vDiv.position.set(vStartX + vConvL + vThL + vDivL * 0.5, vY, 0);
@@ -3292,7 +5160,6 @@
 
         const vEndX = vStartX + vConvL + vThL + vDivL;
 
-        // Stage 3: Packed-Bed Absorber (CPVC/PP)
         const pR = clamp((p.column_diameter_m || 0.55) * 0.5, 0.18, 0.9);
         const pH = clamp(p.column_height_m || 2.3, 1.2, 4.4);
         const packH = clamp(p.packing_height_m || 1.0, 0.35, pH * 0.58);
@@ -3308,32 +5175,27 @@
         pShell.position.set(pX, pH * 0.5, 0);
         assemblyGroup.add(pShell);
 
-        // Sump liquid reservoir
         const sumpH = Math.min(0.45, Math.max(0.22, pH * 0.15));
         const sumpMesh = new THREE.Mesh(new THREE.CylinderGeometry(pR * 0.94, pR * 0.94, sumpH, 28), matSump);
         sumpMesh.position.set(pX, sumpH * 0.5 + 0.02, 0);
         assemblyGroup.add(sumpMesh);
 
-        // Support plate & random packing bed
         const packBaseY = Math.max(sumpH + vOutR + 0.14, pH * 0.28);
         const clampedPackH = Math.min(packH, pH - packBaseY - demH - 0.28);
         const packMesh = new THREE.Mesh(new THREE.CylinderGeometry(pR * 0.92, pR * 0.92, Math.max(0.22, clampedPackH), 28), matPacking);
         packMesh.position.set(pX, packBaseY + Math.max(0.22, clampedPackH) * 0.5, 0);
         assemblyGroup.add(packMesh);
 
-        // Liquid distributor ring
         const distRing = new THREE.Mesh(new THREE.TorusGeometry(pR * 0.65, 0.02, 10, 24), matDark);
         distRing.rotation.x = Math.PI / 2;
         distRing.position.set(pX, packBaseY + Math.max(0.22, clampedPackH) + 0.10, 0);
         assemblyGroup.add(distRing);
 
-        // Chevron Demister Pad
         const demY = pH - demH * 0.5 - 0.18;
         const demMesh = new THREE.Mesh(new THREE.CylinderGeometry(pR * 0.93, pR * 0.93, demH, 28), matDemister);
         demMesh.position.set(pX, demY, 0);
         assemblyGroup.add(demMesh);
 
-        // Top conical cap on Packed Bed
         const topConeH = 0.26;
         const pCap = new THREE.Mesh(new THREE.ConeGeometry(pR, topConeH, 32, 1, false), matCPVC);
         pCap.position.set(pX, pH + topConeH * 0.5, 0);
@@ -3342,12 +5204,10 @@
         pBase.position.set(pX, 0.025, 0);
         assemblyGroup.add(pBase);
 
-        // Stage 4: ID Centrifugal Blower
         const wheelR = clamp((b.wheel_diameter_m || 0.36) * 0.65, 0.16, 0.45);
         const bX = pX + pR + wheelR + 0.48;
         const bY = wheelR + 0.26;
 
-        // Overhead outlet duct from Stage 3 top to Stage 4 blower suction
         const topDuctY = pH + topConeH + 0.12;
         const vertUp = new THREE.Mesh(new THREE.CylinderGeometry(ductR, ductR, 0.22, 20), matCPVC);
         vertUp.position.set(pX, pH + topConeH + 0.02, 0);
@@ -3364,13 +5224,11 @@
         downDuct.position.set(bX, bY + downLen * 0.5, 0);
         assemblyGroup.add(downDuct);
 
-        // Blower volute housing
         const volute = new THREE.Mesh(new THREE.CylinderGeometry(wheelR, wheelR, wheelR * 0.72, 32, 1, cut, thetaStart, thetaLen), matBlower);
         volute.rotation.x = Math.PI / 2;
         volute.position.set(bX, bY, 0);
         assemblyGroup.add(volute);
 
-        // Spinning impeller inside blower
         const impGroup = new THREE.Group();
         impGroup.position.set(bX, bY, 0);
         const hub = new THREE.Mesh(new THREE.CylinderGeometry(wheelR * 0.2, wheelR * 0.2, wheelR * 0.45, 16), matDark);
@@ -3386,7 +5244,6 @@
         assemblyGroup.add(impGroup);
         impellerMesh = impGroup;
 
-        // Discharge exhaust stack & motor pedestal
         const stackH = 0.85;
         const stack = new THREE.Mesh(new THREE.CylinderGeometry(ductR * 0.9, ductR * 0.95, stackH, 20), matBlower);
         stack.position.set(bX + wheelR * 0.65, bY + stackH * 0.5, 0);
@@ -3401,7 +5258,6 @@
         pedestal.position.set(bX, (bY - wheelR * 0.5) * 0.5, -wheelR * 0.3);
         assemblyGroup.add(pedestal);
 
-        // Center assembly horizontally around X = 0
         const centerOffset = -(qX + bX) * 0.5;
         assemblyGroup.position.x = centerOffset;
 
@@ -3487,7 +5343,6 @@
               a.y + (b.y - a.y) * frac + Math.sin(ang) * swirl * 0.6,
               Math.sin(ang) * swirl
             );
-            // Color shifts hot orange -> cool cyan -> clean emerald
             if (t < 0.25) colAttr.setXYZ(i, 0.98, 0.48, 0.15);
             else if (t < 0.58) colAttr.setXYZ(i, 0.12, 0.78, 0.95);
             else colAttr.setXYZ(i, 0.30, 0.90, 0.65);
