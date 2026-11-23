@@ -123,12 +123,13 @@ type daemonRegisterMap struct {
 }
 
 type daemonModbusConfig struct {
-	Device              string            `json:"device"`
-	BaudRate            int               `json:"baud_rate"`
-	SlaveID             byte              `json:"slave_id"`
-	TimeoutNs           time.Duration     `json:"timeout_ns"`
-	UseHoldingRegisters bool              `json:"use_holding_registers"`
-	Registers           daemonRegisterMap `json:"registers"`
+	Device                     string            `json:"device"`
+	BaudRate                   int               `json:"baud_rate"`
+	SlaveID                    byte              `json:"slave_id"`
+	TimeoutNs                  time.Duration     `json:"timeout_ns"`
+	UseHoldingRegisters        bool              `json:"use_holding_registers"`
+	BypassCoilDeenergizeToTrip bool              `json:"bypass_coil_deenergize_to_trip,omitempty"`
+	Registers                  daemonRegisterMap `json:"registers"`
 }
 
 type daemonSimConfig struct {
@@ -265,8 +266,11 @@ func buildPacketReadme(eval StudioEvaluation) []byte {
 	b.WriteString("8.  project.json            Saved studio project settings (re-import into kilnscrub UI/CLI)\n")
 	b.WriteString("9.  daemon.json             Pre-tuned kilnscrub control daemon config (sim or Modbus RS-485)\n")
 	b.WriteString("10. README_PACKET.txt       This overview file\n\n")
-	b.WriteString("SAFETY REMINDER: Always install and test the hardwired spring-return fail-open\n")
-	b.WriteString("hot-gas bypass damper (>= 210 F / < 0.25 GPM / power loss) before firing.\n")
+	b.WriteString("SAFETY REMINDER (NFPA 86 / IPC 608 / NEC 430): Always install and test the\n")
+	b.WriteString("independent hardwired 200 F snap-disc + 24VDC de-energize-to-trip safety relay\n")
+	b.WriteString("driving the spring-return fail-open hot-gas bypass damper (ahead of the 210 F /\n")
+	b.WriteString("0.25 GPM software backup), IPC 608 Air Gap/RPZ backflow preventer, and NEC 430.102\n")
+	b.WriteString("lockable sight disconnect before firing.\n")
 	return []byte(b.String())
 }
 

@@ -493,3 +493,370 @@ func TestPlumeDilutionSquirrelCagePsychrometrics(t *testing.T) {
 			coldEval.Urban.Plume.BarePlumeLengthFt, bareEval.Urban.Plume.BarePlumeLengthFt)
 	}
 }
+
+func TestUSCodeComplianceC1ThroughC14(t *testing.T) {
+	eval := NewEvaluator(nil, nil)
+
+	// C1 & C2: NEC 430.122(A) 125% VFD 1-phase input sizing + Plume Diluter amps + NEC 430.102/210.8(F)/400.12.
+	refProj := DefaultProject() // 24 cu.ft. wood/salt -> 2.0 HP blower
+	refEval, err := eval.Evaluate(refProj)
+	if err != nil {
+		t.Fatalf("ref evaluate: %v", err)
+	}
+	if !strings.Contains(refEval.Urban.Electrical.CircuitLabel, "240V 30A") {
+		t.Errorf("C1: 2.0 HP 240V blower must size to 240V 30A per NEC 430.122(A), got %q (%.1f A)",
+			refEval.Urban.Electrical.CircuitLabel, refEval.Urban.Electrical.RequiredAmps)
+	}
+	if refEval.Urban.Electrical.RequiredAmps < 23.0 || refEval.Urban.Electrical.RequiredAmps > 30.0 {
+		t.Errorf("C1: 2.0 HP 240V NEC 430.122 ampacity = %.1f A, want ~24.6 A", refEval.Urban.Electrical.RequiredAmps)
+	}
+	for _, want := range []string{"NEC 430.102", "NEC 210.8(F)", "NEC 400.12"} {
+		if !strings.Contains(refEval.Urban.Electrical.Summary, want) {
+			t.Errorf("C2: electrical summary missing %q: %s", want, refEval.Urban.Electrical.Summary)
+		}
+	}
+
+	// Plume diluter adds electrical draw.
+	dilProj := refProj
+	dilProj.IncludePlumeDiluter = true
+	dilEval, err := eval.Evaluate(dilProj)
+	if err != nil {
+		t.Fatalf("diluter evaluate: %v", err)
+	}
+	if dilEval.Urban.Electrical.RequiredAmps <= refEval.Urban.Electrical.RequiredAmps {
+		t.Errorf("C1: IncludePlumeDiluter must increase RequiredAmps: %.1f vs %.1f",
+			dilEval.Urban.Electrical.RequiredAmps, refEval.Urban.Electrical.RequiredAmps)
+	}
+	if !strings.Contains(dilEval.Urban.Electrical.Summary, "plume diluter") {
+		t.Errorf("C1: electrical summary should note plume diluter load: %s", dilEval.Urban.Electrical.Summary)
+	}
+
+	// 1.0 HP on 120V must flag 30A / caution per NEC 430.122(A), whereas on 240V it uses 240V 20A OK.
+	soda, _ := PresetByID("gas_soda_14")
+	soda120 := soda.Project
+	soda120.AvailableVoltage = 120
+	soda120Eval, err := eval.Evaluate(soda120)
+	if err != nil {
+		t.Fatalf("soda 120V evaluate: %v", err)
+	}
+	if !strings.Contains(soda120Eval.Urban.Electrical.CircuitLabel, "120V 30A") || soda120Eval.Urban.Electrical.Status != StatusCaution {
+		t.Errorf("C1: 1.0 HP on 120V expected 120V 30A caution, got %+v", soda120Eval.Urban.Electrical)
+	}
+	if !strings.Contains(soda120Eval.COTS.BlowerVFD.SKU, "GS21-11P0") {
+		t.Errorf("C3: 1.0 HP 120V VFD SKU expected GS21-11P0, got %q", soda120Eval.COTS.BlowerVFD.SKU)
+	}
+
+	// C3: Real AutomationDirect GS21 SKUs + NEMA 4X enclosure, never truncated GS21-10P/GS21-20P.
+	if strings.Contains(refEval.COTS.BlowerVFD.SKU, "GS21-20P") || !strings.Contains(refEval.COTS.BlowerVFD.SKU, "GS21-22P0") {
+		t.Errorf("C3: 2.0 HP VFD SKU expected GS21-22P0, got %q", refEval.COTS.BlowerVFD.SKU)
+	}
+	if !strings.Contains(refEval.COTS.BlowerVFD.Material, "NEMA 4X") {
+		t.Errorf("C3: VFD must specify NEMA 4X enclosure, got %q", refEval.COTS.BlowerVFD.Material)
+	}
+
+	// C4: IPC Section 608 backflow prevention in water summary, COTS BOM, and guides.
+	if !strings.Contains(refEval.Urban.Water.Summary, "IPC Section 608") || !strings.Contains(refEval.Urban.Water.Summary, "ASSE 1013") {
+		t.Errorf("C4: WaterAssessment missing IPC 608 / ASSE 1013: %s", refEval.Urban.Water.Summary)
+	}
+	hasRPZItem := false
+	hasDisconnectItem := false
+	for _, it := range refEval.COTS.BOM.Items {
+		if strings.Contains(it.Spec, "IPC608-RPZ-AG") {
+			hasRPZItem = true
+		}
+		if strings.Contains(it.Spec, "NEC430-DISC-LR") {
+			hasDisconnectItem = true
+		}
+	}
+	if !hasRPZItem {
+		t.Error("C4: COTS BOM missing IPC 608 backflow preventer item")
+	}
+	if !hasDisconnectItem {
+		t.Error("C2: COTS BOM missing NEC 430.102 disconnect & line reactor item")
+	}
+	if !strings.Contains(refEval.BuildGuideMD, "IPC Section 608") || !strings.Contains(refEval.OperationsChecklistMD, "IPC 608") {
+		t.Error("C4: guides missing IPC 608 backflow checklist items")
+	}
+
+	// C5: IPC 702.5 <=140 F cooldown + 40 CFR 403.5(b)(2) pH >= 5.0.
+	if !strings.Contains(refEval.Urban.Drain.Summary, "140 F") || !strings.Contains(refEval.Urban.Drain.Summary, "40 CFR 403.5") {
+		t.Errorf("C5: DrainAssessment missing IPC 702.5 <=140 F or 40 CFR 403.5: %s", refEval.Urban.Drain.Summary)
+	}
+	if !strings.Contains(refEval.OperationsChecklistMD, "<= 140 F") || !strings.Contains(refEval.OperationsChecklistMD, "40 CFR 403.5") {
+		t.Error("C5: OperationsChecklistMD missing IPC 702.5 <=140 F or 40 CFR 403.5")
+	}
+
+	// C6: No thin-walled 55-gal HDPE drum as vacuum packed-bed column; 200 F hardwired snap-disc documented.
+	for _, p := range Presets() {
+		ev, err := eval.Evaluate(p.Project)
+		if err != nil {
+			t.Fatalf("preset %s: %v", p.ID, err)
+		}
+		if strings.Contains(ev.COTS.PackedColumn.SKU, "HDPE") {
+			t.Errorf("C6: preset %s selected non-vacuum-rated HDPE drum for packed column: %s", p.ID, ev.COTS.PackedColumn.SKU)
+		}
+	}
+	if !strings.Contains(refEval.COTS.SensorKit.Notes, "200 F") || !strings.Contains(refEval.BuildGuideMD, "200 F") {
+		t.Error("C6: SensorKit and BuildGuideMD must specify independent hardwired 200 F CPVC snap-disc")
+	}
+
+	// C8: Salt mode never calls exhaust "harmless water vapor" and flags <30 ft setback.
+	if strings.Contains(strings.ToLower(refEval.Urban.Plume.Summary), "harmless water vapor") {
+		t.Errorf("C8: salt-mode plume summary must NEVER call HCl exhaust harmless water vapor: %s", refEval.Urban.Plume.Summary)
+	}
+	if !strings.Contains(refEval.Urban.Plume.Summary, "OSHA 29 CFR 1910.1000") || !strings.Contains(refEval.Urban.Plume.Summary, "IMC 510") {
+		t.Errorf("C8: salt-mode plume summary missing OSHA/IMC 510 notice: %s", refEval.Urban.Plume.Summary)
+	}
+	tightSalt := refProj
+	tightSalt.PropertyLineFt = 20.0
+	tightSaltEval, err := eval.Evaluate(tightSalt)
+	if err != nil {
+		t.Fatalf("tightSalt evaluate: %v", err)
+	}
+	if tightSaltEval.Urban.Plume.Status != StatusActionNeeded {
+		t.Errorf("C8: salt mode with 20 ft property line (< 30 ft IMC 501.3.1) expected action_needed, got %q", tightSaltEval.Urban.Plume.Status)
+	}
+
+	// C9, C11, C12, C13: No 650 F RTV silicone recommendation, >=2300 F ceramic gaskets, 36" NFPA 211, NFPA 91 cleanout, zinc-free diluter tee, OSHA 1910.95 noise.
+	if strings.Contains(refEval.BuildGuideMD, "rated 650 F") {
+		t.Error("C9: BuildGuideMD must not recommend 650 F RTV silicone on a 2400 F flue")
+	}
+	for _, want := range []string{"2300 F", `36"`, "NFPA 211", "NFPA 91"} {
+		if !strings.Contains(refEval.BuildGuideMD, want) {
+			t.Errorf("C9/C11: BuildGuideMD missing %q", want)
+		}
+	}
+	if strings.Contains(dilEval.COTS.PlumeDiluter.Material, "Galvanized/316L") || !strings.Contains(dilEval.COTS.PlumeDiluter.Material, "CPVC") {
+		t.Errorf("C12: plume diluter mixing tee must be CPVC/FRP/316L (not galvanized): %s", dilEval.COTS.PlumeDiluter.Material)
+	}
+	unsilProj := refProj
+	unsilProj.IncludeSilencer = false
+	unsilEval, err := eval.Evaluate(unsilProj)
+	if err != nil {
+		t.Fatalf("unsilenced evaluate: %v", err)
+	}
+	if !strings.Contains(unsilEval.Urban.Noise.Summary, "OSHA 29 CFR 1910.95") {
+		t.Errorf("C13: unsilenced blower missing OSHA 29 CFR 1910.95 hearing warning: %s", unsilEval.Urban.Noise.Summary)
+	}
+}
+
+func TestStudioBranchCoverageAndEdgeCases(t *testing.T) {
+	eval := NewEvaluator(nil, nil)
+
+	// Cover all EffectiveDesignInput switch arms.
+	effCases := []struct {
+		mode string
+		fuel string
+		want string
+	}{
+		{VaporGlazeNone, "", model.FuelGas},
+		{VaporGlazeNone, model.FuelGasSalt, model.FuelGas},
+		{VaporGlazeSoda, model.FuelWoodSalt, model.FuelWood},
+		{VaporGlazeSalt, "", model.FuelWoodSalt},
+		{VaporGlazeSalt, model.FuelWood, model.FuelWoodSalt},
+		{VaporGlazeSalt, model.FuelGas, model.FuelGasSalt},
+	}
+	for _, tc := range effCases {
+		p := DefaultProject()
+		p.VaporGlazeMode = tc.mode
+		p.Input.FuelType = tc.fuel
+		got := p.EffectiveDesignInput()
+		if got.FuelType != tc.want {
+			t.Errorf("EffectiveDesignInput(mode=%q, fuel=%q) = %q, want %q", tc.mode, tc.fuel, got.FuelType, tc.want)
+		}
+	}
+
+	// Cover StudioProject.Validate invalid arms.
+	badProjects := []func(*StudioProject){
+		func(p *StudioProject) { p.FiringDurationHours = 0 },
+		func(p *StudioProject) { p.BuildPath = "riveted" },
+		func(p *StudioProject) { p.CorrosionTier = "carbon_steel" },
+		func(p *StudioProject) { p.PropertyLineFt = 1.0 },
+		func(p *StudioProject) { p.AmbientWinterF = -100.0 },
+		func(p *StudioProject) { p.GardenHoseGPM = 0 },
+		func(p *StudioProject) { p.Input.KilnVolumeCuFt = -5 },
+	}
+	for i, mutate := range badProjects {
+		p := DefaultProject()
+		mutate(&p)
+		if err := p.Validate(); err == nil {
+			t.Errorf("badProjects[%d]: expected validation error", i)
+		}
+		if _, err := eval.Evaluate(p); err == nil {
+			t.Errorf("badProjects[%d]: Evaluate expected error", i)
+		}
+	}
+
+	// ParseProject edge cases: empty input, blank studio_name, bad JSON.
+	if p, err := ParseProject([]byte("   ")); err != nil || p.PresetID != "wood_salt_24" {
+		t.Errorf("ParseProject empty = (%+v, %v)", p, err)
+	}
+	if p, err := ParseProject([]byte(`{"studio_name":""}`)); err != nil || p.StudioName != "Studio Kiln Scrubber" {
+		t.Errorf("ParseProject blank name = (%q, %v)", p.StudioName, err)
+	}
+	if _, err := ParseProject([]byte(`{not-json`)); err == nil {
+		t.Error("ParseProject bad JSON expected error")
+	}
+	if _, err := LoadProject(filepath.Join(t.TempDir(), "missing.json")); err == nil {
+		t.Error("LoadProject missing file expected error")
+	}
+	badSave := DefaultProject()
+	badSave.AvailableVoltage = 999
+	if err := SaveProject(filepath.Join(t.TempDir(), "bad.json"), badSave); err == nil {
+		t.Error("SaveProject invalid project expected error")
+	}
+
+	// PacketFilename edge cases: space, empty preset_id, punctuation-only.
+	pSpace := DefaultProject()
+	pSpace.PresetID = ""
+	pSpace.StudioName = "My Studio Kiln!"
+	if fn := PacketFilename(pSpace); fn != "kilnscrub-my-studio-kiln-packet.zip" {
+		t.Errorf("PacketFilename(space) = %q", fn)
+	}
+	pEmpty := DefaultProject()
+	pEmpty.PresetID = ""
+	pEmpty.StudioName = "!!!"
+	if fn := PacketFilename(pEmpty); fn != "kilnscrub-studio-packet.zip" {
+		t.Errorf("PacketFilename(empty) = %q", fn)
+	}
+	pBlank := DefaultProject()
+	pBlank.PresetID = ""
+	pBlank.StudioName = ""
+	if fn := PacketFilename(pBlank); fn != "kilnscrub-studio-packet.zip" {
+		t.Errorf("PacketFilename(blank) = %q", fn)
+	}
+
+	// Cover all COTS sizing tiers: unsnapped hobby & heavy, large sump (>45 gal), 3 HP & 5+ HP VFDs,
+	// all plume diluter CFM tiers (500, 1000, 1500, 2000, 3000), FRP-18/24/30 columns, large nozzles,
+	// and all urban assessment branches (water caution/action, noise caution/action silenced & unsilenced,
+	// plume moderate/low/action, electrical 0.5/1.5/3/5+ HP).
+	for _, cfm := range []float64{60, 140, 240, 340, 550} {
+		d := model.ScrubberDesign{}
+		d.Blower.FlowACFM = cfm
+		d.Blower.TotalStaticPressureInWC = 20.0
+		gotCFM, cone := RecommendedDilutionCFM(d)
+		if gotCFM <= 0 || cone <= 0 {
+			t.Errorf("RecommendedDilutionCFM(%.0f) = (%.0f, %.0f)", cfm, gotCFM, cone)
+		}
+		part := selectPlumeDiluter(DefaultProject(), d)
+		if part.UnitCostUSD <= 0 {
+			t.Errorf("selectPlumeDiluter(%.0f) invalid cost", cfm)
+		}
+		if a := diluterAmps120V(d); a <= 0 {
+			t.Errorf("diluterAmps120V(%.0f) <= 0", cfm)
+		}
+	}
+
+	// Direct COTS & electrical unit checks for 0/0.5/0.75/1.5/3.0/6.0 HP and large sump/nozzles.
+	for _, hp := range []float64{0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0, 7.5} {
+		for _, v := range []int{120, 240} {
+			p := DefaultProject()
+			p.AvailableVoltage = v
+			p.IncludePlumeDiluter = true
+			d := model.ScrubberDesign{}
+			d.Blower.RecommendedMotorHP = hp
+			d.Blower.FlowACFM = 260
+			d.Blower.TotalStaticPressureInWC = 21
+			ea := assessElectrical(p, d)
+			if ea.RequiredAmps <= 0 || ea.CircuitLabel == "" {
+				t.Errorf("assessElectrical(hp=%v, v=%d) invalid: %+v", hp, v, ea)
+			}
+			vfd := selectBlowerVFD(p, d)
+			if vfd.UnitCostUSD <= 0 {
+				t.Errorf("selectBlowerVFD(hp=%v, v=%d) invalid", hp, v)
+			}
+		}
+	}
+
+	// Large 100-gal sump, large nozzle tiers (>0.75 & >1.8 GPM/nozzle), FRP-18/24/30 column snapping, and SnapToCOTS=false.
+	bigDesign := model.ScrubberDesign{}
+	bigDesign.Quench.TowerDiameter = model.InchesToMeters(16)
+	bigDesign.Quench.TowerHeight = model.FeetToMeters(10)
+	bigDesign.Quench.TotalSprayWaterGPM = 4.5
+	bigDesign.Quench.NozzleCount = 2
+	bigDesign.PackedBed.ColumnDiameter = model.InchesToMeters(20)
+	bigDesign.PackedBed.ColumnHeight = model.FeetToMeters(12)
+	bigDesign.PackedBed.PackingHeight = model.FeetToMeters(5)
+	bigDesign.PackedBed.SumpVolume = model.CubicMeters(60.0 * model.CubicMetersPerUSGallon)
+	bigDesign.PackedBed.FloodingVelocity = 3.0
+	bigDesign.QuenchedGas.VolumetricFlow = 0.25
+	bigDesign.Blower.RecommendedMotorHP = 3.0
+	bigDesign.Blower.FlowACFM = 420
+	bigDesign.Blower.TotalStaticPressureInWC = 22
+
+	sump := selectSumpTank(bigDesign)
+	if sump.SKU != "USPLASTIC-100T" {
+		t.Errorf("expected 100-gal sump for 60 gal holdup, got %q", sump.SKU)
+	}
+	if nz := selectSprayNozzle(DefaultProject(), bigDesign); nz.NominalIn != 0.5 {
+		t.Errorf("expected 1/2\" nozzle for 2.25 GPM/nozzle, got %v", nz.NominalIn)
+	}
+	bigDesign.Quench.TotalSprayWaterGPM = 2.0
+	if nz := selectSprayNozzle(DefaultProject(), bigDesign); nz.NominalIn != 0.375 {
+		t.Errorf("expected 3/8\" nozzle for 1.0 GPM/nozzle, got %v", nz.NominalIn)
+	}
+	bigDesign.Quench.NozzleCount = 0
+	_ = selectSprayNozzle(DefaultProject(), bigDesign)
+
+	colFRP, _, _ := selectPackedColumn(DefaultProject(), bigDesign)
+	if !strings.Contains(colFRP.SKU, "FRP-24") {
+		t.Errorf("expected FRP-24 vacuum column for 20\" ID, got %q", colFRP.SKU)
+	}
+
+	// Unsnapped hobby & heavy evaluations + urban water/noise/plume moderate/mild/tight cases.
+	unsnapHobby := DefaultProject()
+	unsnapHobby.SnapToCOTS = false
+	unsnapHobby.GardenHoseGPM = 0.8 // triggers water action_needed
+	unsnapHobby.PropertyLineFt = 4.0
+	unsnapHobby.IncludeSilencer = true
+	unsnapHobby.AmbientWinterF = 55.0 // moderate plume
+	if ev, err := eval.Evaluate(unsnapHobby); err != nil {
+		t.Fatalf("unsnapHobby evaluate: %v", err)
+	} else {
+		if ev.Urban.Water.Status != StatusActionNeeded {
+			t.Errorf("expected water action_needed, got %q", ev.Urban.Water.Status)
+		}
+		if ev.Urban.Noise.Status != StatusActionNeeded {
+			t.Errorf("expected noise action_needed at 4 ft even silenced, got %q (%.1f dBA)", ev.Urban.Noise.Status, ev.Urban.Noise.PropertyLineDBA)
+		}
+	}
+
+	unsnapHeavy := DefaultProject()
+	unsnapHeavy.SnapToCOTS = false
+	unsnapHeavy.CorrosionTier = CorrosionTierHeavyC276FRP
+	unsnapHeavy.VaporGlazeMode = VaporGlazeNone
+	unsnapHeavy.GardenHoseGPM = 1.4 // >70% caution
+	unsnapHeavy.AmbientWinterF = 75.0
+	unsnapHeavy.PropertyLineFt = 8.0 // <10 ft IMC 501.3.1 Item 2 action_needed
+	if ev, err := eval.Evaluate(unsnapHeavy); err != nil {
+		t.Fatalf("unsnapHeavy evaluate: %v", err)
+	} else {
+		if ev.Urban.Water.Status != StatusCaution {
+			t.Errorf("expected water caution, got %q", ev.Urban.Water.Status)
+		}
+		if ev.Urban.Plume.Status != StatusActionNeeded {
+			t.Errorf("expected non-salt plume action_needed at 8 ft (<10 ft IMC), got %q", ev.Urban.Plume.Status)
+		}
+	}
+
+	// Moderate & mild plume OK cases + noise caution (55-60 dBA).
+	modProj := DefaultProject()
+	modProj.VaporGlazeMode = VaporGlazeSoda
+	modProj.AmbientWinterF = 55.0
+	modProj.PropertyLineFt = 120.0
+	modProj.IncludeSilencer = false
+	if ev, err := eval.Evaluate(modProj); err != nil {
+		t.Fatalf("modProj evaluate: %v", err)
+	} else if ev.Urban.Plume.Status != StatusOK {
+		t.Errorf("expected moderate plume OK at 120 ft, got %q", ev.Urban.Plume.Status)
+	}
+
+	mildProj := modProj
+	mildProj.AmbientWinterF = 72.0
+	mildProj.PropertyLineFt = 25.0 // unsilenced ~58-60 dBA
+	if ev, err := eval.Evaluate(mildProj); err != nil {
+		t.Fatalf("mildProj evaluate: %v", err)
+	} else if ev.Urban.Plume.VisiblePlumeRisk != "low" {
+		t.Errorf("expected low plume risk at 72 F, got %q", ev.Urban.Plume.VisiblePlumeRisk)
+	}
+}

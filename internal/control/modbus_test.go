@@ -607,3 +607,82 @@ func TestModbusHALFaultsLatchTripSensorFault(t *testing.T) {
 		})
 	}
 }
+
+func TestModbusHALDeenergizeToTripPolarity(t *testing.T) {
+	cfg := DefaultModbusConfig()
+	cfg.BypassCoilDeenergizeToTrip = true
+	slave := newMockModbusSlave(cfg.SlaveID)
+	negDraft := int16(-1245)
+	slave.inputRegs[0] = uint16(negDraft)
+	slave.inputRegs[1] = 18000
+	slave.inputRegs[2] = 1650
+	slave.inputRegs[3] = 100
+	slave.inputRegs[4] = 800
+	slave.inputRegs[5] = 4200
+
+	hal, err := NewModbusHAL(cfg, slave)
+	if err != nil {
+		t.Fatalf("NewModbusHAL: %v", err)
+	}
+	defer hal.Close()
+
+	ctx := context.Background()
+
+	// Normal healthy command: BypassDamperOpen=false -> coil MUST be energized (true) to hold spring-return damper closed.
+	if err := hal.ApplyCommands(ctx, model.ActuatorCommands{
+		BlowerVFD:        0.5,
+		QuenchSprayValve: 0.6,
+		BypassDamperOpen: false,
+		AlarmLatched:     false,
+	}); err != nil {
+		t.Fatalf("ApplyCommands normal: %v", err)
+	}
+	if !slave.coils[cfg.Registers.BypassDamperCoilAddr] {
+		t.Fatal("expected bypass damper coil ON (energized hold-closed) during normal operation when BypassCoilDeenergizeToTrip=true")
+	}
+	if slave.coils[cfg.Registers.AlarmLatchCoilAddr] {
+		t.Fatal("expected alarm latch coil OFF during normal operation")
+	}
+
+	// Safety trip command: BypassDamperOpen=true -> coil MUST be de-energized (false) first, so spring opens damper.
+	slave.mu.Lock()
+	slave.writeHistory = nil
+	slave.mu.Unlock()
+	if err := hal.ApplyCommands(ctx, model.ActuatorCommands{
+		BlowerVFD:        0.0,
+		QuenchSprayValve: 1.0,
+		BypassDamperOpen: true,
+		AlarmLatched:     true,
+		TripReason:       model.TripHighQuenchTemp,
+	}); err != nil {
+		t.Fatalf("ApplyCommands tripped: %v", err)
+	}
+	if slave.coils[cfg.Registers.BypassDamperCoilAddr] {
+		t.Fatal("expected bypass damper coil OFF (de-energized fail-open) when BypassDamperOpen=true")
+	}
+	if !slave.coils[cfg.Registers.AlarmLatchCoilAddr] {
+		t.Fatal("expected alarm latch coil ON when tripped")
+	}
+	if len(slave.writeHistory) < 3 || slave.writeHistory[0] != FuncWriteSingleCoil {
+		t.Fatalf("expected fail-safe coil de-energized first on trip, got history %x", slave.writeHistory)
+	}
+
+	// Verify Controller fault triggers de-energization on the PLC coil.
+	slave.mu.Lock()
+	slave.coils[cfg.Registers.BypassDamperCoilAddr] = true
+	slave.faultReads = true
+	slave.corruptCRC = true
+	slave.mu.Unlock()
+
+	ctrl, err := NewController(model.DefaultControlConfig())
+	if err != nil {
+		t.Fatalf("NewController: %v", err)
+	}
+	st, tickErr := ctrl.Tick(ctx, hal, 100*time.Millisecond)
+	if tickErr == nil || !st.InterlockActive {
+		t.Fatalf("expected fault trip, got st=%+v err=%v", st, tickErr)
+	}
+	if slave.coils[cfg.Registers.BypassDamperCoilAddr] {
+		t.Fatal("expected bypass coil de-energized (false) after Controller sensor fault")
+	}
+}

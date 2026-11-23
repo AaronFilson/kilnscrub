@@ -1,5 +1,5 @@
 {
-  "description": "Studio 24 cu.ft. Wood/Salt Kiln Scrubber Control Daemon Configuration (switch hal_mode to \"modbus\" for physical RS-485 PLC/VFD hardware)",
+  "description": "Studio 24 cu.ft. Wood/Salt Kiln Scrubber Control Daemon Configuration (switch hal_mode to \"modbus\" and set bypass_coil_deenergize_to_trip: true for fail-safe spring-return PLC coils; NFPA 86 requires an independent hardwired 200 F manual-reset snap-disc + 24VDC latching safety relay ahead of the 210 F software backup)",
   "hal_mode": "sim",
   "control": {
     "target_draft_in_wc": -0.05,
@@ -41,6 +41,7 @@
     "slave_id": 1,
     "timeout_ns": 500000000,
     "use_holding_registers": false,
+    "bypass_coil_deenergize_to_trip": false,
     "registers": {
       "temp_unit": "F",
       "draft_pa": {

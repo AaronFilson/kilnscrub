@@ -10,7 +10,7 @@ PKG := ./cmd/kilnscrub
 VERSION ?= $(shell git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: help build test vet fmt fmt-check check coverage smoke packet-smoke release-all release-archives clean
+.PHONY: help build test vet fmt fmt-check check coverage coverage-branch smoke packet-smoke release-all release-archives clean
 
 help: ## Show available make targets
 	@echo "kilnscrub Makefile targets:"
@@ -21,6 +21,7 @@ help: ## Show available make targets
 	@echo "  fmt-check         Verify all Go files are formatted with gofmt"
 	@echo "  check             Run fmt-check, vet, and race tests"
 	@echo "  coverage          Run race tests with coverage profile and print total coverage"
+	@echo "  coverage-branch   Run atomic race tests and enforce Line (>=85%) & AST Branch (>=72%) coverage"
 	@echo "  smoke             Build and run CLI design, export, and daemon smoke checks"
 	@echo "  packet-smoke      Build and verify CLI presets & Build Packet .zip export"
 	@echo "  release-all       Cross-compile all 5 static binaries and SHA256SUMS.txt to $(DIST_DIR)/"
@@ -53,6 +54,10 @@ check: fmt-check vet test ## Run formatting check, go vet, and race test suite
 coverage: ## Run race tests with coverage profile and print total coverage
 	CGO_ENABLED=1 $(GO) test -race -count=1 -coverprofile=coverage.out ./...
 	@$(GO) tool cover -func=coverage.out | tail -n 1
+
+coverage-branch: ## Run atomic race tests and report Statement, Line & AST Branch coverage
+	CGO_ENABLED=1 $(GO) test -race -count=1 -covermode=atomic -coverprofile=coverage.out ./...
+	@$(GO) run ./scripts/branch_coverage.go -profile coverage.out -min-line 85 -min-branch 72
 
 smoke: build ## Run end-to-end CLI design, export, and daemon smoke verification
 	@set -euo pipefail; \

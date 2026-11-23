@@ -68,17 +68,19 @@ var quenchC276Catalog = []pipeSpec{
 	{24, 24.00, "24", 4450, 44.0},
 }
 
-// Schedule 40 CPVC/PVC pipe nominal sizes with true bore IDs, plus 55-gal HDPE drum (22.5" ID)
-// and 30" FRP/HDPE cylinder for co-op scale columns.
+// Schedule 80 CPVC pipe nominal sizes (ASTM F441, vacuum-rated for -20 inWC ID suction)
+// up to 16", transitioning to vacuum-rated filament-wound FRP for 18"-30" columns
+// (open-head 55-gal HDPE drums are restricted strictly to atmospheric vented sump tanks).
 var packedCPVCCatalog = []pipeSpec{
-	{6, 6.065, "CPVC-06", 145, 2.9},
-	{8, 7.981, "CPVC-08", 215, 4.3},
-	{10, 10.020, "CPVC-10", 320, 6.1},
-	{12, 11.938, "CPVC-12", 435, 8.1},
-	{14, 13.124, "CPVC-14", 560, 9.6},
-	{16, 15.000, "CPVC-16", 715, 11.8},
-	{22.5, 22.500, "HDPE-55D", 195, 3.8},
-	{30, 30.000, "FRP-30", 1180, 14.0},
+	{6, 5.761, "CPVC80-06", 185, 3.6},
+	{8, 7.625, "CPVC80-08", 275, 5.3},
+	{10, 9.564, "CPVC80-10", 395, 7.5},
+	{12, 11.376, "CPVC80-12", 525, 10.1},
+	{14, 12.500, "CPVC80-14", 665, 11.9},
+	{16, 14.314, "CPVC80-16", 835, 14.6},
+	{18, 18.000, "FRP-18", 1120, 11.5},
+	{24, 24.000, "FRP-24", 1590, 15.8},
+	{30, 30.000, "FRP-30", 2150, 20.5},
 }
 
 var packedFRPCatalog = []pipeSpec{
@@ -226,44 +228,31 @@ func selectPackedColumn(project StudioProject, design model.ScrubberDesign) (COT
 		}
 	} else {
 		spec, _ = snapPipe(packedCPVCCatalog, reqIn)
-		if spec.skuSuffix == "HDPE-55D" {
-			// Two stacked/bolted open-head 55-gal HDPE drums form a tall low-cost studio column.
-			drums := math.Max(2.0, math.Ceil(heightFt/2.8))
-			part = COTSPart{
-				SKU:         "ULINE-S-10757-COL",
-				Name:        fmt.Sprintf(`55-Gal Open-Head HDPE Drum Column (22.5" ID, %.0fx stacked)`, drums),
-				NominalIn:   spec.nominalIn,
-				Material:    "Chemical-Grade HDPE (22.5\" ID)",
-				Source:      "Uline / Grainger / McMaster-Carr",
-				UnitCostUSD: round2(95.0 * drums),
-				WeightKg:    round2(10.5 * drums),
-				Notes:       fmt.Sprintf("Bolted flange-joined 55-gal HDPE drum sections (22.5\" ID, snapped from %.1f\"); keep quench <= 185 F.", reqIn),
-			}
-		} else if spec.skuSuffix == "FRP-30" {
+		if spec.skuSuffix == "FRP-18" || spec.skuSuffix == "FRP-24" || spec.skuSuffix == "FRP-30" {
 			cost := round2(spec.baseCost * math.Max(0.85, heightFt/8.0))
 			weight := round2(spec.kgPerFt * heightFt)
 			part = COTSPart{
-				SKU:         "COL-FRP-30",
-				Name:        fmt.Sprintf(`30" HDPE / FRP Absorber Column (%.1f ft)`, heightFt),
+				SKU:         "COL-" + spec.skuSuffix,
+				Name:        fmt.Sprintf(`%.0f" Vacuum-Rated Filament-Wound FRP Absorber Column (%.1f ft)`, spec.nominalIn, heightFt),
 				NominalIn:   spec.nominalIn,
-				Material:    "HDPE / Vinyl-Ester FRP",
-				Source:      "US Plastic / Industrial FRP",
+				Material:    "Filament-Wound Vinyl-Ester FRP (ASTM E84 Class 1, Vacuum-Rated to -25 inWC)",
+				Source:      "Ershigs / Beetle Plastics / US Plastic Industrial FRP",
 				UnitCostUSD: cost,
 				WeightKg:    weight,
-				Notes:       fmt.Sprintf("Large-bore column snapped from %.1f\" for community/co-op flow.", reqIn),
+				Notes:       fmt.Sprintf("Vacuum-rated FRP column (true bore %.1f\", snapped from %.1f\") avoids thin-wall HDPE drum collapse under -20 inWC suction at 184 F; protected by 200 F hardwired snap-disc + 210 F software interlock.", spec.actualID, reqIn),
 			}
 		} else {
 			cost := round2(spec.baseCost * math.Max(0.85, heightFt/8.0))
 			weight := round2(spec.kgPerFt * heightFt)
 			part = COTSPart{
 				SKU:         "HARVEL-" + spec.skuSuffix,
-				Name:        fmt.Sprintf(`%.0f" Sch 40/80 CPVC Pipe Column (ID %.2f", %.1f ft)`, spec.nominalIn, spec.actualID, heightFt),
+				Name:        fmt.Sprintf(`%.0f" Sch 80 CPVC Pipe Column (ID %.2f", %.1f ft)`, spec.nominalIn, spec.actualID, heightFt),
 				NominalIn:   spec.nominalIn,
-				Material:    "Schedule 40/80 CPVC (ASTM F441, 200 F max)",
+				Material:    "Schedule 80 CPVC (ASTM F441, ASTM E84 Class 1, 200 F max, Vacuum-Rated)",
 				Source:      "SupplyHouse / US Plastic / McMaster-Carr",
 				UnitCostUSD: cost,
 				WeightKg:    weight,
-				Notes:       fmt.Sprintf("Standard COTS CPVC pipe (true bore %.2f\", snapped from %.1f\"); requires 210 F bypass interlock.", spec.actualID, reqIn),
+				Notes:       fmt.Sprintf("Vacuum-rated Sch 80 CPVC pipe (true bore %.2f\", snapped from %.1f\"); requires independent hardwired 200 F manual-reset snap-disc + 210 F software backup bypass interlock.", spec.actualID, reqIn),
 			}
 		}
 	}
@@ -291,7 +280,7 @@ func selectSumpTank(design model.ScrubberDesign) COTSPart {
 			Source:      "Uline / Global Industrial",
 			UnitCostUSD: 72.0,
 			WeightKg:    7.5,
-			Notes:       fmt.Sprintf("Covers %.1f gal required holdup with 100%% ash-settling & NaHCO3 mixing reserve.", sumpGal),
+			Notes:       fmt.Sprintf("Atmospheric vented sump ONLY (never under blower vacuum); covers %.1f gal required holdup with 100%% ash-settling & NaHCO3 mixing reserve.", sumpGal),
 		}
 	case sumpGal <= 45.0:
 		return COTSPart{
@@ -302,7 +291,7 @@ func selectSumpTank(design model.ScrubberDesign) COTSPart {
 			Source:      "Uline / Grainger / McMaster-Carr",
 			UnitCostUSD: 96.0,
 			WeightKg:    10.5,
-			Notes:       fmt.Sprintf("Covers %.1f gal required holdup; easy top access for baking soda dosing and ash basket.", sumpGal),
+			Notes:       fmt.Sprintf("Atmospheric vented sump ONLY (never under blower vacuum); covers %.1f gal required holdup with easy top access for baking soda dosing and ash basket.", sumpGal),
 		}
 	default:
 		return COTSPart{
@@ -313,7 +302,7 @@ func selectSumpTank(design model.ScrubberDesign) COTSPart {
 			Source:      "US Plastic Corp / Ace Roto-Mold",
 			UnitCostUSD: 315.0,
 			WeightKg:    22.0,
-			Notes:       fmt.Sprintf("Co-op scale sump for %.1f gal holdup with bulkheads for recirculation & blowdown.", sumpGal),
+			Notes:       fmt.Sprintf("Atmospheric vented co-op sump for %.1f gal holdup with bulkheads for recirculation & cooled blowdown.", sumpGal),
 		}
 	}
 }
@@ -391,38 +380,56 @@ func selectBlowerVFD(project StudioProject, design model.ScrubberDesign) COTSPar
 	}
 	heavy := project.CorrosionTier == CorrosionTierHeavyC276FRP
 
-	voltageStr := "120V 1-Ph Input VFD"
-	vfdSKU := "GS21-10P"
-	if hp > 1.0 {
-		voltageStr = "240V 1-Ph Input -> 3-Ph Motor VFD"
-		vfdSKU = "GS21-20P"
+	var voltageStr, vfdSKU string
+	switch {
+	case hp <= 0.5:
+		voltageStr = "120V 1-Ph Input VFD in NEMA 4X Enclosure"
+		vfdSKU = "GS21-10P5"
+	case hp <= 1.0:
+		if project.AvailableVoltage >= 240 {
+			voltageStr = "240V 1-Ph Input -> 3-Ph Motor VFD in NEMA 4X Enclosure"
+			vfdSKU = "GS21-21P0"
+		} else {
+			voltageStr = "120V 1-Ph Input (30A) VFD in NEMA 4X Enclosure"
+			vfdSKU = "GS21-11P0"
+		}
+	case hp <= 2.0:
+		voltageStr = "240V 1-Ph Input -> 3-Ph Motor VFD in NEMA 4X Enclosure"
+		vfdSKU = "GS21-22P0"
+	case hp <= 3.0:
+		voltageStr = "240V 1-Ph Input -> 3-Ph Motor VFD in NEMA 4X Enclosure"
+		vfdSKU = "GS21-23P0"
+	default:
+		voltageStr = "240V 3-Ph / Derated 1-Ph VFD in NEMA 4X Enclosure"
+		vfdSKU = "GS21-25P0"
 	}
 
+	const nema4XEnclosureCost = 165.0 // NEC 110.28 NEMA 4X fiberglass/polycarbonate housing for IP20 GS21 (or upgrade to GS21X washdown)
 	var blowerCost, vfdCost, weightKg float64
 	switch {
 	case hp <= 0.5:
-		blowerCost, vfdCost, weightKg = 640, 175, 22.0
+		blowerCost, vfdCost, weightKg = 640, 175+nema4XEnclosureCost, 25.0
 	case hp <= 1.0:
-		blowerCost, vfdCost, weightKg = 860, 215, 29.0
+		blowerCost, vfdCost, weightKg = 860, 215+nema4XEnclosureCost, 32.0
 	case hp <= 1.5:
-		blowerCost, vfdCost, weightKg = 1120, 265, 36.0
+		blowerCost, vfdCost, weightKg = 1120, 265+nema4XEnclosureCost, 39.0
 	case hp <= 2.0:
-		blowerCost, vfdCost, weightKg = 1340, 310, 44.0
+		blowerCost, vfdCost, weightKg = 1340, 310+nema4XEnclosureCost, 47.0
 	case hp <= 3.0:
-		blowerCost, vfdCost, weightKg = 1720, 395, 58.0
+		blowerCost, vfdCost, weightKg = 1720, 395+nema4XEnclosureCost, 61.0
 	default:
 		blowerCost = round2(1720.0 + 360.0*(hp-3.0))
-		vfdCost = round2(395.0 + 110.0*(hp-3.0))
-		weightKg = round2(58.0 + 12.0*(hp-3.0))
+		vfdCost = round2(395.0 + nema4XEnclosureCost + 110.0*(hp-3.0))
+		weightKg = round2(61.0 + 12.0*(hp-3.0))
 	}
 
-	mat := "Powder-Coated Steel Housing / 316L SS Radial Wheel + NEMA 4X VFD"
-	sku := fmt.Sprintf("PB-RAD-%.2gHP-%s", hp, vfdSKU)
+	mat := "Powder-Coated Steel Housing / 316L SS Radial Wheel + IP20 GS21 VFD inside NEMA 4X Enclosure"
+	sku := fmt.Sprintf("PB-RAD-%.2gHP-%s-N4X", hp, vfdSKU)
 	source := "Grainger (Dayton/Cincinnati Fan) + AutomationDirect"
 	if heavy {
 		blowerCost = round2(blowerCost * 1.45)
-		mat = "Vinyl-Ester FRP Housing & Chemical-Duty Radial Wheel + NEMA 4X VFD"
-		sku = fmt.Sprintf("FRP-RAD-%.2gHP-%s", hp, vfdSKU)
+		mat = "Vinyl-Ester FRP Housing & Chemical-Duty Radial Wheel + IP20 GS21 VFD inside NEMA 4X Enclosure"
+		sku = fmt.Sprintf("FRP-RAD-%.2gHP-%s-N4X", hp, vfdSKU)
 		source = "New York Blower / Hartzell FRP + AutomationDirect"
 	}
 
@@ -434,7 +441,7 @@ func selectBlowerVFD(project StudioProject, design model.ScrubberDesign) COTSPar
 		Source:      source,
 		UnitCostUSD: round2(blowerCost + vfdCost),
 		WeightKg:    weightKg,
-		Notes:       fmt.Sprintf("High-head radial pressure blower sized for %.0f ACFM @ %.1f inWC static pressure; VFD accepts 0-10V / Modbus PID draft control.", design.Blower.FlowACFM, design.Blower.TotalStaticPressureInWC),
+		Notes:       fmt.Sprintf("High-head radial pressure blower sized for %.0f ACFM @ %.1f inWC static pressure; %s VFD (IP20 housed in NEC 110.28 NEMA 4X enclosure, or upgrade to standalone GS21X washdown VFD) accepts 0-10V / Modbus PID draft control.", design.Blower.FlowACFM, design.Blower.TotalStaticPressureInWC, vfdSKU),
 	}
 }
 
@@ -472,45 +479,50 @@ func RecommendedDilutionCFM(design model.ScrubberDesign) (cfm float64, coneIn fl
 	}
 }
 
-func selectPlumeDiluter(design model.ScrubberDesign) COTSPart {
+func selectPlumeDiluter(project StudioProject, design model.ScrubberDesign) COTSPart {
 	cfm, coneIn := RecommendedDilutionCFM(design)
 	var cost, weight, amps float64
 	switch {
 	case cfm <= 500.0:
-		cost, weight, amps = 245.0, 11.5, 2.2
+		cost, weight, amps = 275.0, 11.5, 2.2
 	case cfm <= 1000.0:
-		cost, weight, amps = 345.0, 16.5, 4.1
+		cost, weight, amps = 385.0, 16.5, 4.1
 	case cfm <= 1500.0:
-		cost, weight, amps = 445.0, 22.0, 6.5
+		cost, weight, amps = 495.0, 22.0, 6.5
 	case cfm <= 2000.0:
-		cost, weight, amps = 540.0, 27.0, 8.8
+		cost, weight, amps = 595.0, 27.0, 8.8
 	default:
-		cost, weight, amps = 695.0, 34.0, 12.5
+		cost, weight, amps = 765.0, 34.0, 12.5
+	}
+	teeMat := "Dry Clean-Air Forward-Curved Blower + CPVC / Vinyl-Ester FRP / 316L SS Stack Mixing Tee & Taper Cone (No Galvanized Zinc in Wet Exhaust)"
+	if project.VaporGlazeMode == VaporGlazeSalt {
+		teeMat = "Dry Clean-Air Intake Blower + Acid-Resistant Sch 80 CPVC / Vinyl-Ester FRP / 316L SS Stack Mixing Tee & Taper Cone (Zinc-Free for Salt HCl)"
 	}
 	return COTSPart{
 		SKU:         fmt.Sprintf("SQ-DILUTE-%.0fCFM-%.0fIN", cfm, coneIn),
-		Name:        fmt.Sprintf(`%.0f CFM 120V Squirrel-Cage Plume Dilution Blower + Mixing Tee & %.0f" HV Exit Cone`, cfm, coneIn),
+		Name:        fmt.Sprintf(`%.0f CFM 120V Squirrel-Cage Plume Dilution Blower + CPVC/FRP/316L Mixing Tee & %.0f" HV Exit Cone`, cfm, coneIn),
 		NominalIn:   coneIn,
-		Material:    "Galvanized Steel Forward-Curved Blower + Galvanized/316L Stack Mixing Tee & Taper Cone",
-		Source:      "Grainger (Dayton 1TDT/4C) / SupplyHouse HVAC",
+		Material:    teeMat,
+		Source:      "Grainger (Dayton 1TDT/4C) + US Plastic / SupplyHouse CPVC/FRP",
 		UnitCostUSD: cost,
 		WeightKg:    weight,
-		Notes:       fmt.Sprintf("120V (~%.1f A, 0.7-1.2 inWC) mounted DOWNSTREAM of Stage 4 ID blower (never in place of the 21 inWC radial blower). %.0f\" high-velocity exit cone (~3,400 FPM) cuts winter plume reach ~3x-4x; add optional cold-intake kiln-jacket warm-air shroud for near-zero visible plume.", amps, coneIn),
+		Notes:       fmt.Sprintf("120V (~%.1f A, 0.7-1.2 inWC) mounted DOWNSTREAM of Stage 4 ID blower (never in place of the %.1f inWC radial blower). Wetted stack mixing tee & %.0f\" high-velocity exit cone (~3,400 FPM) use CPVC/FRP/316L (never galvanized steel, which corrodes in HCl condensate); add optional cold-intake kiln-jacket warm-air shroud for near-zero visible plume.", amps, design.Blower.TotalStaticPressureInWC, coneIn),
 	}
 }
 
 func selectSensorKit(design model.ScrubberDesign) COTSPart {
 	ductIn := math.Max(6.0, math.Ceil(design.Envelope.DuctDiameter.Inches()))
 	damperCost := round2(265.0 + 22.0*ductIn)
+	hardwiredSafetyCost := 228.0 // 200 F manual-reset snap-disc ($35) + 24VDC latching safety relay ($125) + NEMA 4X E-stop/reset/strobe ($68)
 	return COTSPart{
-		SKU:         "KIT-MODBUS-SAFE-V1",
-		Name:        "Modbus RTU Sensor & Fail-Safe Bypass Interlock Kit",
+		SKU:         "KIT-MODBUS-SAFE-V2",
+		Name:        "Modbus RTU Sensor, Hardwired 200 F NFPA 86 Safety Relay & Fail-Safe Bypass Kit",
 		NominalIn:   ductIn,
-		Material:    "316L SS Thermowells / NEMA 4X / Spring-Return 24VDC Damper",
-		Source:      "AutomationDirect / Dwyer / Belimo / Atlas Scientific",
-		UnitCostUSD: round2(415.0 + damperCost),
-		WeightKg:    11.5,
-		Notes:       fmt.Sprintf(`Includes Type-K flue TC, Pt100 quench RTD (210 F cutoff), Dwyer +/-2 inWC draft transmitter, Hall/paddlewheel flow switch (0.25 GPM cutoff), pH probe, RS-485 USB adapter, and %.0f" spring-return fail-open bypass damper.`, ductIn),
+		Material:    "316L SS Thermowells / NEMA 4X / 24VDC Latching Safety Relay / Spring-Return Damper",
+		Source:      "AutomationDirect / Dwyer / Belimo / Honeywell / Atlas Scientific",
+		UnitCostUSD: round2(415.0 + damperCost + hardwiredSafetyCost),
+		WeightKg:    13.5,
+		Notes:       fmt.Sprintf(`Includes independent NFPA 86 hardwired 200 F manual-reset bimetallic snap-disc + 24VDC de-energize-to-trip latching safety relay + NEMA 4X E-Stop, Type-K flue TC, Pt100 quench RTD (210 F software backup), Dwyer +/-2 inWC draft transmitter, 0.25 GPM paddle flow switch, pH probe, isolated RS-485 USB adapter, and %.0f" spring-return fail-open bypass damper.`, ductIn),
 	}
 }
 
@@ -534,7 +546,7 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 
 	var diluterPtr *COTSPart
 	if project.IncludePlumeDiluter {
-		d := selectPlumeDiluter(design)
+		d := selectPlumeDiluter(project, design)
 		diluterPtr = &d
 	}
 
@@ -704,6 +716,26 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 
 	items = append(items,
 		model.BOMItem{
+			Category:    "Liquid & Chemical Handling",
+			Name:        "IPC Section 608 Potable Water Backflow Prevention (Air-Gap Break Tank or ASSE 1013 RPZ)",
+			Material:    "Lead-Free Bronze RPZ / HDPE Break Tank with >=1\" Air Gap",
+			Quantity:    1,
+			Unit:        "ea",
+			Spec:        "[IPC608-RPZ-AG] Mandatory IPC 608 / 608.15.1 high-hazard potable water isolation (engineered >=1\" vertical air gap above overflow rim OR certified ASSE 1013 RPZ backflow preventer) (SupplyHouse / Watts / Zurn)",
+			UnitCostUSD: 185.0,
+			WeightKg:    3.5,
+		},
+		model.BOMItem{
+			Category:    "Safety & Instrumentation",
+			Name:        "NEC 430.102 Lockable NEMA 4X Local Disconnect Switch & 3% VFD Input Line Reactor",
+			Material:    "NEMA 4X Non-Fused Disconnect / Copper-Wound Line Reactor",
+			Quantity:    1,
+			Unit:        "assy",
+			Spec:        "[NEC430-DISC-LR] Padlockable line-side disconnect within sight (<=50 ft) of VFD & blower + 3% input line reactor for NEC 210.8(F) HF-GFCI stability (Square D / AutomationDirect)",
+			UnitCostUSD: 215.0,
+			WeightKg:    4.8,
+		},
+		model.BOMItem{
 			Category:    "Safety & Instrumentation",
 			Name:        sensorPart.Name,
 			Material:    sensorPart.Material,
@@ -716,10 +748,10 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 		model.BOMItem{
 			Category:    "Hardware & Plumbing",
 			Name:        hardwareName,
-			Material:    "316 SS / PTFE / EPDM / CPVC",
+			Material:    "316 SS / Ceramic Fiber / PTFE / EPDM / CPVC",
 			Quantity:    1,
 			Unit:        "lot",
-			Spec:        "High-temp silicone/PTFE flue gaskets, band clamps/bolts, CPVC Sch 80 primer & cement, drain ball valve, pH test strips",
+			Spec:        ">=2300 F alumina-silica ceramic fiber rope/gaskets for dry hot flue upstream of Stage 1 (NO silicone/PTFE on 2400 F flue!), expanded PTFE/EPDM gaskets strictly downstream (<=200 F), band clamps/bolts, CPVC Sch 80 primer & cement, drain ball valve, thermometer (IPC 702.5 <=140 F check), pH test strips",
 			UnitCostUSD: hardwareCost,
 			WeightKg:    8.5,
 		},
@@ -734,7 +766,9 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 			"All line-item WeightKg values represent TOTAL line-item weight (already multiplied by Quantity).",
 			"COTS pricing reflects realistic US studio/industrial distributor budgetary estimates (excluding freight and tax).",
 			fmt.Sprintf("Packed column snapped=%v -> %.1f\" actual ID operating at %.1f%% of Eckert flooding velocity (design limit <= 75%%).", project.SnapToCOTS, actualColIDIn, actualPctFlood),
-			"Stage 3 CPVC/HDPE components MUST be protected by the hardwired 210 F / 0.25 GPM fail-open hot-gas bypass damper.",
+			"NFPA 86 & ASTM F441: Stage 3 Sch 80 CPVC/FRP components MUST be protected by an independent hardwired 200 F manual-reset snap-disc + 24VDC de-energize-to-trip latching safety relay driving the spring-return fail-open hot-gas bypass damper (ahead of the 210 F / 0.25 GPM software backup).",
+			"NEC 430.102 / 430.122 / 210.8(F) / 110.28: Size VFD branch circuit at >=125% VFD rated 1-phase input current, install lockable NEMA 4X sight disconnect (<=50 ft), house IP20 VFD in NEMA 4X enclosure, and use line-side HF-rated GFCI + input line reactor.",
+			"IPC 608 / 702.5 / 803.1 & NFPA 91: Isolate potable water via Air Gap (>=1\") or ASSE 1013 RPZ; cool drain/blowdown <=140 F and neutralize to pH 6.5-8.5 (>=5.0 per 40 CFR 403.5) before sanitary discharge; include NFPA 91 duct cleanouts/low-point drains and ASTM E84 Class 1 plastic ducting.",
 		},
 	}
 	bom.RecalculateTotals()

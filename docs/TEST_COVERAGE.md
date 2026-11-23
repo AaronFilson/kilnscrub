@@ -6,216 +6,121 @@ Generated automatically by [`scripts/branch_coverage.go`](../scripts/branch_cove
 
 | Metric | Covered | Total | Coverage |
 | :--- | ---: | ---: | ---: |
-| **Statements** (matches `go tool cover -func`) | 3675 | 4389 | **83.7%** |
-| **Executable Lines** (token-mapped) | 5164 | 5925 | **87.2%** |
-| **AST Control-Flow Branches** (C1 decision) | 1345 | 1978 | **68.0%** |
+| **Statements** (matches `go tool cover -func`) | 4103 | 4477 | **91.6%** |
+| **Executable Lines** (token-mapped) | 5664 | 6041 | **93.8%** |
+| **AST Control-Flow Branches** (C1 decision) | 1680 | 2024 | **83.0%** |
 
 ## Per-Package Coverage Summary
 
 | Package | Statements | Statement % | Exec Lines | Line % | AST Branches | Branch % | Status (≥85% Line / ≥80% Branch) |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | :---: |
-| `cmd/kilnscrub` | 378 / 436 | 86.7% | 462 / 520 | 88.8% | 160 / 219 | 73.1% | Below Branch |
-| `internal/control` | 794 / 1030 | 77.1% | 989 / 1228 | 80.5% | 346 / 530 | 65.3% | Below Line & Branch |
+| `cmd/kilnscrub` | 395 / 436 | 90.6% | 479 / 520 | 92.1% | 177 / 219 | 80.8% | PASS |
+| `internal/control` | 868 / 1033 | 84.0% | 1063 / 1231 | 86.4% | 403 / 532 | 75.8% | Below Branch |
 | `internal/web` | 409 / 459 | 89.1% | 421 / 471 | 89.4% | 169 / 210 | 80.5% | PASS |
-| `pkg/cad` | 672 / 761 | 88.3% | 1063 / 1152 | 92.3% | 192 / 280 | 68.6% | Below Branch |
-| `pkg/model` | 145 / 170 | 85.3% | 200 / 225 | 88.9% | 79 / 104 | 76.0% | Below Branch |
-| `pkg/scrubber` | 340 / 418 | 81.3% | 488 / 566 | 86.2% | 99 / 177 | 55.9% | Below Branch |
-| `pkg/studio` | 652 / 767 | 85.0% | 1218 / 1377 | 88.5% | 197 / 290 | 67.9% | Below Branch |
-| `pkg/thermo` | 285 / 348 | 81.9% | 323 / 386 | 83.7% | 103 / 168 | 61.3% | Below Line & Branch |
-| **TOTAL** | **3675 / 4389** | **83.7%** | **5164 / 5925** | **87.2%** | **1345 / 1978** | **68.0%** | — |
+| `pkg/cad` | 734 / 761 | 96.5% | 1126 / 1153 | 97.7% | 251 / 280 | 89.6% | PASS |
+| `pkg/model` | 168 / 170 | 98.8% | 223 / 225 | 99.1% | 102 / 104 | 98.1% | PASS |
+| `pkg/scrubber` | 379 / 418 | 90.7% | 527 / 566 | 93.1% | 140 / 177 | 79.1% | Below Branch |
+| `pkg/studio` | 820 / 852 | 96.2% | 1457 / 1489 | 97.9% | 291 / 334 | 87.1% | PASS |
+| `pkg/thermo` | 330 / 348 | 94.8% | 368 / 386 | 95.3% | 147 / 168 | 87.5% | PASS |
+| **TOTAL** | **4103 / 4477** | **91.6%** | **5664 / 6041** | **93.8%** | **1680 / 2024** | **83.0%** | — |
 
 ## Per-File Breakdown
 
 | File | Statements | Exec Lines | AST Branches |
 | :--- | ---: | ---: | ---: |
-| `cmd/kilnscrub/main.go` | 378/436 (86.7%) | 462/520 (88.8%) | 160/219 (73.1%) |
-| `internal/control/config.go` | 37/48 (77.1%) | 41/52 (78.8%) | 29/40 (72.5%) |
+| `cmd/kilnscrub/main.go` | 395/436 (90.6%) | 479/520 (92.1%) | 177/219 (80.8%) |
+| `internal/control/config.go` | 48/48 (100.0%) | 52/52 (100.0%) | 40/40 (100.0%) |
 | `internal/control/controller.go` | 96/109 (88.1%) | 150/163 (92.0%) | 31/44 (70.5%) |
-| `internal/control/daemon.go` | 63/81 (77.8%) | 68/86 (79.1%) | 24/36 (66.7%) |
+| `internal/control/daemon.go` | 77/81 (95.1%) | 82/86 (95.3%) | 30/36 (83.3%) |
 | `internal/control/filter.go` | 37/40 (92.5%) | 41/44 (93.2%) | 10/10 (100.0%) |
-| `internal/control/hub.go` | 38/43 (88.4%) | 40/45 (88.9%) | 15/20 (75.0%) |
-| `internal/control/interlock.go` | 52/59 (88.1%) | 68/75 (90.7%) | 25/29 (86.2%) |
-| `internal/control/modbus_hal.go` | 118/158 (74.7%) | 182/222 (82.0%) | 68/101 (67.3%) |
-| `internal/control/modbus_rtu.go` | 168/219 (76.7%) | 176/230 (76.5%) | 78/129 (60.5%) |
+| `internal/control/hub.go` | 42/43 (97.7%) | 44/45 (97.8%) | 18/20 (90.0%) |
+| `internal/control/interlock.go` | 58/59 (98.3%) | 74/75 (98.7%) | 28/29 (96.6%) |
+| `internal/control/modbus_hal.go` | 139/161 (86.3%) | 203/225 (90.2%) | 84/103 (81.6%) |
+| `internal/control/modbus_rtu.go` | 186/219 (84.9%) | 194/230 (84.3%) | 96/129 (74.4%) |
 | `internal/control/serial_linux.go` | 0/48 (0.0%) | 0/48 (0.0%) | 0/26 (0.0%) |
 | `internal/control/sim_hal.go` | 185/225 (82.2%) | 223/263 (84.8%) | 66/95 (69.5%) |
 | `internal/web/server.go` | 193/220 (87.7%) | 200/227 (88.1%) | 68/92 (73.9%) |
 | `internal/web/studio.go` | 82/88 (93.2%) | 82/88 (93.2%) | 36/40 (90.0%) |
 | `internal/web/telemetry.go` | 134/151 (88.7%) | 139/156 (89.1%) | 65/78 (83.3%) |
-| `pkg/cad/bom.go` | 114/129 (88.4%) | 322/337 (95.5%) | 24/40 (60.0%) |
-| `pkg/cad/dxf.go` | 183/198 (92.4%) | 284/299 (95.0%) | 54/68 (79.4%) |
-| `pkg/cad/exporter.go` | 95/133 (71.4%) | 137/175 (78.3%) | 60/92 (65.2%) |
-| `pkg/cad/stl.go` | 280/301 (93.0%) | 320/341 (93.8%) | 54/80 (67.5%) |
-| `pkg/model/types.go` | 105/128 (82.0%) | 160/183 (87.4%) | 79/104 (76.0%) |
+| `pkg/cad/bom.go` | 124/129 (96.1%) | 333/338 (98.5%) | 34/40 (85.0%) |
+| `pkg/cad/dxf.go` | 186/198 (93.9%) | 287/299 (96.0%) | 57/68 (83.8%) |
+| `pkg/cad/exporter.go` | 131/133 (98.5%) | 173/175 (98.9%) | 91/92 (98.9%) |
+| `pkg/cad/stl.go` | 293/301 (97.3%) | 333/341 (97.7%) | 69/80 (86.2%) |
+| `pkg/model/types.go` | 128/128 (100.0%) | 183/183 (100.0%) | 102/104 (98.1%) |
 | `pkg/model/units.go` | 40/42 (95.2%) | 40/42 (95.2%) | 0/0 (100.0%) |
-| `pkg/scrubber/blower.go` | 62/71 (87.3%) | 103/112 (92.0%) | 15/26 (57.7%) |
-| `pkg/scrubber/packedbed.go` | 92/116 (79.3%) | 127/151 (84.1%) | 19/40 (47.5%) |
-| `pkg/scrubber/scrubber.go` | 62/78 (79.5%) | 96/112 (85.7%) | 24/41 (58.5%) |
-| `pkg/scrubber/venturi.go` | 124/153 (81.0%) | 162/191 (84.8%) | 41/70 (58.6%) |
-| `pkg/studio/cots.go` | 164/213 (77.0%) | 412/501 (82.2%) | 53/77 (68.8%) |
-| `pkg/studio/guide.go` | 123/124 (99.2%) | 169/170 (99.4%) | 21/22 (95.5%) |
-| `pkg/studio/packet.go` | 97/120 (80.8%) | 170/193 (88.1%) | 29/51 (56.9%) |
-| `pkg/studio/presets.go` | 83/103 (80.6%) | 195/217 (89.9%) | 32/54 (59.3%) |
-| `pkg/studio/urban.go` | 185/207 (89.4%) | 272/296 (91.9%) | 62/86 (72.1%) |
-| `pkg/thermo/quench.go` | 133/160 (83.1%) | 159/186 (85.5%) | 44/72 (61.1%) |
-| `pkg/thermo/shomate.go` | 152/188 (80.9%) | 164/200 (82.0%) | 59/96 (61.5%) |
+| `pkg/scrubber/blower.go` | 69/71 (97.2%) | 110/112 (98.2%) | 23/26 (88.5%) |
+| `pkg/scrubber/packedbed.go` | 104/116 (89.7%) | 139/151 (92.1%) | 31/40 (77.5%) |
+| `pkg/scrubber/scrubber.go` | 68/78 (87.2%) | 102/112 (91.1%) | 31/41 (75.6%) |
+| `pkg/scrubber/venturi.go` | 138/153 (90.2%) | 176/191 (92.1%) | 55/70 (78.6%) |
+| `pkg/studio/cots.go` | 221/225 (98.2%) | 523/527 (99.2%) | 76/82 (92.7%) |
+| `pkg/studio/guide.go` | 130/131 (99.2%) | 179/180 (99.4%) | 25/26 (96.2%) |
+| `pkg/studio/packet.go` | 105/123 (85.4%) | 178/196 (90.8%) | 35/51 (68.6%) |
+| `pkg/studio/presets.go` | 99/103 (96.1%) | 213/217 (98.2%) | 48/54 (88.9%) |
+| `pkg/studio/urban.go` | 265/270 (98.1%) | 364/369 (98.6%) | 107/121 (88.4%) |
+| `pkg/thermo/quench.go` | 148/160 (92.5%) | 174/186 (93.5%) | 58/72 (80.6%) |
+| `pkg/thermo/shomate.go` | 182/188 (96.8%) | 194/200 (97.0%) | 89/96 (92.7%) |
 
 ## Branch Coverage by Construct Type
 
 | Construct Kind | Covered | Total | Coverage |
 | :--- | ---: | ---: | ---: |
-| `for-body` | 25 | 28 | 89.3% |
-| `for-exit` | 24 | 26 | 92.3% |
-| `if-else` | 31 | 40 | 77.5% |
-| `if-else-if` | 6 | 8 | 75.0% |
-| `if-implicit-else` | 733 | 797 | 92.0% |
-| `if-then` | 354 | 845 | 41.9% |
-| `range-body` | 40 | 41 | 97.6% |
-| `range-exit` | 35 | 41 | 85.4% |
+| `for-body` | 27 | 28 | 96.4% |
+| `for-exit` | 25 | 26 | 96.2% |
+| `if-else` | 47 | 48 | 97.9% |
+| `if-else-if` | 7 | 7 | 100.0% |
+| `if-implicit-else` | 748 | 804 | 93.0% |
+| `if-then` | 596 | 859 | 69.4% |
+| `range-body` | 41 | 41 | 100.0% |
+| `range-exit` | 38 | 41 | 92.7% |
 | `select-case` | 9 | 10 | 90.0% |
 | `select-default` | 1 | 3 | 33.3% |
-| `switch-case` | 65 | 102 | 63.7% |
-| `switch-default` | 17 | 28 | 60.7% |
-| `switch-implicit-default` | 3 | 6 | 50.0% |
+| `switch-case` | 105 | 117 | 89.7% |
+| `switch-default` | 29 | 31 | 93.5% |
+| `switch-implicit-default` | 4 | 6 | 66.7% |
 | `type-switch-case` | 2 | 2 | 100.0% |
-| `type-switch-implicit-default` | 0 | 1 | 0.0% |
+| `type-switch-implicit-default` | 1 | 1 | 100.0% |
 
 ## Highest-Value Uncovered Branches (Prioritized Test Targets)
 
 Packages below the **85% executable line** or **80% AST branch** target are listed first, followed by remaining packages. Within each package, explicit `switch`/`select` arms, `else`/`else if` paths, and loop entry/exit branches are prioritized ahead of defensive error guards.
 
-### `pkg/scrubber` (Line 86.2%, Branch 55.9%, 78 uncovered branches — Priority Target)
-
-| Location | Construct | Function | Condition / Arm |
-| :--- | :--- | :--- | :--- |
-| `pkg/scrubber/scrubber.go:85` | `switch-default` | `computeInletFlueGas` | `default` |
-| `pkg/scrubber/blower.go:80` | `if-else` | `DuctPressureDrop` | `else of (mu > 0 && v > 0)` |
-| `pkg/scrubber/blower.go:33` | `range-exit` | `selectStandardMotorHP` | `exit/skip (range standardMotorHPs)` |
-| `pkg/scrubber/packedbed.go:109` | `for-exit` | `SizePackedBed` | `exit/skip (iter < 8)` |
-| `pkg/scrubber/packedbed.go:143` | `for-body` | `SizePackedBed` | `(qGas/(math.Pi*colDiam*colDiam/4.0))/vFlood*100.0 > packedBedMaxFloodPct` |
-| `pkg/scrubber/venturi.go:139` | `for-body` | `CalvertCutDiameter` | `residual(low) < 0 && low > 1e-12` |
-| `pkg/scrubber/venturi.go:142` | `for-body` | `CalvertCutDiameter` | `residual(high) > 0 && high < 1.0` |
-| `pkg/scrubber/blower.go:44` | `if-then` | `AutoSizeDuctDiameter` | `inletGas.VolumetricFlow <= 0` |
-| `pkg/scrubber/blower.go:50` | `if-then` | `AutoSizeDuctDiameter` | `nom < ductMinDiamM` |
-| `pkg/scrubber/blower.go:59` | `if-then` | `DuctPressureDrop` | `ductDiameter <= 0 \|\| gas.VolumetricFlow <= 0 \|\| gas.Density <= 0` |
-| `pkg/scrubber/blower.go:72` | `if-then` | `DuctPressureDrop` | `re < 2300.0` |
-| `pkg/scrubber/blower.go:100` | `if-then` | `SizeBlower` | `outletGas.VolumetricFlow <= 0 \|\| outletGas.Density <= 0` |
-
-*...and 66 additional uncovered branches in `pkg/scrubber` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
-
-### `pkg/thermo` (Line 83.7%, Branch 61.3%, 65 uncovered branches — Priority Target)
-
-| Location | Construct | Function | Condition / Arm |
-| :--- | :--- | :--- | :--- |
-| `pkg/thermo/shomate.go:217` | `switch-case` | `LucasGasViscosity` | `case "7440-59-7"` |
-| `pkg/thermo/shomate.go:219` | `switch-case` | `LucasGasViscosity` | `case "1333-74-0"` |
-| `pkg/thermo/shomate.go:221` | `switch-case` | `LucasGasViscosity` | `case "7782-39-0"` |
-| `pkg/thermo/quench.go:86` | `if-else` | `BrentRoot` | `else of (math.Abs(e) >= tol1 && math.Abs(fa) > math.Abs(fb))` |
-| `pkg/thermo/quench.go:44` | `for-exit` | `BrentRoot` | `exit/skip (iter < maxIter)` |
-| `pkg/thermo/shomate.go:148` | `range-exit` | `selectShomateRange` | `exit/skip (range ranges)` |
-| `pkg/thermo/quench.go:14` | `if-then` | `BrentRoot` | `math.IsNaN(a) \|\| math.IsNaN(b) \|\| math.IsInf(a, 0) \|\| math.IsInf(b, 0)` |
-| `pkg/thermo/quench.go:17` | `if-then` | `BrentRoot` | `tol <= 0` |
-| `pkg/thermo/quench.go:20` | `if-then` | `BrentRoot` | `maxIter <= 0` |
-| `pkg/thermo/quench.go:26` | `if-then` | `BrentRoot` | `math.IsNaN(fa) \|\| math.IsNaN(fb)` |
-| `pkg/thermo/quench.go:29` | `if-then` | `BrentRoot` | `fa == 0` |
-| `pkg/thermo/quench.go:32` | `if-then` | `BrentRoot` | `fb == 0` |
-
-*...and 53 additional uncovered branches in `pkg/thermo` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
-
-### `internal/control` (Line 80.5%, Branch 65.3%, 184 uncovered branches — Priority Target)
+### `internal/control` (Line 86.4%, Branch 75.8%, 129 uncovered branches — Priority Target)
 
 | Location | Construct | Function | Condition / Arm |
 | :--- | :--- | :--- | :--- |
 | `internal/control/hub.go:84` | `select-default` | `(*TelemetryHub).Publish` | `default` |
 | `internal/control/hub.go:88` | `select-default` | `(*TelemetryHub).Publish` | `default` |
-| `internal/control/modbus_hal.go:435` | `switch-case` | `convertModbusTempToKelvin` | `case ModbusTempUnitK` |
-| `internal/control/modbus_rtu.go:62` | `switch-case` | `modbusExceptionName` | `case 0x01` |
-| `internal/control/modbus_rtu.go:64` | `switch-case` | `modbusExceptionName` | `case 0x02` |
-| `internal/control/modbus_rtu.go:66` | `switch-case` | `modbusExceptionName` | `case 0x03` |
-| `internal/control/modbus_rtu.go:70` | `switch-case` | `modbusExceptionName` | `case 0x05` |
-| `internal/control/modbus_rtu.go:72` | `switch-case` | `modbusExceptionName` | `case 0x06` |
-| `internal/control/modbus_rtu.go:74` | `switch-case` | `modbusExceptionName` | `case 0x08` |
-| `internal/control/modbus_rtu.go:76` | `switch-case` | `modbusExceptionName` | `case 0x0A` |
-| `internal/control/modbus_rtu.go:78` | `switch-case` | `modbusExceptionName` | `case 0x0B` |
-| `internal/control/modbus_rtu.go:80` | `switch-default` | `modbusExceptionName` | `default` |
+| `internal/control/modbus_rtu.go:381` | `switch-default` | `(*ModbusRTUClient).roundTrip` | `default` |
+| `internal/control/serial_linux.go:82` | `switch-case` | `linuxBaudFlag` | `case 1200` |
+| `internal/control/serial_linux.go:84` | `switch-case` | `linuxBaudFlag` | `case 2400` |
+| `internal/control/serial_linux.go:86` | `switch-case` | `linuxBaudFlag` | `case 4800` |
+| `internal/control/serial_linux.go:88` | `switch-case` | `linuxBaudFlag` | `case 9600` |
+| `internal/control/serial_linux.go:90` | `switch-case` | `linuxBaudFlag` | `case 19200` |
+| `internal/control/serial_linux.go:92` | `switch-case` | `linuxBaudFlag` | `case 38400` |
+| `internal/control/serial_linux.go:94` | `switch-case` | `linuxBaudFlag` | `case 57600` |
+| `internal/control/serial_linux.go:96` | `switch-case` | `linuxBaudFlag` | `case 115200` |
+| `internal/control/serial_linux.go:98` | `switch-case` | `linuxBaudFlag` | `case 230400` |
 
-*...and 172 additional uncovered branches in `internal/control` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
+*...and 117 additional uncovered branches in `internal/control` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
 
-### `pkg/studio` (Line 88.5%, Branch 67.9%, 93 uncovered branches — Priority Target)
-
-| Location | Construct | Function | Condition / Arm |
-| :--- | :--- | :--- | :--- |
-| `pkg/studio/cots.go:307` | `switch-default` | `selectSumpTank` | `default` |
-| `pkg/studio/cots.go:411` | `switch-case` | `selectBlowerVFD` | `case hp <= 3.0` |
-| `pkg/studio/cots.go:468` | `switch-case` | `RecommendedDilutionCFM` | `case target <= 2250.0` |
-| `pkg/studio/cots.go:479` | `switch-case` | `selectPlumeDiluter` | `case cfm <= 500.0` |
-| `pkg/studio/cots.go:481` | `switch-case` | `selectPlumeDiluter` | `case cfm <= 1000.0` |
-| `pkg/studio/cots.go:485` | `switch-case` | `selectPlumeDiluter` | `case cfm <= 2000.0` |
-| `pkg/studio/cots.go:487` | `switch-default` | `selectPlumeDiluter` | `default` |
-| `pkg/studio/packet.go:91` | `switch-case` | `PacketFilename` | `case r == ' '` |
-| `pkg/studio/presets.go:261` | `switch-case` | `(StudioProject).EffectiveDesignInput` | `case "", model.FuelGasSalt` |
-| `pkg/studio/presets.go:268` | `switch-case` | `(StudioProject).EffectiveDesignInput` | `case ""` |
-| `pkg/studio/presets.go:270` | `switch-case` | `(StudioProject).EffectiveDesignInput` | `case model.FuelWood` |
-| `pkg/studio/presets.go:272` | `switch-case` | `(StudioProject).EffectiveDesignInput` | `case model.FuelGas` |
-
-*...and 81 additional uncovered branches in `pkg/studio` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
-
-### `pkg/cad` (Line 92.3%, Branch 68.6%, 88 uncovered branches — Priority Target)
+### `pkg/scrubber` (Line 93.1%, Branch 79.1%, 37 uncovered branches — Priority Target)
 
 | Location | Construct | Function | Condition / Arm |
 | :--- | :--- | :--- | :--- |
-| `pkg/cad/exporter.go:303` | `if-else` | `deriveGeometry` | `else of (sumpVol > 0)` |
-| `pkg/cad/stl.go:127` | `if-else-if` | `(*stlMesh).addFrustum` | `else of (r0 > 1e-6 && r1 > 1e-6)` |
-| `pkg/cad/stl.go:129` | `if-else` | `(*stlMesh).addFrustum` | `else of (r0 > 1e-6)` |
-| `pkg/cad/bom.go:47` | `if-then` | `(*Exporter).GenerateBOM` | `quenchMat == ""` |
-| `pkg/cad/bom.go:51` | `if-then` | `(*Exporter).GenerateBOM` | `venturiMat == ""` |
-| `pkg/cad/bom.go:55` | `if-then` | `(*Exporter).GenerateBOM` | `colMat == ""` |
-| `pkg/cad/bom.go:59` | `if-then` | `(*Exporter).GenerateBOM` | `packingSpec == ""` |
-| `pkg/cad/bom.go:62` | `if-then` | `(*Exporter).GenerateBOM` | `packingSpec == ""` |
-| `pkg/cad/bom.go:66` | `if-then` | `(*Exporter).GenerateBOM` | `blowerMat == ""` |
-| `pkg/cad/bom.go:108` | `if-then` | `(*Exporter).GenerateBOM` | `packingVolM3 < 0.001` |
-| `pkg/cad/bom.go:121` | `if-then` | `(*Exporter).GenerateBOM` | `recircGPM <= 0` |
-| `pkg/cad/bom.go:129` | `if-then` | `(*Exporter).GenerateBOM` | `motorHP <= 0` |
+| `pkg/scrubber/packedbed.go:109` | `for-exit` | `SizePackedBed` | `exit/skip (iter < 8)` |
+| `pkg/scrubber/packedbed.go:143` | `for-body` | `SizePackedBed` | `(qGas/(math.Pi*colDiam*colDiam/4.0))/vFlood*100.0 > packedBedMaxFloodPct` |
+| `pkg/scrubber/blower.go:158` | `if-then` | `SizeBlower` | `kSys < 0` |
+| `pkg/scrubber/blower.go:179` | `if-then` | `SizeBlower` | `pFanVal < 0` |
+| `pkg/scrubber/packedbed.go:81` | `if-then` | `EckertFloodingVelocity` | `vFloodSq <= 0 \|\| math.IsNaN(vFloodSq) \|\| math.IsInf(vFloodSq, 0)` |
+| `pkg/scrubber/packedbed.go:112` | `if-then` | `SizePackedBed` | `err != nil` |
+| `pkg/scrubber/packedbed.go:139` | `if-then` | `SizePackedBed` | `err != nil` |
+| `pkg/scrubber/packedbed.go:148` | `if-then` | `SizePackedBed` | `err != nil` |
+| `pkg/scrubber/packedbed.go:192` | `if-then` | `SizePackedBed` | `err != nil` |
+| `pkg/scrubber/packedbed.go:264` | `if-then` | `SizePackedBed` | `err != nil` |
+| `pkg/scrubber/scrubber.go:64` | `if-then` | `computeInletFlueGas` | `tempScale > 1.80` |
+| `pkg/scrubber/scrubber.go:98` | `if-then` | `computeInletFlueGas` | `nTotal <= 0` |
 
-*...and 76 additional uncovered branches in `pkg/cad` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
-
-### `cmd/kilnscrub` (Line 88.8%, Branch 73.1%, 59 uncovered branches — Priority Target)
-
-| Location | Construct | Function | Condition / Arm |
-| :--- | :--- | :--- | :--- |
-| `cmd/kilnscrub/main.go:647` | `switch-default` | `openControlHAL` | `default` |
-| `cmd/kilnscrub/main.go:276` | `if-else` | `printDesignSummary` | `else of (len(d.Warnings) == 0)` |
-| `cmd/kilnscrub/main.go:278` | `range-body` | `printDesignSummary` | `range d.Warnings` |
-| `cmd/kilnscrub/main.go:278` | `range-exit` | `printDesignSummary` | `exit/skip (range d.Warnings)` |
-| `cmd/kilnscrub/main.go:29` | `if-then` | `main` | `err != nil` |
-| `cmd/kilnscrub/main.go:172` | `if-then` | `runDesign` | `err != nil` |
-| `cmd/kilnscrub/main.go:199` | `if-then` | `runDesign` | `err != nil` |
-| `cmd/kilnscrub/main.go:205` | `if-then` | `runDesign` | `err != nil` |
-| `cmd/kilnscrub/main.go:294` | `if-then` | `runExport` | `err != nil` |
-| `cmd/kilnscrub/main.go:297` | `if-then` | `runExport` | `fs.NArg() > 0` |
-| `cmd/kilnscrub/main.go:324` | `if-then` | `runExport` | `err != nil` |
-| `cmd/kilnscrub/main.go:330` | `if-then` | `runExport` | `err != nil` |
-
-*...and 47 additional uncovered branches in `cmd/kilnscrub` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
-
-### `pkg/model` (Line 88.9%, Branch 76.0%, 25 uncovered branches — Priority Target)
-
-| Location | Construct | Function | Condition / Arm |
-| :--- | :--- | :--- | :--- |
-| `pkg/model/types.go:609` | `if-else` | `(*ControlConfig).Sync` | `else of (c.TargetDraftInWC != 0 \|\| c.TargetDraftPa == 0)` |
-| `pkg/model/types.go:614` | `if-else-if` | `(*ControlConfig).Sync` | `else of (c.DraftFilterCutoffHz > 0)` |
-| `pkg/model/types.go:96` | `if-then` | `(DesignInput).Validate` | `peakK <= d.AmbientTempK \|\| peakK > 2500.0` |
-| `pkg/model/types.go:467` | `if-then` | `(SafetyLimits).Validate` | `!isFinite(float64(s.MaxQuenchOutletTemp)) \|\| s.MaxQuenchOutletTemp <=...` |
-| `pkg/model/types.go:470` | `if-then` | `(SafetyLimits).Validate` | `!isFinite(float64(s.MinWaterFlow)) \|\| s.MinWaterFlow < 0` |
-| `pkg/model/types.go:473` | `if-then` | `(SafetyLimits).Validate` | `!isFinite(s.MinSumpPH) \|\| !isFinite(s.MaxSumpPH) \|\| s.MinSumpPH < 0 \|...` |
-| `pkg/model/types.go:476` | `if-then` | `(SafetyLimits).Validate` | `s.SensorFaultTimeout <= 0` |
-| `pkg/model/types.go:479` | `if-then` | `(SafetyLimits).Validate` | `!isFinite(float64(s.MaxDraftMagnitudePa)) \|\| s.MaxDraftMagnitudePa <= 0` |
-| `pkg/model/types.go:505` | `if-then` | `(PIDGains).Validate` | `!isFinite(g.Kp) \|\| g.Kp < 0` |
-| `pkg/model/types.go:508` | `if-then` | `(PIDGains).Validate` | `!isFinite(g.Ki) \|\| g.Ki < 0` |
-| `pkg/model/types.go:511` | `if-then` | `(PIDGains).Validate` | `!isFinite(g.Kd) \|\| g.Kd < 0` |
-| `pkg/model/types.go:514` | `if-then` | `(PIDGains).Validate` | `!isFinite(g.AntiWindUpGain) \|\| g.AntiWindUpGain < 0` |
-
-*...and 13 additional uncovered branches in `pkg/model` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
+*...and 25 additional uncovered branches in `pkg/scrubber` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
 
 ### `internal/web` (Line 89.4%, Branch 80.5%, 41 uncovered branches)
 
@@ -235,6 +140,89 @@ Packages below the **85% executable line** or **80% AST branch** target are list
 | `internal/web/server.go:284` | `if-then` | `(*Server).handleExport` | `s.designer == nil \|\| s.exporter == nil` |
 
 *...and 29 additional uncovered branches in `internal/web` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
+
+### `cmd/kilnscrub` (Line 92.1%, Branch 80.8%, 42 uncovered branches)
+
+| Location | Construct | Function | Condition / Arm |
+| :--- | :--- | :--- | :--- |
+| `cmd/kilnscrub/main.go:29` | `if-then` | `main` | `err != nil` |
+| `cmd/kilnscrub/main.go:199` | `if-then` | `runDesign` | `err != nil` |
+| `cmd/kilnscrub/main.go:205` | `if-then` | `runDesign` | `err != nil` |
+| `cmd/kilnscrub/main.go:324` | `if-then` | `runExport` | `err != nil` |
+| `cmd/kilnscrub/main.go:330` | `if-then` | `runExport` | `err != nil` |
+| `cmd/kilnscrub/main.go:334` | `if-then` | `runExport` | `err != nil` |
+| `cmd/kilnscrub/main.go:338` | `if-then` | `runExport` | `err != nil` |
+| `cmd/kilnscrub/main.go:342` | `if-then` | `runExport` | `err != nil` |
+| `cmd/kilnscrub/main.go:346` | `if-then` | `runExport` | `err != nil` |
+| `cmd/kilnscrub/main.go:350` | `if-then` | `runExport` | `err != nil` |
+| `cmd/kilnscrub/main.go:366` | `if-then` | `runExport` | `err != nil` |
+| `cmd/kilnscrub/main.go:394` | `if-then` | `runPresets` | `err != nil` |
+
+*...and 30 additional uncovered branches in `cmd/kilnscrub` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
+
+### `pkg/studio` (Line 97.9%, Branch 87.1%, 43 uncovered branches)
+
+| Location | Construct | Function | Condition / Arm |
+| :--- | :--- | :--- | :--- |
+| `pkg/studio/urban.go:254` | `switch-case` | `assessElectrical` | `case reqAmps <= 50.0` |
+| `pkg/studio/guide.go:69` | `if-else` | `GenerateBuildGuide` | `else of (p.CorrosionTier == CorrosionTierHeavyC276FRP)` |
+| `pkg/studio/cots.go:107` | `range-exit` | `snapPipe` | `exit/skip (range catalog)` |
+| `pkg/studio/presets.go:237` | `range-exit` | `PresetByID` | `exit/skip (range Presets())` |
+| `pkg/studio/urban.go:433` | `range-exit` | `assessPlume` | `exit/skip (range []float64{0.15, 0.35, 0.50, 0.70, 0.85})` |
+| `pkg/studio/cots.go:358` | `if-then` | `selectPackingMedia` | `packVolM3 <= 0` |
+| `pkg/studio/cots.go:554` | `if-then` | `BuildCOTSSummary` | `nozzleQty < 3` |
+| `pkg/studio/cots.go:579` | `if-then` | `BuildCOTSSummary` | `recircGPM <= 0` |
+| `pkg/studio/packet.go:59` | `if-then` | `(*Evaluator).Evaluate` | `err != nil` |
+| `pkg/studio/packet.go:168` | `if-then` | `buildDaemonJSON` | `spF > 202.0` |
+| `pkg/studio/packet.go:173` | `if-then` | `buildDaemonJSON` | `err != nil` |
+| `pkg/studio/packet.go:227` | `if-then` | `buildDaemonJSON` | `err != nil` |
+
+*...and 31 additional uncovered branches in `pkg/studio` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
+
+### `pkg/thermo` (Line 95.3%, Branch 87.5%, 21 uncovered branches)
+
+| Location | Construct | Function | Condition / Arm |
+| :--- | :--- | :--- | :--- |
+| `pkg/thermo/quench.go:143` | `if-then` | `SolveAdiabaticQuench` | `err != nil` |
+| `pkg/thermo/quench.go:171` | `if-then` | `SolveAdiabaticQuench` | `err != nil` |
+| `pkg/thermo/quench.go:176` | `if-then` | `SolveAdiabaticQuench` | `tLow >= tHigh` |
+| `pkg/thermo/quench.go:182` | `if-then` | `SolveAdiabaticQuench.func@L180` | `e != nil` |
+| `pkg/thermo/quench.go:186` | `if-then` | `SolveAdiabaticQuench.func@L180` | `ywSat >= 0.9999` |
+| `pkg/thermo/quench.go:198` | `if-then` | `SolveAdiabaticQuench.func@L180` | `e1 != nil \|\| e2 != nil \|\| e3 != nil \|\| e4 != nil \|\| e5 != nil` |
+| `pkg/thermo/quench.go:206` | `if-then` | `SolveAdiabaticQuench` | `err != nil` |
+| `pkg/thermo/quench.go:212` | `if-then` | `SolveAdiabaticQuench` | `err != nil` |
+| `pkg/thermo/quench.go:230` | `if-then` | `SolveAdiabaticQuench` | `err != nil` |
+| `pkg/thermo/quench.go:235` | `if-then` | `SolveAdiabaticQuench` | `err != nil` |
+| `pkg/thermo/quench.go:254` | `if-then` | `SolveAdiabaticQuench` | `towerDiam < minQuenchTowerDiameterM` |
+| `pkg/thermo/quench.go:273` | `if-then` | `SolveAdiabaticQuench` | `nozzleCount < minQuenchNozzleCount` |
+
+*...and 9 additional uncovered branches in `pkg/thermo` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
+
+### `pkg/cad` (Line 97.7%, Branch 89.6%, 29 uncovered branches)
+
+| Location | Construct | Function | Condition / Arm |
+| :--- | :--- | :--- | :--- |
+| `pkg/cad/bom.go:108` | `if-then` | `(*Exporter).GenerateBOM` | `packingVolM3 < 0.001` |
+| `pkg/cad/bom.go:369` | `if-then` | `(*Exporter).FormatBOMCSV` | `err != nil` |
+| `pkg/cad/bom.go:385` | `if-then` | `(*Exporter).FormatBOMCSV` | `err != nil` |
+| `pkg/cad/bom.go:401` | `if-then` | `(*Exporter).FormatBOMCSV` | `err != nil` |
+| `pkg/cad/bom.go:406` | `if-then` | `(*Exporter).FormatBOMCSV` | `err != nil` |
+| `pkg/cad/dxf.go:44` | `if-then` | `ComputeFrustumDevelopment` | `err != nil` |
+| `pkg/cad/dxf.go:47` | `if-then` | `ComputeFrustumDevelopment` | `err != nil` |
+| `pkg/cad/dxf.go:50` | `if-then` | `ComputeFrustumDevelopment` | `err != nil` |
+| `pkg/cad/dxf.go:108` | `if-then` | `(*dxfBuilder).trackPoint` | `!isFinite(x) \|\| !isFinite(y)` |
+| `pkg/cad/dxf.go:225` | `if-then` | `(*dxfBuilder).addFrustumPattern` | `dev.IsCylinder` |
+| `pkg/cad/dxf.go:303` | `if-then` | `(*dxfBuilder).build` | `!b.hasPts` |
+| `pkg/cad/dxf.go:444` | `if-then` | `(*Exporter).ExportDXF` | `err != nil` |
+
+*...and 17 additional uncovered branches in `pkg/cad` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
+
+### `pkg/model` (Line 99.1%, Branch 98.1%, 2 uncovered branches)
+
+| Location | Construct | Function | Condition / Arm |
+| :--- | :--- | :--- | :--- |
+| `pkg/model/types.go:614` | `if-implicit-else` | `(*ControlConfig).Sync` | `!(c.DraftFilterTimeConst > 0)` |
+| `pkg/model/types.go:639` | `if-implicit-else` | `(ControlConfig).Validate` | `!(expectedTau > 0)` |
 
 ## Methodology & Reproducibility
 

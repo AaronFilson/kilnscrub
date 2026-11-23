@@ -295,7 +295,7 @@ func (e *Exporter) GenerateBOM(design model.ScrubberDesign) (model.BOM, error) {
 			Material:    "316L SS / 24VDC Spring-Return Actuator",
 			Quantity:    1,
 			Unit:        "ea",
-			Spec:        fmt.Sprintf("D=%.0fmm butterfly damper, fails OPEN on >=210F / water loss / power loss", g.ductDia*1000),
+			Spec:        fmt.Sprintf("D=%.0fmm butterfly damper, fails OPEN on 200 F hardwired snap-disc / 210 F software / <0.25 GPM / power loss", g.ductDia*1000),
 			UnitCostUSD: damperCost,
 			WeightKg:    damperWeightKg,
 		},
@@ -305,7 +305,7 @@ func (e *Exporter) GenerateBOM(design model.ScrubberDesign) (model.BOM, error) {
 			Material:    "316 SS / NEMA 4X",
 			Quantity:    1,
 			Unit:        "lot",
-			Spec:        "Type-K inlet TC, Pt100 quench outlet RTD, +/-2 inWC draft transmitter, water flow switch, relay interlock",
+			Spec:        "NFPA 86 independent 200 F manual-reset snap-disc + 24VDC de-energize-to-trip latching safety relay, Type-K inlet TC, Pt100 quench RTD, +/-2 inWC draft transmitter, 0.25 GPM flow switch",
 			UnitCostUSD: 890.0,
 			WeightKg:    9.5,
 		},
@@ -344,7 +344,8 @@ func (e *Exporter) GenerateBOM(design model.ScrubberDesign) (model.BOM, error) {
 			"All line-item WeightKg values represent TOTAL line-item weight (accounting for Quantity).",
 			"Sheet-metal quantities include fabrication nesting/scrap allowance (15% for 316L SS, 12% for CPVC/PP).",
 			"Costs are budgetary USD estimates for studio-scale fabrication and exclude labor, shipping, and taxes.",
-			"Stage 3 CPVC/PP components MUST be protected by the fail-safe bypass damper interlock (<= 210 F / 98.9 C).",
+			"NFPA 86 & ASTM F441: Stage 3 CPVC/PP components MUST be protected by an independent hardwired 200 F manual-reset snap-disc + 24VDC latching safety relay driving the spring-return fail-open bypass damper (ahead of the 210 F / 98.9 C software backup).",
+			"US Code Compliance: Include NEC 430.102 lockable NEMA 4X sight disconnect (<=50 ft) & NEC 430.122 125% VFD ampacity, IPC 608 Air Gap/ASSE 1013 RPZ backflow preventer, IPC 702.5 <=140 F drain cooldown, NFPA 211 >=2300 F ceramic flue gaskets & 36\" clearances, and NFPA 91 duct cleanouts/low-point drains & ASTM E84 Class 1 plastic ductwork.",
 		},
 	}
 	bom.RecalculateTotals()

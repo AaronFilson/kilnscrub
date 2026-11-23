@@ -55,19 +55,23 @@ jobs:
         run: |
           jq empty configs/kilnscrub.example.json testdata/oracle_fixtures.json
 
-      - name: Run unit and race tests with coverage
+      - name: Run unit and race tests with line and branch coverage
         env:
           CGO_ENABLED: '1'
         run: |
           set -euo pipefail
-          go test -race -count=1 -coverprofile=coverage.out ./...
+          go test -race -count=1 -covermode=atomic -coverprofile=coverage.out ./...
           total_cov="$(go tool cover -func=coverage.out | tail -n 1)"
+          branch_report="$(go run ./scripts/branch_coverage.go -profile coverage.out -min-line 85 -min-branch 72 -top 0)"
           echo "${total_cov}"
+          echo "${branch_report}"
           {
-            echo "### Go Test Coverage"
+            echo "### Go Test Coverage (Statement, Line & AST Branch)"
             echo ""
             echo '```text'
             echo "${total_cov}"
+            echo ""
+            echo "${branch_report}"
             echo '```'
           } >> "${GITHUB_STEP_SUMMARY}"
 

@@ -77,12 +77,17 @@ type ModbusRegisterMap struct {
 
 // ModbusConfig configures serial connection parameters, timeouts, and the register map for ModbusHAL.
 type ModbusConfig struct {
-	Device              string            `json:"device"`
-	BaudRate            int               `json:"baud_rate"`
-	SlaveID             uint8             `json:"slave_id"`
-	Timeout             time.Duration     `json:"timeout_ns"`
-	UseHoldingRegisters bool              `json:"use_holding_registers"`
-	Registers           ModbusRegisterMap `json:"registers"`
+	Device              string        `json:"device"`
+	BaudRate            int           `json:"baud_rate"`
+	SlaveID             uint8         `json:"slave_id"`
+	Timeout             time.Duration `json:"timeout_ns"`
+	UseHoldingRegisters bool          `json:"use_holding_registers"`
+	// BypassCoilDeenergizeToTrip inverts BypassDamperCoilAddr polarity for fail-safe
+	// de-energize-to-trip relay coils: when true, normal healthy operation writes ON (true)
+	// to hold the spring-return damper closed, and a safety trip (BypassDamperOpen == true)
+	// writes OFF (false) so coil de-energization or power loss opens the bypass damper.
+	BypassCoilDeenergizeToTrip bool              `json:"bypass_coil_deenergize_to_trip,omitempty"`
+	Registers                  ModbusRegisterMap `json:"registers"`
 }
 
 // DefaultModbusConfig returns standard RS-485 9600-8N1 defaults and a contiguous register map
@@ -365,7 +370,13 @@ func (h *ModbusHAL) ApplyCommands(ctx context.Context, cmd model.ActuatorCommand
 
 	writeCoils := func() error {
 		var errs []error
-		if err := h.client.WriteSingleCoil(ctx, cfg.SlaveID, regMap.BypassDamperCoilAddr, cmd.BypassDamperOpen); err != nil {
+		bypassCoilVal := cmd.BypassDamperOpen
+		if cfg.BypassCoilDeenergizeToTrip {
+			// De-energize-to-trip fail-safe polarity: coil ON = healthy hold-closed;
+			// coil OFF (trip or power loss) = spring-return damper fails OPEN.
+			bypassCoilVal = !cmd.BypassDamperOpen
+		}
+		if err := h.client.WriteSingleCoil(ctx, cfg.SlaveID, regMap.BypassDamperCoilAddr, bypassCoilVal); err != nil {
 			errs = append(errs, fmt.Errorf("bypass damper coil %d: %w", regMap.BypassDamperCoilAddr, err))
 		}
 		if err := h.client.WriteSingleCoil(ctx, cfg.SlaveID, regMap.AlarmLatchCoilAddr, cmd.AlarmLatched); err != nil {

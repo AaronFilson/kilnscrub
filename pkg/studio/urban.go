@@ -142,6 +142,22 @@ func AssessUrban(project StudioProject, design model.ScrubberDesign, cots COTSSu
 	}
 }
 
+func diluterAmps120V(design model.ScrubberDesign) float64 {
+	cfm, _ := RecommendedDilutionCFM(design)
+	switch {
+	case cfm <= 500.0:
+		return 2.2
+	case cfm <= 1000.0:
+		return 4.1
+	case cfm <= 1500.0:
+		return 6.5
+	case cfm <= 2000.0:
+		return 8.8
+	default:
+		return 12.5
+	}
+}
+
 func assessElectrical(project StudioProject, design model.ScrubberDesign) ElectricalAssessment {
 	hp := design.Blower.RecommendedMotorHP
 	if hp <= 0 {
@@ -149,41 +165,106 @@ func assessElectrical(project StudioProject, design model.ScrubberDesign) Electr
 	}
 
 	var reqV int
-	var reqAmps float64
+	var vfdRatedInputA float64
+	var auxAmps float64
+	var diluterNote string
+	diluterA120 := 0.0
+	if project.IncludePlumeDiluter {
+		diluterA120 = diluterAmps120V(design)
+		diluterNote = fmt.Sprintf(" Includes +%.1f A (120V) downstream plume diluter load.", diluterA120)
+	}
+
+	// NEC 430.122(A): VFD line-side conductors must be sized >= 125% of VFD rated 1-phase
+	// input current (not motor FLC), plus auxiliary recirc pump & control loads.
+	switch {
+	case hp <= 0.5:
+		reqV = 120
+		if hp <= 0.25 {
+			vfdRatedInputA = 7.2 // GS21-10P5 (1/4 HP load class @ 120V 1-ph)
+		} else {
+			vfdRatedInputA = 11.1 // GS21-10P5 rated 1-ph VT input @ 120V
+		}
+		auxAmps = 3.0 // ~250W mag-drive recirc pump + ~50W instrumentation @ 120V
+	case hp <= 1.0:
+		if project.AvailableVoltage >= 240 {
+			reqV = 240
+			vfdRatedInputA = 9.7 // GS21-21P0 rated 1-ph VT input @ 240V
+			auxAmps = 1.5
+		} else {
+			reqV = 120
+			if hp <= 0.75 {
+				vfdRatedInputA = 15.5 // GS21-11P0 derated @ 120V 1-ph
+			} else {
+				vfdRatedInputA = 20.6 // GS21-11P0 rated 1-ph VT input @ 120V
+			}
+			auxAmps = 3.0
+		}
+	case hp <= 1.5:
+		reqV = 240
+		vfdRatedInputA = 15.5 // GS21-22P0 @ 1.5 HP 240V 1-ph
+		auxAmps = 1.5
+	case hp <= 2.0:
+		reqV = 240
+		vfdRatedInputA = 18.5 // GS21-22P0 rated 1-ph VT input @ 240V
+		auxAmps = 1.5
+	case hp <= 3.0:
+		reqV = 240
+		vfdRatedInputA = 27.5 // GS21-23P0 rated 1-ph VT input @ 240V
+		auxAmps = 1.5
+	default:
+		reqV = 240
+		vfdRatedInputA = 27.5 + 7.25*(hp-3.0) // >=5 HP requires 50-60A 1-ph derated or 3-phase service
+		auxAmps = 1.5
+	}
+
+	diluterCircuitA := diluterA120
+	if reqV == 240 {
+		diluterCircuitA = diluterA120 * 0.5 // equivalent 240V power draw (feed diluter via dedicated 120V leg)
+	}
+	reqAmps := round1(1.25*vfdRatedInputA + auxAmps + diluterCircuitA)
+
 	var circuitLabel string
 	var fits bool
 	var status string
 	var summary string
 
-	if hp <= 1.0 {
-		reqV = 120
-		// Blower motor + ~250W mag-drive recirc pump + ~50W instrumentation/damper.
-		totalWatts := (hp*model.WattsPerHP)/0.80 + 300.0
-		reqAmps = round1(totalWatts / (120.0 * 0.90))
-		circuitLabel = "120V 20A dedicated GFCI garage circuit"
-		fits = true // Both 120V and 240V studios have standard 120V outlets.
-		status = StatusOK
-		summary = fmt.Sprintf("%.2g HP blower VFD + recirc pump draws ~%.1f A at 120V — plugs into a standard dedicated 120V 20A GFCI circuit.", hp, reqAmps)
+	const necNotes = " Install in fixed conduit (NEC 400.12) with a lockable NEMA 4X sight disconnect <=50 ft (NEC 430.102) and a line-side HF-rated GFCI breaker + 3% input line reactor (NEC 210.8(F))."
+
+	if reqV == 120 {
+		fits = true // Both 120V and 240V studios have 120V service.
+		if reqAmps <= 20.0 {
+			circuitLabel = "120V 20A dedicated VFD circuit (12 AWG, NEC 430.122)"
+			status = StatusOK
+			summary = fmt.Sprintf("%.2g HP blower VFD (%.1f A rated in x 125%%) + pump requires %.1f A min ampacity — fits a %s.%s%s",
+				hp, vfdRatedInputA, reqAmps, circuitLabel, diluterNote, necNotes)
+		} else {
+			circuitLabel = "120V 30A dedicated VFD circuit (10 AWG) — or 240V 20A"
+			status = StatusCaution
+			summary = fmt.Sprintf("%.2g HP blower VFD (%.1f A rated in x 125%%) + pump requires %.1f A min ampacity (exceeds standard 120V 20A garage outlet per NEC 430.122(A)) — install a 120V 30A circuit or upgrade to 240V 20A.%s%s",
+				hp, vfdRatedInputA, reqAmps, diluterNote, necNotes)
+		}
 	} else {
-		reqV = 240
-		// Single-phase 240V input to 3-phase motor VFD + recirc pump + controls.
-		totalWatts := (hp*model.WattsPerHP)/0.82 + 340.0
-		reqAmps = round1(totalWatts / (240.0 * 0.85))
 		switch {
-		case reqAmps <= 16.0:
-			circuitLabel = "240V 20A single-phase VFD circuit"
-		case reqAmps <= 24.0:
-			circuitLabel = "240V 30A single-phase VFD circuit"
+		case reqAmps <= 20.0:
+			circuitLabel = "240V 20A single-phase VFD circuit (12 AWG, NEC 430.122)"
+		case reqAmps <= 30.0:
+			circuitLabel = "240V 30A single-phase VFD circuit (10 AWG, NEC 430.122)"
+		case reqAmps <= 40.0:
+			circuitLabel = "240V 40A single-phase VFD circuit (8 AWG, NEC 430.122)"
+		case reqAmps <= 50.0:
+			circuitLabel = "240V 50A single-phase VFD circuit (6 AWG, NEC 430.122)"
 		default:
-			circuitLabel = "240V 40A-50A single-phase (or 3-phase) VFD circuit"
+			circuitLabel = "240V 60A single-phase (or 3-phase) VFD circuit (NEC 430.122)"
 		}
 		fits = project.AvailableVoltage >= 240
 		if fits {
 			status = StatusOK
-			summary = fmt.Sprintf("%.2g HP blower VFD + pump draws ~%.1f A on 240V — ready for your %s.", hp, reqAmps, circuitLabel)
+			summary = fmt.Sprintf("%.2g HP blower VFD (%.1f A rated in x 125%%) + pump requires %.1f A min ampacity on 240V — ready for your %s.%s%s",
+				hp, vfdRatedInputA, reqAmps, circuitLabel, diluterNote, necNotes)
 		} else {
 			status = StatusActionNeeded
-			summary = fmt.Sprintf("%.2g HP blower requires a %s (~%.1f A), but studio power is set to 120V. Add a 240V dryer/kiln breaker or downsize kiln/venturi throat velocity.", hp, circuitLabel, reqAmps)
+			summary = fmt.Sprintf("%.2g HP blower requires a %s (%.1f A min ampacity per NEC 430.122(A)), but studio power is set to 120V. Add a 240V breaker/subpanel or downsize kiln/venturi throat velocity.%s%s",
+				hp, circuitLabel, reqAmps, diluterNote, necNotes)
 		}
 	}
 
@@ -208,17 +289,18 @@ func assessWater(project StudioProject, design model.ScrubberDesign) WaterAssess
 	sumpFillGal := math.Max(25.0, float64(design.PackedBed.SumpVolume)/model.CubicMetersPerUSGallon)
 	totalGal := round1(sumpFillGal + (evapGPM+blowdownGPM)*60.0*project.FiringDurationHours)
 
+	const ipc608Note = " MANDATORY (IPC Section 608): isolate potable water via an engineered Air Gap (>=1\" above break-tank overflow rim, IPC 608.15.1) or certified ASSE 1013 RPZ backflow preventer — never connect a garden hose directly to a pressurized chemical manifold or submerged float valve."
 	status := StatusOK
 	var summary string
 	switch {
 	case reqGPM > project.GardenHoseGPM:
 		status = StatusActionNeeded
-		summary = fmt.Sprintf("Peak quench spray (%.2f GPM) exceeds your %.1f GPM garden hose. Add a dedicated 3/4\" supply or buffer tank (~%.0f gal total per %.0f-hr firing).", reqGPM, project.GardenHoseGPM, totalGal, project.FiringDurationHours)
+		summary = fmt.Sprintf("Peak quench spray (%.2f GPM) exceeds your %.1f GPM supply. Add a dedicated 3/4\" supply or break/buffer tank (~%.0f gal total per %.0f-hr firing).%s", reqGPM, project.GardenHoseGPM, totalGal, project.FiringDurationHours, ipc608Note)
 	case reqGPM > 0.70*project.GardenHoseGPM:
 		status = StatusCaution
-		summary = fmt.Sprintf("Peak quench spray (%.2f GPM) uses >70%% of your %.1f GPM hose flow — avoid sharing the spigot during firing (~%.0f gal total per %.0f-hr firing).", reqGPM, project.GardenHoseGPM, totalGal, project.FiringDurationHours)
+		summary = fmt.Sprintf("Peak quench spray (%.2f GPM) uses >70%% of your %.1f GPM supply — avoid sharing the spigot during firing (~%.0f gal total per %.0f-hr firing).%s", reqGPM, project.GardenHoseGPM, totalGal, project.FiringDurationHours, ipc608Note)
 	default:
-		summary = fmt.Sprintf("Standard garden hose OK: %.2f GPM peak spray (%.2f GPM evaporated) vs %.1f GPM available; ~%.0f gal total per %.0f-hr firing (incl. sump fill & blowdown).", reqGPM, evapGPM, project.GardenHoseGPM, totalGal, project.FiringDurationHours)
+		summary = fmt.Sprintf("Water flow capacity OK: %.2f GPM peak spray (%.2f GPM evaporated) vs %.1f GPM available; ~%.0f gal total per %.0f-hr firing (incl. sump fill & blowdown).%s", reqGPM, evapGPM, project.GardenHoseGPM, totalGal, project.FiringDurationHours, ipc608Note)
 	}
 
 	return WaterAssessment{
@@ -258,20 +340,24 @@ func assessNoise(project StudioProject, design model.ScrubberDesign) NoiseAssess
 	case propDBA > urbanLimitDBA:
 		status = StatusActionNeeded
 		if !project.IncludeSilencer {
-			summary = fmt.Sprintf("Unsilenced blower reaches %.1f dBA at %.0f ft property line (above %.0f dBA residential limit). Enable the acoustic discharge silencer/box to drop ~13 dBA.", propDBA, d2, urbanLimitDBA)
+			summary = fmt.Sprintf("Unsilenced blower reaches %.1f dBA at %.0f ft property line (above %.0f dBA residential daytime limit / 50-55 dBA nighttime ordinances). Enable the acoustic discharge silencer/box to drop ~13 dBA.", propDBA, d2, urbanLimitDBA)
 		} else {
 			summary = fmt.Sprintf("Even silenced, blower reaches %.1f dBA at %.0f ft (above %.0f dBA limit). Relocate blower indoors/behind a masonry wall or increase setback.", propDBA, d2, urbanLimitDBA)
 		}
 	case propDBA > 55.0:
 		status = StatusCaution
-		summary = fmt.Sprintf("Predicted %.1f dBA at %.0f ft property line — below the %.0f dBA daytime limit, but noticeable at night. Acoustic box / silencer keeps late-night firings neighbor-friendly.", propDBA, d2, urbanLimitDBA)
+		summary = fmt.Sprintf("Predicted %.1f dBA at %.0f ft property line — below the %.0f dBA daytime limit, but may exceed 50-55 dBA overnight ordinances during long firings. Acoustic box / silencer keeps late-night firings neighbor-friendly.", propDBA, d2, urbanLimitDBA)
 	default:
 		status = StatusOK
 		modeLabel := "with acoustic silencer"
 		if !project.IncludeSilencer {
 			modeLabel = "bare (no silencer)"
 		}
-		summary = fmt.Sprintf("Quiet backyard operation: %.1f dBA at %.0f ft property line (%s) — comfortably under the %.0f dBA residential limit.", propDBA, d2, modeLabel, urbanLimitDBA)
+		summary = fmt.Sprintf("Quiet backyard operation: %.1f dBA at %.0f ft property line (%s) — comfortably under the %.0f dBA daytime limit (verify 50-55 dBA overnight local ordinance).", propDBA, d2, modeLabel, urbanLimitDBA)
+	}
+
+	if !project.IncludeSilencer && bare3Ft >= 78.0 {
+		summary += fmt.Sprintf(" OSHA 29 CFR 1910.95 HEARING WARNING: unsilenced near-field blower (%.1f dBA at 3 ft, rising >=85 dBA near reflective walls) can exceed the 85 dBA 8-hr TWA action level — wear hearing protection or install the acoustic enclosure.", bare3Ft)
 	}
 
 	return NoiseAssessment{
@@ -419,17 +505,41 @@ func assessPlume(project StudioProject, design model.ScrubberDesign) PlumeAssess
 		activeLenFt = dilutedLenFt
 	}
 
+	hclOutPPM := design.PackedBed.HClOutletPPM
+	isSaltHCl := project.VaporGlazeMode == VaporGlazeSalt || hclOutPPM > 0.0
+	var exhaustSafetyNote string
+	var setbackActionNeeded bool
+	if isSaltHCl {
+		exhaustSafetyNote = fmt.Sprintf(
+			" SALT-FIRING HCl NOTICE: post-scrubber stack exit contains ~%.1f ppm HCl (OSHA 29 CFR 1910.1000 ceiling PEL = 5 ppm — NEVER discharge indoors or into a breathing zone). Discharge strictly outdoors via a >=%.0f ft elevated vertical stack meeting IMC 510 / 501.3.1 hazardous exhaust setbacks (>=30 ft property line, >=10 ft operable windows/air intakes, >=6 ft walls/roofs).",
+			hclOutPPM, minStackFt,
+		)
+		if project.PropertyLineFt < 30.0 {
+			setbackActionNeeded = true
+			exhaustSafetyNote += fmt.Sprintf(" ACTION NEEDED: %.0f ft property line is below the 30 ft IMC 501.3.1 hazardous HCl exhaust setback.", project.PropertyLineFt)
+		}
+	} else {
+		exhaustSafetyNote = fmt.Sprintf(
+			" Exhaust is %.0f F water vapor with 0 ppm HCl (Soda/Non-salt mode); run a >=%.0f ft outdoor stack with condensate drain meeting IMC 501.3.1 setbacks (>=10 ft property line, >=10 ft operable windows/air intakes, >=3 ft walls/roofs).",
+			exhaustF, minStackFt,
+		)
+		if project.PropertyLineFt < 10.0 {
+			setbackActionNeeded = true
+			exhaustSafetyNote += fmt.Sprintf(" ACTION NEEDED: %.0f ft property line is below the 10 ft IMC 501.3.1 exhaust setback.", project.PropertyLineFt)
+		}
+	}
+
 	switch {
 	case project.AmbientWinterF <= 45.0:
 		risk = "high"
 		if project.IncludePlumeDiluter && dilutedLenFt <= 0.75*project.PropertyLineFt {
 			status = StatusOK
-			summary = fmt.Sprintf("Squirrel-cage HV plume diluter (%.0f CFM) shrinks winter steam reach from ~%.0f ft bare down to ~%.0f ft — dissipating cleanly before your %.0f ft property line. Exhaust is harmless %.0f F water vapor (NOT kiln smoke); run a %.0f ft stack with condensate drain.",
-				dilutionCFM, bareLenFt, dilutedLenFt, project.PropertyLineFt, exhaustF, minStackFt)
+			summary = fmt.Sprintf("Squirrel-cage HV plume diluter (%.0f CFM) shrinks winter steam reach from ~%.0f ft bare down to ~%.0f ft — dissipating cleanly before your %.0f ft property line.%s",
+				dilutionCFM, bareLenFt, dilutedLenFt, project.PropertyLineFt, exhaustSafetyNote)
 		} else {
 			status = StatusCaution
-			summary = fmt.Sprintf("In %.0f F winter air, clean saturated %.0f F water vapor forms a ~%.0f ft white steam cloud (like a clothes dryer vent, NOT smoke). Adding a %.0f CFM 120V squirrel-cage diluter + %.0f\" HV cone shrinks visible reach to ~%.0f ft (vs %.0f ft property line). Run a %.0f ft stack with condensate drain.",
-				project.AmbientWinterF, exhaustF, bareLenFt, dilutionCFM, coneIn, dilutedLenFt, project.PropertyLineFt, minStackFt)
+			summary = fmt.Sprintf("In %.0f F winter air, saturated %.0f F scrubber exhaust forms a ~%.0f ft visible white steam cloud. Adding a %.0f CFM 120V squirrel-cage diluter + %.0f\" HV cone shrinks visible reach to ~%.0f ft (vs %.0f ft property line).%s",
+				project.AmbientWinterF, exhaustF, bareLenFt, dilutionCFM, coneIn, dilutedLenFt, project.PropertyLineFt, exhaustSafetyNote)
 		}
 	case project.AmbientWinterF <= 65.0:
 		risk = "moderate"
@@ -438,13 +548,16 @@ func assessPlume(project StudioProject, design model.ScrubberDesign) PlumeAssess
 		} else {
 			status = StatusCaution
 		}
-		summary = fmt.Sprintf("Cool %.0f F air creates a ~%.0f ft bare white steam wisp (~%.0f ft with %.0f CFM squirrel-cage HV diluter). Use a %.0f ft stack riser with a bottom condensate drip leg.",
-			project.AmbientWinterF, bareLenFt, dilutedLenFt, dilutionCFM, minStackFt)
+		summary = fmt.Sprintf("Cool %.0f F air creates a ~%.0f ft bare white steam wisp (~%.0f ft with %.0f CFM squirrel-cage HV diluter).%s",
+			project.AmbientWinterF, bareLenFt, dilutedLenFt, dilutionCFM, exhaustSafetyNote)
 	default:
 		risk = "low"
 		status = StatusOK
-		summary = fmt.Sprintf("Mild %.0f F ambient air disperses %.0f F clean steam quickly (~%.0f ft bare, ~%.0f ft diluted). Maintain a %.0f ft stack height above walkways/eaves.",
-			project.AmbientWinterF, exhaustF, bareLenFt, dilutedLenFt, minStackFt)
+		summary = fmt.Sprintf("Mild %.0f F ambient air disperses %.0f F steam quickly (~%.0f ft bare, ~%.0f ft diluted).%s",
+			project.AmbientWinterF, exhaustF, bareLenFt, dilutedLenFt, exhaustSafetyNote)
+	}
+	if setbackActionNeeded {
+		status = StatusActionNeeded
 	}
 
 	return PlumeAssessment{
@@ -478,7 +591,7 @@ func assessDrain(project StudioProject, design model.ScrubberDesign) DrainAssess
 			BakingSodaLbsPerFiring: 0,
 			BakingSoda4LbBoxes:     0,
 			TargetDrainPH:          targetPH,
-			Summary:                fmt.Sprintf("Zero HCl neutralization required (%s mode: 0 lbs baking soda). Strain wood ash/particulate through a 5-gal settling bucket and confirm pH %s with test strips before draining.", project.VaporGlazeMode, targetPH),
+			Summary:                fmt.Sprintf("Zero HCl neutralization required (%s mode: 0 lbs baking soda). Cool sump/blowdown water to <=140 F (IPC 702.5 PVC/ABS drain limit), strain ash/solids, and confirm pH %s (federal 40 CFR 403.5(b)(2) floor >=5.0) before sanitary drain release.", project.VaporGlazeMode, targetPH),
 		}
 	}
 
@@ -487,7 +600,7 @@ func assessDrain(project StudioProject, design model.ScrubberDesign) DrainAssess
 		BakingSodaLbsPerFiring: lbs,
 		BakingSoda4LbBoxes:     boxes,
 		TargetDrainPH:          targetPH,
-		Summary:                fmt.Sprintf("Stock %.1f lbs baking soda (%d x 4-lb Arm & Hammer boxes) for a %.0f-hr salt firing (15%% pH buffer). Settle wood ash through a mesh bucket, verify pH %s with strips, and dilute neutralized NaCl brine before sewer discharge.", lbs, boxes, project.FiringDurationHours, targetPH),
+		Summary:                fmt.Sprintf("Stock %.1f lbs baking soda (%d x 4-lb Arm & Hammer boxes) for a %.0f-hr salt firing (15%% pH buffer). Cool/temper sump and live blowdown to <=140 F before PVC/ABS drains (IPC 702.5), settle wood ash, verify neutralized pH %s (IPC 803.1; federal 40 CFR 403.5(b)(2) strictly prohibits pH < 5.0), and check local POTW chloride/heavy-metal sludge limits.", lbs, boxes, project.FiringDurationHours, targetPH),
 	}
 }
 
