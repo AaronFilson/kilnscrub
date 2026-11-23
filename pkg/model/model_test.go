@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math"
 	"testing"
+	"time"
 )
 
 func almostEqual(a, b, tol float64) bool {
@@ -127,7 +128,53 @@ func TestDefaultsAndValidation(t *testing.T) {
 		t.Error("expected validation error for TargetHClRemoval=1.0")
 	}
 
+	bad = in
+	bad.TargetKilnDraftInWC = 0.05
+	if err := bad.Validate(); err == nil {
+		t.Error("expected validation error for positive TargetKilnDraftInWC=+0.05")
+	}
+
+	bad = in
+	bad.TargetKilnDraftInWC = -2.5
+	if err := bad.Validate(); err == nil {
+		t.Error("expected validation error for TargetKilnDraftInWC=-2.5")
+	}
+
+	okZeroDraft := in
+	okZeroDraft.TargetKilnDraftInWC = 0
+	if err := okZeroDraft.Validate(); err != nil {
+		t.Errorf("expected TargetKilnDraftInWC=0 to be allowed, got %v", err)
+	}
+
+	bad = in
+	bad.PackingFactor = 0
+	if err := bad.Validate(); err == nil {
+		t.Error("expected validation error for PackingFactor=0")
+	}
+
+	bad = in
+	bad.PackingFactor = -10
+	if err := bad.Validate(); err == nil {
+		t.Error("expected validation error for PackingFactor=-10")
+	}
+
+	for _, ft := range []string{"", FuelWoodSalt, FuelWood, FuelGasSalt, FuelGas} {
+		okFuel := in
+		okFuel.FuelType = ft
+		if err := okFuel.Validate(); err != nil {
+			t.Errorf("expected FuelType=%q to pass validation, got %v", ft, err)
+		}
+	}
+	bad = in
+	bad.FuelType = "coal"
+	if err := bad.Validate(); err == nil {
+		t.Error("expected validation error for unknown FuelType")
+	}
+
 	limits := DefaultSafetyLimits()
+	if err := limits.Validate(); err != nil {
+		t.Fatalf("DefaultSafetyLimits().Validate() failed: %v", err)
+	}
 	if !almostEqual(limits.MaxQuenchOutletTemp.Fahrenheit(), 210.0, 1e-9) {
 		t.Errorf("expected default MaxQuenchOutletTemp 210 F (372.04 K), got %.2f F (%.2f K)",
 			limits.MaxQuenchOutletTemp.Fahrenheit(), limits.MaxQuenchOutletTemp)
@@ -137,11 +184,126 @@ func TestDefaultsAndValidation(t *testing.T) {
 	}
 
 	cfg := DefaultControlConfig()
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("DefaultControlConfig().Validate() failed: %v", err)
+	}
 	if cfg.TargetDraftInWC != -0.05 {
 		t.Errorf("expected control target draft -0.05 inWC, got %v", cfg.TargetDraftInWC)
 	}
 	if !almostEqual(cfg.TargetDraftPa.InWC(), -0.05, 1e-9) {
 		t.Errorf("control target draft Pa/inWC mismatch: %v", cfg.TargetDraftPa.InWC())
+	}
+	expectedTau := 1.0 / (2.0 * math.Pi * cfg.DraftFilterCutoffHz)
+	if !almostEqual(cfg.DraftFilterTimeConst.Seconds(), expectedTau, 1e-6) {
+		t.Errorf("default DraftFilterTimeConst (%v) != 1/(2*pi*%.2f) (%.6fs)",
+			cfg.DraftFilterTimeConst, cfg.DraftFilterCutoffHz, expectedTau)
+	}
+	if cfg.DraftPID.DerivativeFilterTimeConst <= 0 || cfg.QuenchPID.DerivativeFilterTimeConst <= 0 {
+		t.Errorf("default PID DerivativeFilterTimeConst must be > 0")
+	}
+	if cfg.DraftPID.AntiWindUpGain <= 0 || cfg.QuenchPID.AntiWindUpGain <= 0 {
+		t.Errorf("default PID AntiWindUpGain must be > 0")
+	}
+}
+
+func TestDesignInputRejectsNaNAndInf(t *testing.T) {
+	nonFinites := []struct {
+		label string
+		val   float64
+	}{
+		{"NaN", math.NaN()},
+		{"+Inf", math.Inf(1)},
+		{"-Inf", math.Inf(-1)},
+	}
+	mutators := []struct {
+		name string
+		set  func(d *DesignInput, v float64)
+	}{
+		{"KilnVolumeCuFt", func(d *DesignInput, v float64) { d.KilnVolumeCuFt = v }},
+		{"PeakExitTempF", func(d *DesignInput, v float64) { d.PeakExitTempF = v }},
+		{"SaltRateLbsPerHr", func(d *DesignInput, v float64) { d.SaltRateLbsPerHr = v }},
+		{"ExcessAirFraction", func(d *DesignInput, v float64) { d.ExcessAirFraction = v }},
+		{"VenturiThroatVelocity", func(d *DesignInput, v float64) { d.VenturiThroatVelocity = MetersPerSec(v) }},
+		{"VenturiLGRatio", func(d *DesignInput, v float64) { d.VenturiLGRatio = v }},
+		{"VenturiDropletDiameter", func(d *DesignInput, v float64) { d.VenturiDropletDiameter = Meters(v) }},
+		{"TargetHClRemoval", func(d *DesignInput, v float64) { d.TargetHClRemoval = v }},
+		{"PackingDiameter", func(d *DesignInput, v float64) { d.PackingDiameter = Meters(v) }},
+		{"PackingVoidage", func(d *DesignInput, v float64) { d.PackingVoidage = v }},
+		{"PackingFactor", func(d *DesignInput, v float64) { d.PackingFactor = v }},
+		{"TargetKilnDraftInWC", func(d *DesignInput, v float64) { d.TargetKilnDraftInWC = v }},
+		{"AmbientTempK", func(d *DesignInput, v float64) { d.AmbientTempK = Kelvin(v) }},
+		{"AmbientPressurePa", func(d *DesignInput, v float64) { d.AmbientPressurePa = Pascal(v) }},
+		{"SprayWaterTempK", func(d *DesignInput, v float64) { d.SprayWaterTempK = Kelvin(v) }},
+		{"SumpPHTarget", func(d *DesignInput, v float64) { d.SumpPHTarget = v }},
+		{"DuctLength", func(d *DesignInput, v float64) { d.DuctLength = Meters(v) }},
+		{"DuctDiameter", func(d *DesignInput, v float64) { d.DuctDiameter = Meters(v) }},
+	}
+
+	for _, m := range mutators {
+		for _, nf := range nonFinites {
+			d := DefaultSaltKilnInput()
+			m.set(&d, nf.val)
+			if err := d.Validate(); err == nil {
+				t.Errorf("Validate() accepted %s for %s", nf.label, m.name)
+			}
+		}
+	}
+}
+
+func TestControlConfigSyncAndValidation(t *testing.T) {
+	cfg := DefaultControlConfig()
+	cfg.TargetDraftInWC = -0.10 // Mutate only InWC without syncing Pa.
+	if err := cfg.Validate(); err == nil {
+		t.Error("expected Validate() error on diverged TargetDraftInWC vs TargetDraftPa")
+	}
+	cfg.Sync()
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected Validate() to pass after Sync(), got %v", err)
+	}
+	if !almostEqual(float64(cfg.TargetDraftPa), float64(InWCToPascal(-0.10)), 1e-9) {
+		t.Errorf("Sync() did not update TargetDraftPa: got %v", cfg.TargetDraftPa)
+	}
+
+	cfg.SetTargetDraftInWC(-0.08)
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("SetTargetDraftInWC failed validation: %v", err)
+	}
+
+	// Diverged LPF cutoff vs time constant must fail validation until Sync().
+	cfg.DraftFilterCutoffHz = 1.0
+	if err := cfg.Validate(); err == nil {
+		t.Error("expected Validate() error when DraftFilterCutoffHz and DraftFilterTimeConst disagree")
+	}
+	cfg.Sync()
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected Sync() to reconcile LPF cutoff and tau, got %v", err)
+	}
+
+	// Zero DerivativeFilterTimeConst must fail validation (protects einride/pid div-by-zero).
+	badPID := DefaultControlConfig()
+	badPID.DraftPID.DerivativeFilterTimeConst = 0
+	if err := badPID.Validate(); err == nil {
+		t.Error("expected Validate() error for zero DraftPID.DerivativeFilterTimeConst")
+	}
+
+	// QuenchSetpoint >= MaxQuenchOutletTemp must fail validation.
+	badQuench := DefaultControlConfig()
+	badQuench.QuenchSetpoint = badQuench.Safety.MaxQuenchOutletTemp
+	if err := badQuench.Validate(); err == nil {
+		t.Error("expected Validate() error when QuenchSetpoint >= MaxQuenchOutletTemp")
+	}
+
+	// Cutoff/tau helper round-trip.
+	tau := CutoffHzToTimeConst(0.5)
+	fc := TimeConstToCutoffHz(tau)
+	if !almostEqual(fc, 0.5, 1e-6) {
+		t.Errorf("CutoffHzToTimeConst/TimeConstToCutoffHz round-trip got %v", fc)
+	}
+	if CutoffHzToTimeConst(0) != 0 || TimeConstToCutoffHz(0) != 0 {
+		t.Error("expected zero for non-positive LPF parameters")
+	}
+	if tau < 318*time.Millisecond || tau > 319*time.Millisecond {
+		t.Errorf("unexpected tau for 0.5 Hz: %v", tau)
 	}
 }
 
@@ -186,15 +348,33 @@ func TestDesignJSONRoundTripAndHelpers(t *testing.T) {
 		t.Fatalf("JSON round-trip mismatch: %+v", decoded)
 	}
 
+	var nilBOM *BOM
+	nilBOM.RecalculateTotals() // Must not panic.
+
 	bom := BOM{
 		Title: "Test BOM",
 		Items: []BOMItem{
 			{Category: "Stage 1", Name: "Quench Shell", Material: "316L SS", Quantity: 2, Unit: "sheet", UnitCostUSD: 150, WeightKg: 25},
 			{Category: "Stage 3", Name: "Pall Rings", Material: "PP", Quantity: 5, Unit: "cu.ft.", UnitCostUSD: 40, WeightKg: 8},
+			{Category: "Hardware", Name: "Lump-sum Gaskets", Material: "PTFE", Quantity: 1, Unit: "lot", UnitCostUSD: 0, TotalCostUSD: 75, WeightKg: 1.5},
 		},
 	}
 	bom.RecalculateTotals()
-	if !almostEqual(bom.TotalCostUSD, 500.0, 1e-9) || !almostEqual(bom.TotalWeightKg, 33.0, 1e-9) {
+	if !almostEqual(bom.TotalCostUSD, 575.0, 1e-9) || !almostEqual(bom.TotalWeightKg, 34.5, 1e-9) {
 		t.Fatalf("BOM totals mismatch: cost=%v weight=%v", bom.TotalCostUSD, bom.TotalWeightKg)
+	}
+
+	// Editing Quantity/UnitCostUSD must recompute TotalCostUSD (no stale totals), while preserving lump-sum item.
+	bom.Items[0].Quantity = 3
+	bom.Items[1].UnitCostUSD = 50
+	bom.RecalculateTotals()
+	if !almostEqual(bom.Items[0].TotalCostUSD, 450.0, 1e-9) || !almostEqual(bom.Items[1].TotalCostUSD, 250.0, 1e-9) {
+		t.Fatalf("BOM item TotalCostUSD not recomputed: %+v", bom.Items)
+	}
+	if !almostEqual(bom.Items[2].TotalCostUSD, 75.0, 1e-9) {
+		t.Fatalf("BOM lump-sum item TotalCostUSD overwritten: %v", bom.Items[2].TotalCostUSD)
+	}
+	if !almostEqual(bom.TotalCostUSD, 775.0, 1e-9) {
+		t.Fatalf("BOM recomputed TotalCostUSD mismatch: got %v want 775", bom.TotalCostUSD)
 	}
 }

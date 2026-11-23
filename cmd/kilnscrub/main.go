@@ -91,12 +91,17 @@ func runExport(args []string) error {
 
 func runDaemon(args []string) error {
 	fs := flag.NewFlagSet("daemon", flag.ContinueOnError)
-	defaults := model.DefaultControlConfig()
-	draft := fs.Float64("draft", defaults.TargetDraftInWC, "Target kiln draft (inWC)")
+	cfg := model.DefaultControlConfig()
+	draft := fs.Float64("draft", cfg.TargetDraftInWC, "Target kiln draft (inWC, negative = suction)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	fmt.Printf("daemon stub (Phase 1 — active PID controller wired in Phase 3; target draft=%.3f inWC)\n", *draft)
+	cfg.SetTargetDraftInWC(*draft)
+	if err := cfg.Validate(); err != nil {
+		return err
+	}
+	fmt.Printf("daemon stub (Phase 1 — active PID controller wired in Phase 3; target draft=%.3f inWC / %.2f Pa)\n",
+		cfg.TargetDraftInWC, cfg.TargetDraftPa)
 	return nil
 }
 
