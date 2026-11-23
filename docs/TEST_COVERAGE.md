@@ -6,34 +6,34 @@ Generated automatically by [`scripts/branch_coverage.go`](../scripts/branch_cove
 
 | Metric | Covered | Total | Coverage |
 | :--- | ---: | ---: | ---: |
-| **Statements** (matches `go tool cover -func`) | 4103 | 4477 | **91.6%** |
-| **Executable Lines** (token-mapped) | 5664 | 6041 | **93.8%** |
-| **AST Control-Flow Branches** (C1 decision) | 1680 | 2024 | **83.0%** |
+| **Statements** (matches `go tool cover -func`) | 4825 | 5232 | **92.2%** |
+| **Executable Lines** (token-mapped) | 6906 | 7316 | **94.4%** |
+| **AST Control-Flow Branches** (C1 decision) | 1986 | 2369 | **83.8%** |
 
 ## Per-Package Coverage Summary
 
 | Package | Statements | Statement % | Exec Lines | Line % | AST Branches | Branch % | Status (≥85% Line / ≥80% Branch) |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | :---: |
-| `cmd/kilnscrub` | 395 / 436 | 90.6% | 479 / 520 | 92.1% | 177 / 219 | 80.8% | PASS |
-| `internal/control` | 868 / 1033 | 84.0% | 1063 / 1231 | 86.4% | 403 / 532 | 75.8% | Below Branch |
+| `cmd/kilnscrub` | 423 / 460 | 92.0% | 517 / 554 | 93.3% | 193 / 231 | 83.5% | PASS |
+| `internal/control` | 870 / 1033 | 84.2% | 1065 / 1231 | 86.5% | 405 / 532 | 76.1% | Below Branch |
 | `internal/web` | 409 / 459 | 89.1% | 421 / 471 | 89.4% | 169 / 210 | 80.5% | PASS |
 | `pkg/cad` | 734 / 761 | 96.5% | 1126 / 1153 | 97.7% | 251 / 280 | 89.6% | PASS |
 | `pkg/model` | 168 / 170 | 98.8% | 223 / 225 | 99.1% | 102 / 104 | 98.1% | PASS |
 | `pkg/scrubber` | 379 / 418 | 90.7% | 527 / 566 | 93.1% | 140 / 177 | 79.1% | Below Branch |
-| `pkg/studio` | 820 / 852 | 96.2% | 1457 / 1489 | 97.9% | 291 / 334 | 87.1% | PASS |
+| `pkg/studio` | 1512 / 1583 | 95.5% | 2659 / 2730 | 97.4% | 579 / 667 | 86.8% | PASS |
 | `pkg/thermo` | 330 / 348 | 94.8% | 368 / 386 | 95.3% | 147 / 168 | 87.5% | PASS |
-| **TOTAL** | **4103 / 4477** | **91.6%** | **5664 / 6041** | **93.8%** | **1680 / 2024** | **83.0%** | — |
+| **TOTAL** | **4825 / 5232** | **92.2%** | **6906 / 7316** | **94.4%** | **1986 / 2369** | **83.8%** | — |
 
 ## Per-File Breakdown
 
 | File | Statements | Exec Lines | AST Branches |
 | :--- | ---: | ---: | ---: |
-| `cmd/kilnscrub/main.go` | 395/436 (90.6%) | 479/520 (92.1%) | 177/219 (80.8%) |
+| `cmd/kilnscrub/main.go` | 423/460 (92.0%) | 517/554 (93.3%) | 193/231 (83.5%) |
 | `internal/control/config.go` | 48/48 (100.0%) | 52/52 (100.0%) | 40/40 (100.0%) |
 | `internal/control/controller.go` | 96/109 (88.1%) | 150/163 (92.0%) | 31/44 (70.5%) |
-| `internal/control/daemon.go` | 77/81 (95.1%) | 82/86 (95.3%) | 30/36 (83.3%) |
+| `internal/control/daemon.go` | 78/81 (96.3%) | 83/86 (96.5%) | 31/36 (86.1%) |
 | `internal/control/filter.go` | 37/40 (92.5%) | 41/44 (93.2%) | 10/10 (100.0%) |
-| `internal/control/hub.go` | 42/43 (97.7%) | 44/45 (97.8%) | 18/20 (90.0%) |
+| `internal/control/hub.go` | 43/43 (100.0%) | 45/45 (100.0%) | 19/20 (95.0%) |
 | `internal/control/interlock.go` | 58/59 (98.3%) | 74/75 (98.7%) | 28/29 (96.6%) |
 | `internal/control/modbus_hal.go` | 139/161 (86.3%) | 203/225 (90.2%) | 84/103 (81.6%) |
 | `internal/control/modbus_rtu.go` | 186/219 (84.9%) | 194/230 (84.3%) | 96/129 (74.4%) |
@@ -52,11 +52,14 @@ Generated automatically by [`scripts/branch_coverage.go`](../scripts/branch_cove
 | `pkg/scrubber/packedbed.go` | 104/116 (89.7%) | 139/151 (92.1%) | 31/40 (77.5%) |
 | `pkg/scrubber/scrubber.go` | 68/78 (87.2%) | 102/112 (91.1%) | 31/41 (75.6%) |
 | `pkg/scrubber/venturi.go` | 138/153 (90.2%) | 176/191 (92.1%) | 55/70 (78.6%) |
-| `pkg/studio/cots.go` | 221/225 (98.2%) | 523/527 (99.2%) | 76/82 (92.7%) |
-| `pkg/studio/guide.go` | 130/131 (99.2%) | 179/180 (99.4%) | 25/26 (96.2%) |
-| `pkg/studio/packet.go` | 105/123 (85.4%) | 178/196 (90.8%) | 35/51 (68.6%) |
-| `pkg/studio/presets.go` | 99/103 (96.1%) | 213/217 (98.2%) | 48/54 (88.9%) |
-| `pkg/studio/urban.go` | 265/270 (98.1%) | 364/369 (98.6%) | 107/121 (88.4%) |
+| `pkg/studio/cots.go` | 298/307 (97.1%) | 656/665 (98.6%) | 116/126 (92.1%) |
+| `pkg/studio/guide.go` | 186/187 (99.5%) | 257/258 (99.6%) | 61/62 (98.4%) |
+| `pkg/studio/options.go` | 311/339 (91.7%) | 409/437 (93.6%) | 101/133 (75.9%) |
+| `pkg/studio/packet.go` | 115/134 (85.8%) | 196/215 (91.2%) | 36/53 (67.9%) |
+| `pkg/studio/plan.go` | 113/113 (100.0%) | 338/338 (100.0%) | 44/44 (100.0%) |
+| `pkg/studio/presets.go` | 140/144 (97.2%) | 293/297 (98.7%) | 82/88 (93.2%) |
+| `pkg/studio/recirc.go` | 67/72 (93.1%) | 118/123 (95.9%) | 26/32 (81.2%) |
+| `pkg/studio/urban.go` | 282/287 (98.3%) | 392/397 (98.7%) | 113/129 (87.6%) |
 | `pkg/thermo/quench.go` | 148/160 (92.5%) | 174/186 (93.5%) | 58/72 (80.6%) |
 | `pkg/thermo/shomate.go` | 182/188 (96.8%) | 194/200 (97.0%) | 89/96 (92.7%) |
 
@@ -64,18 +67,18 @@ Generated automatically by [`scripts/branch_coverage.go`](../scripts/branch_cove
 
 | Construct Kind | Covered | Total | Coverage |
 | :--- | ---: | ---: | ---: |
-| `for-body` | 27 | 28 | 96.4% |
-| `for-exit` | 25 | 26 | 96.2% |
-| `if-else` | 47 | 48 | 97.9% |
-| `if-else-if` | 7 | 7 | 100.0% |
-| `if-implicit-else` | 748 | 804 | 93.0% |
-| `if-then` | 596 | 859 | 69.4% |
-| `range-body` | 41 | 41 | 100.0% |
-| `range-exit` | 38 | 41 | 92.7% |
+| `for-body` | 28 | 30 | 93.3% |
+| `for-exit` | 27 | 28 | 96.4% |
+| `if-else` | 66 | 67 | 98.5% |
+| `if-else-if` | 17 | 17 | 100.0% |
+| `if-implicit-else` | 863 | 926 | 93.2% |
+| `if-then` | 719 | 1010 | 71.2% |
+| `range-body` | 51 | 51 | 100.0% |
+| `range-exit` | 46 | 51 | 90.2% |
 | `select-case` | 9 | 10 | 90.0% |
-| `select-default` | 1 | 3 | 33.3% |
-| `switch-case` | 105 | 117 | 89.7% |
-| `switch-default` | 29 | 31 | 93.5% |
+| `select-default` | 2 | 3 | 66.7% |
+| `switch-case` | 117 | 130 | 90.0% |
+| `switch-default` | 34 | 37 | 91.9% |
 | `switch-implicit-default` | 4 | 6 | 66.7% |
 | `type-switch-case` | 2 | 2 | 100.0% |
 | `type-switch-implicit-default` | 1 | 1 | 100.0% |
@@ -84,12 +87,11 @@ Generated automatically by [`scripts/branch_coverage.go`](../scripts/branch_cove
 
 Packages below the **85% executable line** or **80% AST branch** target are listed first, followed by remaining packages. Within each package, explicit `switch`/`select` arms, `else`/`else if` paths, and loop entry/exit branches are prioritized ahead of defensive error guards.
 
-### `internal/control` (Line 86.4%, Branch 75.8%, 129 uncovered branches — Priority Target)
+### `internal/control` (Line 86.5%, Branch 76.1%, 127 uncovered branches — Priority Target)
 
 | Location | Construct | Function | Condition / Arm |
 | :--- | :--- | :--- | :--- |
 | `internal/control/hub.go:84` | `select-default` | `(*TelemetryHub).Publish` | `default` |
-| `internal/control/hub.go:88` | `select-default` | `(*TelemetryHub).Publish` | `default` |
 | `internal/control/modbus_rtu.go:381` | `switch-default` | `(*ModbusRTUClient).roundTrip` | `default` |
 | `internal/control/serial_linux.go:82` | `switch-case` | `linuxBaudFlag` | `case 1200` |
 | `internal/control/serial_linux.go:84` | `switch-case` | `linuxBaudFlag` | `case 2400` |
@@ -100,8 +102,9 @@ Packages below the **85% executable line** or **80% AST branch** target are list
 | `internal/control/serial_linux.go:94` | `switch-case` | `linuxBaudFlag` | `case 57600` |
 | `internal/control/serial_linux.go:96` | `switch-case` | `linuxBaudFlag` | `case 115200` |
 | `internal/control/serial_linux.go:98` | `switch-case` | `linuxBaudFlag` | `case 230400` |
+| `internal/control/serial_linux.go:100` | `switch-default` | `linuxBaudFlag` | `default` |
 
-*...and 117 additional uncovered branches in `internal/control` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
+*...and 115 additional uncovered branches in `internal/control` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
 
 ### `pkg/scrubber` (Line 93.1%, Branch 79.1%, 37 uncovered branches — Priority Target)
 
@@ -141,7 +144,7 @@ Packages below the **85% executable line** or **80% AST branch** target are list
 
 *...and 29 additional uncovered branches in `internal/web` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
 
-### `cmd/kilnscrub` (Line 92.1%, Branch 80.8%, 42 uncovered branches)
+### `cmd/kilnscrub` (Line 93.3%, Branch 83.5%, 38 uncovered branches)
 
 | Location | Construct | Function | Condition / Arm |
 | :--- | :--- | :--- | :--- |
@@ -158,26 +161,26 @@ Packages below the **85% executable line** or **80% AST branch** target are list
 | `cmd/kilnscrub/main.go:366` | `if-then` | `runExport` | `err != nil` |
 | `cmd/kilnscrub/main.go:394` | `if-then` | `runPresets` | `err != nil` |
 
-*...and 30 additional uncovered branches in `cmd/kilnscrub` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
+*...and 26 additional uncovered branches in `cmd/kilnscrub` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
 
-### `pkg/studio` (Line 97.9%, Branch 87.1%, 43 uncovered branches)
+### `pkg/studio` (Line 97.4%, Branch 86.8%, 88 uncovered branches)
 
 | Location | Construct | Function | Condition / Arm |
 | :--- | :--- | :--- | :--- |
-| `pkg/studio/urban.go:254` | `switch-case` | `assessElectrical` | `case reqAmps <= 50.0` |
-| `pkg/studio/guide.go:69` | `if-else` | `GenerateBuildGuide` | `else of (p.CorrosionTier == CorrosionTierHeavyC276FRP)` |
+| `pkg/studio/recirc.go:42` | `switch-case` | `workingSumpVolumeGal` | `case "USPLASTIC-100T"` |
+| `pkg/studio/recirc.go:44` | `switch-default` | `workingSumpVolumeGal` | `default` |
+| `pkg/studio/urban.go:268` | `switch-case` | `assessElectrical` | `case reqAmps <= 50.0` |
+| `pkg/studio/guide.go:105` | `if-else` | `GenerateBuildGuide` | `else of (p.CorrosionTier == CorrosionTierHeavyC276FRP)` |
 | `pkg/studio/cots.go:107` | `range-exit` | `snapPipe` | `exit/skip (range catalog)` |
-| `pkg/studio/presets.go:237` | `range-exit` | `PresetByID` | `exit/skip (range Presets())` |
-| `pkg/studio/urban.go:433` | `range-exit` | `assessPlume` | `exit/skip (range []float64{0.15, 0.35, 0.50, 0.70, 0.85})` |
-| `pkg/studio/cots.go:358` | `if-then` | `selectPackingMedia` | `packVolM3 <= 0` |
-| `pkg/studio/cots.go:554` | `if-then` | `BuildCOTSSummary` | `nozzleQty < 3` |
-| `pkg/studio/cots.go:579` | `if-then` | `BuildCOTSSummary` | `recircGPM <= 0` |
-| `pkg/studio/packet.go:59` | `if-then` | `(*Evaluator).Evaluate` | `err != nil` |
-| `pkg/studio/packet.go:168` | `if-then` | `buildDaemonJSON` | `spF > 202.0` |
-| `pkg/studio/packet.go:173` | `if-then` | `buildDaemonJSON` | `err != nil` |
-| `pkg/studio/packet.go:227` | `if-then` | `buildDaemonJSON` | `err != nil` |
+| `pkg/studio/cots.go:300` | `range-exit` | `snapPipeByNominal` | `exit/skip (range catalog)` |
+| `pkg/studio/options.go:260` | `range-exit` | `analyzeEductor` | `exit/skip (range catalog)` |
+| `pkg/studio/options.go:429` | `for-body` | `analyzeParallelBed` | `(qGas/(float64(pipeCount)*pipeAreaM2))/vFlood*100.0 > 75.0` |
+| `pkg/studio/presets.go:303` | `range-exit` | `PresetByID` | `exit/skip (range Presets())` |
+| `pkg/studio/urban.go:453` | `range-exit` | `assessPlume` | `exit/skip (range []float64{0.15, 0.35, 0.50, 0.70, 0.85})` |
+| `pkg/studio/cots.go:350` | `if-then` | `dualSumpExtraCost` | `recircGPM <= 0` |
+| `pkg/studio/cots.go:405` | `if-then` | `selectPackingMedia` | `packVolM3 <= 0` |
 
-*...and 31 additional uncovered branches in `pkg/studio` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
+*...and 76 additional uncovered branches in `pkg/studio` (run `go run ./scripts/branch_coverage.go -profile coverage.out -top 100` for the complete list).*
 
 ### `pkg/thermo` (Line 95.3%, Branch 87.5%, 21 uncovered branches)
 

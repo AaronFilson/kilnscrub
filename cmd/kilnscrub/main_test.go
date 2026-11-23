@@ -394,8 +394,15 @@ func TestRunErrorCases(t *testing.T) {
 		{name: "guide unknown preset", args: []string{"guide", "--preset", "nonexistent"}},
 		{name: "guide both preset and project", args: []string{"guide", "--preset", "wood_salt_24", "--project", "p.json"}},
 		{name: "guide empty out dir", args: []string{"guide", "--out", "   "}},
+		{name: "guide invalid alignment", args: []string{"guide", "--alignment", "bogus"}},
+		{name: "guide invalid bed layout", args: []string{"guide", "--bed-layout", "bogus"}},
+		{name: "guide invalid venturi layout", args: []string{"guide", "--venturi-layout", "bogus"}},
+		{name: "guide invalid controls", args: []string{"guide", "--controls", "bogus"}},
+		{name: "guide negative salting hours", args: []string{"guide", "--salting-hours", "-1"}},
 		{name: "packet unknown preset", args: []string{"packet", "--preset", "nonexistent"}},
 		{name: "packet empty out path", args: []string{"packet", "--out", "   "}},
+		{name: "packet invalid alignment", args: []string{"packet", "--alignment", "bogus"}},
+		{name: "packet invalid controls", args: []string{"packet", "--controls", "bogus"}},
 		{name: "design unknown preset", args: []string{"design", "--preset", "nonexistent"}},
 		{name: "export unknown preset", args: []string{"export", "--preset", "nonexistent"}},
 	}
@@ -517,9 +524,51 @@ func TestRunGuideStdoutAndOutDirAndProject(t *testing.T) {
 			}
 		}
 	})
+	t.Run("phase7_stage_design_flags", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		err := run(context.Background(), []string{
+			"guide",
+			"--preset", "wood_salt_24",
+			"--salting-hours", "2.5",
+			"--alignment", "eductor_dry_fan",
+			"--bed-layout", "parallel_manifold",
+			"--venturi-layout", "parallel_mini_venturis",
+			"--compact",
+			"--controls", "electromechanical_only",
+		}, &stdout, &stderr)
+		if err != nil {
+			t.Fatalf("guide with phase 7 flags failed: %v (stderr: %s)", err, stderr.String())
+		}
+		out := stdout.String()
+		for _, want := range []string{
+			"Stage Options",
+			"alignment=eductor_dry_fan",
+			"bed=parallel_manifold",
+			"venturi=parallel_mini_venturis",
+			"compact=true",
+			"controls=electromechanical_only",
+			"Recirculation",
+			"SG >= 1.105",
+			"Shop Plan",
+			"9 parts",
+			"15 lb",
+			"50 lb",
+			"2.5 hr salting",
+			"Standard 316L SS (Light / Occasional)",
+		} {
+			if !strings.Contains(out, want) {
+				t.Errorf("guide stdout missing %q;\n%s", want, out)
+			}
+		}
+		for _, bad := range []string{"4-lb", "Hobby 316L"} {
+			if strings.Contains(out, bad) {
+				t.Errorf("guide stdout must not contain deprecated string %q", bad)
+			}
+		}
+	})
 }
 
-func TestRunPacketCreatesValid10FileZip(t *testing.T) {
+func TestRunPacketCreatesValid11FileZip(t *testing.T) {
 	outZip := filepath.Join(t.TempDir(), "nested", "ci-packet.zip")
 	var stdout, stderr bytes.Buffer
 	err := run(context.Background(), []string{
@@ -530,12 +579,64 @@ func TestRunPacketCreatesValid10FileZip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("packet failed: %v (stderr: %s)", err, stderr.String())
 	}
+	if !strings.Contains(stdout.String(), "11 files") {
+		t.Errorf("packet stdout missing '11 files': %q", stdout.String())
+	}
 
 	zipBytes, err := os.ReadFile(outZip)
 	if err != nil {
 		t.Fatalf("read zip %s: %v", outZip, err)
 	}
-	assertValid10FilePacketZip(t, zipBytes)
+	assertValid11FilePacketZip(t, zipBytes)
+
+	t.Run("phase7_flags_propagate_to_packet", func(t *testing.T) {
+		optZip := filepath.Join(t.TempDir(), "phase7-packet.zip")
+		var oStdout, oStderr bytes.Buffer
+		err := run(context.Background(), []string{
+			"packet",
+			"--preset", "wood_salt_24",
+			"--salting-hours", "2.5",
+			"--alignment", "eductor_dry_fan",
+			"--bed-layout", "parallel_manifold",
+			"--venturi-layout", "parallel_mini_venturis",
+			"--compact",
+			"--controls", "electromechanical_only",
+			"--out", optZip,
+		}, &oStdout, &oStderr)
+		if err != nil {
+			t.Fatalf("packet with phase 7 flags failed: %v (stderr: %s)", err, oStderr.String())
+		}
+		data, err := os.ReadFile(optZip)
+		if err != nil {
+			t.Fatalf("read zip %s: %v", optZip, err)
+		}
+		files := assertValid11FilePacketZip(t, data)
+
+		var proj studio.StudioProject
+		if err := json.Unmarshal(files["project.json"], &proj); err != nil {
+			t.Fatalf("unmarshal project.json: %v", err)
+		}
+		if proj.SaltingHours != 2.5 ||
+			proj.StageAlignment != studio.StageAlignmentEductorDryFan ||
+			proj.PackedBedLayout != studio.PackedBedLayoutParallelManifold ||
+			proj.VenturiLayout != studio.VenturiLayoutParallelMiniVenturis ||
+			!proj.CompactFootprint ||
+			proj.ControlTier != studio.ControlTierElectromechanicalOnly {
+			t.Errorf("project.json did not preserve Phase 7 CLI flags: %+v", proj)
+		}
+
+		var plan studio.ShopPlan
+		if err := json.Unmarshal(files["shop_plan.json"], &plan); err != nil {
+			t.Fatalf("unmarshal shop_plan.json: %v", err)
+		}
+		if plan.StageAlignment != studio.StageAlignmentEductorDryFan ||
+			plan.PackedBedLayout != studio.PackedBedLayoutParallelManifold ||
+			!plan.CompactFootprint ||
+			len(plan.Parts) < 9 ||
+			len(plan.CutList) == 0 {
+			t.Errorf("shop_plan.json did not reflect Phase 7 CLI flags: %+v", plan)
+		}
+	})
 }
 
 func TestRunDesignAndExportWithPreset(t *testing.T) {
@@ -671,7 +772,7 @@ func TestRunUIStudioBackendRoutes(t *testing.T) {
 	if cd := pktResp.Header.Get("Content-Disposition"); !strings.Contains(cd, "kilnscrub-wood_salt_24-packet.zip") {
 		t.Errorf("packet Content-Disposition = %q, want kilnscrub-wood_salt_24-packet.zip", cd)
 	}
-	assertValid10FilePacketZip(t, pktBytes)
+	assertValid11FilePacketZip(t, pktBytes)
 
 	cancel()
 	select {
@@ -684,7 +785,7 @@ func TestRunUIStudioBackendRoutes(t *testing.T) {
 	}
 }
 
-func assertValid10FilePacketZip(t *testing.T, zipBytes []byte) {
+func assertValid11FilePacketZip(t *testing.T, zipBytes []byte) map[string][]byte {
 	t.Helper()
 	zr, err := zip.NewReader(bytes.NewReader(zipBytes), int64(len(zipBytes)))
 	if err != nil {
@@ -693,6 +794,7 @@ func assertValid10FilePacketZip(t *testing.T, zipBytes []byte) {
 	expected := map[string]bool{
 		"scrubber.stl":            false,
 		"scrubber.dxf":            false,
+		"shop_plan.json":          false,
 		"bom_cots.csv":            false,
 		"bom_cots.md":             false,
 		"bom_engineered.csv":      false,
@@ -705,6 +807,7 @@ func assertValid10FilePacketZip(t *testing.T, zipBytes []byte) {
 	if len(zr.File) != len(expected) {
 		t.Fatalf("zip contains %d files, want %d", len(zr.File), len(expected))
 	}
+	contents := make(map[string][]byte, len(expected))
 	for _, f := range zr.File {
 		if _, ok := expected[f.Name]; !ok {
 			t.Errorf("unexpected zip entry %q", f.Name)
@@ -721,10 +824,12 @@ func assertValid10FilePacketZip(t *testing.T, zipBytes []byte) {
 			t.Errorf("zip entry %q empty or unreadable: len=%d err=%v", f.Name, len(data), err)
 		}
 		expected[f.Name] = true
+		contents[f.Name] = data
 	}
 	for name, seen := range expected {
 		if !seen {
 			t.Errorf("zip missing expected entry %q", name)
 		}
 	}
+	return contents
 }

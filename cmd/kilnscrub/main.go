@@ -76,9 +76,9 @@ Commands:
   export   Export fabrication .stl mesh, unfolded .dxf patterns, and BOM
   presets  List curated studio kiln presets (ID, profile, audience, badge)
   guide    Evaluate COTS hardware, urban readiness, and Build/Firing Guides
-  packet   Generate a complete 10-file Studio Build Packet (.zip)
+  packet   Generate a complete 11-file Studio Build Packet (.zip)
   daemon   Run the closed-loop PID draft & quench safety controller
-  ui       Launch the interactive 3-tab web dashboard (default :8080)
+  ui       Launch the interactive 4-tab web dashboard (default :8080)
   version  Print the kilnscrub version`)
 }
 
@@ -409,6 +409,49 @@ func runPresets(args []string, stdout, stderr io.Writer) error {
 	return nil
 }
 
+type studioOptionFlags struct {
+	saltingHours  *float64
+	alignment     *string
+	bedLayout     *string
+	venturiLayout *string
+	compact       *bool
+	controls      *string
+}
+
+func bindStudioOptionFlags(fs *flag.FlagSet) studioOptionFlags {
+	return studioOptionFlags{
+		saltingHours:  fs.Float64("salting-hours", 0, "Active peak salting window in hours (e.g. 2-4 hrs for salt mode)"),
+		alignment:     fs.String("alignment", "", "Stage alignment: inline_id_blower or eductor_dry_fan"),
+		bedLayout:     fs.String("bed-layout", "", "Stage 3 packed-bed layout: single_column or parallel_manifold"),
+		venturiLayout: fs.String("venturi-layout", "", "Stage 2 venturi layout: single_throat or parallel_mini_venturis"),
+		compact:       fs.Bool("compact", false, "Use compact U-turn folded skid footprint"),
+		controls:      fs.String("controls", "", "Control tier: rpi_modbus or electromechanical_only"),
+	}
+}
+
+func (f studioOptionFlags) applyExplicit(base studio.StudioProject, setFlags map[string]bool) studio.StudioProject {
+	proj := base
+	if setFlags["salting-hours"] {
+		proj.SaltingHours = *f.saltingHours
+	}
+	if setFlags["alignment"] {
+		proj.StageAlignment = strings.ToLower(strings.TrimSpace(*f.alignment))
+	}
+	if setFlags["bed-layout"] {
+		proj.PackedBedLayout = strings.ToLower(strings.TrimSpace(*f.bedLayout))
+	}
+	if setFlags["venturi-layout"] {
+		proj.VenturiLayout = strings.ToLower(strings.TrimSpace(*f.venturiLayout))
+	}
+	if setFlags["compact"] {
+		proj.CompactFootprint = *f.compact
+	}
+	if setFlags["controls"] {
+		proj.ControlTier = strings.ToLower(strings.TrimSpace(*f.controls))
+	}
+	return proj
+}
+
 func runGuide(args []string, stdout, stderr io.Writer) error {
 	fs := flag.NewFlagSet("guide", flag.ContinueOnError)
 	fs.SetOutput(stderr)
@@ -416,6 +459,7 @@ func runGuide(args []string, stdout, stderr io.Writer) error {
 	presetID := fs.String("preset", "", "Studio preset ID (default: wood_salt_24; see 'kilnscrub presets')")
 	projectPath := fs.String("project", "", "Path to a saved StudioProject project.json file")
 	outDir := fs.String("out", "", "Optional output directory to write BUILD_GUIDE.md and OPERATIONS_CHECKLIST.md")
+	optFlags := bindStudioOptionFlags(fs)
 
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -436,6 +480,7 @@ func runGuide(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
+	proj = optFlags.applyExplicit(proj, setFlags)
 
 	eval, err := studio.NewEvaluator(scrubber.NewDesigner(), cad.NewExporter()).Evaluate(proj)
 	if err != nil {
@@ -474,15 +519,24 @@ func printStudioSummary(w io.Writer, eval studio.StudioEvaluation) {
 	p := eval.Project
 	c := eval.COTS
 	u := eval.Urban
+	a := eval.ArchitectureOptions
+	r := eval.Recirculation
 	fmt.Fprintf(w, "Kiln Scrub Studio Readiness & COTS Summary\n")
 	fmt.Fprintf(w, "==========================================\n")
 	fmt.Fprintf(w, "Studio          : %s (preset=%s)\n", p.StudioName, p.PresetID)
-	fmt.Fprintf(w, "Kiln & Firing   : %.1f cu.ft. | %s (%.0f F peak, %.0f hrs) | Glaze: %s\n",
-		eval.Design.Input.KilnVolumeCuFt, p.FiringCone, eval.Design.Input.PeakExitTempF, p.FiringDurationHours, p.VaporGlazeMode)
-	fmt.Fprintf(w, "Build & Alloy   : path=%s | tier=%s | snap_to_cots=%v\n",
-		p.BuildPath, p.CorrosionTier, c.Snapped)
+	fmt.Fprintf(w, "Kiln & Firing   : %.1f cu.ft. | %s (%.0f F peak, %.0f hrs, %.1f hr salting) | Glaze: %s\n",
+		eval.Design.Input.KilnVolumeCuFt, p.FiringCone, eval.Design.Input.PeakExitTempF, p.FiringDurationHours, p.EffectiveSaltingHours(), p.VaporGlazeMode)
+	fmt.Fprintf(w, "Build & Alloy   : path=%s | tier=%s (%s) | snap_to_cots=%v\n",
+		p.BuildPath, p.CorrosionTier, studio.CorrosionTierLabel(p.CorrosionTier), c.Snapped)
+	fmt.Fprintf(w, "Stage Options   : alignment=%s | bed=%s | venturi=%s | compact=%v | controls=%s | delta=%+.2f USD\n",
+		a.StageAlignment, a.PackedBedLayout, a.VenturiLayout, a.CompactFootprint, a.ControlTier, a.CostDeltaUSD)
 	fmt.Fprintf(w, "COTS Hardware   : $%.2f est. USD | Quench %.1f\" | Column %.1f\" (%.1f%% of flood) | %s\n",
 		c.EstimatedTotalUSD, c.QuenchVessel.NominalIn, c.PackedColumn.NominalIn, c.ActualPercentOfFlood, c.BlowerVFD.Name)
+	fmt.Fprintf(w, "Recirculation   : %.1f%% water saved | dump every %d firing(s) (SG >= %.3f)\n",
+		r.WaterSavedPct, r.FiringsBeforeFullDump, r.DumpSpecificGravity)
+	fmt.Fprintf(w, "Shop Plan       : %d parts, %d cut-sheet items (%.1f\" L x %.1f\" W x %.1f\" H)\n",
+		len(eval.ShopPlan.Parts), len(eval.ShopPlan.CutList),
+		eval.ShopPlan.OverallLengthIn, eval.ShopPlan.OverallWidthIn, eval.ShopPlan.OverallHeightIn)
 	fmt.Fprintf(w, "Urban Readiness : %s\n", strings.ToUpper(u.OverallStatus))
 	fmt.Fprintf(w, "  Electrical    : [%s] %s (~%.1f A)\n", u.Electrical.Status, u.Electrical.CircuitLabel, u.Electrical.RequiredAmps)
 	fmt.Fprintf(w, "  Water         : [%s] %.2f GPM peak (~%.0f gal/firing)\n", u.Water.Status, u.Water.RequiredGPM, u.Water.TotalFiringGallons)
@@ -490,8 +544,8 @@ func printStudioSummary(w io.Writer, eval studio.StudioEvaluation) {
 		u.Noise.Status, u.Noise.PropertyLineDBA, u.Noise.PropertyLineFt, u.Noise.UrbanLimitDBA)
 	fmt.Fprintf(w, "  Winter Plume  : [%s] %.0f ft bare -> %.0f ft w/ %.0f CFM HV squirrel-cage (vs %.0f ft fence; 0-ft reheat %.1f kW)\n",
 		u.Plume.Status, u.Plume.BarePlumeLengthFt, u.Plume.DilutedPlumeLengthFt, u.Plume.DilutionCFMNeeded, p.PropertyLineFt, u.Plume.DilutionReheatKW)
-	fmt.Fprintf(w, "  Drain / Soda  : [%s] %.1f lbs baking soda (%d x 4-lb boxes) | target pH %s\n",
-		u.Drain.Status, u.Drain.BakingSodaLbsPerFiring, u.Drain.BakingSoda4LbBoxes, u.Drain.TargetDrainPH)
+	fmt.Fprintf(w, "  Drain / Soda  : [%s] %s | target pH %s\n",
+		u.Drain.Status, u.Drain.BulkPackagingLabel, u.Drain.TargetDrainPH)
 	fmt.Fprintf(w, "  Corrosion     : [%s] %s\n", u.Corrosion.Status, u.Corrosion.InspectionInterval)
 }
 
@@ -502,6 +556,7 @@ func runPacket(args []string, stdout, stderr io.Writer) error {
 	presetID := fs.String("preset", "", "Studio preset ID (default: wood_salt_24; see 'kilnscrub presets')")
 	projectPath := fs.String("project", "", "Path to a saved StudioProject project.json file")
 	outPath := fs.String("out", "", "Output .zip file path (default: kilnscrub-<preset>-packet.zip)")
+	optFlags := bindStudioOptionFlags(fs)
 
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -522,6 +577,7 @@ func runPacket(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
+	proj = optFlags.applyExplicit(proj, setFlags)
 
 	targetPath := strings.TrimSpace(*outPath)
 	if targetPath == "" {
@@ -542,7 +598,7 @@ func runPacket(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("write %s: %w", targetPath, err)
 	}
 
-	fmt.Fprintf(stdout, "wrote %s (%d bytes, 10 files) | %s | Est. COTS $%.2f | Urban Readiness: %s\n",
+	fmt.Fprintf(stdout, "wrote %s (%d bytes, 11 files) | %s | Est. COTS $%.2f | Urban Readiness: %s\n",
 		targetPath, len(zipBytes), eval.Project.StudioName, eval.COTS.EstimatedTotalUSD, strings.ToUpper(eval.Urban.OverallStatus))
 	return nil
 }

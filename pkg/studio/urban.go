@@ -73,8 +73,6 @@ type DrainAssessment struct {
 	BulkPackagingLabel     string  `json:"bulk_packaging_label"`
 	TargetDrainPH          string  `json:"target_drain_ph"`
 	Summary                string  `json:"summary"`
-	// BakingSoda4LbBoxes is retained hidden from JSON solely for CLI source compatibility until updated.
-	BakingSoda4LbBoxes int `json:"-"`
 }
 
 // CorrosionAssessment provides practical alloy selection, buffered flush, and weld inspection guidance.
