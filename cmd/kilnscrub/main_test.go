@@ -399,10 +399,18 @@ func TestRunErrorCases(t *testing.T) {
 		{name: "guide invalid venturi layout", args: []string{"guide", "--venturi-layout", "bogus"}},
 		{name: "guide invalid controls", args: []string{"guide", "--controls", "bogus"}},
 		{name: "guide negative salting hours", args: []string{"guide", "--salting-hours", "-1"}},
+		{name: "guide invalid blower drive", args: []string{"guide", "--blower-drive", "bogus"}},
+		{name: "guide invalid parallel pipe size", args: []string{"guide", "--parallel-pipe-in", "6"}},
+		{name: "guide invalid packing media", args: []string{"guide", "--packing-media", "bogus"}},
+		{name: "guide invalid compressor scfm", args: []string{"guide", "--compressor-scfm", "-5"}},
 		{name: "packet unknown preset", args: []string{"packet", "--preset", "nonexistent"}},
 		{name: "packet empty out path", args: []string{"packet", "--out", "   "}},
 		{name: "packet invalid alignment", args: []string{"packet", "--alignment", "bogus"}},
 		{name: "packet invalid controls", args: []string{"packet", "--controls", "bogus"}},
+		{name: "packet invalid blower drive", args: []string{"packet", "--blower-drive", "bogus"}},
+		{name: "packet invalid parallel pipe size", args: []string{"packet", "--parallel-pipe-in", "5"}},
+		{name: "packet invalid packing media", args: []string{"packet", "--packing-media", "bogus"}},
+		{name: "packet invalid compressor scfm", args: []string{"packet", "--compressor-scfm", "250"}},
 		{name: "design unknown preset", args: []string{"design", "--preset", "nonexistent"}},
 		{name: "export unknown preset", args: []string{"export", "--preset", "nonexistent"}},
 	}
@@ -566,6 +574,71 @@ func TestRunGuideStdoutAndOutDirAndProject(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("phase8_budget_combo_flags", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		err := run(context.Background(), []string{
+			"guide",
+			"--preset", "wood_salt_24",
+			"--blower-drive", "compressor_air_atomize",
+			"--bed-layout", "parallel_manifold",
+			"--parallel-pipe-in", "4",
+			"--packing-media", "diy_ceramic_rings",
+			"--compressor-scfm", "15",
+			"--controls", "electromechanical_only",
+		}, &stdout, &stderr)
+		if err != nil {
+			t.Fatalf("guide with phase 8 flags failed: %v (stderr: %s)", err, stderr.String())
+		}
+		out := stdout.String()
+		for _, want := range []string{
+			"Stage Options",
+			"bed=parallel_manifold (4\" pipe)",
+			"controls=electromechanical_only",
+			"Blower Drive",
+			"compressor_air_atomize",
+			"Packing Media",
+			"diy_ceramic_rings",
+			"Shop Compressor (Eductor vs Air-Atomize)",
+			"15.0 SCFM avail",
+			"Eductor:",
+			"Air-Atomize:",
+			"feasible=true",
+		} {
+			if !strings.Contains(out, want) {
+				t.Errorf("phase 8 guide stdout missing %q;\n%s", want, out)
+			}
+		}
+		for _, bad := range []string{"4-lb", "Hobby 316L"} {
+			if strings.Contains(out, bad) {
+				t.Errorf("phase 8 guide stdout must not contain deprecated string %q", bad)
+			}
+		}
+	})
+
+	t.Run("phase8_compressor_eductor_only_feasibility", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		err := run(context.Background(), []string{
+			"guide",
+			"--preset", "wood_salt_24",
+			"--blower-drive", "compressor_eductor_only",
+			"--compressor-scfm", "15",
+		}, &stdout, &stderr)
+		if err != nil {
+			t.Fatalf("guide --blower-drive compressor_eductor_only failed: %v (stderr: %s)", err, stderr.String())
+		}
+		out := stdout.String()
+		for _, want := range []string{
+			"Blower Drive",
+			"compressor_eductor_only",
+			"feasible=false",
+			"Shop Compressor (Eductor vs Air-Atomize)",
+		} {
+			if !strings.Contains(out, want) {
+				t.Errorf("compressor_eductor_only stdout missing %q;\n%s", want, out)
+			}
+		}
+	})
 }
 
 func TestRunPacketCreatesValid11FileZip(t *testing.T) {
@@ -635,6 +708,43 @@ func TestRunPacketCreatesValid11FileZip(t *testing.T) {
 			len(plan.Parts) < 9 ||
 			len(plan.CutList) == 0 {
 			t.Errorf("shop_plan.json did not reflect Phase 7 CLI flags: %+v", plan)
+		}
+	})
+
+	t.Run("phase8_flags_propagate_to_packet", func(t *testing.T) {
+		optZip := filepath.Join(t.TempDir(), "phase8-packet.zip")
+		var oStdout, oStderr bytes.Buffer
+		err := run(context.Background(), []string{
+			"packet",
+			"--preset", "wood_salt_24",
+			"--blower-drive", "compressor_air_atomize",
+			"--bed-layout", "parallel_manifold",
+			"--parallel-pipe-in", "4",
+			"--packing-media", "diy_ceramic_rings",
+			"--compressor-scfm", "15",
+			"--controls", "electromechanical_only",
+			"--out", optZip,
+		}, &oStdout, &oStderr)
+		if err != nil {
+			t.Fatalf("packet with phase 8 flags failed: %v (stderr: %s)", err, oStderr.String())
+		}
+		data, err := os.ReadFile(optZip)
+		if err != nil {
+			t.Fatalf("read zip %s: %v", optZip, err)
+		}
+		files := assertValid11FilePacketZip(t, data)
+
+		var proj studio.StudioProject
+		if err := json.Unmarshal(files["project.json"], &proj); err != nil {
+			t.Fatalf("unmarshal project.json: %v", err)
+		}
+		if proj.BlowerDriveOption != studio.BlowerDriveCompressorAirAtomize ||
+			proj.PackedBedLayout != studio.PackedBedLayoutParallelManifold ||
+			proj.ParallelPipeSizeIn != 4.0 ||
+			proj.PackingMediaOption != studio.PackingMediaDIYCeramicRings ||
+			proj.ShopCompressorSCFM != 15.0 ||
+			proj.ControlTier != studio.ControlTierElectromechanicalOnly {
+			t.Errorf("project.json did not preserve Phase 8 CLI flags: %+v", proj)
 		}
 	})
 }

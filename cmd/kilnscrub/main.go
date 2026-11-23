@@ -410,22 +410,30 @@ func runPresets(args []string, stdout, stderr io.Writer) error {
 }
 
 type studioOptionFlags struct {
-	saltingHours  *float64
-	alignment     *string
-	bedLayout     *string
-	venturiLayout *string
-	compact       *bool
-	controls      *string
+	saltingHours   *float64
+	alignment      *string
+	bedLayout      *string
+	parallelPipeIn *float64
+	venturiLayout  *string
+	compact        *bool
+	controls       *string
+	blowerDrive    *string
+	packingMedia   *string
+	compressorSCFM *float64
 }
 
 func bindStudioOptionFlags(fs *flag.FlagSet) studioOptionFlags {
 	return studioOptionFlags{
-		saltingHours:  fs.Float64("salting-hours", 0, "Active peak salting window in hours (e.g. 2-4 hrs for salt mode)"),
-		alignment:     fs.String("alignment", "", "Stage alignment: inline_id_blower or eductor_dry_fan"),
-		bedLayout:     fs.String("bed-layout", "", "Stage 3 packed-bed layout: single_column or parallel_manifold"),
-		venturiLayout: fs.String("venturi-layout", "", "Stage 2 venturi layout: single_throat or parallel_mini_venturis"),
-		compact:       fs.Bool("compact", false, "Use compact U-turn folded skid footprint"),
-		controls:      fs.String("controls", "", "Control tier: rpi_modbus or electromechanical_only"),
+		saltingHours:   fs.Float64("salting-hours", 0, "Active peak salting window in hours (e.g. 2-4 hrs for salt mode)"),
+		alignment:      fs.String("alignment", "", "Stage alignment: inline_id_blower or eductor_dry_fan"),
+		bedLayout:      fs.String("bed-layout", "", "Stage 3 packed-bed layout: single_column or parallel_manifold"),
+		parallelPipeIn: fs.Float64("parallel-pipe-in", 0, "Shell-less parallel manifold pipe size in inches: 2, 3, or 4"),
+		venturiLayout:  fs.String("venturi-layout", "", "Stage 2 venturi layout: single_throat or parallel_mini_venturis"),
+		compact:        fs.Bool("compact", false, "Use compact U-turn folded skid footprint"),
+		controls:       fs.String("controls", "", "Control tier: rpi_modbus or electromechanical_only"),
+		blowerDrive:    fs.String("blower-drive", "", "Stage 4 blower drive: industrial_radial_vfd, regen_side_channel, dual_bypass_blowers, compressor_air_atomize, or compressor_eductor_only"),
+		packingMedia:   fs.String("packing-media", "", "Stage 3 packing media: pp_pall_rings, aquaculture_bioballs, or diy_ceramic_rings"),
+		compressorSCFM: fs.Float64("compressor-scfm", 0, "Existing studio shop air compressor capacity (SCFM @ 90 PSI, default 15)"),
 	}
 }
 
@@ -440,6 +448,9 @@ func (f studioOptionFlags) applyExplicit(base studio.StudioProject, setFlags map
 	if setFlags["bed-layout"] {
 		proj.PackedBedLayout = strings.ToLower(strings.TrimSpace(*f.bedLayout))
 	}
+	if setFlags["parallel-pipe-in"] || *f.parallelPipeIn != 0 {
+		proj.ParallelPipeSizeIn = *f.parallelPipeIn
+	}
 	if setFlags["venturi-layout"] {
 		proj.VenturiLayout = strings.ToLower(strings.TrimSpace(*f.venturiLayout))
 	}
@@ -448,6 +459,15 @@ func (f studioOptionFlags) applyExplicit(base studio.StudioProject, setFlags map
 	}
 	if setFlags["controls"] {
 		proj.ControlTier = strings.ToLower(strings.TrimSpace(*f.controls))
+	}
+	if setFlags["blower-drive"] || strings.TrimSpace(*f.blowerDrive) != "" {
+		proj.BlowerDriveOption = strings.ToLower(strings.TrimSpace(*f.blowerDrive))
+	}
+	if setFlags["packing-media"] || strings.TrimSpace(*f.packingMedia) != "" {
+		proj.PackingMediaOption = strings.ToLower(strings.TrimSpace(*f.packingMedia))
+	}
+	if setFlags["compressor-scfm"] || *f.compressorSCFM != 0 {
+		proj.ShopCompressorSCFM = *f.compressorSCFM
 	}
 	return proj
 }
@@ -528,8 +548,15 @@ func printStudioSummary(w io.Writer, eval studio.StudioEvaluation) {
 		eval.Design.Input.KilnVolumeCuFt, p.FiringCone, eval.Design.Input.PeakExitTempF, p.FiringDurationHours, p.EffectiveSaltingHours(), p.VaporGlazeMode)
 	fmt.Fprintf(w, "Build & Alloy   : path=%s | tier=%s (%s) | snap_to_cots=%v\n",
 		p.BuildPath, p.CorrosionTier, studio.CorrosionTierLabel(p.CorrosionTier), c.Snapped)
-	fmt.Fprintf(w, "Stage Options   : alignment=%s | bed=%s | venturi=%s | compact=%v | controls=%s | delta=%+.2f USD\n",
-		a.StageAlignment, a.PackedBedLayout, a.VenturiLayout, a.CompactFootprint, a.ControlTier, a.CostDeltaUSD)
+	fmt.Fprintf(w, "Stage Options   : alignment=%s | bed=%s (%.0f\" pipe) | venturi=%s | compact=%v | controls=%s | delta=%+.2f USD\n",
+		a.StageAlignment, a.PackedBedLayout, a.ParallelBed.PipeNominalIn, a.VenturiLayout, a.CompactFootprint, a.ControlTier, a.CostDeltaUSD)
+	fmt.Fprintf(w, "Blower Drive    : %s (%s) | %.1f inWC | $%.2f (%+.2f USD) | feasible=%v\n",
+		a.BlowerDrive.Option, a.BlowerDrive.Label, a.BlowerDrive.RequiredStaticInWC, a.BlowerDrive.FanCostUSD, a.BlowerDrive.CostDeltaUSD, a.BlowerDrive.Feasible)
+	fmt.Fprintf(w, "Packing Media   : %s (%s) | %.0f%% voidage | %.2f inWC bed dP | $%.2f (%+.2f USD)\n",
+		a.PackingMedia.Option, a.PackingMedia.Label, a.PackingMedia.Voidage*100.0, a.PackingMedia.BedDPInWC, a.PackingMedia.MediaCostUSD, a.PackingMedia.CostDeltaUSD)
+	fmt.Fprintf(w, "Shop Compressor (Eductor vs Air-Atomize) : %.1f SCFM avail | Eductor: %.1f SCFM (~%.1f HP, feasible=%v) | Air-Atomize: %.1f SCFM @ 40 PSI (%.0f um, -%.1f inWC, saves $%.0f, feasible=%v)\n",
+		a.Compressor.AvailableSCFM, a.Compressor.EductorSCFMNeeded, a.Compressor.EductorHPNeeded, a.Compressor.EductorFeasible,
+		a.Compressor.AtomizeSCFMNeeded, a.Compressor.AtomizeDropletUm, a.Compressor.AtomizeDPSavedInWC, a.Compressor.AtomizeCostSavedUSD, a.Compressor.AtomizeFeasible)
 	fmt.Fprintf(w, "COTS Hardware   : $%.2f est. USD | Quench %.1f\" | Column %.1f\" (%.1f%% of flood) | %s\n",
 		c.EstimatedTotalUSD, c.QuenchVessel.NominalIn, c.PackedColumn.NominalIn, c.ActualPercentOfFlood, c.BlowerVFD.Name)
 	fmt.Fprintf(w, "Recirculation   : %.1f%% water saved | dump every %d firing(s) (SG >= %.3f)\n",
