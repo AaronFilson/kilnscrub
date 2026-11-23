@@ -287,7 +287,7 @@ func buildPacketReadme(eval StudioEvaluation) []byte {
 	b.WriteString("5.  bom_engineered.csv      Sheet-metal fabrication BOM (Spreadsheet CSV)\n")
 	b.WriteString("6.  scrubber.stl            3D assembly model (millimeters) for visual review & layout\n")
 	b.WriteString("7.  scrubber.dxf            2D AutoCAD R12 flat-pattern cut sheets (millimeters) for CNC/fab\n")
-	b.WriteString("8.  shop_plan.json          Structured in-browser Complete Plan Viewer parts, cut sheets & clearances\n")
+	b.WriteString("8.  shop_plan.json          Structured Complete Systems Plan (parts, cuts, electrical, plumbing, pump, bracing, acoustics, clearances & deluxe spec)\n")
 	b.WriteString("9.  project.json            Saved studio project settings (re-import into kilnscrub UI/CLI)\n")
 	b.WriteString("10. daemon.json             Pre-tuned kilnscrub control daemon config (sim or Modbus RS-485)\n")
 	b.WriteString("11. README_PACKET.txt       This overview file\n\n")

@@ -1535,3 +1535,407 @@ func TestPhase8BudgetBlowerDrivesShelllessPipesPackingAndCompressor(t *testing.T
 		budgetEval.COTS.EstimatedTotalUSD, netSavings,
 	)
 }
+
+func TestPhase9CustomFabDeluxeAndCompleteSystemsShopPlan(t *testing.T) {
+	eval := NewEvaluator(scrubber.NewDesigner(), cad.NewExporter())
+
+	// 1. ParseProject & Validate accept "custom_fab_deluxe".
+	dlxParsed, err := ParseProject([]byte(`{"preset_id":"wood_salt_24","build_path":"custom_fab_deluxe"}`))
+	if err != nil {
+		t.Fatalf("ParseProject custom_fab_deluxe failed: %v", err)
+	}
+	if dlxParsed.BuildPath != BuildPathCustomFabDeluxe || !dlxParsed.IsDeluxe() {
+		t.Fatalf("expected BuildPathCustomFabDeluxe, got %q", dlxParsed.BuildPath)
+	}
+
+	cotsProj := DefaultProject()
+	cotsProj.BuildPath = BuildPathCOTSNoWeld
+	cotsProj.IncludeSilencer = true
+	cotsEval, err := eval.Evaluate(cotsProj)
+	if err != nil {
+		t.Fatalf("cots evaluate: %v", err)
+	}
+
+	dlxEval, err := eval.Evaluate(dlxParsed)
+	if err != nil {
+		t.Fatalf("deluxe evaluate: %v", err)
+	}
+
+	// 2. Verify Deluxe BOM upgrades, weight/cost invariants, and mandatory code compliance items.
+	if dlxEval.COTS.EstimatedTotalUSD <= cotsEval.COTS.EstimatedTotalUSD+3000.0 {
+		t.Errorf("expected Deluxe BOM ($%.2f) to exceed COTS ($%.2f) by >$3,000", dlxEval.COTS.EstimatedTotalUSD, cotsEval.COTS.EstimatedTotalUSD)
+	}
+	var sumCost, sumWeight float64
+	var hasSightCleanout, hasSteelSkid, hasUL508A, hasANSI150, hasRPZ, hasDisc, hasNFPA86, hasIPC702 bool
+	for _, it := range dlxEval.COTS.BOM.Items {
+		if it.WeightKg <= 0 {
+			t.Errorf("Deluxe BOM item %q has non-positive WeightKg %v", it.Name, it.WeightKg)
+		}
+		sumCost += it.TotalCostUSD
+		sumWeight += it.WeightKg
+		blob := it.Name + " " + it.Material + " " + it.Spec
+		if strings.Contains(blob, "DLX-SIGHT-CLNOUT-INSUL") && strings.Contains(blob, "borosilicate") {
+			hasSightCleanout = true
+		}
+		if strings.Contains(blob, "DLX-SKID-KBRACE-VBOOT") && strings.Contains(blob, "K-bracing") {
+			hasSteelSkid = true
+		}
+		if strings.Contains(blob, "DLX-UL508A-N4X-PANEL") && strings.Contains(blob, "1/16-DIN") {
+			hasUL508A = true
+		}
+		if strings.Contains(blob, "B16.5 Class 150") && strings.Contains(blob, "PTFE envelope") {
+			hasANSI150 = true
+		}
+		if strings.Contains(blob, "IPC608-RPZ-AG") {
+			hasRPZ = true
+		}
+		if strings.Contains(blob, "NEC430-DISC-LR") {
+			hasDisc = true
+		}
+		if strings.Contains(blob, "200 F") && strings.Contains(blob, "NFPA 86") {
+			hasNFPA86 = true
+		}
+		if strings.Contains(blob, "IPC 702.5") {
+			hasIPC702 = true
+		}
+	}
+	if math.Abs(sumCost-dlxEval.COTS.BOM.TotalCostUSD) > 0.01 || math.Abs(sumWeight-dlxEval.COTS.BOM.TotalWeightKg) > 0.01 {
+		t.Errorf("Deluxe BOM totals mismatch: cost=%.2f/%.2f wt=%.2f/%.2f", sumCost, dlxEval.COTS.BOM.TotalCostUSD, sumWeight, dlxEval.COTS.BOM.TotalWeightKg)
+	}
+	if !hasSightCleanout || !hasSteelSkid || !hasUL508A || !hasANSI150 || !hasRPZ || !hasDisc || !hasNFPA86 || !hasIPC702 {
+		t.Errorf("Deluxe BOM missing required items: sight=%v skid=%v ul508a=%v ansi150=%v rpz=%v disc=%v nfpa86=%v ipc702=%v",
+			hasSightCleanout, hasSteelSkid, hasUL508A, hasANSI150, hasRPZ, hasDisc, hasNFPA86, hasIPC702)
+	}
+	if dlxEval.COTS.Silencer == nil || !strings.Contains(dlxEval.COTS.Silencer.SKU, "DLX-ACOUSTIC-ENC") {
+		t.Errorf("expected Deluxe acoustic enclosure silencer, got %+v", dlxEval.COTS.Silencer)
+	}
+	if dlxEval.COTS.SumpTank.SKU != "DLX-SUMP-SLOPED-35" {
+		t.Errorf("expected DLX-SUMP-SLOPED-35 for 24 cu.ft. Deluxe, got %q", dlxEval.COTS.SumpTank.SKU)
+	}
+
+	// 3. Verify Deluxe acoustic attenuation (~9 dBA extra over standard silenced, ~22 dBA over bare).
+	extraDrop3Ft := cotsEval.Urban.Noise.SilencedDBA3Ft - dlxEval.Urban.Noise.SilencedDBA3Ft
+	if extraDrop3Ft < 8.0 || extraDrop3Ft > 10.0 {
+		t.Errorf("expected Deluxe extra 3ft attenuation in [8, 10] dBA, got %.1f dBA (COTS=%.1f, Deluxe=%.1f)",
+			extraDrop3Ft, cotsEval.Urban.Noise.SilencedDBA3Ft, dlxEval.Urban.Noise.SilencedDBA3Ft)
+	}
+	extraDropLine := cotsEval.Urban.Noise.PropertyLineDBA - dlxEval.Urban.Noise.PropertyLineDBA
+	if extraDropLine < 8.0 || extraDropLine > 10.0 {
+		t.Errorf("expected Deluxe extra property-line attenuation in [8, 10] dBA, got %.1f dBA (COTS=%.1f, Deluxe=%.1f)",
+			extraDropLine, cotsEval.Urban.Noise.PropertyLineDBA, dlxEval.Urban.Noise.PropertyLineDBA)
+	}
+	if dlxEval.ShopPlan.AcousticSummary.TotalReductionDBA != 22.0 {
+		t.Errorf("expected Deluxe TotalReductionDBA=22.0, got %.1f", dlxEval.ShopPlan.AcousticSummary.TotalReductionDBA)
+	}
+	if cotsEval.ShopPlan.AcousticSummary.TotalReductionDBA != 13.0 {
+		t.Errorf("expected COTS silenced TotalReductionDBA=13.0, got %.1f", cotsEval.ShopPlan.AcousticSummary.TotalReductionDBA)
+	}
+
+	// 4. Verify Deluxe Build Guide section (TIG weld prep, ANSI B16.5 bolt torque, FRP curing, skid anchoring, acoustic baffle, UL 508A & NEC 110.26).
+	for _, want := range []string{
+		"Custom Fabrication Deluxe (`custom_fab_deluxe`)",
+		"## 7. Custom Fabrication Deluxe Build Guide",
+		"ER316L",
+		"B16.5 Class 150",
+		"3-stage star pattern",
+		"Derakane Vinyl-Ester FRP",
+		"concrete wedge anchors",
+		"Cooling Labyrinth",
+		"UL 508A",
+		"NEC 110.26",
+	} {
+		if !strings.Contains(dlxEval.BuildGuideMD, want) {
+			t.Errorf("Deluxe BuildGuideMD missing %q", want)
+		}
+	}
+
+	// 5. Verify exact Phase 9 ShopPlan JSON contract (matching p9-web-deluxe-plan).
+	spBytes, err := json.Marshal(dlxEval.ShopPlan)
+	if err != nil {
+		t.Fatalf("marshal ShopPlan: %v", err)
+	}
+	var spRaw map[string]any
+	if err := json.Unmarshal(spBytes, &spRaw); err != nil {
+		t.Fatalf("unmarshal ShopPlan raw: %v", err)
+	}
+	for _, key := range []string{
+		"build_path", "is_deluxe", "clearances", "electrical", "plumbing",
+		"pump_station", "bracing", "acoustics", "acoustic_summary", "deluxe_spec",
+	} {
+		if _, ok := spRaw[key]; !ok {
+			t.Errorf("ShopPlan JSON missing top-level key %q", key)
+		}
+	}
+	clrRaw := spRaw["clearances"].(map[string]any)
+	for _, key := range []string{
+		"flue_to_combustibles_in", "property_line_min_ft", "stack_above_roof_ft", "service_aisle_in",
+		"nec_panel_depth_in", "nec_panel_width_in", "pump_service_in", "cleanout_swing_in",
+		"hose_bend_radius_in", "wiring_access_note",
+	} {
+		if _, ok := clrRaw[key]; !ok {
+			t.Errorf("ShopPlan.clearances JSON missing key %q", key)
+		}
+	}
+	sp := dlxEval.ShopPlan
+	if sp.BuildPath != BuildPathCustomFabDeluxe || !sp.IsDeluxe {
+		t.Errorf("unexpected ShopPlan build_path=%q is_deluxe=%v", sp.BuildPath, sp.IsDeluxe)
+	}
+	if sp.Clearances.NECPanelDepthIn != 36.0 || sp.Clearances.NECPanelWidthIn != 30.0 ||
+		sp.Clearances.PumpServiceIn != 24.0 || sp.Clearances.CleanoutSwingIn != 24.0 || sp.Clearances.HoseBendRadiusIn != 6.0 {
+		t.Errorf("unexpected expanded clearances: %+v", sp.Clearances)
+	}
+
+	// Verify electrical E1..E5 (E3 is_safety_loop=true), plumbing P1..P7, pump_station, bracing B1..B5, acoustics S1..S3, deluxe_spec.
+	if len(sp.Electrical) != 5 {
+		t.Errorf("expected 5 electrical circuits (E1..E5) without diluter, got %d", len(sp.Electrical))
+	}
+	foundSafetyLoop := false
+	for _, c := range sp.Electrical {
+		if c.ID == "E3" {
+			foundSafetyLoop = c.IsSafetyLoop && c.Voltage == 24
+		}
+		if c.ID == "E1" && (c.Voltage != dlxEval.Urban.Electrical.RequiredVoltage || c.Amps != dlxEval.Urban.Electrical.RequiredAmps) {
+			t.Errorf("E1 voltage/amps (%dV %.1fA) mismatch urban.electrical (%dV %.1fA)", c.Voltage, c.Amps, dlxEval.Urban.Electrical.RequiredVoltage, dlxEval.Urban.Electrical.RequiredAmps)
+		}
+	}
+	if !foundSafetyLoop {
+		t.Errorf("missing 24VDC E3 hardwired safety loop in %+v", sp.Electrical)
+	}
+	if len(sp.Plumbing) != 7 {
+		t.Errorf("expected 7 plumbing lines (P1..P7), got %d", len(sp.Plumbing))
+	}
+	if sp.PumpStation.FlowGPM <= 0 || sp.PumpStation.HeadFt < 40.0 || !strings.Contains(sp.PumpStation.BackflowPreventer, "ASSE 1013") {
+		t.Errorf("unexpected Deluxe pump_station: %+v", sp.PumpStation)
+	}
+	if len(sp.Bracing) != 5 {
+		t.Errorf("expected 5 bracing members (B1..B5), got %d", len(sp.Bracing))
+	}
+	if len(sp.Acoustics) != 3 {
+		t.Errorf("expected 3 acoustic zones (S1..S3), got %d", len(sp.Acoustics))
+	}
+	var sumZoneDBA float64
+	for _, z := range sp.Acoustics {
+		sumZoneDBA += z.AttenuationDBA
+	}
+	if math.Abs(sumZoneDBA-sp.AcousticSummary.TotalReductionDBA) > 0.01 {
+		t.Errorf("Deluxe acoustic zone sum %.1f != TotalReductionDBA %.1f", sumZoneDBA, sp.AcousticSummary.TotalReductionDBA)
+	}
+	if sp.DeluxeSpec == nil || !sp.DeluxeSpec.Enabled || len(sp.DeluxeSpec.Highlights) < 6 {
+		t.Fatalf("unexpected DeluxeSpec: %+v", sp.DeluxeSpec)
+	}
+	exactDelta := round2(dlxEval.COTS.EstimatedTotalUSD - cotsEval.COTS.EstimatedTotalUSD)
+	if math.Abs(sp.DeluxeSpec.CostDeltaUSD-exactDelta) > 0.02 {
+		t.Errorf("DeluxeSpec.CostDeltaUSD=%.2f != exact delta %.2f", sp.DeluxeSpec.CostDeltaUSD, exactDelta)
+	}
+	if cotsEval.ShopPlan.DeluxeSpec == nil || cotsEval.ShopPlan.DeluxeSpec.Enabled || math.Abs(cotsEval.ShopPlan.DeluxeSpec.CostDeltaUSD-exactDelta) > 0.02 {
+		t.Errorf("COTS ShopPlan.DeluxeSpec should preview disabled state with exact delta %.2f, got %+v", exactDelta, cotsEval.ShopPlan.DeluxeSpec)
+	}
+
+	// Verify expanded Deluxe cut_list includes ANSI B16.5 flanges, steel skid, K-bracing & acoustic baffle panels.
+	if len(sp.CutList) <= len(cotsEval.ShopPlan.CutList)+3 {
+		t.Errorf("expected expanded Deluxe cut_list (%d) vs COTS (%d)", len(sp.CutList), len(cotsEval.ShopPlan.CutList))
+	}
+	cutText := ""
+	for _, ci := range sp.CutList {
+		cutText += ci.Name + " " + ci.Notes + "\n"
+	}
+	for _, want := range []string{"ANSI/ASME B16.5 Class 150", "Forklift Skid", "K-Bracing", "Acoustic Blower Baffle Enclosure"} {
+		if !strings.Contains(cutText, want) {
+			t.Errorf("Deluxe CutList missing %q", want)
+		}
+	}
+
+	// 6. Verify interactions: Eductor + Parallel Bed + Compressor Air-Atomize + DIY Ceramic Rings + Plume Diluter + Dual Sump!
+	comboProj := dlxParsed
+	comboProj.StageAlignment = StageAlignmentEductorDryFan
+	comboProj.PackedBedLayout = PackedBedLayoutParallelManifold
+	comboProj.BlowerDriveOption = BlowerDriveCompressorAirAtomize
+	comboProj.PackingMediaOption = PackingMediaDIYCeramicRings
+	comboProj.IncludePlumeDiluter = true
+	comboProj.SharedBaffledSump = false
+	comboEval, err := eval.Evaluate(comboProj)
+	if err != nil {
+		t.Fatalf("combo evaluate: %v", err)
+	}
+	csp := comboEval.ShopPlan
+	// E6 diluter electrical circuit present.
+	hasE6 := false
+	for _, c := range csp.Electrical {
+		if c.ID == "E6" {
+			hasE6 = true
+		}
+	}
+	if !hasE6 {
+		t.Error("expected E6 plume diluter circuit when IncludePlumeDiluter=true")
+	}
+	// A1 compressor air line, P5 parallel manifold, P6 >= 8" U-trap seal present.
+	hasA1, hasP5Parallel, hasP6UTrap := false, false, false
+	for _, pl := range csp.Plumbing {
+		if pl.ID == "A1" && pl.PressurePSI == 40.0 {
+			hasA1 = true
+		}
+		if pl.ID == "P5" && strings.Contains(pl.To, "Parallel-Pipe Spray Manifold") {
+			hasP5Parallel = true
+		}
+		if pl.ID == "P6" && strings.Contains(pl.Notes, `>= 8" U-trap`) {
+			hasP6UTrap = true
+		}
+	}
+	if !hasA1 || !hasP5Parallel || !hasP6UTrap {
+		t.Errorf("combo plumbing interaction checks failed: A1=%v P5par=%v P6utrap=%v", hasA1, hasP5Parallel, hasP6UTrap)
+	}
+	// S4 diluter acoustic zone present.
+	hasS4 := false
+	for _, z := range csp.Acoustics {
+		if z.ID == "S4" {
+			hasS4 = true
+		}
+	}
+	if !hasS4 {
+		t.Error("expected S4 diluter acoustic zone when IncludePlumeDiluter=true")
+	}
+	// B4 adapts to eductor frame support.
+	hasB4Eductor := false
+	for _, b := range csp.Bracing {
+		if b.ID == "B4" && strings.Contains(b.Component, "Eductor") {
+			hasB4Eductor = true
+		}
+	}
+	if !hasB4Eductor {
+		t.Error("expected B4 bracing member to adapt to Downflow Eductor Frame Support")
+	}
+	// DIY ceramic rings increases B3 wet column load substantially vs PP Pall rings on identical single column!
+	ceramicSingle := dlxParsed
+	ceramicSingle.PackingMediaOption = PackingMediaDIYCeramicRings
+	ceramicSingleEval, err := eval.Evaluate(ceramicSingle)
+	if err != nil {
+		t.Fatalf("ceramicSingle evaluate: %v", err)
+	}
+	var b3PP, b3Cer float64
+	for _, b := range dlxEval.ShopPlan.Bracing {
+		if b.ID == "B3" {
+			b3PP = b.LoadLbs
+		}
+	}
+	for _, b := range ceramicSingleEval.ShopPlan.Bracing {
+		if b.ID == "B3" {
+			b3Cer = b.LoadLbs
+		}
+	}
+	if b3Cer <= b3PP+80.0 {
+		t.Errorf("expected DIY stoneware ceramic rings B3 wet load (%.1f lbs) to exceed PP Pall rings (%.1f lbs) by >80 lbs", b3Cer, b3PP)
+	}
+
+	// 7. Verify Heavy C-276 Deluxe, small 35-gal Deluxe, large 110-gal Deluxe, unsnapped Deluxe, and welded_dxf preview branch coverage.
+	heavyDlx, _ := PresetByID("coop_wood_48")
+	heavyDlxProj := heavyDlx.Project
+	heavyDlxProj.BuildPath = BuildPathCustomFabDeluxe
+	heavyDlxProj.IncludePlumeDiluter = true
+	heavyDlxEval, err := eval.Evaluate(heavyDlxProj)
+	if err != nil {
+		t.Fatalf("heavy 48 cuft deluxe evaluate: %v", err)
+	}
+	if !strings.Contains(heavyDlxEval.COTS.QuenchVessel.SKU, "DLX-QC276") || !strings.Contains(heavyDlxEval.BuildGuideMD, "ERNiCrMo-4") {
+		t.Errorf("expected Alloy C-276 Deluxe quench & ERNiCrMo-4 guide, got SKU=%q", heavyDlxEval.COTS.QuenchVessel.SKU)
+	}
+
+	raku, _ := PresetByID("electric_raku_6")
+	smallDlx := raku.Project
+	smallDlx.BuildPath = BuildPathCustomFabDeluxe
+	smallDlx.ControlTier = ControlTierElectromechanicalOnly
+	smallDlx.IncludeSilencer = false
+	smallDlxEval, err := eval.Evaluate(smallDlx)
+	if err != nil {
+		t.Fatalf("small 6 cuft deluxe evaluate: %v", err)
+	}
+	if smallDlxEval.COTS.SumpTank.SKU != "DLX-SUMP-SLOPED-35" || smallDlxEval.ShopPlan.AcousticSummary.TotalReductionDBA != 22.0 {
+		t.Errorf("unexpected small Deluxe sump/acoustics: sump=%q red=%.1f", smallDlxEval.COTS.SumpTank.SKU, smallDlxEval.ShopPlan.AcousticSummary.TotalReductionDBA)
+	}
+
+	unsnapDlx := dlxParsed
+	unsnapDlx.SnapToCOTS = false
+	unsnapDlx.StageAlignment = StageAlignmentEductorDryFan
+	if _, err := eval.Evaluate(unsnapDlx); err != nil {
+		t.Fatalf("unsnapped Deluxe eductor evaluate: %v", err)
+	}
+
+	// Cover medium 60-gal & large 110-gal Deluxe sump + ansi150FlangeNote + breakerAndGaugeForAmps branches.
+	medD := dlxEval.Design
+	medD.PackedBed.SumpVolume = model.CubicMeters(30.0 * model.CubicMetersPerUSGallon)
+	if s60 := selectSumpTankForProject(dlxParsed, medD); s60.SKU != "DLX-SUMP-SLOPED-60" {
+		t.Errorf("expected DLX-SUMP-SLOPED-60 for 30 gal holdup, got %q", s60.SKU)
+	}
+	bigD := dlxEval.Design
+	bigD.PackedBed.SumpVolume = model.CubicMeters(60.0 * model.CubicMetersPerUSGallon)
+	if s110 := selectSumpTankForProject(dlxParsed, bigD); s110.SKU != "DLX-SUMP-SLOPED-110" {
+		t.Errorf("expected DLX-SUMP-SLOPED-110 for 60 gal holdup, got %q", s110.SKU)
+	}
+	for _, nom := range []float64{6, 8, 10, 12, 14, 16, 18, 24} {
+		if note := ansi150FlangeNote(nom); !strings.Contains(note, "BCD") {
+			t.Errorf("ansi150FlangeNote(%v) missing BCD: %q", nom, note)
+		}
+	}
+	for _, a := range []float64{15, 25, 35, 45, 55} {
+		if brk, g := breakerAndGaugeForAmps(a); brk <= 0 || g == "" {
+			t.Errorf("breakerAndGaugeForAmps(%v) invalid: %d %q", a, brk, g)
+		}
+	}
+	// Cover workingSumpVolumeGal for all 3 Deluxe SKUs.
+	for _, sku := range []string{"DLX-SUMP-SLOPED-35", "DLX-SUMP-SLOPED-60", "DLX-SUMP-SLOPED-110"} {
+		if gal := workingSumpVolumeGal(COTSSummary{SumpTank: COTSPart{SKU: sku}}, dlxEval.Design); gal <= 0 {
+			t.Errorf("workingSumpVolumeGal(%q) = %v", sku, gal)
+		}
+	}
+
+	// 8. Verify BuildPacketZip contains enriched shop_plan.json with all Phase 9 systems layers!
+	zipBytes, _, err := eval.BuildPacketZip(dlxParsed)
+	if err != nil {
+		t.Fatalf("Deluxe BuildPacketZip failed: %v", err)
+	}
+	zr, err := zip.NewReader(bytes.NewReader(zipBytes), int64(len(zipBytes)))
+	if err != nil {
+		t.Fatalf("zip.NewReader: %v", err)
+	}
+	foundShopPlan := false
+	for _, f := range zr.File {
+		if f.Name == "shop_plan.json" {
+			foundShopPlan = true
+			rc, err := f.Open()
+			if err != nil {
+				t.Fatalf("open shop_plan.json: %v", err)
+			}
+			var buf bytes.Buffer
+			_, _ = buf.ReadFrom(rc)
+			_ = rc.Close()
+			var zPlan ShopPlan
+			if err := json.Unmarshal(buf.Bytes(), &zPlan); err != nil {
+				t.Fatalf("unmarshal packet shop_plan.json: %v", err)
+			}
+			if !zPlan.IsDeluxe || len(zPlan.Electrical) < 5 || len(zPlan.Plumbing) < 7 || len(zPlan.Bracing) < 5 || len(zPlan.Acoustics) < 3 || zPlan.DeluxeSpec == nil {
+				t.Errorf("packet shop_plan.json missing Phase 9 systems data: %+v", zPlan)
+			}
+		}
+	}
+	if !foundShopPlan {
+		t.Fatal("Deluxe packet missing shop_plan.json")
+	}
+
+	// 9. Verify zero banned strings across Deluxe evaluation, guides, and packet README.
+	bannedPhrases := []string{"Hobby " + "316L", "4-" + "lb", "gro" + "cery", "Switching from Salt " + "(NaCl) to Soda"}
+	dlxJSON, _ := json.Marshal(dlxEval)
+	haystack := string(dlxJSON) + "\n" + dlxEval.BuildGuideMD + "\n" + dlxEval.OperationsChecklistMD + "\n" + string(buildPacketReadme(dlxEval))
+	for _, banned := range bannedPhrases {
+		if strings.Contains(strings.ToLower(haystack), strings.ToLower(banned)) {
+			t.Errorf("Deluxe output contains banned phrase %q", banned)
+		}
+	}
+
+	t.Logf("Phase 9 24 cu.ft. Deluxe vs COTS Comparison:\n"+
+		"  No-Weld COTS (silenced):    $%.2f | bare=%.1f dBA @ 3ft -> silenced=%.1f dBA @ 3ft -> %.1f dBA @ %.0fft (-%.1f dBA)\n"+
+		"  Custom Fab Deluxe:          $%.2f (delta=+$%.2f) | bare=%.1f dBA @ 3ft -> treated=%.1f dBA @ 3ft -> %.1f dBA @ %.0fft (-%.1f dBA)\n"+
+		"  B3 Column Wet Load:         PP Pall=%.1f lbs | DIY Ceramic Rings=%.1f lbs",
+		cotsEval.COTS.EstimatedTotalUSD, cotsEval.Urban.Noise.BareDBA3Ft, cotsEval.Urban.Noise.SilencedDBA3Ft, cotsEval.Urban.Noise.PropertyLineDBA, cotsEval.Urban.Noise.PropertyLineFt, cotsEval.ShopPlan.AcousticSummary.TotalReductionDBA,
+		dlxEval.COTS.EstimatedTotalUSD, sp.DeluxeSpec.CostDeltaUSD, dlxEval.Urban.Noise.BareDBA3Ft, dlxEval.Urban.Noise.SilencedDBA3Ft, dlxEval.Urban.Noise.PropertyLineDBA, dlxEval.Urban.Noise.PropertyLineFt, sp.AcousticSummary.TotalReductionDBA,
+		b3PP, b3Cer,
+	)
+}

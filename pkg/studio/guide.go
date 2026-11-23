@@ -89,14 +89,27 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 
 	// 2. Tools & Shop Prep (adapts to build_path).
 	b.WriteString("## 2. Tools & Shop Preparation\n\n")
-	if p.BuildPath == BuildPathCOTSNoWeld {
+	switch p.BuildPath {
+	case BuildPathCOTSNoWeld:
 		b.WriteString("**Build Path: No-Weld COTS Hardware (`cots_no_weld`)** — designed for a home workshop using bolted flanges, stainless band clamps, and solvent-welded CPVC pipe (no TIG welder needed):\n\n")
 		b.WriteString("- Cordless drill/driver with step bits & bi-metal hole saws (`1\"` to `4\"` for bulkhead and nozzle ports)\n")
 		b.WriteString("- Socket/wrench set for 316 SS flange bolts & high-torque stainless band clamps\n")
 		b.WriteString("- Heavy-duty CPVC primer (ASTM F656) & Schedule 80 CPVC solvent cement (ASTM F493)\n")
 		b.WriteString("- `>= 2300 F` alumina-silica ceramic fiber rope gaskets / refractory mortar for dry hot kiln flue joints upstream of Stage 1 (NEVER use 650 F RTV silicone or PTFE on a 2400 F dry flue!), plus expanded PTFE/EPDM flange gaskets strictly downstream of Stage 1 (`<= 200 F`)\n")
 		b.WriteString("- Basic multimeter, wire strippers, brine hydrometer (`SG 1.000–1.200`), and a digital manometer or Dwyer Magnehelic gauge (`0 to -1.0 inWC`)\n\n")
-	} else {
+	case BuildPathCustomFabDeluxe:
+		b.WriteString("**Build Path: Custom Fabrication Deluxe (`custom_fab_deluxe`)** — turnkey industrial-grade TIG / Derakane FRP / welded forklift skid / UL 508A NEMA 4X panel / Rockwool acoustic enclosure build:\n\n")
+		b.WriteString("- Send `scrubber.dxf` (units: **millimeters**) and `shop_plan.json` (ANSI/ASME B16.5 Class 150 bolt circles, steel skid cuts & acoustic baffle panel dimensions) to a CNC laser/waterjet & FRP fabricator\n")
+		if p.CorrosionTier == CorrosionTierHeavyC276FRP {
+			b.WriteString("- TIG welder with **ERNiCrMo-4 (Alloy C-276)** filler rod, argon back-purge monitor (`< 50 ppm O2`), interpass temp stick (`<= 200 F`), and heavy-gauge `11 ga / Sch 10S` slip rolls\n")
+		} else {
+			b.WriteString("- TIG welder with **ER316L** filler rod, argon back-purge monitor (`< 50 ppm O2`), stainless pickling/passivation paste, and heavy-gauge `11 ga / Sch 10S` slip rolls\n")
+		}
+		b.WriteString("- Calibrated torque wrench (`20–100 ft-lb`), nickel anti-seize for 316 SS ANSI B16.5 Class 150 flange studs, and PTFE envelope gaskets\n")
+		b.WriteString("- MIG/TIG structural welder for `2\"×2\"×3/16\"` steel forklift skid + diagonal K-bracing, rotary hammer drill (`1/2\"` masonry bit) for stainless concrete wedge anchors\n")
+		b.WriteString("- Acoustic fabrication tools for `2\"` Rockwool Safe'n'Sound panels + perforated metal inner liner + baffled TEFC motor cooling-air labyrinth\n")
+		b.WriteString("- Digital multimeter, clamp ammeter, megohmmeter (for VFD motor insulation check), dBA sound level meter, and brine hydrometer (`SG 1.000–1.200`)\n\n")
+	default:
 		b.WriteString("**Build Path: Rolled Sheet Metal & DXF Fabrication (`welded_dxf`)** — uses the exact flat patterns in `scrubber.dxf` and `shop_plan.json` for laser/plasma cutting and TIG welding:\n\n")
 		b.WriteString("- Send `scrubber.dxf` (units: **millimeters**) to a local CNC laser/waterjet shop for Stage 1–2 shells, venturi cones, and bolted flanges\n")
 		b.WriteString("- Sheet-metal slip rolls for cylindrical shells and frustum venturi cones\n")
@@ -280,6 +293,43 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 	b.WriteString("- [ ] **Fail-Safe Bypass Trip Drill (200 F Hardwired Limit / 210 F Software / Power Loss):** Pull 24 VDC control power (and test the `200 F` hardwired snap-disc & `210 F` software trip) — confirm bypass damper springs **OPEN** immediately and VFD stops via hardwired STO/Run-Enable.\n")
 	fmt.Fprintf(&b, "- [ ] **Water Supply Check:** Verify potable supply (through Air Gap / ASSE 1013 RPZ) delivers at least `%.2f GPM` continuously.\n",
 		math.Max(0.5, d.Quench.TotalSprayWaterGPM))
+
+	if p.IsDeluxe() {
+		sp := eval.ShopPlan
+		b.WriteString("\n## 7. Custom Fabrication Deluxe Build Guide\n\n")
+		if sp.DeluxeSpec != nil {
+			fmt.Fprintf(&b, "%s\n\n", sp.DeluxeSpec.Summary)
+		}
+		b.WriteString("### 7.1 TIG Weld Prep, Back-Purging & Hot-Flue Insulation Jacket\n")
+		if p.CorrosionTier == CorrosionTierHeavyC276FRP {
+			b.WriteString("- **Alloy C-276 Weld Procedure:** Bevel `11 ga / Sch 10S` edges to 37.5°, degrease with acetone, use **ERNiCrMo-4** filler rod with continuous argon back-purge (`< 50 ppm O2`), and keep interpass temperature strictly **`<= 200 F`** to avoid secondary-phase carbide precipitation.\n")
+		} else {
+			b.WriteString("- **316L SS Weld Procedure:** Bevel `11 ga / Sch 10S` edges to 37.5°, degrease with acetone, use **ER316L** filler rod with continuous argon back-purge (`< 50 ppm O2`) for sugar-free smooth root welds, keep interpass temperature **`<= 300 F`**, then pickle and citric/nitric passivate every interior weld seam.\n")
+		}
+		b.WriteString("- **Sight Glasses, Cleanout Doors & Insulation:** TIG-weld the **2× borosilicate sight-glass nozzles** (Stage 1 quench spray + Stage 3 bed level) and **2× bolted NFPA 91 quick-release cleanout frames**, then wrap the dry hot flue upstream of Stage 1 with the **`1\"` ceramic-fiber blanket + stainless steel cladding jacket** (still maintaining NFPA 211 `>= 36\"` clearance to unprotected combustibles).\n\n")
+
+		b.WriteString("### 7.2 ANSI/ASME B16.5 Class 150 Bolt Torque & Gasket Seating\n")
+		b.WriteString("- Apply nickel anti-seize to all 316 SS flange studs to prevent galling, seat **PTFE envelope gaskets** concentrically (never use PTFE on the dry `2400 F` kiln inlet — use `>= 2300 F` ceramic fiber there!), and torque in a **3-stage star pattern (30% -> 65% -> 100%)**.\n")
+		b.WriteString("- **Torque Limits:** Torque 316L/C-276 metal-to-metal ANSI Class 150 lap-joint flanges to **55–75 ft-lb**, and cap FRP-to-metal stub-end flanges at **25–35 ft-lb** with wide flat washers under backing rings so FRP stub ends never crack.\n\n")
+
+		b.WriteString("### 7.3 Filament-Wound Derakane Vinyl-Ester FRP Curing & Internals\n")
+		b.WriteString("- Allow secondary FRP nozzle/gusset-ring laminations to cure **24 hours at >= 70 F** (or post-cure **4 hours at 180 F** for peak wet-HCl resistance) before hydrostatic testing.\n")
+		b.WriteString("- Bolt the **12\" packing access manway** and slide-in **removable 3-pass chevron demister cassette** with EPDM/PTFE seals; align the **sloped-bottom baffled settling sump** (`2\"` full-port drain ball valve) for positive flooded suction into the **sealless PVDF magnetic-drive chemical pump**.\n\n")
+
+		b.WriteString("### 7.4 Welded Structural Steel Skid, K-Bracing & Concrete Anchoring\n")
+		fmt.Fprintf(&b, "- Position the welded **`2\"×2\"×3/16\"` galvanized/powder-coated steel forklift skid** (`%.1f\" L × %.1f\" W`) on a level `>= 4\"` concrete slab and anchor with **`6× 1/2\"×4\"` 316 SS concrete wedge anchors** (`>= 3\"` embedment, `40 ft-lb` torque).\n", sp.OverallLengthIn, sp.OverallWidthIn)
+		b.WriteString("- Bolt/weld the **Stage 3 column cage & diagonal K-bracing**, secure overhead ducts with cushioned pipe saddles (`<= 4 ft` spacing), and install **flexible PTFE/EPDM vibration isolation boots** at both blower inlet and discharge.\n\n")
+
+		b.WriteString("### 7.5 Acoustic Blower Baffle Enclosure & Tuned Stack Silencer Assembly\n")
+		b.WriteString("- Line all 6 steel enclosure panels with **`2\"` Rockwool Safe'n'Sound mineral wool** retained behind a **perforated metal inner liner** and mount the blower pedestal on `1\"` ribbed neoprene isolation pads.\n")
+		b.WriteString("- **CRITICAL TEFC Motor Cooling Labyrinth:** Install both baffled intake and exhaust cooling-air labyrinth ducts (minimum `2×` motor fan inlet cross-sectional area, offset 180° turns lined with Rockwool) so the TEFC motor receives full cooling airflow without leaking direct line-of-sight noise.\n")
+		fmt.Fprintf(&b, "- Mount the **tuned absorptive discharge stack silencer** directly above the discharge vibration boot (`%.1f dBA` bare -> **`%.1f dBA @ 3 ft`** -> **`%.1f dBA @ %.0f ft`** property line, `-%.1f dBA` total reduction).\n\n",
+			sp.AcousticSummary.BareDBA3Ft, sp.AcousticSummary.TreatedDBA3Ft, sp.AcousticSummary.PropertyLineDBA, sp.AcousticSummary.PropertyLineFt, sp.AcousticSummary.TotalReductionDBA)
+
+		b.WriteString("### 7.6 UL 508A NEMA 4X Panel Wiring & NEC 110.26 Clearance Verification\n")
+		b.WriteString("- Mount the **UL 508A-style NEMA 4X pre-wired panel** with **through-door NEC 430.102 lockable disconnect**, `3%` input line reactor, `HF-GFCI` breaker, GS21 VFD, **FM/UL 1/16-DIN `200 F` independent high-limit controller + hardwired 24VDC latching safety relay**, dual Type-K thermowells, inline flow transmitter, flow-through pH probe, and pilot stack light/alarm horn.\n")
+		b.WriteString("- **Segregation & NEC 110.26 Sign-Off:** Route shielded VFD motor cable in dedicated LFMC **`>= 12\"`** away from `24VDC` NFPA 86 safety loop & RS-485 instrumentation conduit, and verify unobstructed **`36\"` depth × `30\"` width × `78\"` height** electrical working clearance (**NEC 110.26(A)**) plus **`24\"`** pump & cleanout door service swing.\n")
+	}
 
 	return b.String()
 }
