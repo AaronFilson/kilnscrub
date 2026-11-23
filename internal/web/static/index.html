@@ -3844,7 +3844,7 @@
           warnings.push(text);
         };
         if (Array.isArray(raw?.warnings)) raw.warnings.forEach(addWarn);
-        if (Array.isArray(ed.warnings)) ed.warnings.forEach(addWarn);
+        if (align === "eductor_dry_fan" && Array.isArray(ed.warnings)) ed.warnings.forEach(addWarn);
         if (align === "eductor_dry_fan" && warnings.length === 0) {
           addWarn("OUTDOOR-ONLY POSITIVE PRESSURE: Dry-fan downflow eductor pressurizes the packed bed (+2 to +5 inWC). Site strictly outdoors with airtight gasketed flanges.");
         }

@@ -469,6 +469,7 @@ func TestEmbeddedHTMLStudioUXAndJSIntegrity(t *testing.T) {
 		"atomize_cost_saved_usd",
 		"atomize_verdict",
 		"seenWarn",
+		`align === "eductor_dry_fan" && Array.isArray(ed.warnings)`,
 		`replace(/^\s*\d+\.\s*/, "")`,
 		`data-venturi-layout="single_throat"`,
 		`data-venturi-layout="parallel_mini_venturis"`,
