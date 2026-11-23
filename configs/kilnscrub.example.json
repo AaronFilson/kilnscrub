@@ -1,0 +1,101 @@
+{
+  "description": "Studio 24 cu.ft. Wood/Salt Kiln Scrubber Control Daemon Configuration (switch hal_mode to \"modbus\" for physical RS-485 PLC/VFD hardware)",
+  "hal_mode": "sim",
+  "control": {
+    "target_draft_in_wc": -0.05,
+    "target_draft_pa": -12.4544455,
+    "draft_pid": {
+      "kp": 0.04,
+      "ki": 0.015,
+      "kd": 0.005,
+      "min_output": 0.15,
+      "max_output": 1.0,
+      "anti_windup_gain": 0.5,
+      "derivative_filter_time_const_ns": 200000000
+    },
+    "quench_pid": {
+      "kp": 0.03,
+      "ki": 0.008,
+      "kd": 0.002,
+      "min_output": 0.2,
+      "max_output": 1.0,
+      "anti_windup_gain": 0.5,
+      "derivative_filter_time_const_ns": 500000000
+    },
+    "draft_filter_cutoff_hz": 0.5,
+    "draft_filter_time_const_ns": 318309886,
+    "quench_setpoint_k": 347.0388888888889,
+    "loop_interval_ns": 100000000,
+    "safety": {
+      "max_quench_outlet_temp_k": 372.0388888888889,
+      "min_water_flow_m3_s": 0.0000157725491,
+      "min_sump_ph": 6.5,
+      "max_sump_ph": 9.5,
+      "sensor_fault_timeout_ns": 5000000000,
+      "max_draft_magnitude_pa": 249.08891
+    }
+  },
+  "modbus": {
+    "device": "/dev/ttyUSB0",
+    "baud_rate": 9600,
+    "slave_id": 1,
+    "timeout_ns": 500000000,
+    "use_holding_registers": false,
+    "registers": {
+      "temp_unit": "F",
+      "draft_pa": {
+        "address": 0,
+        "scale": 0.01,
+        "signed": true
+      },
+      "quench_inlet_temp": {
+        "address": 1,
+        "scale": 0.1,
+        "signed": true
+      },
+      "quench_outlet_temp": {
+        "address": 2,
+        "scale": 0.1,
+        "signed": true
+      },
+      "water_flow_gpm": {
+        "address": 3,
+        "scale": 0.01,
+        "signed": false
+      },
+      "sump_ph": {
+        "address": 4,
+        "scale": 0.01,
+        "signed": false
+      },
+      "blower_speed_feedback": {
+        "address": 5,
+        "scale": 0.0001,
+        "signed": false
+      },
+      "blower_vfd_addr": 100,
+      "quench_spray_valve_addr": 101,
+      "output_scale": 10000,
+      "bypass_damper_coil_addr": 0,
+      "alarm_latch_coil_addr": 1
+    }
+  },
+  "sim": {
+    "nominal_inlet_temp_k": 1255.3722222222223,
+    "baseline_quench_temp_k": 347.0388888888889,
+    "max_water_flow_gpm": 2.5,
+    "nominal_water_flow_gpm": 1.0,
+    "blower_max_suction_pa": 30.0,
+    "blower_time_const_ns": 400000000,
+    "draft_time_const_ns": 300000000,
+    "valve_time_const_ns": 300000000,
+    "quench_time_const_ns": 2000000000,
+    "heat_sensitivity_k": 75.0,
+    "cooling_gain_k_per_gpm": 22.0,
+    "dry_gas_outlet_temp_k": 466.48333333333335,
+    "initial_sump_ph": 8.0,
+    "draft_noise_amplitude_pa": 0.6,
+    "draft_noise_freq_hz": 4.0,
+    "auto_step_interval_ns": 0
+  }
+}

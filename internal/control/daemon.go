@@ -4,12 +4,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/AaronFilson/kilnscrub/pkg/model"
 )
+
+// ErrFaultInjectionUnsupported is returned by Daemon.InjectFault when the active HAL does not
+// support interactive fault injection (for example, physical Modbus RTU hardware).
+var ErrFaultInjectionUnsupported = errors.New("fault injection is not supported by active hardware HAL")
+
+type faultInjector interface {
+	InjectFault(action string, value float64) error
+}
 
 // DaemonOption customizes a Daemon constructed with NewDaemon.
 type DaemonOption func(*Daemon)
@@ -30,12 +39,23 @@ func WithErrorCallback(fn func(error)) DaemonOption {
 	}
 }
 
+// WithHALMode overrides the HAL mode label reported by Daemon.HALMode() (e.g. "sim", "modbus").
+func WithHALMode(mode string) DaemonOption {
+	return func(d *Daemon) {
+		if trimmed := strings.ToLower(strings.TrimSpace(mode)); trimmed != "" {
+			d.halMode = trimmed
+		}
+	}
+}
+
 // Daemon executes the closed-loop Controller against a model.HardwareHAL at cfg.LoopInterval
-// until its context is canceled.
+// until its context is canceled, fanning out live telemetry via an internal TelemetryHub.
 type Daemon struct {
 	controller *Controller
 	hal        model.HardwareHAL
+	halMode    string
 	interval   time.Duration
+	hub        *TelemetryHub
 
 	mu          sync.RWMutex
 	onTelemetry func(model.ControlStatus)
@@ -54,10 +74,20 @@ func NewDaemon(cfg model.ControlConfig, hal model.HardwareHAL, opts ...DaemonOpt
 		return nil, err
 	}
 
+	mode := "custom"
+	switch hal.(type) {
+	case *SimHAL:
+		mode = HALModeSim
+	case *ModbusHAL:
+		mode = HALModeModbus
+	}
+
 	d := &Daemon{
 		controller: ctrl,
 		hal:        hal,
+		halMode:    mode,
 		interval:   cfg.LoopInterval,
+		hub:        NewTelemetryHub(defaultHubBufferSize),
 	}
 	for _, opt := range opts {
 		if opt != nil {
@@ -125,6 +155,9 @@ func (d *Daemon) runTick(ctx context.Context, dt time.Duration) {
 	status, err := d.controller.Tick(ctx, d.hal, dt)
 	d.ticks.Add(1)
 
+	// Non-blocking fan-out to all live telemetry subscribers (e.g. HTTP SSE clients).
+	d.hub.Publish(status)
+
 	d.mu.RLock()
 	onTelemetry := d.onTelemetry
 	onError := d.onError
@@ -140,9 +173,37 @@ func (d *Daemon) runTick(ctx context.Context, dt time.Duration) {
 	}
 }
 
+// Subscribe registers a live telemetry stream subscriber and returns its channel and
+// an idempotent unsubscribe function. Slow subscribers drop old samples instead of
+// blocking the control loop.
+func (d *Daemon) Subscribe() (<-chan model.ControlStatus, func()) {
+	return d.hub.Subscribe()
+}
+
+// Hub returns the underlying TelemetryHub for live telemetry subscribers.
+func (d *Daemon) Hub() *TelemetryHub {
+	return d.hub
+}
+
 // Status returns the most recent model.ControlStatus snapshot.
 func (d *Daemon) Status() model.ControlStatus {
 	return d.controller.Status()
+}
+
+// Config returns a copy of the active validated model.ControlConfig.
+func (d *Daemon) Config() model.ControlConfig {
+	return d.controller.Config()
+}
+
+// HALMode returns the active HAL mode label ("sim", "modbus", etc.).
+func (d *Daemon) HALMode() string {
+	return d.halMode
+}
+
+// SupportsFaultInjection reports whether the underlying HAL supports interactive fault injection.
+func (d *Daemon) SupportsFaultInjection() bool {
+	_, ok := d.hal.(faultInjector)
+	return ok
 }
 
 // Controller returns the underlying Controller instance.
@@ -150,9 +211,41 @@ func (d *Daemon) Controller() *Controller {
 	return d.controller
 }
 
-// ResetInterlock delegates an interlock reset request to the underlying Controller.
+// ResetInterlock delegates an interlock reset request to the underlying Controller and
+// immediately publishes the updated status to live subscribers on success.
 func (d *Daemon) ResetInterlock() error {
-	return d.controller.ResetInterlock()
+	if err := d.controller.ResetInterlock(); err != nil {
+		return err
+	}
+	d.hub.Publish(d.controller.Status())
+	return nil
+}
+
+// SetTargetDraftInWC updates the live kiln draft setpoint in inches of water column (negative = suction).
+func (d *Daemon) SetTargetDraftInWC(inwc float64) error {
+	return d.controller.SetTargetDraftInWC(inwc)
+}
+
+// SetQuenchSetpointF updates the live quench outlet temperature setpoint in degrees Fahrenheit.
+func (d *Daemon) SetQuenchSetpointF(tempF float64) error {
+	return d.controller.SetQuenchSetpointF(tempF)
+}
+
+// SetSetpoints atomically validates and applies optional targetDraftInWC and/or quenchSetpointF
+// updates, returning the updated ControlConfig.
+func (d *Daemon) SetSetpoints(targetDraftInWC *float64, quenchSetpointF *float64) (model.ControlConfig, error) {
+	return d.controller.SetSetpoints(targetDraftInWC, quenchSetpointF)
+}
+
+// InjectFault triggers or clears a simulated fault on the underlying HAL when supported
+// (e.g. "heat_spike", "water_loss", "clear_water_loss", "sensor_fault", "clear_sensor_fault",
+// "sump_ph", "clear_all"). Returns ErrFaultInjectionUnsupported on physical hardware HALs.
+func (d *Daemon) InjectFault(action string, value float64) error {
+	fi, ok := d.hal.(faultInjector)
+	if !ok {
+		return ErrFaultInjectionUnsupported
+	}
+	return fi.InjectFault(action, value)
 }
 
 // Running reports whether Run is currently executing.
