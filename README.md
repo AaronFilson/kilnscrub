@@ -100,7 +100,7 @@ Not every studio kiln needs a full 4-stage `21.2 inWC` train: **89% of total sta
 - **Go toolchain:** Go `1.24+` (module targets `go 1.24.13`).
 - **Pure-Go static binary:** `CGO_ENABLED=0` is fully supported across Linux, macOS, and Windows (including the pure-Go Modbus RTU serial HAL).
 - **Zero Python runtime dependencies:** Neither the `kilnscrub` binary nor `go test` invokes Python.
-- **C compiler (test-time only):** `gcc` / `build-essential` is only required when running the Go race detector (`CGO_ENABLED=1 go test -race`).
+- **C compiler (test-time only):** `gcc` / `build-essential` (or MinGW-w64 `gcc` on Windows) is only required when running the Go race detector (`CGO_ENABLED=1 go test -race`). Building, running, and pure-Go tests require zero C compiler and zero `make`.
 
 ### Offline Scientific Oracle Fixtures
 
@@ -116,9 +116,14 @@ Go unit tests read only `testdata/oracle_fixtures.json` and assert `<= 1e-6` rel
 
 ### Building
 
+#### Linux / macOS (Bash)
+
 ```bash
 # Static pure-Go binary for the current host
 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/kilnscrub ./cmd/kilnscrub
+
+# Launch the Studio Potter Web UI (http://localhost:8080)
+./bin/kilnscrub ui
 
 # Or using the Makefile
 make build
@@ -128,6 +133,32 @@ make release-all
 
 # Build reproducible packaged release archives (.tar.gz / .zip) + SHA256SUMS.txt
 make release-archives
+```
+
+#### Windows (PowerShell)
+
+No `make`, `gcc`, or Bash required — copy and paste directly into Windows PowerShell:
+
+```powershell
+# Static pure-Go binary for Windows
+$env:CGO_ENABLED = "0"
+go build -trimpath -ldflags="-s -w" -o bin\kilnscrub.exe .\cmd\kilnscrub
+
+# Launch the Studio Potter Web UI (http://localhost:8080)
+.\bin\kilnscrub.exe ui
+```
+
+Cross-compile from Windows PowerShell (for example, to deploy to a Raspberry Pi studio controller on `linux/arm64`) with zero `make` required:
+
+```powershell
+# Cross-compile static binary for Raspberry Pi (linux/arm64)
+$env:CGO_ENABLED = "0"
+$env:GOOS = "linux"
+$env:GOARCH = "arm64"
+go build -trimpath -ldflags="-s -w" -o dist\kilnscrub-linux-arm64 .\cmd\kilnscrub
+
+# Reset GOOS/GOARCH so subsequent commands in this terminal target Windows again
+Remove-Item Env:GOOS, Env:GOARCH
 ```
 
 ---
@@ -162,6 +193,8 @@ Commands:
   ui       Launch the interactive 3-tab web dashboard (default :8080)
   version  Print the kilnscrub version
 ```
+
+> **Windows PowerShell tip:** Invoke `.\bin\kilnscrub.exe` instead of `kilnscrub` (or add `.\bin` to your `PATH`). All subcommands and flags below work identically in Windows PowerShell, Linux, and macOS.
 
 ### `kilnscrub presets`
 
@@ -361,7 +394,7 @@ Launches the embedded single-binary HTTP dashboard on `http://localhost:8080` (w
 | `--hal` | `sim` | Embedded control HAL backend: `sim` or `modbus` |
 | `--no-control` | `false` | Disable embedded live control daemon and telemetry backend |
 
-**Examples:**
+**Examples (Linux / macOS Bash):**
 
 ```bash
 # Dashboard with live simulated control & SSE telemetry out of the box
@@ -372,6 +405,17 @@ kilnscrub ui --addr 127.0.0.1:8080 --config configs/kilnscrub.example.json
 
 # Design-only mode without live control backend
 kilnscrub ui --addr 127.0.0.1:8080 --no-control
+```
+
+**Examples (Windows PowerShell):**
+
+```powershell
+# Dashboard with live simulated control & SSE telemetry out of the box (http://localhost:8080)
+.\bin\kilnscrub.exe ui
+
+# Bind to localhost only, or disable the embedded live control backend
+.\bin\kilnscrub.exe ui --addr 127.0.0.1:8080
+.\bin\kilnscrub.exe ui --addr 127.0.0.1:8080 --no-control
 ```
 
 ---
@@ -446,7 +490,9 @@ The embedded web application (`internal/web/static/index.html`) provides three w
 
 ## Testing, CI & Automated Releases
 
-Run the full formatting, static analysis, race-detector test suite, and CLI/packet smoke checks with zero Python dependencies:
+Run the full formatting, static analysis, test suite, and CLI/packet smoke checks with zero Python dependencies:
+
+### Linux / macOS (Bash)
 
 ```bash
 # Full local verification gate (gofmt check, go vet, race tests across all 8 packages)
@@ -455,6 +501,33 @@ make check
 # CLI end-to-end smoke checks (design, export, daemon) and Build Packet zip check
 make smoke
 make packet-smoke
+```
+
+### Windows (PowerShell)
+
+Run the full pure-Go test suite, static analysis, and CLI smoke checks with **no `gcc` and no `make` required**:
+
+```powershell
+# Pure-Go tests across all 8 packages (no gcc or make required)
+$env:CGO_ENABLED = "0"; go test -count=1 ./...
+
+# Static analysis and formatting check
+go vet ./...
+gofmt -l .
+
+# Quick CLI smoke check (presets & 10-file Studio Build Packet .zip)
+.\bin\kilnscrub.exe presets
+.\bin\kilnscrub.exe packet --preset wood_salt_24 --out .\kilnscrub-wood_salt_24-packet.zip
+```
+
+**Race detector & AST branch coverage on Windows** (optional — requires MinGW-w64 `gcc` in `PATH` for `CGO_ENABLED=1`):
+
+```powershell
+# Race detector + atomic coverage profile across all 8 packages (requires MinGW/gcc)
+$env:CGO_ENABLED = "1"; go test -race -count=1 -covermode=atomic -coverprofile=coverage.out ./...
+
+# Statement, Executable Line, and AST Branch coverage report (add -min-line 85 -min-branch 72 to enforce CI gates)
+go run .\scripts\branch_coverage.go -profile coverage.out
 ```
 
 ### GitHub Actions CI & Release Pipeline
