@@ -78,7 +78,7 @@ Commands:
   guide    Evaluate COTS hardware, urban readiness, and Build/Firing Guides
   packet   Generate a tailored Studio Build Packet (.zip)
   daemon   Run the closed-loop PID draft & quench safety controller
-  ui       Launch the interactive 4-tab web dashboard (default 127.0.0.1:8080)
+  ui       Launch the interactive 4-tab web dashboard (default 127.0.0.1:8888)
   version  Print the kilnscrub version`)
 }
 
@@ -948,7 +948,7 @@ func runUI(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	fs := flag.NewFlagSet("ui", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 
-	addr := fs.String("addr", "127.0.0.1:8080", "HTTP listen address (default loopback 127.0.0.1:8080; pass 0.0.0.0:8080 for LAN)")
+	addr := fs.String("addr", "127.0.0.1:8888", "HTTP listen address (default loopback 127.0.0.1:8888; pass 0.0.0.0:8888 for LAN)")
 	configPath := fs.String("config", "", "Path to JSON daemon configuration file for embedded live control")
 	halMode := fs.String("hal", control.HALModeSim, "Hardware abstraction layer backend for embedded control: sim or modbus")
 	noControl := fs.Bool("no-control", false, "Disable embedded live control daemon and telemetry backend")

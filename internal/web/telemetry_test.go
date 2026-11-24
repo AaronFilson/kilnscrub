@@ -885,7 +885,7 @@ func TestWebSecurityHeadersAndCSRFGuards(t *testing.T) {
 
 	// 2. Cross-origin POST to mutating control endpoint must be rejected with 403.
 	reqCross := httptest.NewRequest(http.MethodPost, "/api/control/reset", nil)
-	reqCross.Host = "127.0.0.1:8080"
+	reqCross.Host = "127.0.0.1:8888"
 	reqCross.Header.Set("Origin", "https://evil.example")
 	recCross := httptest.NewRecorder()
 	h.ServeHTTP(recCross, reqCross)

@@ -135,7 +135,7 @@ Go unit tests read only `testdata/oracle_fixtures.json` and assert `<= 1e-6` rel
 # Static pure-Go binary for the current host
 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/kilnscrub ./cmd/kilnscrub
 
-# Launch the Studio Potter Web UI (http://localhost:8080)
+# Launch the Studio Potter Web UI (http://localhost:8888)
 ./bin/kilnscrub ui
 
 # Or using the Makefile
@@ -157,7 +157,7 @@ No `make`, `gcc`, or Bash required — copy and paste directly into Windows Powe
 $env:CGO_ENABLED = "0"
 go build -trimpath -ldflags="-s -w" -o bin\kilnscrub.exe .\cmd\kilnscrub
 
-# Launch the Studio Potter Web UI (http://localhost:8080)
+# Launch the Studio Potter Web UI (http://localhost:8888)
 .\bin\kilnscrub.exe ui
 ```
 
@@ -231,7 +231,7 @@ Commands:
   guide    Evaluate COTS hardware, urban readiness, and Build/Firing Guides
   packet   Generate a tailored Studio Build Packet (.zip)
   daemon   Run the closed-loop PID draft & quench safety controller
-  ui       Launch the interactive 4-tab web dashboard (default 127.0.0.1:8080)
+  ui       Launch the interactive 4-tab web dashboard (default 127.0.0.1:8888)
   version  Print the kilnscrub version
 ```
 
@@ -458,13 +458,13 @@ Hard interlock trips latch `BypassDamperOpen = true` and `AlarmLatched = true` (
 
 ### `kilnscrub ui`
 
-Launches the embedded single-binary HTTP dashboard on `http://127.0.0.1:8080` (loopback-only by default for local safety; pass `--addr 0.0.0.0:8080` when intentionally exposing on a trusted studio LAN, with same-origin CSRF guards and clickjacking headers enabled). By default, an embedded `control.Daemon` starts in the background (using `SimHAL` unless `--config` / `--hal modbus` selects Modbus RTU) so the **Live Control & Telemetry** tab streams live SSE telemetry immediately.
+Launches the embedded single-binary HTTP dashboard on `http://127.0.0.1:8888` (loopback-only by default for local safety; pass `--addr 0.0.0.0:8888` when intentionally exposing on a trusted studio LAN, with same-origin CSRF guards and clickjacking headers enabled). By default, an embedded `control.Daemon` starts in the background (using `SimHAL` unless `--config` / `--hal modbus` selects Modbus RTU) so the **Live Control & Telemetry** tab streams live SSE telemetry immediately.
 
 **Flags:**
 
 | Flag | Default | Description |
 |---|---|---|
-| `--addr` | `127.0.0.1:8080` | HTTP listen address (`127.0.0.1:8080` loopback default; pass `0.0.0.0:8080` for LAN) |
+| `--addr` | `127.0.0.1:8888` | HTTP listen address (`127.0.0.1:8888` loopback default; pass `0.0.0.0:8888` for LAN) |
 | `--config` | *(none)* | Path to JSON daemon configuration file for embedded live control |
 | `--hal` | `sim` | Embedded control HAL backend: `sim` or `modbus` |
 | `--no-control` | `false` | Disable embedded live control daemon and telemetry backend |
@@ -473,24 +473,24 @@ Launches the embedded single-binary HTTP dashboard on `http://127.0.0.1:8080` (l
 
 ```bash
 # Dashboard with live simulated control & SSE telemetry out of the box
-kilnscrub ui --addr 127.0.0.1:8080
+kilnscrub ui --addr 127.0.0.1:8888
 
 # Dashboard backed by config file / Modbus RTU hardware
-kilnscrub ui --addr 127.0.0.1:8080 --config configs/kilnscrub.example.json
+kilnscrub ui --addr 127.0.0.1:8888 --config configs/kilnscrub.example.json
 
 # Design-only mode without live control backend
-kilnscrub ui --addr 127.0.0.1:8080 --no-control
+kilnscrub ui --addr 127.0.0.1:8888 --no-control
 ```
 
 **Examples (Windows PowerShell):**
 
 ```powershell
-# Dashboard with live simulated control & SSE telemetry out of the box (http://localhost:8080)
+# Dashboard with live simulated control & SSE telemetry out of the box (http://localhost:8888)
 .\bin\kilnscrub.exe ui
 
 # Bind to localhost only, or disable the embedded live control backend
-.\bin\kilnscrub.exe ui --addr 127.0.0.1:8080
-.\bin\kilnscrub.exe ui --addr 127.0.0.1:8080 --no-control
+.\bin\kilnscrub.exe ui --addr 127.0.0.1:8888
+.\bin\kilnscrub.exe ui --addr 127.0.0.1:8888 --no-control
 ```
 
 ---
