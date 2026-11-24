@@ -166,12 +166,20 @@ func diluterAmps120V(design model.ScrubberDesign) float64 {
 
 func assessElectrical(project StudioProject, design model.ScrubberDesign) ElectricalAssessment {
 	if project.ZeroElectricity {
+		summary := "100% off-grid zero-electricity ceramic scrubber (0 V, 0 A, 0 W): natural chimney buoyancy draft + elevated overhead gravity water tank + manual treadle/hand pump eliminate all electric blowers, pumps, VFDs, and grid circuits."
+		if project.IsSteamEjector() {
+			psig := 20.0
+			if project.LocalDraftMode == LocalDraftSteamEjectorHP {
+				psig = 60.0
+			}
+			summary = fmt.Sprintf("100%% off-grid zero-electricity %.0f psig steam-jet ceramic scrubber (0 V, 0 A, 0 W): certified steam-jet de Laval ejector draft + elevated overhead gravity water tank + manual treadle/hand pump eliminate all electric blowers, pumps, VFDs, and grid circuits.", psig)
+		}
 		return ElectricalAssessment{
 			Status:               StatusOK,
 			RequiredVoltage:      0,
 			RequiredAmps:         0,
 			CircuitLabel:         "0V / 0W — 100% Off-Grid (Zero Electricity)",
-			Summary:              "100% off-grid zero-electricity ceramic scrubber (0 V, 0 A, 0 W): natural chimney buoyancy draft + elevated overhead gravity water tank + manual treadle/hand pump eliminate all electric blowers, pumps, VFDs, and grid circuits.",
+			Summary:              summary,
 			FitsAvailableVoltage: true,
 		}
 	}
@@ -179,6 +187,21 @@ func assessElectrical(project StudioProject, design model.ScrubberDesign) Electr
 		reqV := 230
 		if project.AvailableVoltage == 120 {
 			reqV = 120
+		}
+		if project.IsSteamEjector() {
+			reqAmps := round1(370.0 / float64(reqV) * 1.25)
+			label := fmt.Sprintf("%dV 10A domestic circuit (0.5 HP water pump only, ~370 W; steam ejector replaces electric fan)", reqV)
+			if reqV == 230 {
+				label = "230V 50Hz 10A domestic circuit (0.5 HP water pump only, ~370 W; steam ejector replaces electric fan)"
+			}
+			return ElectricalAssessment{
+				Status:               StatusOK,
+				RequiredVoltage:      reqV,
+				RequiredAmps:         reqAmps,
+				CircuitLabel:         label,
+				Summary:              fmt.Sprintf("Hybrid steam-ejector ceramic mode draws ~370 W (%.1f A @ %dV): local 0.5 HP domestic monoblock water pump automates tower & atmospheric 0 psig boiler feed refill while the zero-electricity steam-jet ejector provides draft (no electric blower).", reqAmps, reqV),
+				FitsAvailableVoltage: true,
+			}
 		}
 		reqAmps := round1(520.0 / float64(reqV) * 1.25)
 		label := "230V 50Hz 10A domestic circuit (0.5 HP pump + 12V/230V fan, ~520 W)"
@@ -347,6 +370,17 @@ func assessWater(project StudioProject, design model.ScrubberDesign) WaterAssess
 		blowdownGPM = 0.08
 	}
 	sumpFillGal := math.Max(25.0, float64(design.PackedBed.SumpVolume)/model.CubicMetersPerUSGallon)
+	steamNote := ""
+	if project.IsLocalCeramic() && project.IsSteamEjector() {
+		fr := EvaluateFrugal(project, design)
+		if fr.SteamEnabled && fr.SteamWaterLHr > 0 {
+			steamGPM := fr.SteamWaterLHr / 60.0 / 3.785411784
+			reqGPM = round2(reqGPM + steamGPM)
+			steamTotalGal := round1(steamGPM * 60.0 * project.FiringDurationHours)
+			sumpFillGal += steamTotalGal
+			steamNote = fmt.Sprintf(" Includes +%.1f L/hr (+%.1f gal/firing) clean boiler/coil makeup water for the %.0f psig steam-jet ejector.", fr.SteamWaterLHr, steamTotalGal, fr.SteamPressurePSIG)
+		}
+	}
 	totalGal := round1(sumpFillGal + (evapGPM+blowdownGPM)*60.0*project.FiringDurationHours)
 
 	const ipc608Note = " MANDATORY (IPC Section 608): isolate potable water via an engineered Air Gap (>=1\" above break-tank overflow rim, IPC 608.15.1) or certified ASSE 1013 RPZ backflow preventer — never connect a garden hose directly to a pressurized chemical manifold or submerged float valve."
@@ -355,12 +389,12 @@ func assessWater(project StudioProject, design model.ScrubberDesign) WaterAssess
 	switch {
 	case reqGPM > project.GardenHoseGPM:
 		status = StatusActionNeeded
-		summary = fmt.Sprintf("Peak quench spray (%.2f GPM) exceeds your %.1f GPM supply. Add a dedicated 3/4\" supply or break/buffer tank (~%.0f gal total per %.0f-hr firing).%s", reqGPM, project.GardenHoseGPM, totalGal, project.FiringDurationHours, ipc608Note)
+		summary = fmt.Sprintf("Peak quench spray (%.2f GPM) exceeds your %.1f GPM supply. Add a dedicated 3/4\" supply or break/buffer tank (~%.0f gal total per %.0f-hr firing).%s%s", reqGPM, project.GardenHoseGPM, totalGal, project.FiringDurationHours, steamNote, ipc608Note)
 	case reqGPM > 0.70*project.GardenHoseGPM:
 		status = StatusCaution
-		summary = fmt.Sprintf("Peak quench spray (%.2f GPM) uses >70%% of your %.1f GPM supply — avoid sharing the spigot during firing (~%.0f gal total per %.0f-hr firing).%s", reqGPM, project.GardenHoseGPM, totalGal, project.FiringDurationHours, ipc608Note)
+		summary = fmt.Sprintf("Peak quench spray (%.2f GPM) uses >70%% of your %.1f GPM supply — avoid sharing the spigot during firing (~%.0f gal total per %.0f-hr firing).%s%s", reqGPM, project.GardenHoseGPM, totalGal, project.FiringDurationHours, steamNote, ipc608Note)
 	default:
-		summary = fmt.Sprintf("Water flow capacity OK: %.2f GPM peak spray (%.2f GPM evaporated) vs %.1f GPM available; ~%.0f gal total per %.0f-hr firing (closed-loop recirculation cuts makeup water 70-85%% vs once-through).%s", reqGPM, evapGPM, project.GardenHoseGPM, totalGal, project.FiringDurationHours, ipc608Note)
+		summary = fmt.Sprintf("Water flow capacity OK: %.2f GPM peak spray (%.2f GPM evaporated) vs %.1f GPM available; ~%.0f gal total per %.0f-hr firing (closed-loop recirculation cuts makeup water 70-85%% vs once-through).%s%s", reqGPM, evapGPM, project.GardenHoseGPM, totalGal, project.FiringDurationHours, steamNote, ipc608Note)
 	}
 
 	return WaterAssessment{
@@ -378,6 +412,39 @@ func assessNoise(project StudioProject, design model.ScrubberDesign) NoiseAssess
 		silencerDropDBA        = 13.0
 		deluxeAcousticBonusDBA = 9.0 // extra attenuation from Deluxe 2" Rockwool baffle box + cooling labyrinth + tuned stack silencer + vibration boots
 	)
+	if project.IsLocalCeramic() && project.IsSteamEjector() {
+		d2 := math.Max(refDistFt, project.PropertyLineFt)
+		atten := 20.0 * math.Log10(d2/refDistFt)
+		bareSteam := 62.0 // LP 20 psig steam-jet hiss inside masonry diffuser (17 dBA quieter than a 79 dBA 2 HP blower)
+		silSteam := 56.0
+		steamLabel := "20 psig LP steam-jet ejector"
+		if project.LocalDraftMode == LocalDraftSteamEjectorHP {
+			bareSteam = 68.0 // HP 60 psig Mach ~1.55 Hydro-Sonic steam-jet hiss inside masonry shroud (still 11 dBA quieter than a 79 dBA 2 HP blower)
+			silSteam = 60.0
+			steamLabel = "60 psig HP Hydro-Sonic steam-jet ejector"
+		}
+		src := bareSteam
+		if project.IncludeSilencer {
+			src = silSteam
+		}
+		propDBA := round1(math.Max(25.0, src-atten))
+		status := StatusOK
+		if propDBA > urbanLimitDBA {
+			status = StatusActionNeeded
+		} else if propDBA > 55.0 {
+			status = StatusCaution
+		}
+		return NoiseAssessment{
+			Status:              status,
+			BareDBA3Ft:          bareSteam,
+			SilencedDBA3Ft:      silSteam,
+			PropertyLineDBA:     propDBA,
+			PropertyLineFt:      d2,
+			UrbanLimitDBA:       urbanLimitDBA,
+			SilencerRecommended: bareSteam-atten > 55.0,
+			Summary:             fmt.Sprintf("Modest %s hiss inside masonry shroud: %.1f dBA at 3 ft (quieter than a 79 dBA 2 HP radial blower) -> %.1f dBA at %.0f ft property line (limit %.0f dBA).", steamLabel, src, propDBA, d2, urbanLimitDBA),
+		}
+	}
 	if project.ZeroElectricity {
 		d2 := math.Max(refDistFt, project.PropertyLineFt)
 		atten := 20.0 * math.Log10(d2/refDistFt)

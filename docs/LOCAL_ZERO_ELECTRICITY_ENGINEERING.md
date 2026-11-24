@@ -2,9 +2,10 @@
 
 **Purpose:** A first-principles chemical, thermal, and masonry engineering manual for urban studio potters in **Nairobi, Kenya**, **Mumbai, India**, and similar cities who cannot import industrial CPVC pipe, Alloy C-276 venturis, or `2 HP` VFD pressure blowers — and who frequently face unstable grid power or choose to fire **100% off-grid**.
 
-**Dual Operating Architecture:** Every mechanical subsystem in this manual is built from **fired ceramics, brick, lime/fireclay mortar, stoneware sewer pipe, and local poly tanks** and operates in two interchangeable modes:
-- **Mode A — 100% Zero-Electricity On Site:** Natural buoyancy draft via a **wide ceramic-packed masonry tower (`0.04–0.08 inWC`) + tall thermal-reheat chimney (`8–12 m`, `0.20–0.32 inWC`)** paired with a **gravity head tank (`3.5 m` stand)** replenished manually (`8–12 min/hr` on a treadle or semi-rotary hand wing pump).
-- **Mode B — Local-Materials Low-Power (`230V 50Hz` Grid or `12V` Solar):** Identical masonry/ceramic scrubber body, swapping manual pumping for a local **`$40–$60` `0.5 HP` `230V 50Hz` domestic monoblock water pump** (Davis & Shirtliff Dayliff in Nairobi; Kirloskar or Crompton in Mumbai) plus an optional **`12V` solar automotive cooling/cabin fan (`1–2 inWC`)** for zero manual pumping at **`~$510–$950` total build cost**.
+**Multi-Mode Operating Architecture:** Every mechanical subsystem in this manual is built from **fired ceramics, brick, lime/fireclay mortar, stoneware sewer pipe, and local poly tanks** and operates in three interchangeable modes:
+- **Mode A1 — 100% Zero-Electricity Passive Reheat Chimney (`0 psig`, `0 W`):** Natural buoyancy draft via a **wide ceramic-packed masonry tower (`0.04–0.08 inWC`) + tall thermal-reheat chimney (`8–12 m`, `0.20–0.32 inWC`)** paired with a **gravity head tank (`3.5 m` stand)** replenished manually (`8–12 min/hr` on a treadle or semi-rotary hand wing pump). Captures `95–98%` HCl and `~30%` submicron NaCl at **`~$520–$800`**.
+- **Mode A2 — 100% Zero-Electricity Certified Steam-Jet Ejector (`20 psig` LP or `60 psig` HP Hydro-Sonic, `0 W`):** Adds a **factory-certified commercial Non-IBR / DOSHS baby steam boiler** (or strictly `<= 20 psig` code-rated `< 0.8 L` monotube coil) driving a `4.6–5.1 mm` supersonic *de Laval* steam nozzle (`514–735 m/s`) into the wide condensing stoneware tower — cutting chimney height to **`4.5–5.5 m`** and lifting submicron NaCl capture to **`~62%` (LP) / `~80%` (HP)** at **`0 W` electricity**! See the dedicated engineering manual [docs/STEAM_EJECTOR_ZERO_ELECTRICITY.md](./STEAM_EJECTOR_ZERO_ELECTRICITY.md) for full compressible-flow, ejector momentum, and pressure-safety design.
+- **Mode B — Local-Materials Low-Power (`230V 50Hz` Grid or `12V` Solar):** Identical masonry/ceramic scrubber body, swapping manual pumping for a local **`$40–$60` `0.5 HP` `230V 50Hz` domestic monoblock water pump** (Davis & Shirtliff Dayliff in Nairobi; Kirloskar or Crompton in Mumbai) plus an optional **`12V` solar automotive cooling/cabin fan (`1–2 inWC`)** for zero manual pumping at **`~$510–$910` total build cost**.
 
 **Thermodynamic Reference Baseline:** All mass, energy, pressure-drop, and stoichiometry calculations below are anchored directly to the `kilnscrub` validated reference `24 cu.ft.` Cone 11 (`2400°F` / `1315°C`) wood/salt studio kiln ([pkg/thermo/shomate.go](../pkg/thermo/shomate.go), [pkg/thermo/quench.go](../pkg/thermo/quench.go), [pkg/scrubber/packedbed.go](../pkg/scrubber/packedbed.go), [pkg/scrubber/venturi.go](../pkg/scrubber/venturi.go), [docs/ENGINEERING_VALIDATION.md](./ENGINEERING_VALIDATION.md)):
 - **Peak firing load:** `129.6 kW` LHV (`~29.2 kg/hr` seasoned hardwood, `30%` excess air); hot kiln exhaust sensible enthalpy = **`97.54 kW`** (`2.098 mol/s`, `0.0610 kg/s`, `579.5 ACFM` at sea level).
@@ -117,18 +118,23 @@ $$P_{\text{hyd}} = \rho_L \, g \, Q_L \, H, \qquad \Delta P_{\text{static,nozzle
 
 ---
 
-### 1.4 DIY Pressurized Steam-Jet Ejector Safety Verdict: EXPLICITLY REJECTED
+### 1.4 Pressurized Steam-Jet Ejector Safety Boundary: DIY Drum Boilers REJECTED vs. Certified Steam-Drive Upgrade
 
-> **DANGER — LETHAL BOILER EXPLOSION HAZARD (REJECTED FOR STUDIO BUILDS):**
-> Because `97.5 kW` of `2400°F` kiln exhaust is available, builders occasionally ask about inserting a welded steel pipe coil or drum boiler into the kiln flue to generate **`15–30 psig` (`1–2 barg`) live steam** to drive a steam-jet venturi ejector without electricity. **DO NOT BUILD THIS.**
+> **DANGER — LETHAL IMPROVISED BOILER EXPLOSION HAZARD (DIY WELDED DRUMS STRICTLY REJECTED):**
+> Because `86–155 kW` of `2400°F` kiln exhaust is available, builders occasionally ask about inserting an improvised welded steel drum boiler into the kiln flue to generate **`15–60 psig` (`1–4.1 barg`) live steam** to drive a steam-jet ejector without electricity. **NEVER BUILD AN UNCERTIFIED DIY DRUM BOILER.**
 
-**First-Principles Stored-Energy & Failure Audit:**
+**First-Principles Stored-Energy & Failure Audit (Why Improvised Drum Boilers Are Banned):**
 1. **Structural End-Cap Forces:** Even at a deceptively "low" **`15–30 psig`**, internal pressure exerts **`1,696–3,393 lbf` (`7.5–15.1 kN`)** — the weight of a full sedan — pushing outward on every `300 mm` (`12"`) flat end-cap or non-code weld!
-2. **Flashing-Water BLEVE Energy:** Superheated liquid water inside a `50 L` (`40 kg` water) DIY boiler at `30 psig` (`134.5°C` / `274°F`) stores isentropic flash expansion work of:
-   $$e_{\text{flash}} = c_{p,w}\left[T_1 - T_2 - T_2 \ln\!\left(\frac{T_1}{T_2}\right)\right] = 4.21 \left[407.65 - 373.15 - 373.15\ln\!\left(\frac{407.65}{373.15}\right)\right] = \mathbf{6.33\text{ kJ/kg}}$$
-   Across `40 kg` of boiling water, rupture instantaneously flashes `6.5%` of the water into steam (`1,600×` volume expansion!), releasing **`253 kJ` of explosive blast energy — equivalent to `60 grams` of TNT** (`96 kJ` / `23 g` TNT even at `15 psig`; `472 kJ` / `113 g` TNT if a stuck valve lets pressure spike to `50 psig`!) while showering everyone within `10 meters` in `135°C` scalding shrapnel!
-3. **Thermal Runaway + Acid Corrosion:** A `2400°F` wood/salt flue surges unpredictably during stoking while coating exterior mild-steel coils in hot corrosive HCl and NaCl slag (`> 100 mpy` wall thinning). Without **ASME Section I/VIII stamped pressure vessels, certified bronze safety relief valves (pop-tested), sight glasses, low-water fuel cutoffs, and licensed boiler inspection**, a flue-heated steam boiler is a homemade bomb.
-4. **Verdict:** **100% REJECTED.** Use atmospheric-pressure (`0 psig`) open masonry/ceramic thermal reheat chimneys only.
+2. **Flashing-Water BLEVE Energy:** Superheated liquid water inside a `50 L` (`40 kg` water) DIY drum boiler at `30 psig` (`134.5°C` / `274°F`) stores isentropic flash expansion work of:
+   $$e_{\text{flash}} = c_{p,w}\left[T_1 - T_2 - T_2 \ln\!\left(\frac{T_1}{T_2}\right)\right] = 4.21 \left[407.65 - 373.15 - 373.15\ln\!\left(\frac{407.65}{373.15}\right)\right] = \mathbf{6.32\text{ kJ/kg}}$$
+   Across `40 kg` of boiling water, rupture instantaneously flashes `6.5%` of the water into steam (`1,600×` volume expansion!), releasing **`253 kJ` of explosive blast energy — equivalent to `60 grams` of TNT** (`95 kJ` / `23 g` TNT at `15 psig`; **`579 kJ` / `138 g` TNT at `60 psig`!**) while showering everyone within `10 meters` in `135–153°C` scalding shrapnel!
+3. **Thermal Runaway + Acid Corrosion:** A `2400°F` wood/salt flue surges unpredictably during stoking while coating exterior mild-steel coils in hot corrosive HCl and NaCl slag (`> 100 mpy` wall thinning). Without factory-certified pressure vessels, pop-tested spring-loaded safety relief valves (PRVs), sight glasses, and statutory inspection compliance, a flue-heated drum boiler is a homemade bomb.
+
+**The Safe, Code-Compliant Engineering Path (When You Want `62–80%` Submicron NaCl Capture at `0 W`):**
+While DIY-welded drum boilers remain **100% rejected**, pressurized steam **does** solve the zero-electricity velocity problem safely when sourced strictly through **code-compliant hardware** documented in full in **[docs/STEAM_EJECTOR_ZERO_ELECTRICITY.md](./STEAM_EJECTOR_ZERO_ELECTRICITY.md)**:
+- **Path A (Recommended — `20 psig` LP or `60 psig` HP Hydro-Sonic):** Procure an off-the-shelf **factory-certified commercial baby steam boiler** — e.g., an Indian **Non-IBR (`< 25 L` capacity exemption)** wood/LPG mini boiler in Mumbai (`₹28k–₹1.35L`) or a **KEBS/DOSHS-compliant commercial laundry/food baby boiler** in Nairobi (`KES 48k–185k`) complete with factory `1.5× MAWP` hydro-test certificate, calibrated ASME/IBR spring-loaded PRV, pressure gauge, fusible plug, and sight glass. Expanding `22–54 kg/hr` of steam through a `4.6–5.1 mm` stainless/brass *de Laval* nozzle delivers **`514–735 m/s` supersonic velocity**, cuts chimney height to **`4.5–5.5 m`**, and lifts submicron NaCl capture to **`~62%` (`20 psig`)** or **`~80%` (`60 psig`)** via hygroscopic NaCl condensation growth + `14–25 µm` Hydro-Sonic droplet atomization at **`0 W` electricity**.
+- **Path B (Low-Pressure `<= 15–20 psig` Only):** A **code-rated small-bore seamless once-through monotube flash coil** (`< 0.8 L` liquid inventory = **`53×` lower flash energy, `< 2.8 kJ`**) heated indirectly outside the raw acid flue, strictly equipped with a certified `25 psig` ASME/BS spring-loaded PRV, bronze check valve, `>= 1.5× MAWP` cold hydro-test, open `0 psig` atmospheric feed tank, and scald shielding.
+- **Passive Baseline Option:** If you want **zero pressure vessels of any kind**, stay with the atmospheric **`0 psig` Passive Reheat Chimney** in Sections 1.2 and 2 below!
 
 ---
 
@@ -227,20 +233,30 @@ Below are exact first-principles stoichiometry, verified **Nairobi (KES)** and *
 
 ---
 
-## 4. Honest Capture Performance vs. Powered Venturi Scrubber
+### 3.2 Steam-Jet Condensation Water Chemistry & Boiler Feedwater Separation (Mode A2)
 
-Engineering honesty requires stating clearly what zero-electricity physics **can** and **cannot** match against a `$3,500–$7,263` powered `21 inWC` venturi train:
+When operating the **Certified Steam-Jet Ejector upgrade** ([docs/STEAM_EJECTOR_ZERO_ELECTRICITY.md](./STEAM_EJECTOR_ZERO_ELECTRICITY.md)), strictly separate the two water circuits:
+- **Boiler / Monotube Feedwater (`22–54 L/hr`):** Use **only clean rainwater or softened tap water** (zero salt, zero ash, zero *chuna*!) so calcium scale and NaCl never foul the boiler tubes or `4.6–5.1 mm` *de Laval* nozzle.
+- **Condensing Stoneware Tower Sump (`pH 7.5–8.5`):** Continues using Magadi Soda Ash (`Na₂CO₃`), *chuna* (`Ca(OH)₂`), wood-ash potash lye (`K₂CO₃`), or bulk `NaHCO₃` exactly as tabled above. When operated at `75–80°C` exit temperature, the cooled stoneware tower re-condenses `67–130 kg/hr` of vapor right back into the baffled settling sump, diluting sump salt concentration slightly while preserving identical stoichiometric alkali demand per kg of kiln salt!
 
-| Pollutant / Metric | Powered Venturi Scrubber (`kilnscrub` Ref., `21.2 inWC`, `2 HP` Blower) | **Mode A: Zero-Electricity All-Ceramic** (`0.20–0.29 inWC` Reheated Chimney, Hand/Treadle Pump) | **Mode B: Local Low-Power Ceramic** (`0.5 HP` 230V Pump + Optional `12V` `1.5 inWC` Fan) | Governing Physics Explanation |
-| :--- | :---: | :---: | :---: | :--- |
-| **HCl Acid Gas (`1,000–2,055 ppm`)** | **`95–99%`** | **`95–98%`** | **`97–99%`** | **Virtually Equal!** HCl absorption into alkaline water is rapid and gas-film controlled. The wide hydrophilic stoneware bed (`0.9–1.0 m` deep, `2.6 s` residence time!) + alkaline cascade quench gives `NTU >= 3.5` without needing high pressure drop. |
-| **Coarse Wood Fly Ash & Embers (`> 5 µm`)** | **`96–99%`** | **`85–95%`** | **`90–96%`** | Gravity settling in the brick quench chamber (`v < 0.5 m/s`) + wet stoneware Raschig impaction + 3-pass terracotta chevron baffles capture virtually all sparks, char, and coarse ash. |
-| **Submicron Condensed NaCl Fume (`0.1–0.5 µm`)** | **`~80–84%`** (`d_50 = 0.21 µm` at `70 m/s` throat) | **`~25–35%`** | **`~30–45%`** *(still no `70 m/s` throat!)* | **Honest Physics Limit:** Inertial impaction of `0.2–0.5 µm` particles requires high relative velocity (`50–70 m/s` = `10–21 inWC`). At `0.35 m/s`, capture relies on **hygroscopic steam-condensation droplet growth (diffusiophoresis)** during quenching plus Brownian/wet-packing interception (`~25–35%`), supplemented by **tall `10–12 m` reheated-chimney plume dispersion** above neighbor rooflines! |
-| **Electrical Power Required** | `1.5–2.2 kW` continuous (`240V 30A`) | **`0 W` (100% Zero-Electricity!)** | `370 W` (`0.5 HP` 230V pump) + optional `100 W` (`12V` solar fan) | Mode A runs indefinitely through total city blackouts; Mode B consumes `< 1.5 kWh` (`$0.15–$0.35`) per 3-hr salting! |
-| **Plastic Meltdown Risk on Pump Failure** | High (requires `$700+` NFPA 86 interlock) | **`ZERO` (All ceramic & brick!)** | **`ZERO` (All ceramic & brick!)** | Fired brick & stoneware survive `2400°F` dry flue excursions intact without fire or toxic PVC fumes. |
-| **Estimated Local Build Cost (`24 cu.ft.`)** | `$3,450–$7,263` (US COTS) | **`~$520` (Mumbai) / `~$800–$915` (Nairobi)** | **`~$510–$630` (Mumbai) / `~$780–$910` (Nairobi)** | **`85%–93%` cheaper** than imported industrial hardware! |
+---
 
-> **Urban Siting Transparency on Submicron Salt Haze:** Because Mode A/B removes **`95–98%` of acrid HCl acid gas** (the pungent choking acid that corrodes neighbors' metal roofs and triggers respiratory irritation) and **`85–95%` of soot/fly ash**, but leaves **`~65–75%` of fine `0.1–0.5 µm` benign NaCl table-salt haze**, a tall **`10–12 m` reheated stack** is essential in dense urban neighborhoods in Nairobi or Mumbai so the dry buoyant salt haze disperses cleanly high above adjacent windows and drying laundry!
+## 4. Honest Capture Performance vs. Powered Venturi & Certified Steam-Jet Ejector
+
+Engineering honesty requires stating clearly what each local-ceramic operating mode **can** and **cannot** match against a `$3,450–$7,263` powered `21.2 inWC` electric venturi train (100% aligned with [docs/STEAM_EJECTOR_ZERO_ELECTRICITY.md](./STEAM_EJECTOR_ZERO_ELECTRICITY.md)):
+
+| Pollutant / Metric | Powered Electric Venturi (`kilnscrub` Ref., `21.2"`, `2 HP`) | **Mode A1: Passive Reheat Chimney (`0 psig`, `0 W`)** | **Mode A2-LP: Steam-Jet Ejector (`20 psig`, `0 W`)** | **Mode A2-HP: Hydro-Sonic Steam-Drive (`60 psig`, `0 W`)** | **Mode B: Local `230V`/`12V` Ceramic (`520 W`)** |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Draft / Velocity Driver** | `2 HP` VFD Blower (`70 m/s` throat) | `9.5–12 m` Reheated Stack (`0.20–0.29"`) | `20 psig` *de Laval* Jet (`514–544 m/s`, `0.7–1.2"`) | `60 psig` *de Laval* Jet (`706–735 m/s`, `3.0–7.0"`) | `12V`/`230V` Low-ΔP Fan (`1.8"`) + `4.5 m` Stack |
+| **HCl Acid Gas (`1,000–2,055 ppm`)** | **`95–99%`** | **`95.5–98.0%`** | **`97.8%`** | **`98.5%`** | **`97–99%`** |
+| **Coarse Wood Ash & Embers (`> 5 µm`)** | **`96–99%`** | **`88–93%`** *(nom. `90.5%`)* | **`94.0%`** | **`96.5%`** | **`92–96%`** |
+| **Submicron NaCl Fume (`0.1–0.5 µm`)** | **`~80–84%`** (`d_50 = 0.21 µm`) | **`~25–35%`** *(nom. `30%`)* | **`~58–65%`** *(nom. **`62%`** — condensation!)* | **`~75–84%`** *(nom. **`80%`** — Hydro-Sonic!)* | **`~30–35%`** *(no high-shear throat)* |
+| **Required Chimney Height (`m`)** | `3–4 m` exhaust | `9.5–12.0 m` (`31–40 ft`) | **`5.0 m`** (`4.5–5.5 m`) | **`4.5–5.0 m`** (`15–16.5 ft`) | `4.5 m` (`15 ft`) |
+| **Electrical Power Required** | `1,500–2,200 W` (`240V 30A`) | **`0 W` (100% Off-Grid)** | **`0 W` (100% Off-Grid)** | **`0 W` (100% Off-Grid)** | `520 W` (`0.5 HP` pump + fan) |
+| **Dry-Run Plastic Meltdown Risk** | High (`$700+` NFPA 86 req.) | **`ZERO`** (All Ceramic) | **`ZERO`** (All Ceramic) | **`ZERO`** (All Ceramic) | **`ZERO`** (All Ceramic) |
+| **Est. Local Build Cost (Mumbai / Nairobi)** | `$3,450–$7,263` (US COTS) | **`~$522` / `~$796`** | **`~$830–$1,140` / `~$1,140–$1,505`** | **`~$1,320–$2,030` / `~$1,715–$2,280`** | **`~$509–$631` / `~$781–$908`** |
+
+> **Urban Siting Transparency on Submicron Salt Haze:** Passive Mode A1 (`0 psig`) removes **`95.5–98%` of acrid HCl acid gas** and **`~90%` of coarse wood ash**, but leaves **`~65–70%` of fine `0.1–0.5 µm` benign NaCl table-salt haze** — making the tall **`10–12 m` reheated stack** essential in dense Nairobi/Mumbai neighborhoods. Where dense urban siting demands both **`0 W` off-grid operation** AND **high submicron NaCl capture (`62–80%`) with a compact `4.5–5.5 m` chimney**, upgrade to **Mode A2 (`20 psig` or `60 psig` Certified Steam-Jet Ejector)** documented in [docs/STEAM_EJECTOR_ZERO_ELECTRICITY.md](./STEAM_EJECTOR_ZERO_ELECTRICITY.md)!
 
 ---
 
@@ -319,6 +335,10 @@ Exchange rates verified at `1 USD ≈ 129.5 KES ≈ 92.5 INR` (baseline local di
 | **Bulk Washing Soda (`50 kg` @ `₹1,500`) + *Chuna* (`50 kg` @ `₹650`) + pH Strips (`₹500`)** | `2,650` | `2,650` | Masjid Bunder / IndiaMART wholesale — covers `30+` salt firings! |
 | **MUMBAI TOTAL ESTIMATED BUILD COST** | **`₹48,250` (`~$522 USD`)** | **Mode B1 (Grid Pump Only): `₹47,050` (`~$509`)**<br>**Mode B2 (+12V Solar Fan): `₹58,350` (`~$631`)** | **`91%–93%` cheaper** than `$7,263` imported US baseline! |
 
+*(Optional Zero-Electricity Certified Steam-Jet Upgrade BOM Summary — full line-item breakdown in [docs/STEAM_EJECTOR_ZERO_ELECTRICITY.md](./STEAM_EJECTOR_ZERO_ELECTRICITY.md#8-verified-nairobi--mumbai-local-steam-ejector-boms-24-cuft-kiln)):*
+- **Mumbai:** Tier 1 LP (`20 psig`, `0 W`, `~62%` NaCl): **`₹76,500–₹1,05,000` (`~$830–$1,140`)** *(Path B `< 0.8 L` coil: `₹70,500` / `$762`)* · Tier 2 HP (`60 psig` Non-IBR baby boiler, `0 W`, `~80%` NaCl): **`₹1,22,000–₹1,88,000` (`~$1,320–$2,030`)**.
+- **Nairobi:** Tier 1 LP (`20 psig`, `0 W`, `~62%` NaCl): **`KES 148,000–195,000` (`~$1,140–$1,505`)** *(Path B `< 0.8 L` coil: `KES 136,000` / `$1,050`)* · Tier 2 HP (`60 psig` DOSHS commercial baby boiler, `0 W`, `~80%` NaCl): **`KES 222,000–295,000` (`~$1,715–$2,280`)**.
+
 ---
 
 ## 6. Mandatory Safety, Structural & Urban Siting Rules
@@ -338,5 +358,6 @@ Frugal local construction **never** means compromising human life safety. Every 
    - Wet salt water is highly conductive! Power the `0.5 HP` Kirloskar/Crompton/Dayliff pump strictly through a dedicated **`30 mA` RCD / ELCB earth-leakage breaker**, proper earth grounding rod, waterproof IP55 switch box, and elevated pump plinth (`>= 15 cm` above splash puddles).
 5. **Chemical & Thermal PPE:**
    - Wear **splash-proof chemical goggles, nitrile/rubber gloves, and closed leather shoes** when mixing *chuna* (`Ca(OH)₂`), Magadi Soda (`Na₂CO₃`), or decanting caustic wood-ash potash lye (`K₂CO₃`, `pH 12+`). Keep a `20 L` bucket of clean fresh rinse water immediately next to Sump Chamber 2 at all times.
-6. **Zero Pressurized Vessels:**
-   - Keep every tank, sump, quench leg, and recuperator strictly **open to atmospheric pressure (`0 psig`)**. Never seal a water-heating coil or drum inside the `2400°F` kiln flue.
+6. **Strict Pressure-Vessel Safety Rule (Zero DIY Drum Boilers; Certified Steam Equipment Only):**
+   - For **Mode A1 / Mode B (`0 psig`)**, keep every tank, sump, quench leg, and recuperator strictly **open to atmospheric pressure (`0 psig`)** — never seal a drum or water-heating coil inside the `2400°F` kiln flue.
+   - For **Mode A2 (`20 psig` / `60 psig` Steam-Jet Ejector)**, **improvised DIY-welded drum boilers remain 100% prohibited (`253–579 kJ` BLEVE explosion hazard)**. Use **only** a factory-certified `< 25 L` Non-IBR / DOSHS commercial baby steam boiler (Path A) — or, strictly at `<= 20 psig`, a code-rated `< 0.8 L` once-through seamless monotube coil (Path B) protected by a certified ASME/BS spring-loaded PRV (`25 psig`), bronze check valve, `>= 1.5× MAWP` cold hydro-test, open `0 psig` feed tank, and scald shielding per [docs/STEAM_EJECTOR_ZERO_ELECTRICITY.md](./STEAM_EJECTOR_ZERO_ELECTRICITY.md).

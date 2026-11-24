@@ -1601,6 +1601,128 @@
       color: #fed7aa;
       white-space: nowrap;
     }
+    .btn-steam-combo {
+      width: 100%;
+      justify-content: space-between;
+      padding: 8px 11px;
+      border-radius: 7px;
+      border: 1px solid rgba(20, 184, 166, 0.68);
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.24) 0%, rgba(16, 185, 129, 0.20) 100%);
+      color: #ccfbf1;
+      font-weight: 700;
+      font-size: 12px;
+      box-shadow: 0 2px 10px rgba(6, 182, 212, 0.16);
+    }
+    .btn-steam-combo:hover {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.36) 0%, rgba(16, 185, 129, 0.32) 100%);
+      border-color: #5eead4;
+    }
+    .steam-combo-tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(6, 182, 212, 0.28);
+      border: 1px solid rgba(103, 232, 249, 0.55);
+      color: #a5f3fc;
+      white-space: nowrap;
+    }
+    .steam-ejector-card {
+      border: 1px solid rgba(56, 189, 248, 0.52);
+      background: linear-gradient(135deg, rgba(8, 47, 73, 0.58) 0%, rgba(15, 23, 42, 0.86) 100%);
+      border-radius: 8px;
+      padding: 11px 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .steam-ejector-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .steam-ejector-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #7dd3fc;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .steam-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 7px;
+    }
+    @media (max-width: 1180px) {
+      .steam-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .steam-kpi-tile {
+      padding: 7px 9px;
+      border-radius: 6px;
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      background: rgba(12, 17, 24, 0.78);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .steam-kpi-k {
+      font-size: 9.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #67e8f9;
+    }
+    .steam-kpi-v {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: #f0f9ff;
+      line-height: 1.3;
+    }
+    .steam-kpi-s {
+      font-size: 10.5px;
+      color: #cbd5e1;
+      line-height: 1.3;
+    }
+    .steam-condensation-box {
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(45, 212, 191, 0.48);
+      background: rgba(13, 148, 136, 0.14);
+      color: #ccfbf1;
+      font-size: 11.5px;
+      line-height: 1.45;
+    }
+    .steam-safety-box {
+      padding: 9px 11px;
+      border-radius: 7px;
+      border: 1px solid rgba(239, 68, 68, 0.56);
+      background: linear-gradient(135deg, rgba(127, 29, 29, 0.24) 0%, rgba(120, 53, 15, 0.22) 100%);
+      color: #fef3c7;
+      font-size: 11.5px;
+      line-height: 1.42;
+    }
+    .steam-safety-box h4 {
+      margin: 0 0 5px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #fca5a5;
+    }
+    .steam-safety-box ul {
+      margin: 5px 0 0 18px;
+      padding: 0;
+    }
+    .steam-safety-box li {
+      margin-bottom: 3px;
+    }
     .zero-elec-toggle {
       border: 1px solid rgba(217, 119, 6, 0.48);
       background: linear-gradient(135deg, rgba(180, 83, 9, 0.14) 0%, rgba(16, 185, 129, 0.10) 100%);
@@ -2513,6 +2635,18 @@
               </select>
               <span class="control-hint" id="hint-local-alkali">Sodium carbonate (<span class="unit-literal">Na₂CO₃</span>) — locally mined at Lake Magadi / widely sold as washing soda.</span>
             </div>
+            <div class="control">
+              <div class="control-row">
+                <label for="in-local-draft-mode">Velocity / Draft Driver (0 W Options) <span class="tip-badge" title="Choose passive thermal-reheat chimney draft or a zero-electricity supersonic steam-jet ejector driven by a certified ASME/IBR/KEBS baby boiler or monotube flash coil for high NaCl fume capture.">?</span></label>
+                <span class="control-sub">0W Draft</span>
+              </div>
+              <select id="in-local-draft-mode" aria-label="Velocity or Draft Driver Zero-Watt Options">
+                <option value="natural_chimney">Natural Reheat Chimney (0 psig · 9.5m stack · ~30% NaCl)</option>
+                <option value="steam_ejector_lp">LP Steam-Jet Ejector (20 psig · ~520 m/s · ~62% NaCl · 0W)</option>
+                <option value="steam_ejector_hp">HP Steam-Drive Hydro-Sonic (60 psig Baby Boiler · ~750 m/s · ~80% NaCl · 0W)</option>
+              </select>
+              <span class="control-hint" id="hint-local-draft-mode">Passive 9.5 m thermal-reheat brick chimney buoyancy (0 psig, whisper-quiet ~45 dBA).</span>
+            </div>
           </div>
 
           <div class="control">
@@ -2597,6 +2731,10 @@
             <button id="btn-apply-offgrid-ceramic" class="btn btn-offgrid-combo" type="button" title="Selects Local Ceramic / Brick build path with Zero Electricity On Site (0V / 0W): thermal-reheat brick chimney buoyancy draft, wide masonry stoneware-ring tower, Kentank/Sintex overhead gravity drum, and manual treadle/hand pump">
               <span>Apply Off-Grid Ceramic (Zero Electricity)</span>
               <span class="offgrid-combo-tag">0W · Nairobi / Mumbai</span>
+            </button>
+            <button id="btn-apply-offgrid-steam" class="btn btn-steam-combo" type="button" title="Selects Local Ceramic / Brick with Zero Electricity (0V / 0W) and HP 60 psig Steam-Drive Hydro-Sonic Ejector (certified ASME/IBR/KEBS baby boiler, ~710-740 m/s Mach 1.50-1.57 nozzle, ~80% NaCl condensation scrubbing, compact 4.5-4.8 m stack)">
+              <span>Off-Grid Steam-Jet (60 psig, 0W)</span>
+              <span class="steam-combo-tag">~750 m/s · ~80% NaCl</span>
             </button>
           </div>
 
@@ -3631,6 +3769,7 @@
         zeroElectricity: false,
         localRegion: "nairobi",
         localAlkali: "soda_ash",
+        localDraftMode: "natural_chimney",
         corrosionTier: "standard_316l",
         stageAlignment: "inline_id_blower",
         packedBedLayout: "single_column",
@@ -3688,6 +3827,17 @@
         const s = String(raw || "").trim().toLowerCase();
         if (s === "slaked_lime" || s === "wood_ash_lye" || s === "baking_soda") return s;
         return "soda_ash";
+      }
+
+      function normalizeLocalDraftMode(raw) {
+        const s = String(raw || "").trim().toLowerCase();
+        if (s === "steam_ejector_lp" || s === "steam_ejector_hp") return s;
+        return "natural_chimney";
+      }
+
+      function isSteamDraftMode(mode) {
+        const m = normalizeLocalDraftMode(mode);
+        return m === "steam_ejector_lp" || m === "steam_ejector_hp";
       }
 
       function isFrugalMode(proj) {
@@ -3919,11 +4069,32 @@
         if (localPanel) localPanel.classList.toggle("hidden", !frugalActive);
         studioState.localRegion = normalizeLocalRegion(studioState.localRegion);
         studioState.localAlkali = normalizeLocalAlkali(studioState.localAlkali);
+        studioState.localDraftMode = normalizeLocalDraftMode(studioState.localDraftMode);
         if (el("in-local-region")) el("in-local-region").value = studioState.localRegion;
         if (el("in-local-alkali")) el("in-local-alkali").value = studioState.localAlkali;
+        if (el("in-local-draft-mode")) el("in-local-draft-mode").value = studioState.localDraftMode;
         const pModeBadge = el("badge-local-power-mode");
         if (pModeBadge) {
-          pModeBadge.textContent = studioState.zeroElectricity ? "0V / 0W Off-Grid" : "230V 50Hz Hybrid";
+          if (studioState.zeroElectricity) {
+            pModeBadge.textContent = isSteamDraftMode(studioState.localDraftMode)
+              ? (studioState.localDraftMode === "steam_ejector_hp" ? "0W · 60 psig Steam" : "0W · 20 psig Steam")
+              : "0V / 0W Off-Grid";
+          } else {
+            pModeBadge.textContent = "230V 50Hz Hybrid";
+          }
+        }
+        const draftHint = el("hint-local-draft-mode");
+        if (draftHint) {
+          if (studioState.localDraftMode === "steam_ejector_hp") {
+            draftHint.className = "control-hint ok";
+            draftHint.innerHTML = `Certified 60 psig baby boiler drives ~710–740 m/s (Mach 1.50–1.57) supersonic hydro-sonic ejector (~80% <span class="unit-literal">NaCl</span>, 4.5–4.8 m stack, 0W).`;
+          } else if (studioState.localDraftMode === "steam_ejector_lp") {
+            draftHint.className = "control-hint ok";
+            draftHint.innerHTML = `Certified 20 psig monotube coil / baby boiler drives ~520 m/s (Mach 1.17) ejector + condensation growth (~62% <span class="unit-literal">NaCl</span>, 5.5 m stack, 0W).`;
+          } else {
+            draftHint.className = "control-hint";
+            draftHint.textContent = "Passive 9.5 m thermal-reheat brick chimney buoyancy (0 psig, whisper-quiet ~45 dBA, ~30% NaCl).";
+          }
         }
         const regHint = el("hint-local-region");
         if (regHint) {
@@ -4055,9 +4226,15 @@
         const pillBlower = el("pill-blower-label");
         if (pillBlower) {
           if (isFrugalMode()) {
-            pillBlower.textContent = studioState.zeroElectricity
-              ? "4: Brick Chimney (0W)"
-              : "4: Chimney + 230V Fan";
+            if (isSteamDraftMode(studioState.localDraftMode)) {
+              pillBlower.textContent = studioState.zeroElectricity
+                ? "4: Steam Ejector + Stack (0W)"
+                : "4: Steam Ejector + Stack";
+            } else {
+              pillBlower.textContent = studioState.zeroElectricity
+                ? "4: Brick Chimney (0W)"
+                : "4: Chimney + 230V Fan";
+            }
           } else {
             pillBlower.textContent = studioState.stageAlignment === "eductor_dry_fan"
               ? "4: Dry Motive Fan"
@@ -4103,9 +4280,11 @@
         studioState.zeroElectricity = !!proj.zero_electricity;
         studioState.localRegion = normalizeLocalRegion(proj.local_region || studioState.localRegion);
         studioState.localAlkali = normalizeLocalAlkali(proj.local_alkali || studioState.localAlkali);
+        studioState.localDraftMode = normalizeLocalDraftMode(proj.local_draft_mode || studioState.localDraftMode);
         if (el("in-zero-electricity")) el("in-zero-electricity").checked = studioState.zeroElectricity;
         if (el("in-local-region")) el("in-local-region").value = studioState.localRegion;
         if (el("in-local-alkali")) el("in-local-alkali").value = studioState.localAlkali;
+        if (el("in-local-draft-mode")) el("in-local-draft-mode").value = studioState.localDraftMode;
         if (studioState.buildPath === "custom_fab_deluxe") {
           state.showSystems3D = true;
           syncSystems3DButton();
@@ -4188,6 +4367,7 @@
           zero_electricity: !!studioState.zeroElectricity,
           local_region: normalizeLocalRegion(studioState.localRegion),
           local_alkali: normalizeLocalAlkali(studioState.localAlkali),
+          local_draft_mode: normalizeLocalDraftMode(el("in-local-draft-mode")?.value || studioState.localDraftMode),
           corrosion_tier: normalizeCorrosionTier(studioState.corrosionTier),
           stage_alignment: studioState.stageAlignment,
           packed_bed_layout: studioState.packedBedLayout,
@@ -4463,13 +4643,19 @@
         }
 
         const elec = u.electrical || {};
+        const steamOn = frugalOn && !!frugal.steam_enabled;
+        const isHpSteam = steamOn && (frugal.draft_mode === "steam_ejector_hp" || frugal.steam_pressure_psig >= 40);
         if (zeroElec) {
           setReadinessChip(
             "readiness-power",
             "ok",
             "0V / 0W Off-Grid",
-            "No motors / No grid — passive chimney + gravity",
-            elec.summary || "100% zero-electricity operation: buoyancy chimney draft + overhead gravity tank + manual pump."
+            steamOn
+              ? `No motors / No grid — ${Math.round(frugal.steam_pressure_psig)} psig steam-jet + gravity`
+              : "No motors / No grid — passive chimney + gravity",
+            elec.summary || (steamOn
+              ? "100% zero-electricity operation: certified baby boiler steam-jet ejector + overhead gravity tank + manual pump."
+              : "100% zero-electricity operation: buoyancy chimney draft + overhead gravity tank + manual pump.")
           );
         } else if (frugalOn) {
           setReadinessChip(
@@ -4496,7 +4682,9 @@
             water.status || "ok",
             `${fmt(frugal.spray_flow_lpm, 1)} L/min (${fmt(frugal.spray_flow_gpm, 1)} GPM)`,
             zeroElec
-              ? `${Math.round(frugal.gravity_tank_liters)} L tank · ${Math.round(frugal.jerrycans_20l_per_hr)}×20L/hr`
+              ? (steamOn
+                ? `${Math.round(frugal.gravity_tank_liters)} L tank · +${fmt(frugal.steam_water_l_hr, 0)} L/hr boiler`
+                : `${Math.round(frugal.gravity_tank_liters)} L tank · ${Math.round(frugal.jerrycans_20l_per_hr)}×20L/hr`)
               : `${Math.round(frugal.gravity_tank_liters)} L tank · 0.5 HP 230V pump`,
             water.summary || frugal.summary || ""
           );
@@ -4511,7 +4699,16 @@
         }
 
         const noise = u.noise || {};
-        if (zeroElec) {
+        if (zeroElec && steamOn) {
+          const steamDba = isHpSteam ? 68 : 62;
+          setReadinessChip(
+            "readiness-noise",
+            noise.status || "ok",
+            `~${steamDba} dBA Steam-Jet Hiss`,
+            isHpSteam ? "HP 60 psig hydro-sonic nozzle (0W · no blower)" : "LP 20 psig steam-jet nozzle (0W · no blower)",
+            noise.summary || `No rotating electric blower — enclosed ceramic venturi damps supersonic steam-jet hiss to ~${steamDba} dBA at 3 ft.`
+          );
+        } else if (zeroElec) {
           setReadinessChip(
             "readiness-noise",
             "ok",
@@ -4566,15 +4763,20 @@
             ? `${String(plume.visible_plume_risk).replace(/^\w/, (ch) => ch.toUpperCase())} mist risk`
             : (Number.isFinite(plume.exhaust_temp_f) ? `${fmt(plume.exhaust_temp_f, 0)}°F steam` : "—"));
         let plumeSub = plume.min_stack_height_ft ? `Stack >= ${fmt(plume.min_stack_height_ft, 0)} ft` : "Clean water vapor";
-        if (frugalOn) {
+        if (steamOn) {
+          plumeSub = `${Math.round(frugal.steam_pressure_psig)} psig · ${Math.round(frugal.steam_nozzle_vel_m_s)} m/s (Mach ${fmt(frugal.steam_nozzle_mach, 2)})`;
+        } else if (frugalOn) {
           plumeSub = `${fmt(frugal.chimney_height_m, 1)} m (${fmt(frugal.chimney_height_ft, 0)} ft) reheat chimney @ ${fmt(frugal.stack_reheat_temp_f, 0)}°F`;
         } else if (hasPlumeLengths && Number.isFinite(fenceFt)) {
           plumeSub = `vs ${fmt(fenceFt, 0)} ft fence · ${Math.round(plume.dilution_cfm_needed || 0)} CFM`;
         } else if (Number.isFinite(plume.dilution_cfm_needed) && plume.dilution_cfm_needed > 0) {
           plumeSub = `Dilute: ${Math.round(plume.dilution_cfm_needed)} CFM${Number.isFinite(plume.dilution_reheat_kw) && plume.dilution_reheat_kw > 0 ? ` · ${fmt(plume.dilution_reheat_kw, 1)} kW` : ""}`;
         }
-        const plumeTip = [plume.summary, plume.squirrel_cage_verdict].filter(Boolean).join(" — ");
-        setReadinessChip("readiness-plume", plume.status, frugalOn ? `${fmt(frugal.chimney_height_m, 1)} m Chimney` : plumeVal, plumeSub, plumeTip);
+        const plumeTip = [plume.summary, plume.squirrel_cage_verdict, frugal.condensation_growth_note].filter(Boolean).join(" — ");
+        const frugalStackLabel = steamOn
+          ? `${fmt(frugal.chimney_height_m, 1)} m Steam-Ejector Stack`
+          : `${fmt(frugal.chimney_height_m, 1)} m Chimney`;
+        setReadinessChip("readiness-plume", plume.status, frugalOn ? frugalStackLabel : plumeVal, plumeSub, plumeTip);
 
         const corr = u.corrosion || {};
         if (frugalOn) {
@@ -4616,11 +4818,13 @@
           : "Studio Kit: Offline";
 
         if (zeroElec) {
-          setReadinessChip("readiness-power", "ok", "0V / 0W Off-Grid", "No motors / No grid — passive chimney");
-          setReadinessChip("readiness-water", "ok", `${fmt(frugal.spray_flow_lpm, 1)} L/min`, `${Math.round(frugal.gravity_tank_liters)} L tank · ${Math.round(frugal.jerrycans_20l_per_hr)}×20L/hr`);
-          setReadinessChip("readiness-noise", "ok", "~45 dBA Whisper Quiet", "No Blower — passive water trickle");
+          const stOn = !!frugal.steam_enabled;
+          const hpSt = stOn && (frugal.draft_mode === "steam_ejector_hp" || frugal.steam_pressure_psig >= 40);
+          setReadinessChip("readiness-power", "ok", "0V / 0W Off-Grid", stOn ? `No motors / No grid — ${Math.round(frugal.steam_pressure_psig)} psig steam-jet` : "No motors / No grid — passive chimney");
+          setReadinessChip("readiness-water", "ok", `${fmt(frugal.spray_flow_lpm, 1)} L/min`, stOn ? `${Math.round(frugal.gravity_tank_liters)} L tank · +${fmt(frugal.steam_water_l_hr, 0)} L/hr boiler` : `${Math.round(frugal.gravity_tank_liters)} L tank · ${Math.round(frugal.jerrycans_20l_per_hr)}×20L/hr`);
+          setReadinessChip("readiness-noise", "ok", stOn ? `~${hpSt ? 68 : 62} dBA Steam-Jet Hiss` : "~45 dBA Whisper Quiet", stOn ? "No Blower — supersonic steam nozzle" : "No Blower — passive water trickle");
           setReadinessChip("readiness-soda", "ok", `${fmt(frugal.alkali_kg_per_firing, 1)} kg (${fmt(frugal.alkali_lbs_per_firing, 1)} lbs)`, `${frugal.alkali_name} (${frugal.alkali_formula})`);
-          setReadinessChip("readiness-plume", "ok", `${fmt(frugal.chimney_height_m, 1)} m Chimney`, `Reheat ${fmt(frugal.stack_reheat_temp_f, 0)}°F`);
+          setReadinessChip("readiness-plume", "ok", stOn ? `${fmt(frugal.chimney_height_m, 1)} m Steam-Ejector Stack` : `${fmt(frugal.chimney_height_m, 1)} m Chimney`, stOn ? `${Math.round(frugal.steam_pressure_psig)} psig · ${Math.round(frugal.steam_nozzle_vel_m_s)} m/s` : `Reheat ${fmt(frugal.stack_reheat_temp_f, 0)}°F`);
           setReadinessChip("readiness-corrosion", "ok", "Fired Ceramic / Brick", "Zero CPVC Meltdown (>1,800°F)");
         } else {
           setReadinessChip("readiness-power", elecOk ? "ok" : "action_needed", `${reqV}V (${fmt(hp, 1)} HP)`, elecOk ? "Fits selected power" : `Needs ${reqV}V VFD`);
@@ -4638,17 +4842,14 @@
 
       /* ===================== PHASE 10: LOCAL CERAMIC & ZERO-ELECTRICITY ENGINE ===================== */
 
-      function getEffectiveFrugalData(ev) {
-        const proj = readProjectFromControls();
-        const uiFrugal = isFrugalMode(proj);
-        const rawCand = (ev && ev.frugal) || null;
-        const rawMatches = !!(rawCand && typeof rawCand.enabled === "boolean" && rawCand.enabled === uiFrugal && !!rawCand.zero_electricity === !!proj.zero_electricity && normalizeLocalRegion(rawCand.region) === normalizeLocalRegion(proj.local_region) && normalizeLocalAlkali(rawCand.alkali_id) === normalizeLocalAlkali(proj.local_alkali));
-        const raw = rawMatches ? rawCand : null;
-        const d = (ev && ev.design) || state.design || {};
-        const enabled = uiFrugal;
+      function evaluateFrugalFallback(proj, d, raw) {
+        const enabled = isFrugalMode(proj);
         const zeroElec = !!proj.zero_electricity;
         const region = normalizeLocalRegion(raw?.region || proj.local_region || studioState.localRegion);
         const alkaliId = normalizeLocalAlkali(raw?.alkali_id || proj.local_alkali || studioState.localAlkali);
+        const draftMode = normalizeLocalDraftMode(raw?.draft_mode || proj.local_draft_mode || studioState.localDraftMode);
+        const steamEnabled = typeof raw?.steam_enabled === "boolean" ? raw.steam_enabled : isSteamDraftMode(draftMode);
+        const isHP = draftMode === "steam_ejector_hp";
 
         const regionLabels = {
           nairobi: "Nairobi / East Africa (KES)",
@@ -4657,28 +4858,62 @@
         };
         const regionLabel = raw?.region_label || regionLabels[region] || regionLabels.nairobi;
 
-        // First-principles offline fallback physics (mirrors pkg/studio/frugal.go)
+        // First-principles offline fallback physics (mirrors pkg/studio/frugal.go & Phase 10B steam ejector)
         const kilnVol = Number(proj.input?.kiln_volume_cu_ft || d.input?.kiln_volume_cu_ft || 24);
         const scaleF = Math.sqrt(Math.max(0.35, kilnVol / 24.0));
+        const volRatio = Math.max(0.35, kilnVol / 24.0);
         const targetDraft = Math.abs(Number(proj.input?.target_kiln_draft_in_wc || -0.05));
         const bedDiamIn = Number.isFinite(raw?.bed_diameter_in) ? raw.bed_diameter_in : Math.round(Math.max(24, 30 * scaleF));
         const bedVelMs = Number.isFinite(raw?.bed_superficial_vel_m_s) ? raw.bed_superficial_vel_m_s : 0.38;
         const bedDpInwc = Number.isFinite(raw?.bed_dp_inwc) ? raw.bed_dp_inwc : 0.062;
-        const reqDraft = Number.isFinite(raw?.required_draft_inwc) ? raw.required_draft_inwc : Number((targetDraft + bedDpInwc + 0.05).toFixed(3));
 
-        const reheatF = Number.isFinite(raw?.stack_reheat_temp_f) ? raw.stack_reheat_temp_f : (zeroElec ? 340.0 : 210.0);
+        // Steam-jet ejector thermodynamics & 1D momentum fallback (aligned with IAPWS-IF97 & pkg/studio/frugal.go)
+        const isHighland = region === "nairobi";
+        const steamPsig = Number.isFinite(raw?.steam_pressure_psig) ? raw.steam_pressure_psig : (steamEnabled ? (isHP ? 60.0 : 20.0) : 0.0);
+        const steamBar = Number.isFinite(raw?.steam_pressure_bar) ? raw.steam_pressure_bar : Number((steamPsig * 0.0689476).toFixed(2));
+        const defaultVel = steamEnabled ? (isHP ? (isHighland ? 738.6 : 709.2) : (isHighland ? 544.8 : 514.4)) : 0.0;
+        const defaultMach = steamEnabled ? (isHP ? (isHighland ? 1.57 : 1.50) : (isHighland ? 1.16 : 1.09)) : 0.0;
+        const defaultThroat = steamEnabled ? (isHP ? (isHighland ? 5.17 : 5.08) : (isHighland ? 4.85 : 4.68)) : 0.0;
+        const nozzleVel = Number.isFinite(raw?.steam_nozzle_vel_m_s) ? raw.steam_nozzle_vel_m_s : defaultVel;
+        const nozzleMach = Number.isFinite(raw?.steam_nozzle_mach) ? raw.steam_nozzle_mach : defaultMach;
+        const throatMm = Number.isFinite(raw?.steam_nozzle_throat_mm) ? raw.steam_nozzle_throat_mm : (steamEnabled ? Number((defaultThroat * scaleF).toFixed(2)) : 0.0);
+        const steamKgHr = Number.isFinite(raw?.steam_flow_kg_hr) ? raw.steam_flow_kg_hr : (steamEnabled ? Number(((isHP ? 54.3 : 22.1) * volRatio).toFixed(1)) : 0.0);
+        const steamLHr = Number.isFinite(raw?.steam_water_l_hr) ? raw.steam_water_l_hr : steamKgHr;
+        const steamKw = Number.isFinite(raw?.steam_thermal_kw) ? raw.steam_thermal_kw : (steamEnabled ? Number(((steamKgHr * (isHP ? 2655 : 2600)) / 3600).toFixed(1)) : 0.0);
+        const wasteHeatKw = Number.isFinite(raw?.kiln_waste_heat_kw) ? raw.kiln_waste_heat_kw : Number((86.4 * volRatio).toFixed(1));
+        const wasteHeatOk = typeof raw?.waste_heat_sufficient === "boolean" ? raw.waste_heat_sufficient : (steamEnabled ? wasteHeatKw >= steamKw * 1.4 : true);
+        const defaultEjDraft = steamEnabled ? (isHP ? (isHighland ? 4.259 : 4.927) : (isHighland ? 0.788 : 0.893)) : 0.0;
+        const ejDraftInwc = Number.isFinite(raw?.ejector_draft_inwc) ? raw.ejector_draft_inwc : defaultEjDraft;
+        const entrainRatio = Number.isFinite(raw?.ejector_entrainment_ratio) ? raw.ejector_entrainment_ratio : (steamEnabled ? (isHP ? 6.5 : 15.9) : 0.0);
+
+        const reqDraft = Number.isFinite(raw?.required_draft_inwc)
+          ? raw.required_draft_inwc
+          : Number((targetDraft + bedDpInwc + (steamEnabled ? (isHP ? 0.42 : 0.24) : 0.05)).toFixed(3));
+
+        const reheatF = Number.isFinite(raw?.stack_reheat_temp_f)
+          ? raw.stack_reheat_temp_f
+          : (steamEnabled ? 195.0 : (zeroElec ? 340.0 : 210.0));
         const tAmbK = ((Number(proj.ambient_winter_f ?? 68) - 32) * 5 / 9) + 273.15;
         const tStackK = ((reheatF - 32) * 5 / 9) + 273.15;
         const rhoAmb = (101325 * 0.02897) / (8.3145 * Math.max(255, tAmbK));
         const rhoStack = (101325 * 0.02897) / (8.3145 * Math.max(320, tStackK));
-        const chimM = Number.isFinite(raw?.chimney_height_m) ? raw.chimney_height_m : (zeroElec ? 9.5 : 4.5);
+        const defaultChimM = steamEnabled ? (isHighland ? (isHP ? 4.8 : 5.0) : 4.5) : (zeroElec ? 9.5 : 4.5);
+        const chimM = Number.isFinite(raw?.chimney_height_m) ? raw.chimney_height_m : defaultChimM;
         const chimFt = Number.isFinite(raw?.chimney_height_ft) ? raw.chimney_height_ft : chimM * 3.28084;
         const buoyInwc = (9.80665 * chimM * Math.max(0.05, rhoAmb - rhoStack)) / 249.08891;
         const availDraft = Number.isFinite(raw?.available_draft_inwc)
           ? raw.available_draft_inwc
-          : (zeroElec ? Number((buoyInwc + 0.03).toFixed(3)) : 1.85);
+          : (steamEnabled
+            ? Number((ejDraftInwc + buoyInwc).toFixed(3))
+            : (zeroElec ? Number((buoyInwc + 0.03).toFixed(3)) : 1.85));
         const marginDraft = Number.isFinite(raw?.draft_margin_inwc) ? raw.draft_margin_inwc : Number((availDraft - reqDraft).toFixed(3));
         const draftFeasible = typeof raw?.draft_feasible === "boolean" ? raw.draft_feasible : (marginDraft >= 0);
+
+        const draftModeLabel = raw?.draft_mode_label || (draftMode === "steam_ejector_hp"
+          ? "HP Steam-Drive Hydro-Sonic Ejector (60 psig · 0W)"
+          : (draftMode === "steam_ejector_lp"
+            ? "LP Steam-Jet Ejector (20 psig · 0W)"
+            : "Natural Reheat Chimney (0 psig · 9.5m stack)"));
 
         const tankL = Number.isFinite(raw?.gravity_tank_liters) ? raw.gravity_tank_liters : (kilnVol > 32 ? 500 : 300);
         const tankGal = Number.isFinite(raw?.gravity_tank_gal) ? raw.gravity_tank_gal : tankL * 0.264172;
@@ -4686,8 +4921,8 @@
         const headPsi = Number.isFinite(raw?.gravity_head_psi) ? raw.gravity_head_psi : elevFt * 0.4335;
         const sprayGpm = Number.isFinite(raw?.spray_flow_gpm) ? raw.spray_flow_gpm : Number(Math.max(1.2, 1.8 * scaleF).toFixed(2));
         const sprayLpm = Number.isFinite(raw?.spray_flow_lpm) ? raw.spray_flow_lpm : sprayGpm * 3.78541;
-        const jerrycansHr = Number.isFinite(raw?.jerrycans_20l_per_hr) ? raw.jerrycans_20l_per_hr : Math.ceil((sprayLpm * 60) / 20);
-        const treadleMinHr = Number.isFinite(raw?.treadle_minutes_per_hr) ? raw.treadle_minutes_per_hr : Number(((sprayLpm * 60) / 35.0).toFixed(1));
+        const jerrycansHr = Number.isFinite(raw?.jerrycans_20l_per_hr) ? raw.jerrycans_20l_per_hr : Math.ceil((sprayLpm * 60 + steamLHr) / 20);
+        const treadleMinHr = Number.isFinite(raw?.treadle_minutes_per_hr) ? raw.treadle_minutes_per_hr : Number(((sprayLpm * 60 + steamLHr) / 35.0).toFixed(1));
         const pumpType = raw?.manual_pump_type || (zeroElec
           ? "Treadle / Semi-Rotary Cast-Iron Hand Pump"
           : (region === "mumbai" ? "Local 0.5 HP 230V 50Hz Monoblock Pump (Kirloskar)" : "Local 0.5 HP 230V 50Hz Domestic Pump (Davis & Shirtliff)"));
@@ -4728,13 +4963,43 @@
         const alkLbs = Number.isFinite(raw?.alkali_lbs_per_firing) ? raw.alkali_lbs_per_firing : Number((alkKg * 2.20462).toFixed(1));
         const alkCost = Number.isFinite(raw?.alkali_cost_usd) ? raw.alkali_cost_usd : Number((alkKg * alkDef.costPerKg).toFixed(2));
 
-        const baseUsd = zeroElec
+        const steamAddonUsd = steamEnabled ? (isHP ? 540 : 320) : 0;
+        const baseUsd = (zeroElec
           ? (region === "mumbai" ? 540 : (region === "nairobi" ? 640 : 690))
-          : (region === "mumbai" ? 680 : (region === "nairobi" ? 790 : 840));
+          : (region === "mumbai" ? 680 : (region === "nairobi" ? 790 : 840))) + steamAddonUsd;
         const estUsd = Number.isFinite(raw?.estimated_local_cost_usd) ? raw.estimated_local_cost_usd : Math.round(baseUsd * Math.max(0.85, Math.min(1.4, scaleF)));
         const localCurrency = raw?.local_currency_estimate || (region === "nairobi"
           ? `~KES ${Math.round(estUsd * 130).toLocaleString("en-US")}`
           : (region === "mumbai" ? `~INR ${Math.round(estUsd * 84).toLocaleString("en-US")}` : `~$${estUsd.toLocaleString("en-US")} USD`));
+
+        const steamSourceType = raw?.steam_source_type || (steamEnabled
+          ? (region === "mumbai"
+            ? (isHP ? "Certified IBR-Exempt Vertical Baby Steam Boiler (<= 22.75 L water volume, 100 psig MAWP, PRV-fitted)" : "Certified Code-Rated Sch 80 Monotube Flash Coil or IBR-Exempt Baby Boiler (<= 30 psig MAWP)")
+            : (region === "nairobi"
+              ? (isHP ? "KEBS / ASME-Certified Compact Vertical Baby Steam Boiler (60 psig operating, 100 psig MAWP, PRV-fitted)" : "Code-Rated Sch 80 Monotube Waste-Heat Flash Coil or KEBS Baby Boiler (20 psig)")
+              : (isHP ? "ASME Section I/VIII Certified Compact Baby Steam Boiler (60 psig operating, 100 psig MAWP)" : "Code-Rated Low-Inventory Sch 80 Monotube Flash Coil or Certified LP Baby Boiler (20 psig)")))
+          : "");
+
+        const defaultSteamSafety = steamEnabled ? [
+          "STRICTLY REJECTED — ZERO DIY DRUM BOILERS: Never weld or pressurize 55-gal oil drums, propane cylinders, or uncertified tanks to make steam — catastrophic BLEVE explosion hazard.",
+          "Certified Pressure Hardware Only: Use ONLY a factory-certified ASME / IBR / KEBS baby boiler (<= 25 L water inventory) or code-rated Sch 80 monotube flash coil.",
+          `Certified Spring-Loaded PRV: Install an ASME/IBR-stamped brass Pressure Relief Valve set <= 1.0x MAWP (${isHP ? "75 psig" : "30 psig"}) piped vertically to an outdoor safe discharge.`,
+          "1.5x MAWP Cold Hydrostatic Test: Perform a cold water hydrostatic pressure test at 1.5x MAWP before first firing and annually thereafter.",
+          "Open Atmospheric Feed & Sight Glass: Feed makeup water from an open atmospheric gravity tank / hand pump via dual brass check valves, Bourdon pressure gauge, and water-level sight glass.",
+        ] : [];
+        const steamSafetyReqs = Array.isArray(raw?.steam_safety_requirements)
+          ? raw.steam_safety_requirements
+          : defaultSteamSafety;
+
+        const condensationNote = raw?.condensation_growth_note || (steamEnabled
+          ? (isHP
+            ? "Hygroscopic NaCl Condensation Growth (HP 60 psig Hydro-Sonic): Supersonic ~710–740 m/s (Mach 1.50–1.57) steam jet atomizes quench water to ~15 µm droplets while supersaturated steam condenses directly onto deliquescent submicron NaCl nuclei (DRH ~75%), growing 0.2 µm salt fume to >1.5 µm droplets captured in the wide stoneware condensing tower (~80% NaCl capture at 0W!)."
+            : "Hygroscopic NaCl Condensation Growth (LP 20 psig Steam-Jet): Supersonic ~520 m/s (Mach 1.18) steam plume creates supersaturated condensing shear in the venturi throat; deliquescent NaCl crystals (DRH ~75%) swell into >1.0 µm droplets caught by the stoneware bed (~62% NaCl capture at 0W).")
+          : "");
+
+        const defaultHcl = steamEnabled ? (isHP ? 98.5 : 97.8) : 96.4;
+        const defaultAsh = steamEnabled ? (isHP ? 96.5 : 94.0) : 90.5;
+        const defaultNacl = steamEnabled ? (isHP ? 80.0 : 62.0) : 30.5;
 
         return {
           enabled,
@@ -4748,9 +5013,13 @@
           required_draft_inwc: reqDraft,
           draft_margin_inwc: marginDraft,
           draft_feasible: draftFeasible,
-          draft_mechanism: raw?.draft_mechanism || (zeroElec
-            ? "Concentric Brick Flue Thermal-Reheat Chimney Buoyancy + Gravity-Spray Assist (0W)"
-            : "Brick Chimney Buoyancy + Local Low-ΔP 230V 50Hz Assist Fan"),
+          draft_mechanism: raw?.draft_mechanism || (steamEnabled
+            ? (isHP
+              ? "Certified 60 psig Supersonic Hydro-Sonic Steam-Jet Ejector + Compact Stack (0W)"
+              : "Certified 20 psig LP Steam-Jet Ejector + Condensation Scrubbing (0W)")
+            : (zeroElec
+              ? "Concentric Brick Flue Thermal-Reheat Chimney Buoyancy + Gravity-Spray Assist (0W)"
+              : "Brick Chimney Buoyancy + Local Low-ΔP 230V 50Hz Assist Fan")),
           bed_diameter_in: bedDiamIn,
           bed_superficial_vel_m_s: bedVelMs,
           bed_dp_inwc: bedDpInwc,
@@ -4772,31 +5041,70 @@
           alkali_cost_usd: alkCost,
           alkali_local_note: raw?.alkali_local_note || alkDef.note,
           scaling_warning: raw?.scaling_warning !== undefined ? raw.scaling_warning : alkDef.warn,
-          hcl_removal_pct: Number.isFinite(raw?.hcl_removal_pct) ? raw.hcl_removal_pct : 96.4,
-          coarse_ash_capture_pct: Number.isFinite(raw?.coarse_ash_capture_pct) ? raw.coarse_ash_capture_pct : 90.5,
-          submicron_nacl_capture_pct: Number.isFinite(raw?.submicron_nacl_capture_pct) ? raw.submicron_nacl_capture_pct : 30.5,
-          submicron_honest_note: raw?.submicron_honest_note || "Honest Physics Check: A passive zero-electricity scrubber has only ~0.18–0.28 inWC of chimney buoyancy draft and cannot reach the 18–22 inWC throat shear needed for 84% submicron NaCl aerosol capture. Instead, it achieves ~96% HCl acid gas neutralization and ~90% coarse wood-ash removal via deep irrigated stoneware rings, while relying on condensation growth and tall-chimney dispersion for submicron salt mist.",
+          hcl_removal_pct: Number.isFinite(raw?.hcl_removal_pct) ? raw.hcl_removal_pct : defaultHcl,
+          coarse_ash_capture_pct: Number.isFinite(raw?.coarse_ash_capture_pct) ? raw.coarse_ash_capture_pct : defaultAsh,
+          submicron_nacl_capture_pct: Number.isFinite(raw?.submicron_nacl_capture_pct) ? raw.submicron_nacl_capture_pct : defaultNacl,
+          submicron_honest_note: raw?.submicron_honest_note || (steamEnabled
+            ? (isHP
+              ? "Honest Physics Check: A certified 60 psig hydro-sonic steam-jet ejector delivers ~710–740 m/s (Mach 1.50–1.57) supersonic shear + hygroscopic condensation growth on deliquescent NaCl nuclei, lifting zero-electricity submicron NaCl capture from ~30% (passive chimney) up to ~80% — approaching a powered electric venturi with 0 W electrical draw, at the trade-off of certified boiler/PRV discipline and ~54 L/hr boiler feedwater."
+              : "Honest Physics Check: A certified 20 psig LP steam-jet ejector (~520 m/s, Mach 1.18) combines venturi shear with supersaturated steam condensation onto hygroscopic NaCl crystals, doubling zero-electricity submicron NaCl capture from ~30% to ~62% while cutting chimney height from 9.5 m down to 5.5 m.")
+            : "Honest Physics Check: A passive zero-electricity scrubber has only ~0.18–0.28 inWC of chimney buoyancy draft and cannot reach the 18–22 inWC throat shear needed for 84% submicron NaCl aerosol capture. Instead, it achieves ~96% HCl acid gas neutralization and ~90% coarse wood-ash removal via deep irrigated stoneware rings, while relying on condensation growth and tall-chimney dispersion for submicron salt mist."),
           thermal_immunity_note: raw?.thermal_immunity_note || "Zero-Plastic-Meltdown Ceramic Immunity: Firebrick, glazed SWG clay flue pipes, and kiln-fired stoneware Raschig rings survive >1,800°F dry-run if water is ever interrupted — completely eliminating the 210°F CPVC plastic meltdown failure mode.",
           estimated_local_cost_usd: estUsd,
           local_currency_estimate: localCurrency,
           power_watts: Number.isFinite(raw?.power_watts) ? raw.power_watts : (zeroElec ? 0 : 550),
+          // Phase 10B additive Steam-Jet Ejector & Condensation fields
+          draft_mode: draftMode,
+          draft_mode_label: draftModeLabel,
+          steam_enabled: steamEnabled,
+          steam_pressure_psig: steamPsig,
+          steam_pressure_bar: steamBar,
+          steam_nozzle_vel_m_s: nozzleVel,
+          steam_nozzle_mach: nozzleMach,
+          steam_nozzle_throat_mm: throatMm,
+          steam_flow_kg_hr: steamKgHr,
+          steam_water_l_hr: steamLHr,
+          steam_thermal_kw: steamKw,
+          kiln_waste_heat_kw: wasteHeatKw,
+          waste_heat_sufficient: wasteHeatOk,
+          ejector_draft_inwc: ejDraftInwc,
+          ejector_entrainment_ratio: entrainRatio,
+          condensation_growth_note: condensationNote,
+          steam_source_type: steamSourceType,
+          steam_safety_requirements: steamSafetyReqs,
           manual_steps: Array.isArray(raw?.manual_steps) && raw.manual_steps.length > 0 ? raw.manual_steps : [
-            "Pre-warm the brick thermal-reheat chimney during kiln preheat so buoyant updraft establishes cleanly before salting.",
+            steamEnabled
+              ? `Inspect certified baby boiler / flash coil water sight glass, Bourdon gauge, and ASME/IBR PRV before firing; bring steam header smoothly to ${Math.round(steamPsig)} psig during kiln preheat.`
+              : "Pre-warm the brick thermal-reheat chimney during kiln preheat so buoyant updraft establishes cleanly before salting.",
             `Fill the ${Math.round(tankL)} L overhead ${region === "mumbai" ? "Sintex" : "Kentank"} gravity tank to full head (${(elevFt * 0.3048).toFixed(1)} m / ${fmt(elevFt, 1)} ft = ${fmt(headPsi, 1)} PSI) and charge baffled brick sump with ${fmt(alkKg, 1)} kg ${alkDef.name}.`,
-            "Open brass gravity spray valves just before first salt throw; verify steady water trickle through the stoneware ring bed sight port.",
+            steamEnabled
+              ? `Open gravity spray valves, then slowly crack the insulated brass steam isolation valve (S1) to establish supersonic ${Math.round(nozzleVel)} m/s steam-jet suction (+${fmt(ejDraftInwc, 2)} inWC) before first salt throw.`
+              : "Open brass gravity spray valves just before first salt throw; verify steady water trickle through the stoneware ring bed sight port.",
             zeroElec
-              ? `Every 20 minutes during salting, operate the treadle/semi-rotary hand pump (~${fmt(treadleMinHr, 1)} min/hr, equiv. to ${jerrycansHr}× 20 L jerrycans/hr) to return settled sump liquor to the overhead tank.`
+              ? `Every 20 minutes during salting, operate the treadle/semi-rotary hand pump (~${fmt(treadleMinHr, 1)} min/hr, equiv. to ${jerrycansHr}× 20 L jerrycans/hr) to return settled sump liquor to the overhead tank${steamEnabled ? ` and top up open atmospheric boiler feed (${fmt(steamLHr, 1)} L/hr)` : ""}.`
               : "Run local 0.5 HP 230V 50Hz monoblock pump from baffled brick sump clean bay up to overhead header; verify Y-strainer flow.",
             "Check sump pH with litmus strips every 30 min (keep pH 7.5–9.0); top up local alkali before pH drops below 7.0.",
           ],
           local_materials: Array.isArray(raw?.local_materials) ? raw.local_materials : [],
           warnings: Array.isArray(raw?.warnings) && raw.warnings.length > 0 ? raw.warnings : [
-            "NEVER build DIY pressurized steam boilers or steam-jet ejectors to pull chimney draft — catastrophic explosion hazard.",
+            "NEVER build DIY uncertified drum boilers or improvised pressure vessels to generate steam — catastrophic explosion hazard. Use ONLY certified ASME/IBR/KEBS baby boilers or code-rated monotube flash coils with a certified PRV.",
             `Brace the overhead ${Math.round(tankL)} L water tank tower with diagonal X-bracing rated for >= ${Math.round(tankL * 1.4)} kg wet load + wind.`,
             "Site the masonry scrubber strictly outdoors with >= 36 in (0.9 m) clearance from combustible roofs and timber.",
           ],
-          summary: raw?.summary || `${regionLabel}: ${fmt(chimM, 1)} m thermal-reheat brick chimney + Ø${bedDiamIn}" stoneware-ring masonry tower + ${Math.round(tankL)} L gravity drum (${fmtUSD(estUsd)} / ${localCurrency}).`,
+          summary: raw?.summary || (steamEnabled
+            ? `${regionLabel}: ${draftModeLabel} (${Math.round(nozzleVel)} m/s · Mach ${fmt(nozzleMach, 2)} · +${fmt(ejDraftInwc, 2)} inWC) + compact ${fmt(chimM, 1)} m stack + Ø${bedDiamIn}" stoneware condensing tower (${fmtUSD(estUsd)} / ${localCurrency}).`
+            : `${regionLabel}: ${fmt(chimM, 1)} m thermal-reheat brick chimney + Ø${bedDiamIn}" stoneware-ring masonry tower + ${Math.round(tankL)} L gravity drum (${fmtUSD(estUsd)} / ${localCurrency}).`),
         };
+      }
+
+      function getEffectiveFrugalData(ev) {
+        const proj = readProjectFromControls();
+        const uiFrugal = isFrugalMode(proj);
+        const rawCand = (ev && ev.frugal) || null;
+        const rawMatches = !!(rawCand && typeof rawCand.enabled === "boolean" && rawCand.enabled === uiFrugal && !!rawCand.zero_electricity === !!proj.zero_electricity && normalizeLocalRegion(rawCand.region) === normalizeLocalRegion(proj.local_region) && normalizeLocalAlkali(rawCand.alkali_id) === normalizeLocalAlkali(proj.local_alkali) && normalizeLocalDraftMode(rawCand.draft_mode) === normalizeLocalDraftMode(proj.local_draft_mode));
+        const raw = rawMatches ? rawCand : null;
+        const d = (ev && ev.design) || state.design || {};
+        return evaluateFrugalFallback(proj, d, raw);
       }
 
       function renderFrugalPanels(ev) {
@@ -4808,17 +5116,23 @@
         if (guidePanel) guidePanel.classList.toggle("hidden", !active);
         if (!active) return;
 
+        const steamOn = !!f.steam_enabled;
         const elevM = f.tank_elevation_ft * 0.3048;
         const draftPillText = f.draft_feasible
-          ? `Draft Feasible (+${fmt(f.draft_margin_inwc, 2)} inWC)`
+          ? (steamOn ? `Ejector Draft +${fmt(f.ejector_draft_inwc, 2)} inWC` : `Draft Feasible (+${fmt(f.draft_margin_inwc, 2)} inWC)`)
           : `Draft Deficit (${fmt(f.draft_margin_inwc, 2)} inWC)`;
         const draftPillCls = f.draft_feasible ? "pill ok" : "pill danger";
-        const powerPillText = f.zero_electricity ? "0V / 0W Off-Grid" : `230V 50Hz Hybrid (${Math.round(f.power_watts)}W)`;
+        const powerPillText = f.zero_electricity
+          ? (steamOn ? `0V / 0W Off-Grid (${Math.round(f.steam_pressure_psig)} psig Steam)` : "0V / 0W Off-Grid")
+          : `230V 50Hz Hybrid (${Math.round(f.power_watts)}W)`;
         const costPillText = `${fmtUSD(f.estimated_local_cost_usd)} (${f.local_currency_estimate})`;
 
         // Tab 1 Summary Banner (#frugal-spec-banner)
         if (el("frugal-spec-title")) {
-          el("frugal-spec-title").textContent = `Local Ceramic / Brick Scrubber — ${f.region_label}${f.zero_electricity ? " · ZERO ELECTRICITY" : " · LOCAL HYBRID"}`;
+          const modeSuffix = steamOn
+            ? ` · ${f.draft_mode === "steam_ejector_hp" ? "HP STEAM-DRIVE HYDRO-SONIC (60 psig)" : "LP STEAM-JET EJECTOR (20 psig)"}`
+            : (f.zero_electricity ? " · ZERO ELECTRICITY" : " · LOCAL HYBRID");
+          el("frugal-spec-title").textContent = `Local Ceramic / Brick Scrubber — ${f.region_label}${modeSuffix}`;
         }
         if (el("frugal-draft-pill")) {
           el("frugal-draft-pill").className = draftPillCls;
@@ -4842,7 +5156,12 @@
 
         const bannerGrid = el("frugal-spec-grid");
         if (bannerGrid) {
-          const chips = [
+          const chips = steamOn ? [
+            ["Supersonic Steam Nozzle", `${Math.round(f.steam_nozzle_vel_m_s)} m/s (Mach ${fmt(f.steam_nozzle_mach, 2)}) · ${fmt(f.steam_pressure_psig, 0)} psig (${fmt(f.steam_pressure_bar, 2)} bar) · Ø${fmt(f.steam_nozzle_throat_mm, 1)} mm throat`],
+            ["Steam Flow & Entrainment", `${fmt(f.steam_flow_kg_hr, 1)} kg/hr (${fmt(f.steam_water_l_hr, 1)} L/hr) · Ratio ${fmt(f.ejector_entrainment_ratio, 1)}:1 · Draft +${fmt(f.ejector_draft_inwc, 2)} inWC`],
+            ["Compact Stack & Waste Heat", `${fmt(f.chimney_height_m, 1)} m (${fmt(f.chimney_height_ft, 0)} ft) stack vs 9.5 m · ${fmt(f.steam_thermal_kw, 1)} kW / ${fmt(f.kiln_waste_heat_kw, 1)} kW kiln heat (${f.waste_heat_sufficient ? "Sufficient" : "Aux Fuel"})`],
+            ["Gravity Tank & Certified PRV", `${Math.round(f.gravity_tank_liters)} L ${tankName} @ ${fmt(elevM, 1)} m · ${f.alkali_name} (${fmt(f.alkali_kg_per_firing, 1)} kg) · Certified Boiler + PRV Only`],
+          ] : [
             ["Natural Chimney Buoyancy", `${fmt(f.available_draft_inwc, 2)} vs ${fmt(f.required_draft_inwc, 2)} inWC · ${fmt(f.chimney_height_m, 1)} m (${fmt(f.chimney_height_ft, 0)} ft) @ ${fmt(f.stack_reheat_temp_f, 0)}°F`],
             [`${Math.round(f.gravity_tank_liters)} L ${tankName} Gravity Tank`, `@ ${fmt(elevM, 1)} m (${fmt(f.tank_elevation_ft, 1)} ft · ${fmt(f.gravity_head_psi, 1)} PSI) · ${fmt(f.spray_flow_lpm, 1)} L/min · ${laborLine}`],
             ["Local Alkali Chemistry", `${f.alkali_name} (${f.alkali_formula}): ${fmt(f.alkali_kg_per_firing, 1)} kg (${fmt(f.alkali_lbs_per_firing, 1)} lbs)/firing · ${f.alkali_cost_usd <= 0.01 ? "FREE ($0)" : fmtUSD(f.alkali_cost_usd)}`],
@@ -4856,6 +5175,16 @@
           `).join("");
         }
 
+        // Dynamic color tier for honest submicron NaCl capture: amber (~30%) -> teal (~62%) -> green (~80%)
+        const naclPct = Number(f.submicron_nacl_capture_pct || 0);
+        const naclColor = naclPct >= 72 ? "#22c55e" : (naclPct >= 48 ? "#14b8a6" : "#f97316");
+        const naclTextColor = naclPct >= 72 ? "#86efac" : (naclPct >= 48 ? "#5eead4" : "#fb923c");
+        const naclSub = steamOn
+          ? (naclPct >= 72
+            ? "HP 60 psig hydro-sonic Mach 1.6+ shear + hygroscopic NaCl condensation growth (0W)"
+            : "LP 20 psig steam-jet shear + supersaturated NaCl condensation droplet growth (0W)")
+          : "Passive buoyancy trades away 19 inWC venturi fine-fume shear";
+
         const metersHtml = `
           <div class="frugal-meter-card">
             <div class="frugal-meter-head"><span><span class="unit-literal">HCl</span> Acid Gas Removal</span><span style="color:#86efac;font-family:var(--mono)">~${fmt(f.hcl_removal_pct, 1)}%</span></div>
@@ -4868,14 +5197,18 @@
             <span class="p7-mini-sub">Brick settling chamber + gravity spray + terracotta chevrons</span>
           </div>
           <div class="frugal-meter-card">
-            <div class="frugal-meter-head"><span>Submicron <span class="unit-literal">NaCl</span> Fume (Honest)</span><span style="color:#fb923c;font-family:var(--mono)">~${fmt(f.submicron_nacl_capture_pct, 1)}%</span></div>
-            <div class="frugal-meter-track"><div class="frugal-meter-fill" style="width:${Math.min(100, f.submicron_nacl_capture_pct).toFixed(1)}%;background:#f97316"></div></div>
-            <span class="p7-mini-sub">Passive buoyancy trades away 19 inWC venturi fine-fume shear</span>
+            <div class="frugal-meter-head"><span>Submicron <span class="unit-literal">NaCl</span> Fume (Honest)</span><span style="color:${naclTextColor};font-family:var(--mono)">~${fmt(naclPct, 1)}%</span></div>
+            <div class="frugal-meter-track"><div class="frugal-meter-fill" style="width:${Math.min(100, naclPct).toFixed(1)}%;background:${naclColor}"></div></div>
+            <span class="p7-mini-sub">${escapeHtml(naclSub)}</span>
           </div>
         `;
         if (el("frugal-honest-strip")) el("frugal-honest-strip").innerHTML = metersHtml;
         if (el("frugal-honest-note")) {
-          el("frugal-honest-note").innerHTML = `<strong>Honest Capture Reality Check:</strong> ${escapeHtml(f.submicron_honest_note)}`;
+          if (steamOn && f.condensation_growth_note) {
+            el("frugal-honest-note").innerHTML = `<strong>Hygroscopic <span class="unit-literal">NaCl</span> Condensation Growth:</strong> ${escapeHtml(f.condensation_growth_note)} <span style="display:block;margin-top:4px;color:#fde68a"><strong>Certified Hardware Mandate:</strong> ${escapeHtml(f.steam_source_type || "Certified ASME/IBR/KEBS baby boiler + PRV only — zero DIY drum boilers.")}</span>`;
+          } else {
+            el("frugal-honest-note").innerHTML = `<strong>Honest Capture Reality Check:</strong> ${escapeHtml(f.submicron_honest_note)}`;
+          }
         }
 
         // Tab 2 Full Local Ceramic & Zero-Electricity Engineering Card (#guide-frugal-panel)
@@ -4893,6 +5226,51 @@
         const guideBody = el("guide-frugal-body");
         if (!guideBody) return;
 
+        const steamCardHtml = steamOn ? `
+          <div class="steam-ejector-card" id="guide-steam-ejector-card">
+            <div class="steam-ejector-head">
+              <span class="steam-ejector-title">Supersonic Steam-Jet Ejector &amp; Condensation Scrubbing — ${escapeHtml(f.draft_mode_label)}</span>
+              <div class="preset-actions">
+                <span class="pill ok">${fmt(f.steam_pressure_psig, 0)} psig / ${fmt(f.steam_pressure_bar, 2)} bar</span>
+                <span class="pill ${f.waste_heat_sufficient ? "ok" : "warn"}">${f.waste_heat_sufficient ? "Kiln Waste-Heat Sufficient" : "Auxiliary Burner Needed"}</span>
+                <span class="pill ok">0W Zero-Electricity</span>
+              </div>
+            </div>
+            <div class="steam-kpi-grid">
+              <div class="steam-kpi-tile">
+                <span class="steam-kpi-k">Nozzle Exit Velocity &amp; Throat</span>
+                <span class="steam-kpi-v">${Math.round(f.steam_nozzle_vel_m_s)} m/s · Mach ${fmt(f.steam_nozzle_mach, 2)}</span>
+                <span class="steam-kpi-s">${fmt(f.steam_pressure_psig, 0)} psig (${fmt(f.steam_pressure_bar, 2)} bar) · Ø${fmt(f.steam_nozzle_throat_mm, 1)} mm choked throat</span>
+              </div>
+              <div class="steam-kpi-tile">
+                <span class="steam-kpi-k">Steam Flow &amp; Entrainment</span>
+                <span class="steam-kpi-v">${fmt(f.steam_flow_kg_hr, 1)} kg/hr (${fmt(f.steam_water_l_hr, 1)} L/hr)</span>
+                <span class="steam-kpi-s">Entrainment ratio (m_gas/m_steam): ${fmt(f.ejector_entrainment_ratio, 1)}:1</span>
+              </div>
+              <div class="steam-kpi-tile">
+                <span class="steam-kpi-k">Ejector Draft &amp; Compact Stack</span>
+                <span class="steam-kpi-v">+${fmt(f.ejector_draft_inwc, 2)} inWC · ${fmt(f.chimney_height_m, 1)} m stack</span>
+                <span class="steam-kpi-s">${fmt(f.chimney_height_ft, 1)} ft stack (vs 9.5 m / 31 ft passive chimney)</span>
+              </div>
+              <div class="steam-kpi-tile">
+                <span class="steam-kpi-k">Kiln Waste-Heat Recovery</span>
+                <span class="steam-kpi-v">${fmt(f.steam_thermal_kw, 1)} kW / ${fmt(f.kiln_waste_heat_kw, 1)} kW avail.</span>
+                <span class="steam-kpi-s">${f.waste_heat_sufficient ? "Kiln flue waste heat covers 100% of steam duty" : "Supplement boiler heat during low-fire soak"}</span>
+              </div>
+            </div>
+            <div class="steam-condensation-box">
+              <strong>Hygroscopic <span class="unit-literal">NaCl</span> Condensation Growth:</strong> ${escapeHtml(f.condensation_growth_note)}
+            </div>
+            <div class="steam-safety-box">
+              <h4>Certified Steam Hardware &amp; PRV Safety Mandate (Zero DIY Drum Boilers)</h4>
+              <div><strong>Approved Steam Source:</strong> ${escapeHtml(f.steam_source_type)}</div>
+              ${Array.isArray(f.steam_safety_requirements) && f.steam_safety_requirements.length > 0
+                ? `<ul>${f.steam_safety_requirements.map((req) => `<li>${escapeHtml(req)}</li>`).join("")}</ul>`
+                : ""}
+            </div>
+          </div>
+        ` : "";
+
         const scalingHtml = f.scaling_warning
           ? `<div class="p7-warn-inline">${escapeHtml(f.scaling_warning)}</div>`
           : "";
@@ -4907,17 +5285,18 @@
           : "";
 
         guideBody.innerHTML = `
+          ${steamCardHtml}
           <div class="frugal-detail-grid">
             <div class="frugal-subcard">
               <h4>
-                <span>Natural Chimney Buoyancy Draft</span>
+                <span>${steamOn ? "Steam-Jet Ejector &amp; Compact Stack" : "Natural Chimney Buoyancy Draft"}</span>
                 <span class="${f.draft_feasible ? "budget-badge-ok" : "budget-badge-fail"}">${f.draft_feasible ? "DRAFT FEASIBLE" : "DRAFT DEFICIT"}</span>
               </h4>
               <div class="kv-list">${kvHtml([
                 ["Available vs Required", `${fmt(f.available_draft_inwc, 3)} vs ${fmt(f.required_draft_inwc, 3)} inWC`],
                 ["Draft Margin", `${f.draft_margin_inwc >= 0 ? "+" : ""}${fmt(f.draft_margin_inwc, 3)} inWC`],
                 ["Chimney Height", `${fmt(f.chimney_height_m, 1)} m (${fmt(f.chimney_height_ft, 1)} ft)`],
-                ["Thermal Reheat Temp", `${fmt(f.stack_reheat_temp_f, 0)} °F (brick flue wall)`],
+                [steamOn ? "Ejector Static Draft" : "Thermal Reheat Temp", steamOn ? `+${fmt(f.ejector_draft_inwc, 2)} inWC @ ${fmt(f.steam_pressure_psig, 0)} psig` : `${fmt(f.stack_reheat_temp_f, 0)} °F (brick flue wall)`],
                 ["Wide Masonry Bed", `Ø${fmt(f.bed_diameter_in, 0)}" · v_s ${fmt(f.bed_superficial_vel_m_s, 2)} m/s · ΔP ${fmt(f.bed_dp_inwc, 3)} inWC`],
                 ["Draft Mechanism", f.draft_mechanism],
               ])}</div>
@@ -4933,7 +5312,7 @@
                 ["Stand Elevation / Head", `${fmt(elevM, 1)} m (${fmt(f.tank_elevation_ft, 1)} ft) · ${fmt(f.gravity_head_psi, 1)} PSI`],
                 ["Gravity Spray Flow", `${fmt(f.spray_flow_lpm, 1)} L/min (${fmt(f.spray_flow_gpm, 2)} GPM)`],
                 ["Pumping System", f.manual_pump_type],
-                ["20L Buckets / Hr", `${Math.round(f.jerrycans_20l_per_hr)} jerrycans / hr (closed-loop refill)`],
+                ["20L Buckets / Hr", `${Math.round(f.jerrycans_20l_per_hr)} jerrycans / hr${steamOn ? ` (incl. ${fmt(f.steam_water_l_hr, 1)} L/hr boiler)` : " (closed-loop refill)"}`],
                 ["Treadle / Hand Pump", f.zero_electricity ? `${fmt(f.treadle_minutes_per_hr, 1)} min / hr active pumping` : "Electric 230V 50Hz (manual backup ready)"],
               ])}</div>
             </div>
@@ -6280,9 +6659,19 @@
         const frugal = getEffectiveFrugalData(studioState.evaluation);
         if (frugal.enabled) {
           const tankName = frugal.region === "mumbai" ? "Sintex" : (frugal.region === "nairobi" ? "Kentank" : "HDPE");
-          let title = frugal.zero_electricity ? "Off-Grid Local Ceramic Scrubber (0W)" : "Local Ceramic Masonry Scrubber";
-          let mat = "Firebrick / SWG Clay";
-          let rows = [
+          const stOn = !!frugal.steam_enabled;
+          const stDba = (frugal.draft_mode === "steam_ejector_hp" || frugal.steam_pressure_psig >= 40) ? 68 : 62;
+          let title = stOn
+            ? `Off-Grid Steam-Jet Ceramic Scrubber (${Math.round(frugal.steam_pressure_psig)} psig · 0W)`
+            : (frugal.zero_electricity ? "Off-Grid Local Ceramic Scrubber (0W)" : "Local Ceramic Masonry Scrubber");
+          let mat = stOn ? "Firebrick / Certified Baby Boiler" : "Firebrick / SWG Clay";
+          let rows = stOn ? [
+            ["Steam-Jet Nozzle", `${Math.round(frugal.steam_nozzle_vel_m_s)} m/s (Mach ${fmt(frugal.steam_nozzle_mach, 2)}) · Ø${fmt(frugal.steam_nozzle_throat_mm, 1)} mm`],
+            ["Ejector Draft", `+${fmt(frugal.ejector_draft_inwc, 2)} inWC · Entrainment ${fmt(frugal.ejector_entrainment_ratio, 1)}:1`],
+            ["Compact Stack", `${fmt(frugal.chimney_height_m, 1)} m (${fmt(frugal.chimney_height_ft, 0)} ft) · ${fmt(frugal.steam_flow_kg_hr, 1)} kg/hr steam`],
+            ["NaCl / HCl Capture", `~${fmt(frugal.submicron_nacl_capture_pct, 1)}% NaCl · ~${fmt(frugal.hcl_removal_pct, 1)}% HCl`],
+            ["Est. Local Cost", `${fmtUSD(frugal.estimated_local_cost_usd)} (${frugal.local_currency_estimate})`],
+          ] : [
             ["Chimney Height", `${fmt(frugal.chimney_height_m, 1)} m (${fmt(frugal.chimney_height_ft, 0)} ft) @ ${fmt(frugal.stack_reheat_temp_f, 0)}°F`],
             ["Buoyancy Draft", `${fmt(frugal.available_draft_inwc, 2)} vs ${fmt(frugal.required_draft_inwc, 2)} inWC (${frugal.draft_feasible ? "OK" : "Low"})`],
             ["Overhead Tank", `${Math.round(frugal.gravity_tank_liters)} L ${tankName} @ ${fmt(frugal.gravity_head_psi, 1)} PSI`],
@@ -6300,17 +6689,29 @@
               ["Refill Labor", frugal.zero_electricity ? `${Math.round(frugal.jerrycans_20l_per_hr)}×20L/hr · ${fmt(frugal.treadle_minutes_per_hr, 1)} min/hr` : "0.5 HP 230V pump"],
             ];
           } else if (stage === "venturi") {
-            title = "Stage 2: Gravity Spray & Thermal Jacket";
-            mat = "Refractory Brick";
-            rows = [
-              ["Flue Reheat Jacket", `Recovers kiln heat → ${fmt(frugal.stack_reheat_temp_f, 0)}°F stack`],
-              ["Honest NaCl Fume", `~${fmt(frugal.submicron_nacl_capture_pct, 1)}% (passive draft trade-off)`],
-              ["Quench + Baffle ΔP", "~0.05 inWC ultra-low resistance"],
-              ["Spray Orifice", "Large >=6 mm brass rose (non-clogging)"],
-              ["Safety", "No pressurized steam boilers"],
-            ];
+            if (stOn) {
+              title = `Stage 2: Supersonic Steam-Jet Ejector (${Math.round(frugal.steam_pressure_psig)} psig)`;
+              mat = "Brass Laval Nozzle / Ceramic Venturi";
+              rows = [
+                ["Nozzle Velocity", `${Math.round(frugal.steam_nozzle_vel_m_s)} m/s (Mach ${fmt(frugal.steam_nozzle_mach, 2)}) · Ø${fmt(frugal.steam_nozzle_throat_mm, 1)} mm`],
+                ["Motive Steam", `${fmt(frugal.steam_flow_kg_hr, 1)} kg/hr (${fmt(frugal.steam_water_l_hr, 1)} L/hr) @ ${fmt(frugal.steam_pressure_bar, 2)} bar`],
+                ["Waste Heat Budget", `${fmt(frugal.steam_thermal_kw, 1)} kW needed / ${fmt(frugal.kiln_waste_heat_kw, 1)} kW kiln heat`],
+                ["Condensation NaCl", `~${fmt(frugal.submicron_nacl_capture_pct, 1)}% (hygroscopic growth + shear)`],
+                ["Safety Mandate", "Certified ASME/IBR/KEBS boiler + PRV ONLY"],
+              ];
+            } else {
+              title = "Stage 2: Gravity Spray & Thermal Jacket";
+              mat = "Refractory Brick";
+              rows = [
+                ["Flue Reheat Jacket", `Recovers kiln heat → ${fmt(frugal.stack_reheat_temp_f, 0)}°F stack`],
+                ["Honest NaCl Fume", `~${fmt(frugal.submicron_nacl_capture_pct, 1)}% (passive draft trade-off)`],
+                ["Quench + Baffle ΔP", "~0.05 inWC ultra-low resistance"],
+                ["Spray Orifice", "Large >=6 mm brass rose (non-clogging)"],
+                ["Safety", "No improvised DIY drum boilers"],
+              ];
+            }
           } else if (stage === "packed") {
-            title = "Stage 3: Wide Masonry Stoneware Bed";
+            title = stOn ? "Stage 3: Stoneware Condensing & Acid Bed" : "Stage 3: Wide Masonry Stoneware Bed";
             mat = "Brick / Stoneware Rings";
             rows = [
               ["Wide Tower Ø", `Ø${fmt(frugal.bed_diameter_in, 0)}" (${Math.round(frugal.bed_diameter_in * 25.4)} mm)`],
@@ -6320,14 +6721,16 @@
               ["Packing Media", "Kiln-fired 1\" stoneware Raschig rings"],
             ];
           } else if (stage === "blower") {
-            title = frugal.zero_electricity ? "Stage 4: Thermal-Reheat Brick Chimney" : "Stage 4: Chimney + 230V Assist Fan";
-            mat = frugal.zero_electricity ? "0V / 0W Passive" : "230V 50Hz Hybrid";
+            title = stOn
+              ? "Stage 4: Compact Steam-Ejector Stack (0W)"
+              : (frugal.zero_electricity ? "Stage 4: Thermal-Reheat Brick Chimney" : "Stage 4: Chimney + 230V Assist Fan");
+            mat = frugal.zero_electricity ? (stOn ? "0V / 0W Steam-Driven" : "0V / 0W Passive") : "230V 50Hz Hybrid";
             rows = [
               ["Chimney Height", `${fmt(frugal.chimney_height_m, 1)} m (${fmt(frugal.chimney_height_ft, 1)} ft)`],
-              ["Available Draft", `${fmt(frugal.available_draft_inwc, 3)} inWC`],
+              ["Available Draft", `${fmt(frugal.available_draft_inwc, 3)} inWC${stOn ? ` (Ejector ${fmt(frugal.ejector_draft_inwc, 2)}")` : ""}`],
               ["Required Draft", `${fmt(frugal.required_draft_inwc, 3)} inWC`],
               ["Power Draw", frugal.zero_electricity ? "0 W (Zero Electricity)" : `${Math.round(frugal.power_watts)} W (230V 50Hz)`],
-              ["Noise Level", frugal.zero_electricity ? "~45 dBA Whisper Quiet" : "~58 dBA low-ΔP fan"],
+              ["Noise Level", stOn ? `~${stDba} dBA Steam-Jet Hiss (no blower)` : (frugal.zero_electricity ? "~45 dBA Whisper Quiet" : "~58 dBA low-ΔP fan")],
             ];
           }
           el("inspector-heading").textContent = title;
@@ -6564,6 +6967,9 @@
         const frugal = getEffectiveFrugalData(ev);
         const isFrugal = !!frugal.enabled || bp === "local_ceramic_masonry" || !!proj.zero_electricity;
         const isZeroElec = isFrugal && (!!frugal.zero_electricity || !!proj.zero_electricity);
+        const isSteamEjector = isFrugal && (!!frugal.steam_enabled || !!basePlan.steam_ejector_enabled);
+        const isHpSteam = isSteamEjector && (frugal.draft_mode === "steam_ejector_hp" || frugal.steam_pressure_psig >= 40);
+        const steamDba = isHpSteam ? 68 : 62;
         const isDeluxe = !isFrugal && (typeof basePlan.is_deluxe === "boolean" ? basePlan.is_deluxe : (bp === "custom_fab_deluxe"));
         const isEductor = (basePlan.stage_alignment || arch.align) === "eductor_dry_fan";
         const isParallelBed = (basePlan.packed_bed_layout || arch.bedLayout) === "parallel_manifold";
@@ -6584,12 +6990,12 @@
         const sprayGpm = Math.max(1.2, Number(q.total_spray_water_gpm || 2.4));
         const recircGpm = Number((sprayGpm * 1.65 + 2.5).toFixed(1));
         const propFt = Number.isFinite(uNoise.property_line_ft) ? uNoise.property_line_ft : (proj.property_line_ft || 35);
-        const bareDba = isZeroElec ? 45 : (Number.isFinite(uNoise.bare_dba_3ft) && uNoise.bare_dba_3ft > 0 ? uNoise.bare_dba_3ft : 86);
+        const bareDba = isZeroElec ? (isSteamEjector ? steamDba : 45) : (Number.isFinite(uNoise.bare_dba_3ft) && uNoise.bare_dba_3ft > 0 ? uNoise.bare_dba_3ft : 86);
         const defaultAtten = isZeroElec ? 0 : ((hasSilencer ? 13 : 0) + (isDeluxe ? 9 : 4));
-        const treatedDba = isZeroElec ? 45 : (Number.isFinite(uNoise.silenced_dba_3ft) && uNoise.silenced_dba_3ft > 0
+        const treatedDba = isZeroElec ? (isSteamEjector ? steamDba : 45) : (Number.isFinite(uNoise.silenced_dba_3ft) && uNoise.silenced_dba_3ft > 0
           ? uNoise.silenced_dba_3ft
           : Math.max(54, bareDba - defaultAtten));
-        const propDba = isZeroElec ? 30 : (Number.isFinite(uNoise.property_line_dba) && uNoise.property_line_dba > 0
+        const propDba = isZeroElec ? (isSteamEjector ? Math.max(38, Math.round(steamDba - 20 * Math.log10(Math.max(3, propFt) / 3))) : 30) : (Number.isFinite(uNoise.property_line_dba) && uNoise.property_line_dba > 0
           ? uNoise.property_line_dba
           : Math.max(32, Math.round(treatedDba - 20 * Math.log10(Math.max(3, propFt) / 3))));
 
@@ -6701,6 +7107,14 @@
             size_in: 1.0, material: "1\" HDPE / Reinforced Hose", flow_gpm: isZeroElec ? 9.2 : 10.5, pressure_psi: Number((frugal.gravity_head_psi + 4).toFixed(1)),
             valves_fittings: "Foot Valve + Coarse Mesh Strainer + Swing Check", notes: isZeroElec ? `~${fmt(frugal.treadle_minutes_per_hr, 1)} min/hr pumping (~${Math.round(frugal.jerrycans_20l_per_hr)}× 20L buckets/hr)` : "Runs intermittently on float switch or manual toggle",
           },
+          ...(isSteamEjector ? [{
+            id: "S1", label: `Insulated Motive Steam Header (${Math.round(frugal.steam_pressure_psig)} psig)`,
+            fluid: `Saturated Steam (${fmt(frugal.steam_flow_kg_hr, 1)} kg/hr @ ${Math.round(frugal.steam_pressure_psig)} psig)`,
+            from: "Certified Baby Boiler / Monotube Coil + PRV", to: "Brass Converging-Diverging Steam-Jet Ejector Nozzle",
+            size_in: 0.75, material: "3/4\" Sch 80 Black Steel / Copper + 1\" Rockwool Wrap", flow_gpm: Number((frugal.steam_water_l_hr / 227.1).toFixed(2)), pressure_psi: Number(frugal.steam_pressure_psig.toFixed(0)),
+            valves_fittings: "ASME/IBR PRV + Bourdon Gauge + Brass Globe Isolation Valve + Check",
+            notes: `Supersonic ${Math.round(frugal.steam_nozzle_vel_m_s)} m/s (Mach ${fmt(frugal.steam_nozzle_mach, 2)}) · Ø${fmt(frugal.steam_nozzle_throat_mm, 1)} mm throat · 1.5x MAWP hydro-tested`,
+          }] : []),
         ] : [
           {
             id: "P1", label: "Potable Makeup Water Supply", fluid: "Potable Cold Water", from: "Studio Hose Bib / Line", to: "IPC 608 RPZ / Air Gap → Sump Float Valve",
@@ -6801,7 +7215,13 @@
         ]);
 
         const acoustics = (Array.isArray(basePlan.acoustics) && basePlan.acoustics.length > 0) ? basePlan.acoustics : (isZeroElec ? [
-          {
+          isSteamEjector ? {
+            id: "S1", location: "Ceramic-Lined Steam-Jet Ejector Throat & Compact Stack",
+            treatment: `Zero Electric Blower — Enclosed Supersonic Steam-Jet (${Math.round(frugal.steam_pressure_psig)} psig)`,
+            material: "High-Mass Firebrick & Stoneware Venturi Sleeve (inherent hiss damping)",
+            thickness_in: 4.5, attenuation_dba: 8,
+            notes: `~${steamDba} dBA steam-jet hiss at 3 ft (~${propDba} dBA @ ${Math.round(propFt)} ft); zero rotating motor whine`,
+          } : {
             id: "S1", location: "Passive Masonry Scrubber & Brick Chimney",
             treatment: "Zero Electric Blower — Natural Buoyancy Draft & Gravity Water Trickle",
             material: "High-Mass Firebrick & Stoneware Walls (inherent sound damping)",
@@ -6841,11 +7261,11 @@
 
         const acRaw = basePlan.acoustic_summary || {};
         const acoustic_summary = {
-          bare_dba_3ft: isZeroElec ? 45 : (Number.isFinite(acRaw.bare_dba_3ft) && acRaw.bare_dba_3ft > 0 ? acRaw.bare_dba_3ft : bareDba),
-          treated_dba_3ft: isZeroElec ? 45 : (Number.isFinite(acRaw.treated_dba_3ft) && acRaw.treated_dba_3ft > 0 ? acRaw.treated_dba_3ft : treatedDba),
-          property_line_dba: isZeroElec ? 30 : (Number.isFinite(acRaw.property_line_dba) && acRaw.property_line_dba > 0 ? acRaw.property_line_dba : propDba),
+          bare_dba_3ft: isZeroElec ? (isSteamEjector ? steamDba : 45) : (Number.isFinite(acRaw.bare_dba_3ft) && acRaw.bare_dba_3ft > 0 ? acRaw.bare_dba_3ft : bareDba),
+          treated_dba_3ft: isZeroElec ? (isSteamEjector ? steamDba : 45) : (Number.isFinite(acRaw.treated_dba_3ft) && acRaw.treated_dba_3ft > 0 ? acRaw.treated_dba_3ft : treatedDba),
+          property_line_dba: isZeroElec ? propDba : (Number.isFinite(acRaw.property_line_dba) && acRaw.property_line_dba > 0 ? acRaw.property_line_dba : propDba),
           property_line_ft: Number.isFinite(acRaw.property_line_ft) && acRaw.property_line_ft > 0 ? acRaw.property_line_ft : propFt,
-          total_reduction_dba: isZeroElec ? 0 : (Number.isFinite(acRaw.total_reduction_dba) && acRaw.total_reduction_dba > 0
+          total_reduction_dba: isZeroElec ? (isSteamEjector ? 8 : 0) : (Number.isFinite(acRaw.total_reduction_dba) && acRaw.total_reduction_dba > 0
             ? acRaw.total_reduction_dba
             : Math.max(0, Math.round((Number.isFinite(acRaw.bare_dba_3ft) ? acRaw.bare_dba_3ft : bareDba) - (Number.isFinite(acRaw.treated_dba_3ft) ? acRaw.treated_dba_3ft : treatedDba)))),
         };
@@ -6870,6 +7290,8 @@
           is_deluxe: isDeluxe,
           is_frugal: isFrugal,
           zero_electricity: isZeroElec,
+          local_draft_mode: frugal.draft_mode,
+          steam_ejector_enabled: isSteamEjector,
           clearances,
           electrical,
           plumbing,
@@ -7145,6 +7567,8 @@
         const frugal = getEffectiveFrugalData(ev);
         const isFrugal = !!plan.is_frugal || !!frugal.enabled || normalizeBuildPath(plan.build_path || studioState.buildPath) === "local_ceramic_masonry";
         const isZeroElec = isFrugal && (!!plan.zero_electricity || !!frugal.zero_electricity);
+        const isSteamFrugal = isFrugal && (!!plan.steam_ejector_enabled || !!frugal.steam_enabled);
+        const isHpSteamFrugal = isSteamFrugal && (frugal.draft_mode === "steam_ejector_hp" || frugal.steam_pressure_psig >= 40);
         const isDeluxe = !isFrugal && (!!plan.is_deluxe || normalizeBuildPath(plan.build_path || studioState.buildPath) === "custom_fab_deluxe");
         const isAirAtomize = arch.blowerDriveOption === "compressor_air_atomize";
         const hasDiluter = !isZeroElec && !!(el("in-include-plume-diluter")?.checked);
@@ -7152,7 +7576,9 @@
         const layers = planState.layers || { electrical: true, plumbing: true, bracing: true, clearances: true, acoustics: true };
         const acSum = plan.acoustic_summary || { bare_dba_3ft: 86, treated_dba_3ft: 64, property_line_dba: 41, property_line_ft: 35, total_reduction_dba: 22 };
         const acBadgeText = isZeroElec
-          ? "~45 dBA WHISPER QUIET — NO BLOWER"
+          ? (isSteamFrugal
+            ? `~${isHpSteamFrugal ? 68 : 62} dBA STEAM-JET HISS — NO BLOWER`
+            : "~45 dBA WHISPER QUIET — NO BLOWER")
           : `${Math.round(acSum.bare_dba_3ft || 86)} → ${Math.round(acSum.treated_dba_3ft || 64)} dBA @ 3 ft · ${Math.round(acSum.property_line_dba || 41)} dBA @ ${Math.round(acSum.property_line_ft || 35)} ft`;
 
         // Map canonical part IDs to their actual callout numbers from plan.parts (supports [1]..[9])
@@ -7246,15 +7672,18 @@
           const tankKg = Math.round(tankL * 1.1);
 
           out += `<rect x="${ex}" y="${ey}" width="${ew}" height="${eh}" fill="rgba(10, 24, 42, 0.55)" stroke="#234873" stroke-width="1"/>`;
-          out += `<text x="${ex + 14}" y="${ey + 22}" fill="#fdba74" font-family="monospace" font-size="11.5" font-weight="800">FRONT ELEVATION — LOCAL CERAMIC / MASONRY SCRUBBER (${escapeHtml(isZeroElec ? "0V / 0W PASSIVE DRAFT" : "230V 50Hz HYBRID")})</text>`;
+          const elevTitle = isSteamFrugal
+            ? `FRONT ELEVATION — STEAM-JET CERAMIC SCRUBBER (${Math.round(frugal.steam_pressure_psig)} psig · ${isZeroElec ? "0V / 0W" : "230V HYBRID"})`
+            : `FRONT ELEVATION — LOCAL CERAMIC / MASONRY SCRUBBER (${isZeroElec ? "0V / 0W PASSIVE DRAFT" : "230V 50Hz HYBRID"})`;
+          out += `<text x="${ex + 14}" y="${ey + 22}" fill="${isSteamFrugal ? "#7dd3fc" : "#fdba74"}" font-family="monospace" font-size="11.2" font-weight="800">${escapeHtml(elevTitle)}</text>`;
 
           // Ground / concrete plinth datum
           out += `<line x1="${ex + 24}" y1="${floorY}" x2="${ex + ew - 24}" y2="${floorY}" stroke="#b4533c" stroke-width="2.2"/>`;
           out += `<text x="${ex + 30}" y="${floorY + 14}" fill="#d6a288" font-family="monospace" font-size="9.5">COMPACTED PLINTH / MASONRY FOUNDATION DATUM (EL 0.0)</text>`;
 
           // 1. Hot Brick Kiln Flue + Settling & Gravity-Spray Quench Chamber
-          const qX = baseX;
-          const qW = 86 * xScale;
+          const qX = baseX + (isSteamFrugal ? 30 * xScale : 0);
+          const qW = (isSteamFrugal ? 74 : 86) * xScale;
           const qH = 152;
           const qTopY = floorY - qH;
           const qInY = qTopY + 34;
@@ -7263,7 +7692,7 @@
             out += `<g class="plan-layer-clearances">`;
             out += `<rect x="${qX - 62}" y="${qInY - 34}" width="68" height="68" fill="url(#bp-nfpa-hatch)" stroke="#f97316" stroke-width="1.2" stroke-dasharray="5 3"/>`;
             out += `<text x="${qX - 60}" y="${qInY - 40}" fill="#fdba74" font-family="monospace" font-size="8.2" font-weight="700">NFPA 211: ${fmtPlanLen(cl.flue_to_combustibles_in || 36)}</text>`;
-            out += `<text x="${ex + 30}" y="${ey + eh - 14}" fill="#86efac" font-family="monospace" font-size="8.6">${isZeroElec ? "0V OFF-GRID: ZERO NEC 110.26 PANEL · OUTDOOR SITING · >=36\" HOT-FLUE CLEARANCE" : "230V 50Hz RCD PROTECTION · OUTDOOR SITING · >=36\" HOT-FLUE CLEARANCE"}</text>`;
+            out += `<text x="${ex + 30}" y="${ey + eh - 14}" fill="#86efac" font-family="monospace" font-size="8.4">${isSteamFrugal ? (isZeroElec ? "0V OFF-GRID STEAM-JET: CERTIFIED PRV BOILER ONLY · ZERO DIY DRUMS · >=36\" HOT-FLUE CLEARANCE" : "230V HYBRID STEAM-JET: CERTIFIED PRV BOILER ONLY · >=36\" HOT-FLUE CLEARANCE") : (isZeroElec ? "0V OFF-GRID: ZERO NEC 110.26 PANEL · OUTDOOR SITING · >=36\" HOT-FLUE CLEARANCE" : "230V 50Hz RCD PROTECTION · OUTDOOR SITING · >=36\" HOT-FLUE CLEARANCE")}</text>`;
             out += `</g>`;
           }
 
@@ -7273,6 +7702,29 @@
           out += `</g>`;
           out += svgCalloutBubble(numInlet, qX - 28, qInY, qX - 38, qTopY - 38, sel);
 
+          // Certified Baby Boiler / Monotube Steam Unit + PRV + Pressure Gauge (when Steam-Jet Ejector is active!)
+          const boX = ex + 34;
+          const boW = 48 * xScale;
+          const boH = 88;
+          const boTopY = floorY - boH;
+          if (isSteamFrugal) {
+            out += `<g stroke="#38bdf8" stroke-width="1.6" fill="rgba(30, 41, 59, 0.85)">`;
+            out += `<rect x="${boX}" y="${boTopY}" width="${boW}" height="${boH}" rx="7"/>`;
+            // Sight glass on side of boiler
+            out += `<rect x="${boX + 6}" y="${boTopY + 20}" width="6" height="36" rx="2" fill="rgba(56,189,248,0.45)" stroke="#7dd3fc" stroke-width="1"/>`;
+            // Brass Bourdon pressure gauge dial
+            out += `<circle cx="${boX + boW - 11}" cy="${boTopY + 18}" r="7" fill="#fef3c7" stroke="#eab308" stroke-width="1.5"/>`;
+            out += `<line x1="${boX + boW - 11}" y1="${boTopY + 18}" x2="${boX + boW - 7}" y2="${boTopY + 14}" stroke="#ef4444" stroke-width="1.4"/>`;
+            // Red-capped spring-loaded ASME/IBR PRV + vertical outdoor vent pipe
+            out += `<line x1="${boX + boW * 0.35}" y1="${boTopY}" x2="${boX + boW * 0.35}" y2="${boTopY - 26}" stroke="#ef4444" stroke-width="2.2"/>`;
+            out += `<rect x="${boX + boW * 0.35 - 5}" y="${boTopY - 13}" width="10" height="8" rx="1.5" fill="#ef4444" stroke="#fecaca" stroke-width="1"/>`;
+            out += `</g>`;
+            out += `<text x="${boX + boW * 0.5}" y="${boTopY - 31}" text-anchor="middle" fill="#fca5a5" font-family="monospace" font-size="7.6" font-weight="800">PRV + GAUGE</text>`;
+            out += `<text x="${boX + boW * 0.5}" y="${boTopY + 52}" text-anchor="middle" fill="#e0f2fe" font-family="monospace" font-size="7.2" font-weight="800">CERTIFIED</text>`;
+            out += `<text x="${boX + boW * 0.5}" y="${boTopY + 63}" text-anchor="middle" fill="#7dd3fc" font-family="monospace" font-size="7.2" font-weight="700">BOILER</text>`;
+            out += `<text x="${boX + boW * 0.5}" y="${boTopY + 75}" text-anchor="middle" fill="#fde68a" font-family="monospace" font-size="7.2">${Math.round(frugal.steam_pressure_psig)} psig</text>`;
+          }
+
           // Brick Quench / Settling Chamber ([2])
           out += `<g stroke="${sel === numQuench ? "#f97316" : "#c2633a"}" stroke-width="${sel === numQuench ? 2.6 : 1.7}" fill="url(#bp-brick-hatch)">`;
           out += `<rect x="${qX}" y="${qTopY}" width="${qW}" height="${qH}"/>`;
@@ -7280,16 +7732,41 @@
           out += `<line x1="${qX + qW * 0.5}" y1="${qTopY}" x2="${qX + qW * 0.5}" y2="${qTopY + 26}" stroke="#fbbf24" stroke-width="2.2"/>`;
           out += `<path d="M ${qX + qW * 0.5} ${qTopY + 26} L ${qX + 10} ${floorY - 18} L ${qX + qW - 10} ${floorY - 18} Z" fill="rgba(56,189,248,0.18)" stroke="#38bdf8" stroke-dasharray="3 2" stroke-width="1"/>`;
           out += `</g>`;
-          out += `<text x="${qX + qW * 0.5}" y="${floorY - 6}" text-anchor="middle" fill="#fed7aa" font-family="monospace" font-size="8.2" font-weight="700">BRICK QUENCH</text>`;
+          out += `<text x="${qX + qW * 0.5}" y="${floorY - 6}" text-anchor="middle" fill="#fed7aa" font-family="monospace" font-size="8.0" font-weight="700">BRICK QUENCH</text>`;
           out += svgCalloutBubble(numQuench, qX + qW * 0.5, qTopY + 52, qX + qW * 0.5, qTopY - 38, sel);
 
-          // 2. Wide Masonry / SWG Stoneware-Packed Tower ([4])
-          const pX = qX + qW + 28 * xScale;
-          const pW = 136 * xScale;
+          // 2. Wide Masonry / SWG Stoneware-Packed Tower ([4]) + Steam-Jet Ejector Throat when steam enabled
+          const ejGap = isSteamFrugal ? 64 * xScale : 28 * xScale;
+          const pX = qX + qW + ejGap;
+          const pW = (isSteamFrugal ? 118 : 136) * xScale;
           const pH = 216;
           const pTopY = floorY - pH;
-          // Brick connecting flue (low-ΔP wide channel)
-          out += `<rect x="${qX + qW}" y="${floorY - 56}" width="${pX - (qX + qW)}" height="28" fill="url(#bp-brick-hatch)" stroke="#c2633a" stroke-width="1.5"/>`;
+          if (isSteamFrugal) {
+            const ejMidY = floorY - 46;
+            const ejX1 = qX + qW;
+            const ejX2 = pX;
+            const ejMidX = (ejX1 + ejX2) * 0.5;
+            // Ceramic-lined converging-diverging venturi mixing throat + brass Laval steam nozzle
+            out += `<g stroke="${sel === numVenturi ? "#f97316" : "#38bdf8"}" stroke-width="${sel === numVenturi ? 2.5 : 1.7}" fill="rgba(14,165,233,0.18)">`;
+            out += `<polygon points="${ejX1},${ejMidY - 15} ${ejMidX - 8},${ejMidY - 7} ${ejMidX + 8},${ejMidY - 7} ${ejX2},${ejMidY - 16} ${ejX2},${ejMidY + 16} ${ejMidX + 8},${ejMidY + 7} ${ejMidX - 8},${ejMidY + 7} ${ejX1},${ejMidY + 15}"/>`;
+            // Brass CD steam nozzle pointing into throat
+            out += `<polygon points="${ejX1 + 6},${ejMidY - 4} ${ejMidX - 6},${ejMidY - 2} ${ejMidX - 6},${ejMidY + 2} ${ejX1 + 6},${ejMidY + 4}" fill="#eab308" stroke="#fef08a" stroke-width="1"/>`;
+            // Supersonic cyan/white steam plume entering stoneware condensing tower
+            out += `<polygon points="${ejMidX - 5},${ejMidY} ${ejX2 + 22},${ejMidY - 13} ${ejX2 + 22},${ejMidY + 13}" fill="rgba(103,232,249,0.34)" stroke="#a5f3fc" stroke-dasharray="3 2" stroke-width="1"/>`;
+            out += `</g>`;
+            // Insulated Steam Line (S1) from Certified Baby Boiler crown -> Ejector Nozzle
+            const s1RouteY = qTopY - 12;
+            out += `<g class="plan-layer-plumbing">`;
+            out += `<path d="M ${boX + boW * 0.70} ${boTopY} L ${boX + boW * 0.70} ${s1RouteY} L ${ejX1 + 10} ${s1RouteY} L ${ejX1 + 10} ${ejMidY}" fill="none" stroke="#f59e0b" stroke-width="2.4" stroke-dasharray="6 2" marker-end="url(#bp-arrow-elec)"/>`;
+            out += `<text x="${(boX + ejX1) * 0.5 + 16}" y="${s1RouteY - 5}" text-anchor="middle" fill="#fde68a" font-family="monospace" font-size="7.8" font-weight="800">S1 INSULATED STEAM (${Math.round(frugal.steam_pressure_psig)} psig)</text>`;
+            out += `</g>`;
+            out += `<text x="${ejMidX}" y="${ejMidY - 22}" text-anchor="middle" fill="#a5f3fc" font-family="monospace" font-size="7.6" font-weight="800">STEAM EJECTOR</text>`;
+            out += `<text x="${ejMidX}" y="${ejMidY + 28}" text-anchor="middle" fill="#67e8f9" font-family="monospace" font-size="7.4">${Math.round(frugal.steam_nozzle_vel_m_s)} m/s · ${Math.round(frugal.steam_pressure_psig)} psig</text>`;
+            out += svgCalloutBubble(numVenturi, ejMidX, ejMidY, ejMidX, ejMidY - 54, sel);
+          } else {
+            // Brick connecting flue (low-ΔP wide channel)
+            out += `<rect x="${qX + qW}" y="${floorY - 56}" width="${pX - (qX + qW)}" height="28" fill="url(#bp-brick-hatch)" stroke="#c2633a" stroke-width="1.5"/>`;
+          }
           out += `<g stroke="${sel === numPacked ? "#f97316" : "#d97706"}" stroke-width="${sel === numPacked ? 2.6 : 1.8}" fill="url(#bp-brick-hatch)">`;
           out += `<rect x="${pX}" y="${pTopY}" width="${pW}" height="${pH}"/>`;
           // Stoneware Raschig ring bed
@@ -7300,32 +7777,34 @@
             out += `<polyline points="${pX + 12},${cy + 6} ${pX + pW * 0.33},${cy} ${pX + pW * 0.5},${cy + 6} ${pX + pW * 0.67},${cy} ${pX + pW - 12},${cy + 6}" fill="none" stroke="#fdba74" stroke-width="1.4"/>`;
           }
           out += `</g>`;
-          out += `<text x="${pX + pW * 0.5}" y="${pTopY + pH * 0.52}" text-anchor="middle" fill="#fef3c7" font-family="monospace" font-size="8.8" font-weight="700">STONEWARE RINGS</text>`;
-          out += `<text x="${pX + pW * 0.5}" y="${pTopY + pH * 0.52 + 12}" text-anchor="middle" fill="#fdba74" font-family="monospace" font-size="8">Ø${Math.round(frugal.bed_diameter_in || 30)}" · ΔP ${fmt(frugal.bed_dp_inwc, 2)}"</text>`;
+          out += `<text x="${pX + pW * 0.5}" y="${pTopY + pH * 0.52}" text-anchor="middle" fill="#fef3c7" font-family="monospace" font-size="8.4" font-weight="700">${isSteamFrugal ? "CONDENSING BED" : "STONEWARE RINGS"}</text>`;
+          out += `<text x="${pX + pW * 0.5}" y="${pTopY + pH * 0.52 + 12}" text-anchor="middle" fill="#fdba74" font-family="monospace" font-size="7.8">Ø${Math.round(frugal.bed_diameter_in || 30)}" · ΔP ${fmt(frugal.bed_dp_inwc, 2)}"</text>`;
           out += svgDimLine(pX, pTopY, pX + pW, pTopY, `WIDE BED Ø${fmtPlanLen(frugal.bed_diameter_in || 30)}`, -16, false, "#fdba74");
           out += svgCalloutBubble(numPacked, pX + pW * 0.5, pTopY + 26, pX + pW * 0.5, pTopY - 46, sel);
 
-          // 3. Tall Brick / Terracotta Thermal-Reheat Chimney ([6] / [8])
-          const chX = pX + pW + 40 * xScale;
-          const chW = 42 * xScale;
-          const chTopY = ey + 56;
+          // 3. Brick / Terracotta Chimney ([6] / [8]) — Shorter 4.5-5.5 m stack when Steam-Jet Ejector is active!
+          const chX = pX + pW + (isSteamFrugal ? 30 : 40) * xScale;
+          const chW = 40 * xScale;
+          const chTopY = isSteamFrugal ? (ey + 168) : (ey + 56);
           const chH = floorY - chTopY;
-          // Overhead brick/SWG flue from tower top to chimney base thermal-reheat jacket
+          // Overhead brick/SWG flue from tower top to chimney base
           out += `<path d="M ${pX + pW} ${pTopY + 26} L ${chX - 10} ${pTopY + 26} L ${chX - 10} ${floorY - 68} L ${chX} ${floorY - 68}" fill="none" stroke="#c2633a" stroke-width="14" stroke-linejoin="round"/>`;
-          // Concentric brick thermal-reheat jacket at chimney base
-          out += `<rect x="${chX - 10}" y="${floorY - 124}" width="${chW + 20}" height="124" fill="rgba(234, 88, 12, 0.22)" stroke="#fb923c" stroke-width="1.8"/>`;
-          out += `<text x="${chX + chW * 0.5}" y="${floorY - 102}" text-anchor="middle" fill="#fed7aa" font-family="monospace" font-size="7.5" font-weight="700">REHEAT</text>`;
-          out += `<text x="${chX + chW * 0.5}" y="${floorY - 91}" text-anchor="middle" fill="#fdba74" font-family="monospace" font-size="7.5">${Math.round(frugal.stack_reheat_temp_f || 340)}°F</text>`;
-          // Tall brick/SWG chimney shaft
+          if (!isSteamFrugal) {
+            // Concentric brick thermal-reheat jacket at chimney base (passive natural draft only)
+            out += `<rect x="${chX - 10}" y="${floorY - 124}" width="${chW + 20}" height="124" fill="rgba(234, 88, 12, 0.22)" stroke="#fb923c" stroke-width="1.8"/>`;
+            out += `<text x="${chX + chW * 0.5}" y="${floorY - 102}" text-anchor="middle" fill="#fed7aa" font-family="monospace" font-size="7.5" font-weight="700">REHEAT</text>`;
+            out += `<text x="${chX + chW * 0.5}" y="${floorY - 91}" text-anchor="middle" fill="#fdba74" font-family="monospace" font-size="7.5">${Math.round(frugal.stack_reheat_temp_f || 340)}°F</text>`;
+          }
+          // Brick/SWG chimney shaft
           out += `<g stroke="${sel === numStack ? "#f97316" : "#c2633a"}" stroke-width="${sel === numStack ? 2.6 : 1.7}" fill="url(#bp-brick-hatch)">`;
           out += `<rect x="${chX}" y="${chTopY}" width="${chW}" height="${chH}"/>`;
           out += `</g>`;
-          out += `<text x="${chX + chW * 0.5}" y="${chTopY - 8}" text-anchor="middle" fill="#86efac" font-family="monospace" font-size="8.6" font-weight="700">${fmt(frugal.chimney_height_m, 1)}m (${fmt(frugal.chimney_height_ft, 0)}ft) CHIMNEY</text>`;
+          out += `<text x="${chX + chW * 0.5}" y="${chTopY - 8}" text-anchor="middle" fill="#86efac" font-family="monospace" font-size="8.2" font-weight="700">${fmt(frugal.chimney_height_m, 1)}m ${isSteamFrugal ? "STEAM STACK" : `(${fmt(frugal.chimney_height_ft, 0)}ft) CHIMNEY`}</text>`;
           out += svgDimLine(chX + chW, chTopY, chX + chW, floorY, `H: ${fmt(frugal.chimney_height_m, 1)}m`, 18, true, "#86efac");
-          out += svgCalloutBubble(numStack, chX + chW * 0.5, chTopY + 34, chX + chW + 46, chTopY + 24, sel);
+          out += svgCalloutBubble(numStack, chX + chW * 0.5, chTopY + 34, chX + chW + 42, chTopY + 24, sel);
 
           // 4. Elevated Blue HDPE Kentank / Sintex Overhead Gravity Drum on Braced Stand ([5])
-          const tkX = chX + chW + 84 * xScale;
+          const tkX = Math.min(ex + ew - 92, chX + chW + (isSteamFrugal ? 68 : 84) * xScale);
           const tkW = 76 * xScale;
           const tkH = 66;
           const standH = 166;
@@ -7403,8 +7882,8 @@
             out += `<text x="${ex + 22}" y="${ey + 66.5}" fill="#f3e8ff" font-family="monospace" font-size="8.2" font-weight="700">ACOUSTIC: ${escapeHtml(acBadgeText)}</text>`;
             out += `</g>`;
           }
-          out += `<rect x="${ex + 292}" y="${ey + 30}" width="244" height="20" rx="4" fill="rgba(180, 83, 9, 0.34)" stroke="${frugal.draft_feasible ? "#34d399" : "#ef4444"}" stroke-width="1.3"/>`;
-          out += `<text x="${ex + 300}" y="${ey + 43.5}" fill="#fef3c7" font-family="monospace" font-size="8.2" font-weight="700">DRAFT: ${fmt(frugal.available_draft_inwc, 2)} vs ${fmt(frugal.required_draft_inwc, 2)} inWC (${frugal.draft_feasible ? "OK" : "LOW"})</text>`;
+          out += `<rect x="${ex + 292}" y="${ey + 30}" width="262" height="20" rx="4" fill="${isSteamFrugal ? "rgba(8, 47, 73, 0.72)" : "rgba(180, 83, 9, 0.34)"}" stroke="${frugal.draft_feasible ? "#34d399" : "#ef4444"}" stroke-width="1.3"/>`;
+          out += `<text x="${ex + 300}" y="${ey + 43.5}" fill="#fef3c7" font-family="monospace" font-size="8.0" font-weight="700">${isSteamFrugal ? `EJECTOR: +${fmt(frugal.ejector_draft_inwc, 2)} inWC · ${Math.round(frugal.steam_nozzle_vel_m_s)} m/s (${Math.round(frugal.steam_pressure_psig)} psig)` : `DRAFT: ${fmt(frugal.available_draft_inwc, 2)} vs ${fmt(frugal.required_draft_inwc, 2)} inWC (${frugal.draft_feasible ? "OK" : "LOW"})`}</text>`;
 
           out += svgDimLine(qX, floorY, Math.min(ex + ew - 30, tkX + tkW), floorY, `OVERALL L: ${fmtPlanLen(lenIn, true)}`, 78, false, "#38bdf8");
         } else if (showElev) {
@@ -7771,7 +8250,7 @@
           const tankL = Math.round(frugal.gravity_tank_liters || 300);
 
           out += `<rect x="${tx}" y="${ty}" width="${tw}" height="${th}" fill="rgba(10, 24, 42, 0.55)" stroke="#234873" stroke-width="1"/>`;
-          out += `<text x="${tx + 14}" y="${ty + 22}" fill="#fdba74" font-family="monospace" font-size="11.5" font-weight="800">TOP / FOOTPRINT PLAN — MASONRY PAD &amp; GRAVITY TOWER</text>`;
+          out += `<text x="${tx + 14}" y="${ty + 22}" fill="${isSteamFrugal ? "#7dd3fc" : "#fdba74"}" font-family="monospace" font-size="11.2" font-weight="800">${isSteamFrugal ? "TOP / FOOTPRINT PLAN — BABY BOILER, EJECTOR &amp; MASONRY PAD" : "TOP / FOOTPRINT PLAN — MASONRY PAD &amp; GRAVITY TOWER"}</text>`;
 
           const padW = Math.min(tw - 130, 310);
           const padH = 148;
@@ -7797,19 +8276,36 @@
           out += `<rect x="${s1X - 24}" y="${midY - 24}" width="48" height="48" fill="url(#bp-brick-hatch)" stroke="#c2633a" stroke-width="1.8"/>`;
           out += `<text x="${s1X}" y="${midY + 4}" text-anchor="middle" fill="#fed7aa" font-family="monospace" font-size="9.5" font-weight="700">${numQuench} QUENCH</text>`;
 
-          // Wide Masonry Stoneware Tower [4]
-          const s3X = padX + 132;
-          out += `<line x1="${s1X + 24}" y1="${midY}" x2="${s3X - 34}" y2="${midY}" stroke="#c2633a" stroke-width="10"/>`;
-          out += `<rect x="${s3X - 34}" y="${midY - 34}" width="68" height="68" fill="url(#bp-brick-hatch)" stroke="#d97706" stroke-width="2"/>`;
-          out += `<circle cx="${s3X}" cy="${midY}" r="22" fill="rgba(200,147,99,0.34)" stroke="#eab308" stroke-dasharray="3 2" stroke-width="1.2"/>`;
+          // Wide Masonry Stoneware Tower [4] (+ Supersonic Steam-Jet Ejector & Certified Baby Boiler when Steam enabled)
+          const s3X = padX + (isSteamFrugal ? 148 : 132);
+          if (isSteamFrugal) {
+            const ejTopX = (s1X + 24 + s3X - 30) * 0.5;
+            out += `<line x1="${s1X + 24}" y1="${midY}" x2="${s3X - 30}" y2="${midY}" stroke="#38bdf8" stroke-width="9"/>`;
+            out += `<rect x="${ejTopX - 16}" y="${midY - 10}" width="32" height="20" rx="3" fill="rgba(14,165,233,0.34)" stroke="#7dd3fc" stroke-width="1.5"/>`;
+            out += `<text x="${ejTopX}" y="${midY + 3}" text-anchor="middle" fill="#e0f2fe" font-family="monospace" font-size="7.2" font-weight="800">EJECT</text>`;
+            // Certified Baby Boiler + PRV Footprint beside hot kiln flue
+            const boTopX = padX + 44;
+            const boTopY = padY + 14;
+            out += `<circle cx="${boTopX}" cy="${boTopY}" r="14" fill="rgba(30,41,59,0.9)" stroke="#38bdf8" stroke-width="1.6"/>`;
+            out += `<circle cx="${boTopX + 9}" cy="${boTopY - 8}" r="4" fill="#ef4444" stroke="#fecaca" stroke-width="1"/>`;
+            out += `<text x="${boTopX + 20}" y="${boTopY + 3}" fill="#a5f3fc" font-family="monospace" font-size="7.2" font-weight="800">BOILER+PRV</text>`;
+            // Insulated Steam Line (S1) from Boiler -> Ejector Throat
+            out += `<path d="M ${boTopX + 14} ${boTopY} L ${ejTopX} ${boTopY} L ${ejTopX} ${midY - 10}" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5 2" marker-end="url(#bp-arrow-elec)"/>`;
+            out += `<text x="${(boTopX + ejTopX) * 0.5 + 16}" y="${boTopY - 4}" text-anchor="middle" fill="#fde68a" font-family="monospace" font-size="7.2" font-weight="700">S1 STEAM</text>`;
+          } else {
+            out += `<line x1="${s1X + 24}" y1="${midY}" x2="${s3X - 34}" y2="${midY}" stroke="#c2633a" stroke-width="10"/>`;
+          }
+          const bedHalf = isSteamFrugal ? 30 : 34;
+          out += `<rect x="${s3X - bedHalf}" y="${midY - bedHalf}" width="${bedHalf * 2}" height="${bedHalf * 2}" fill="url(#bp-brick-hatch)" stroke="#d97706" stroke-width="2"/>`;
+          out += `<circle cx="${s3X}" cy="${midY}" r="${isSteamFrugal ? 19 : 22}" fill="rgba(200,147,99,0.34)" stroke="#eab308" stroke-dasharray="3 2" stroke-width="1.2"/>`;
           out += `<text x="${s3X}" y="${midY + 4}" text-anchor="middle" fill="#fef3c7" font-family="monospace" font-size="9.5" font-weight="700">${numPacked} BED</text>`;
 
-          // Tall Brick Chimney + Thermal Reheat Jacket [8]
-          const chTopX = padX + 216;
-          out += `<line x1="${s3X + 34}" y1="${midY}" x2="${chTopX - 22}" y2="${midY}" stroke="#c2633a" stroke-width="9"/>`;
-          out += `<rect x="${chTopX - 22}" y="${midY - 22}" width="44" height="44" fill="rgba(234,88,12,0.28)" stroke="#fb923c" stroke-width="1.8"/>`;
-          out += `<circle cx="${chTopX}" cy="${midY}" r="12" fill="#081424" stroke="#fdba74" stroke-width="1.5"/>`;
-          out += `<text x="${chTopX}" y="${midY - 27}" text-anchor="middle" fill="#86efac" font-family="monospace" font-size="8" font-weight="700">${fmt(frugal.chimney_height_m, 1)}m CHIMNEY</text>`;
+          // Chimney / Compact Steam Stack [8]
+          const chTopX = padX + (isSteamFrugal ? 228 : 216);
+          out += `<line x1="${s3X + bedHalf}" y1="${midY}" x2="${chTopX - 20}" y2="${midY}" stroke="#c2633a" stroke-width="9"/>`;
+          out += `<rect x="${chTopX - 20}" y="${midY - 20}" width="40" height="40" fill="${isSteamFrugal ? "rgba(56,189,248,0.16)" : "rgba(234,88,12,0.28)"}" stroke="${isSteamFrugal ? "#38bdf8" : "#fb923c"}" stroke-width="1.8"/>`;
+          out += `<circle cx="${chTopX}" cy="${midY}" r="11" fill="#081424" stroke="#fdba74" stroke-width="1.5"/>`;
+          out += `<text x="${chTopX}" y="${midY - 25}" text-anchor="middle" fill="#86efac" font-family="monospace" font-size="7.8" font-weight="700">${fmt(frugal.chimney_height_m, 1)}m ${isSteamFrugal ? "STACK" : "CHIMNEY"}</text>`;
 
           // Elevated Gravity Tank Braced Stand Footprint [5]
           const tkTopX = padX + padW - 34;
@@ -7844,7 +8340,7 @@
           out += svgDimLine(padX, padY, padX + padW, padY, `PAD L: ${fmtPlanLen(lenIn, true)}`, -18, false, "#38bdf8");
           out += svgDimLine(padX + padW, padY, padX + padW, padY + padH, `W: ${fmtPlanLen(widIn, true)}`, 22, true, "#38bdf8");
           out += `<text x="${tx + 14}" y="${ty + th - 26}" fill="#cbd5e1" font-family="monospace" font-size="9.5">LOCAL CERAMIC: ${escapeHtml(frugal.region_label)} · ${fmtUSD(frugal.estimated_local_cost_usd)} (${escapeHtml(frugal.local_currency_estimate)})</text>`;
-          out += `<text x="${tx + 14}" y="${ty + th - 10}" fill="#86efac" font-family="monospace" font-size="9.5">${isZeroElec ? "ZERO ELECTRICITY · PASSIVE BUOYANCY CHIMNEY + GRAVITY TANK" : "LOCAL 230V 50Hz HYBRID · BRICK MASONRY + STONEWARE RINGS"}</text>`;
+          out += `<text x="${tx + 14}" y="${ty + th - 10}" fill="#86efac" font-family="monospace" font-size="9.2">${isSteamFrugal ? `ZERO ELECTRICITY · CERTIFIED PRV BOILER + ${Math.round(frugal.steam_pressure_psig)} psig STEAM-JET EJECTOR` : (isZeroElec ? "ZERO ELECTRICITY · PASSIVE BUOYANCY CHIMNEY + GRAVITY TANK" : "LOCAL 230V 50Hz HYBRID · BRICK MASONRY + STONEWARE RINGS")}</text>`;
         } else if (showTop) {
           const tx = showElev ? 778 : 26;
           const ty = 26;
@@ -8035,7 +8531,7 @@
         out += `<line x1="${tbX}" y1="${tbY + 74}" x2="${tbX + tbW}" y2="${tbY + 74}" stroke="#234873" stroke-width="1"/>`;
         out += `<line x1="${tbX + 240}" y1="${tbY + 34}" x2="${tbX + 240}" y2="${tbY + tbH}" stroke="#234873" stroke-width="1"/>`;
         out += `<text x="${tbX + 12}" y="${tbY + 22}" fill="#f8fafc" font-family="monospace" font-size="12" font-weight="800">${escapeHtml(plan.title || "KILNSCRUB FULL SYSTEMS SHOP PLAN")}</text>`;
-        out += `<text x="${tbX + 12}" y="${tbY + 51}" fill="#7dd3fc" font-family="monospace" font-size="9.5">BUILD: ${escapeHtml(isFrugal ? (isZeroElec ? "LOCAL CERAMIC (0V OFF-GRID)" : "LOCAL CERAMIC (HYBRID)") : (isDeluxe ? "CUSTOM FAB DELUXE" : (normalizeBuildPath(plan.build_path) === "welded_dxf" ? "WELDED DXF" : "NO-WELD COTS")))}</text>`;
+        out += `<text x="${tbX + 12}" y="${tbY + 51}" fill="#7dd3fc" font-family="monospace" font-size="9.5">BUILD: ${escapeHtml(isFrugal ? (isSteamFrugal ? `LOCAL CERAMIC (0V STEAM-JET ${Math.round(frugal.steam_pressure_psig)} psig)` : (isZeroElec ? "LOCAL CERAMIC (0V OFF-GRID)" : "LOCAL CERAMIC (HYBRID)")) : (isDeluxe ? "CUSTOM FAB DELUXE" : (normalizeBuildPath(plan.build_path) === "welded_dxf" ? "WELDED DXF" : "NO-WELD COTS")))}</text>`;
         out += `<text x="${tbX + 12}" y="${tbY + 66}" fill="#cbd5e1" font-family="monospace" font-size="9.5">BED: ${escapeHtml(isParallelBed ? `SHELL-LESS ${arch.parallelBed.pipeCount}×${arch.parallelBed.pipeNomIn}" UNISEAL` : "SINGLE COLUMN")}</text>`;
         out += `<text x="${tbX + 252}" y="${tbY + 51}" fill="#7dd3fc" font-family="monospace" font-size="9.5">ENVELOPE: ${escapeHtml(fmtPlanLen(lenIn, true))} × ${escapeHtml(fmtPlanLen(widIn, true))}</text>`;
         out += `<text x="${tbX + 252}" y="${tbY + 66}" fill="#cbd5e1" font-family="monospace" font-size="9.5">LAYERS: ${escapeHtml(activeLayerTags)}</text>`;
@@ -8345,10 +8841,17 @@
       }
 
       function formatPlumbingFlow(ln) {
-        const isAir = String(ln?.id || "").toUpperCase().startsWith("A");
+        const idUp = String(ln?.id || "").toUpperCase();
+        const isAir = idUp.startsWith("A");
+        const isSteam = idUp.startsWith("S") || /steam/i.test(String(ln?.fluid || ""));
         const gpm = Number(ln?.flow_gpm);
         const psi = Number(ln?.pressure_psi);
-        const psiText = Number.isFinite(psi) ? `${fmt(psi, 0)} PSI` : "—";
+        const psiText = Number.isFinite(psi) ? `${fmt(psi, 0)} ${isSteam ? "psig" : "PSI"}` : "—";
+        if (isSteam) {
+          const ms = String(ln?.fluid || "").match(/(\d+(?:\.\d+)?)\s*kg\/hr/i);
+          if (ms) return `${ms[1]} kg/hr · ${psiText}`;
+          return `Steam · ${psiText}`;
+        }
         if (isAir) {
           if (Number.isFinite(gpm) && gpm > 0) {
             return `${fmt(gpm, 1)} SCFM · ${psiText}`;
@@ -8523,6 +9026,9 @@
         const isCompact = !!(plan.compact_footprint ?? studioState.compactFootprint);
         const isFrugal = !!plan.is_frugal || isFrugalMode();
         const isZeroElec = !!plan.zero_electricity || (isFrugal && !!studioState.zeroElectricity);
+        const frugalPlan = getEffectiveFrugalData(studioState.evaluation);
+        const isSteamPlan = isFrugal && (!!plan.steam_ejector_enabled || !!frugalPlan.steam_enabled);
+        const isHpSteamPlan = isSteamPlan && (frugalPlan.draft_mode === "steam_ejector_hp" || frugalPlan.steam_pressure_psig >= 40);
         const isDeluxe = !isFrugal && (!!plan.is_deluxe || normalizeBuildPath(plan.build_path || studioState.buildPath) === "custom_fab_deluxe");
 
         if (el("plan-sheet-title")) el("plan-sheet-title").textContent = plan.title || "Shop Plan Blueprint";
@@ -8533,7 +9039,9 @@
         if (aPill) {
           if (isFrugal) {
             aPill.className = "pill ok";
-            aPill.textContent = isZeroElec ? "Off-Grid Ceramic (0W Passive Draft)" : "Local Ceramic (230V Hybrid)";
+            aPill.textContent = isSteamPlan
+              ? `Off-Grid Steam-Jet (${Math.round(frugalPlan.steam_pressure_psig)} psig · ${isZeroElec ? "0W" : "Hybrid"})`
+              : (isZeroElec ? "Off-Grid Ceramic (0W Passive Draft)" : "Local Ceramic (230V Hybrid)");
           } else {
             aPill.className = "pill " + (isEductor ? "warn" : "ok");
             aPill.textContent = `${isEductor ? "Dry-Fan Downflow Eductor" : "Inline ID Blower"}${isCompact ? " · U-Turn" : ""}`;
@@ -8547,13 +9055,17 @@
         const acPill = el("plan-acoustic-pill");
         if (acPill) {
           acPill.textContent = isZeroElec
-            ? "Acoustic: ~45 dBA Whisper Quiet (No Blower)"
+            ? (isSteamPlan
+              ? `Acoustic: ~${isHpSteamPlan ? 68 : 62} dBA Steam-Jet Hiss (0W · No Blower)`
+              : "Acoustic: ~45 dBA Whisper Quiet (No Blower)")
             : `Acoustic: ${Math.round(acSum.bare_dba_3ft || 86)} → ${Math.round(acSum.treated_dba_3ft || 64)} dBA @ 3 ft · ${Math.round(acSum.property_line_dba || 41)} dBA @ ${Math.round(acSum.property_line_ft || 35)} ft`;
         }
         const cl = plan.clearances || { flue_to_combustibles_in: 36, service_aisle_in: 36, nec_panel_depth_in: 36, nec_panel_width_in: 30, pump_service_in: 24 };
         if (el("plan-clearance-summary")) {
           el("plan-clearance-summary").textContent = isZeroElec
-            ? `NFPA 211: ${fmtPlanLen(cl.flue_to_combustibles_in || 36)} Flue · 0V / OFF-GRID (No NEC Panel) · Braced Gravity Tank Stand`
+            ? (isSteamPlan
+              ? `NFPA 211: ${fmtPlanLen(cl.flue_to_combustibles_in || 36)} Flue · 0V / OFF-GRID · Certified PRV Baby Boiler + Steam Line S1`
+              : `NFPA 211: ${fmtPlanLen(cl.flue_to_combustibles_in || 36)} Flue · 0V / OFF-GRID (No NEC Panel) · Braced Gravity Tank Stand`)
             : `NFPA 211: ${fmtPlanLen(cl.flue_to_combustibles_in || 36)} Flue · NEC 110.26: ${fmtPlanLen(cl.nec_panel_depth_in || 36)}×${fmtPlanLen(cl.nec_panel_width_in || 30)} Panel · ${fmtPlanLen(cl.pump_service_in || 24)} Pump/Hatch`;
         }
 
@@ -8811,33 +9323,43 @@
         const frugal2d = getEffectiveFrugalData(studioState.evaluation);
         if (frugal2d.enabled) {
           const isZero = !!frugal2d.zero_electricity;
+          const isSteam2d = !!frugal2d.steam_enabled;
           const tankName = frugal2d.region === "mumbai" ? "SINTEX" : (frugal2d.region === "nairobi" ? "KENTANK" : "HDPE");
-          const qX = Math.max(66, w * 0.10);
-          const qW2 = Math.max(58, Math.min(82, w * 0.095));
-          const qH2 = Math.max(106, Math.min(148, h * 0.36));
-          const pX = qX + qW2 + Math.max(24, w * 0.032);
-          const pW2 = Math.max(88, Math.min(126, w * 0.15));
-          const pH2 = Math.max(158, Math.min(208, h * 0.50));
-          const chX = pX + pW2 + Math.max(28, w * 0.036);
-          const chW2 = Math.max(28, Math.min(42, w * 0.045));
-          const chTopY = Math.max(22, floorY - Math.min(h - 90, pH2 * 1.48));
-          const tkX = Math.min(w - 220, chX + chW2 + Math.max(46, w * 0.06));
-          const tkW2 = Math.max(56, Math.min(76, w * 0.09));
+          const qX = Math.max(isSteam2d ? 92 : 66, w * (isSteam2d ? 0.14 : 0.10));
+          const qW2 = Math.max(54, Math.min(78, w * 0.088));
+          const qH2 = Math.max(106, Math.min(146, h * 0.36));
+          const ejGap2 = isSteam2d ? Math.max(56, w * 0.068) : Math.max(24, w * 0.032);
+          const pX = qX + qW2 + ejGap2;
+          const pW2 = Math.max(84, Math.min(120, w * 0.14));
+          const pH2 = Math.max(158, Math.min(206, h * 0.50));
+          const chX = pX + pW2 + Math.max(26, w * 0.034);
+          const chW2 = Math.max(26, Math.min(40, w * 0.042));
+          const chTopY = isSteam2d
+            ? Math.max(floorY - pH2 * 1.12, 86)
+            : Math.max(22, floorY - Math.min(h - 90, pH2 * 1.48));
+          const tkX = Math.min(w - 220, chX + chW2 + Math.max(42, w * 0.055));
+          const tkW2 = Math.max(54, Math.min(74, w * 0.085));
           const tkH2 = 50;
-          const standH2 = Math.max(115, Math.min(156, pH2 * 0.78));
+          const standH2 = Math.max(115, Math.min(154, pH2 * 0.78));
           const tkBotY = floorY - standH2;
           const tkTopY = tkBotY - tkH2;
 
           // Banner badge
           ctx.save();
-          ctx.fillStyle = "rgba(180, 83, 9, 0.24)";
-          ctx.strokeStyle = isZero ? "#34d399" : "#f59e0b";
+          ctx.fillStyle = isSteam2d ? "rgba(8, 47, 73, 0.78)" : "rgba(180, 83, 9, 0.24)";
+          ctx.strokeStyle = isSteam2d ? "#38bdf8" : (isZero ? "#34d399" : "#f59e0b");
           ctx.lineWidth = 1.3;
-          ctx.fillRect(w - 306, 12, 290, 24);
-          ctx.strokeRect(w - 306, 12, 290, 24);
-          ctx.fillStyle = isZero ? "#a7f3d0" : "#fde68a";
-          ctx.font = "bold 10.5px monospace";
-          ctx.fillText(isZero ? "0V / 0W OFF-GRID CERAMIC PASSIVE DRAFT" : "LOCAL CERAMIC MASONRY (230V HYBRID)", w - 294, 28);
+          ctx.fillRect(w - 336, 12, 320, 24);
+          ctx.strokeRect(w - 336, 12, 320, 24);
+          ctx.fillStyle = isSteam2d ? "#a5f3fc" : (isZero ? "#a7f3d0" : "#fde68a");
+          ctx.font = "bold 10.2px monospace";
+          ctx.fillText(
+            isSteam2d
+              ? `0V / 0W STEAM-JET (${Math.round(frugal2d.steam_pressure_psig)} psig · ${Math.round(frugal2d.steam_nozzle_vel_m_s)} m/s)`
+              : (isZero ? "0V / 0W OFF-GRID CERAMIC PASSIVE DRAFT" : "LOCAL CERAMIC MASONRY (230V HYBRID)"),
+            w - 326,
+            28
+          );
           ctx.restore();
 
           // Hot firebrick kiln flue inlet
@@ -8847,6 +9369,43 @@
           ctx.lineWidth = 2;
           ctx.fillRect(22, qInY - 10, qX - 22, 20);
           ctx.strokeRect(22, qInY - 10, qX - 22, 20);
+
+          // Certified Baby Boiler + PRV + Sight Glass + Pressure Gauge (when Steam-Jet Ejector is active!)
+          const boX = Math.max(24, qX - 66);
+          const boW = 42;
+          const boH = 74;
+          const boTopY = floorY - boH;
+          if (isSteam2d) {
+            ctx.save();
+            ctx.fillStyle = "#1e293b";
+            ctx.strokeStyle = "#38bdf8";
+            ctx.lineWidth = 1.8;
+            ctx.fillRect(boX, boTopY, boW, boH);
+            ctx.strokeRect(boX, boTopY, boW, boH);
+            // Sight glass
+            ctx.fillStyle = "rgba(56, 189, 248, 0.55)";
+            ctx.fillRect(boX + 5, boTopY + 18, 5, 32);
+            // Brass pressure gauge
+            ctx.fillStyle = "#fef3c7";
+            ctx.strokeStyle = "#eab308";
+            ctx.beginPath(); ctx.arc(boX + boW - 10, boTopY + 16, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            ctx.strokeStyle = "#ef4444";
+            ctx.beginPath(); ctx.moveTo(boX + boW - 10, boTopY + 16); ctx.lineTo(boX + boW - 7, boTopY + 12); ctx.stroke();
+            // Red-capped spring-loaded PRV + outdoor vent pipe
+            ctx.strokeStyle = "#ef4444";
+            ctx.lineWidth = 2.4;
+            ctx.beginPath(); ctx.moveTo(boX + 14, boTopY); ctx.lineTo(boX + 14, boTopY - 22); ctx.stroke();
+            ctx.fillStyle = "#ef4444";
+            ctx.fillRect(boX + 9, boTopY - 11, 10, 7);
+            ctx.fillStyle = "#fca5a5";
+            ctx.font = "bold 8.5px monospace";
+            ctx.fillText("PRV", boX + 4, boTopY - 26);
+            ctx.fillStyle = "#a5f3fc";
+            ctx.fillText("BOILER", boX + 3, floorY + 16);
+            ctx.fillStyle = "#fde68a";
+            ctx.fillText(`${Math.round(frugal2d.steam_pressure_psig)} psig`, boX + 2, floorY + 29);
+            ctx.restore();
+          }
 
           // 1. Brick Settling & Gravity-Spray Quench Chamber
           ctx.save();
@@ -8869,15 +9428,74 @@
             ctx.fill();
           }
           ctx.fillStyle = "#fdba74";
-          ctx.font = "bold 10.5px monospace";
-          ctx.fillText("1. BRICK QUENCH", qX - 6, floorY + 16);
+          ctx.font = "bold 10px monospace";
+          ctx.fillText("1. QUENCH", qX + 2, floorY + 16);
           ctx.restore();
 
-          // Connecting brick channel
-          ctx.fillStyle = "rgba(180, 83, 60, 0.28)";
-          ctx.strokeStyle = "#c2633a";
-          ctx.fillRect(qX + qW2, floorY - 46, pX - (qX + qW2), 22);
-          ctx.strokeRect(qX + qW2, floorY - 46, pX - (qX + qW2), 22);
+          // Connecting duct OR Supersonic Steam-Jet Ejector Venturi Throat
+          const ejMidY2 = floorY - 38;
+          if (isSteam2d) {
+            const ejX1 = qX + qW2;
+            const ejX2 = pX;
+            const ejMidX = (ejX1 + ejX2) * 0.5;
+            ctx.save();
+            ctx.globalAlpha = hi("venturi") ? 1.0 : 0.35;
+            // Insulated S1 Steam Header from Baby Boiler crown -> Brass CD Nozzle
+            const s1Y = floorY - qH2 - 14;
+            ctx.strokeStyle = "#f59e0b";
+            ctx.lineWidth = 2.6;
+            ctx.setLineDash([6, 3]);
+            ctx.beginPath();
+            ctx.moveTo(boX + boW - 10, boTopY);
+            ctx.lineTo(boX + boW - 10, s1Y);
+            ctx.lineTo(ejX1 + 8, s1Y);
+            ctx.lineTo(ejX1 + 8, ejMidY2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            // Converging-diverging ceramic venturi throat
+            ctx.fillStyle = "rgba(14, 165, 233, 0.24)";
+            ctx.strokeStyle = "#38bdf8";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(ejX1, ejMidY2 - 14);
+            ctx.lineTo(ejMidX - 7, ejMidY2 - 6);
+            ctx.lineTo(ejMidX + 7, ejMidY2 - 6);
+            ctx.lineTo(ejX2, ejMidY2 - 15);
+            ctx.lineTo(ejX2, ejMidY2 + 15);
+            ctx.lineTo(ejMidX + 7, ejMidY2 + 6);
+            ctx.lineTo(ejMidX - 7, ejMidY2 + 6);
+            ctx.lineTo(ejX1, ejMidY2 + 14);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            // Brass CD steam nozzle
+            ctx.fillStyle = "#eab308";
+            ctx.beginPath();
+            ctx.moveTo(ejX1 + 5, ejMidY2 - 4);
+            ctx.lineTo(ejMidX - 5, ejMidY2 - 1.5);
+            ctx.lineTo(ejMidX - 5, ejMidY2 + 1.5);
+            ctx.lineTo(ejX1 + 5, ejMidY2 + 4);
+            ctx.closePath();
+            ctx.fill();
+            // Glowing cyan-white supersonic steam plume
+            ctx.fillStyle = "rgba(186, 230, 253, 0.45)";
+            ctx.beginPath();
+            ctx.moveTo(ejMidX - 4, ejMidY2);
+            ctx.lineTo(ejX2 + 24, ejMidY2 - 12);
+            ctx.lineTo(ejX2 + 24, ejMidY2 + 12);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = "#67e8f9";
+            ctx.font = "bold 9px monospace";
+            ctx.fillText("2. EJECTOR", ejX1 + 2, floorY + 16);
+            ctx.fillText(`M${fmt(frugal2d.steam_nozzle_mach, 2)}`, ejMidX - 10, floorY + 29);
+            ctx.restore();
+          } else {
+            ctx.fillStyle = "rgba(180, 83, 60, 0.28)";
+            ctx.strokeStyle = "#c2633a";
+            ctx.fillRect(qX + qW2, floorY - 46, pX - (qX + qW2), 22);
+            ctx.strokeRect(qX + qW2, floorY - 46, pX - (qX + qW2), 22);
+          }
 
           // 2. Wide Masonry Stoneware-Ring Packed Tower + Terracotta Chevron Baffles
           ctx.save();
@@ -8913,11 +9531,11 @@
             }
           }
           ctx.fillStyle = "#fde68a";
-          ctx.font = "bold 10.5px monospace";
-          ctx.fillText(`3. STONEWARE BED Ø${Math.round(frugal2d.bed_diameter_in)}"`, pX - 6, floorY + 16);
+          ctx.font = "bold 10px monospace";
+          ctx.fillText(`3. ${isSteam2d ? "CONDENSE" : "STONEWARE"} Ø${Math.round(frugal2d.bed_diameter_in)}"`, pX - 6, floorY + 16);
           ctx.restore();
 
-          // 3. Tall Brick / Terracotta Thermal-Reheat Chimney
+          // 3. Brick / Terracotta Chimney (Tall Reheat vs Compact Steam-Ejector Stack)
           ctx.save();
           ctx.globalAlpha = hi("blower") ? 1.0 : 0.35;
           ctx.strokeStyle = "#c2633a";
@@ -8928,21 +9546,23 @@
           ctx.lineTo(chX - 8, floorY - 54);
           ctx.lineTo(chX, floorY - 54);
           ctx.stroke();
-          // Reheat jacket at chimney base
-          ctx.fillStyle = "rgba(234, 88, 12, 0.28)";
-          ctx.strokeStyle = "#fb923c";
-          ctx.lineWidth = 1.8;
-          ctx.fillRect(chX - 7, floorY - 88, chW2 + 14, 88);
-          ctx.strokeRect(chX - 7, floorY - 88, chW2 + 14, 88);
+          if (!isSteam2d) {
+            // Reheat jacket at chimney base (passive draft)
+            ctx.fillStyle = "rgba(234, 88, 12, 0.28)";
+            ctx.strokeStyle = "#fb923c";
+            ctx.lineWidth = 1.8;
+            ctx.fillRect(chX - 7, floorY - 88, chW2 + 14, 88);
+            ctx.strokeRect(chX - 7, floorY - 88, chW2 + 14, 88);
+          }
           // Chimney shaft
           ctx.fillStyle = state.cutaway ? "rgba(180, 83, 60, 0.22)" : "#8c3b27";
-          ctx.strokeStyle = "#c2633a";
+          ctx.strokeStyle = isSteam2d ? "#38bdf8" : "#c2633a";
           ctx.fillRect(chX, chTopY, chW2, floorY - chTopY);
           ctx.strokeRect(chX, chTopY, chW2, floorY - chTopY);
           ctx.fillStyle = "#86efac";
           ctx.font = "bold 10px monospace";
-          ctx.fillText(`4. ${fmt(frugal2d.chimney_height_m, 1)}m CHIMNEY`, chX - 18, floorY + 16);
-          ctx.fillText(`${Math.round(frugal2d.stack_reheat_temp_f)}°F REHEAT`, chX - 14, floorY + 29);
+          ctx.fillText(`4. ${fmt(frugal2d.chimney_height_m, 1)}m ${isSteam2d ? "STACK" : "CHIMNEY"}`, chX - 18, floorY + 16);
+          ctx.fillText(isSteam2d ? "STEAM-DRIVEN" : `${Math.round(frugal2d.stack_reheat_temp_f)}°F REHEAT`, chX - 14, floorY + 29);
           ctx.restore();
 
           // 4. Elevated Blue Kentank / Sintex Gravity Tank on X-Braced Stand + Gravity Downcomer + Manual Pump
@@ -8981,22 +9601,31 @@
           ctx.fillText(isZero ? "TREADLE / HAND PUMP" : "0.5 HP 230V PUMP", tkX - 18, floorY + 16);
           ctx.restore();
 
-          // Buoyant flow particles
+          // Buoyant flow particles + fast supersonic white/cyan steam-jet particles when steam enabled
           if (state.particles) {
             const dt = p2d.lastTime ? Math.min(0.05, (ts - p2d.lastTime) / 1000) : 0.016;
             p2d.lastTime = ts;
             const cPts = [
-              [22, qInY], [qX + qW2 * 0.5, qInY], [qX + qW2 * 0.5, floorY - 35],
-              [pX + pW2 * 0.5, floorY - 35], [pX + pW2 * 0.5, pTopY + 20],
+              [22, qInY], [qX + qW2 * 0.5, qInY], [qX + qW2 * 0.5, floorY - 38],
+              [pX + pW2 * 0.5, floorY - 38], [pX + pW2 * 0.5, pTopY + 20],
               [chX - 8, pTopY + 20], [chX - 8, floorY - 54], [chX + chW2 * 0.5, floorY - 54],
               [chX + chW2 * 0.5, chTopY - 14],
             ];
-            for (const pt of p2d.particles) {
-              pt.t = (pt.t + dt * 0.14) % 1.0;
-              const [x, y] = sample2DPolyline(cPts, pt.t);
-              ctx.fillStyle = pt.t < 0.22 ? "#fb923c" : pt.t < 0.58 ? "#38bdf8" : "#86efac";
+            const sPts = isSteam2d ? [
+              [boX + boW - 10, boTopY], [boX + boW - 10, floorY - qH2 - 14],
+              [qX + qW2 + 8, floorY - qH2 - 14], [qX + qW2 + 8, ejMidY2],
+              [pX + pW2 * 0.45, ejMidY2], [pX + pW2 * 0.5, pTopY + 36],
+            ] : null;
+            for (let pi = 0; pi < p2d.particles.length; pi++) {
+              const pt = p2d.particles[pi];
+              const isSteamPt = isSteam2d && (pi % 3 === 0);
+              pt.t = (pt.t + dt * (isSteamPt ? 0.42 : 0.16)) % 1.0;
+              const [x, y] = sample2DPolyline(isSteamPt ? sPts : cPts, pt.t);
+              ctx.fillStyle = isSteamPt
+                ? (pt.t < 0.65 ? "#f0f9ff" : "#67e8f9")
+                : (pt.t < 0.22 ? "#fb923c" : pt.t < 0.58 ? "#38bdf8" : "#86efac");
               ctx.beginPath();
-              ctx.arc(x + pt.jitter * 3, y + pt.jitter * 2, 2.5, 0, Math.PI * 2);
+              ctx.arc(x + pt.jitter * (isSteamPt ? 1.8 : 3), y + pt.jitter * 2, isSteamPt ? 2.8 : 2.5, 0, Math.PI * 2);
               ctx.fill();
             }
           }
@@ -9592,7 +10221,7 @@
         const inputIds = [
           "in-studio-name", "in-kiln-vol", "in-peak-temp", "in-salt-rate", "in-fuel-type",
           "in-firing-hours", "in-salting-hours", "in-property-line", "in-ambient-winter", "in-garden-hose",
-          "in-zero-electricity", "in-local-region", "in-local-alkali",
+          "in-zero-electricity", "in-local-region", "in-local-alkali", "in-local-draft-mode",
           "in-blower-drive", "in-compressor-scfm",
           "in-compact-footprint", "in-shared-baffled-sump",
           "in-snap-cots", "in-include-silencer", "in-include-plume-diluter",
@@ -9629,6 +10258,10 @@
               studioState.localAlkali = normalizeLocalAlkali(node.value);
               syncSegmentedButtons();
               refreshVisualGeometryImmediate();
+            } else if (id === "in-local-draft-mode") {
+              studioState.localDraftMode = normalizeLocalDraftMode(node.value);
+              syncSegmentedButtons();
+              refreshVisualGeometryImmediate();
             } else if (id === "in-blower-drive") {
               studioState.blowerDriveOption = normalizeBlowerDriveOption(node.value);
               syncSegmentedButtons();
@@ -9662,6 +10295,10 @@
               refreshVisualGeometryImmediate();
             } else if (id === "in-local-alkali") {
               studioState.localAlkali = normalizeLocalAlkali(node.value);
+              syncSegmentedButtons();
+              refreshVisualGeometryImmediate();
+            } else if (id === "in-local-draft-mode") {
+              studioState.localDraftMode = normalizeLocalDraftMode(node.value);
               syncSegmentedButtons();
               refreshVisualGeometryImmediate();
             } else if (id === "in-blower-drive") {
@@ -9849,6 +10486,8 @@
             if (el("in-zero-electricity")) el("in-zero-electricity").checked = true;
             studioState.localRegion = normalizeLocalRegion(studioState.localRegion);
             studioState.localAlkali = normalizeLocalAlkali(studioState.localAlkali);
+            studioState.localDraftMode = "natural_chimney";
+            if (el("in-local-draft-mode")) el("in-local-draft-mode").value = "natural_chimney";
             studioState.packingMediaOption = "diy_ceramic_rings";
             studioState.sharedBaffledSump = true;
             if (el("in-shared-baffled-sump")) el("in-shared-baffled-sump").checked = true;
@@ -9859,6 +10498,30 @@
             refreshVisualGeometryImmediate();
             requestEvaluateOrSize();
             showToast("Applied Off-Grid Local Ceramic (0V / 0W): Thermal-Reheat Brick Chimney + Wide Stoneware Bed + Overhead Gravity Tank!");
+          });
+        }
+
+        // Phase 10B: One-Click "Off-Grid Steam-Jet (60 psig, 0W)" Button
+        const offgridSteamBtn = el("btn-apply-offgrid-steam");
+        if (offgridSteamBtn) {
+          offgridSteamBtn.addEventListener("click", () => {
+            studioState.buildPath = "local_ceramic_masonry";
+            studioState.zeroElectricity = true;
+            if (el("in-zero-electricity")) el("in-zero-electricity").checked = true;
+            studioState.localRegion = normalizeLocalRegion(studioState.localRegion);
+            studioState.localAlkali = normalizeLocalAlkali(studioState.localAlkali);
+            studioState.localDraftMode = "steam_ejector_hp";
+            if (el("in-local-draft-mode")) el("in-local-draft-mode").value = "steam_ejector_hp";
+            studioState.packingMediaOption = "diy_ceramic_rings";
+            studioState.sharedBaffledSump = true;
+            if (el("in-shared-baffled-sump")) el("in-shared-baffled-sump").checked = true;
+            studioState.controlTier = "electromechanical_only";
+            if (el("in-include-plume-diluter")) el("in-include-plume-diluter").checked = false;
+            syncSegmentedButtons();
+            updateControlLabels();
+            refreshVisualGeometryImmediate();
+            requestEvaluateOrSize();
+            showToast("Applied Off-Grid Steam-Jet (60 psig, 0W): Certified PRV Baby Boiler + ~750 m/s Hydro-Sonic Ejector + ~80% NaCl Capture!");
           });
         }
 
@@ -11254,11 +11917,17 @@
         const side = cut ? THREE.DoubleSide : THREE.FrontSide;
 
         // =========================================================================
-        // BRANCH C (PHASE 10): LOCAL CERAMIC / BRICK MASONRY SCRUBBER (0W OR HYBRID)
+        // BRANCH C (PHASE 10 / 10B): LOCAL CERAMIC / BRICK MASONRY + STEAM-JET EJECTOR
         // =========================================================================
-        if (isLocalCeramic) {
+        function buildLocalCeramicScene() {
           const fr = ev.frugal || {};
-          const chimM = Number.isFinite(fr.chimney_height_m) ? fr.chimney_height_m : (isZeroElec ? 9.5 : 4.5);
+          const uiDraft = String(document.getElementById("in-local-draft-mode")?.value || studio.localDraftMode || fr.draft_mode || "natural_chimney").toLowerCase();
+          const steamEnabled = (typeof fr.steam_enabled === "boolean" && String(fr.draft_mode || "").toLowerCase() === uiDraft)
+            ? fr.steam_enabled
+            : (uiDraft === "steam_ejector_lp" || uiDraft === "steam_ejector_hp");
+          const isHP = uiDraft === "steam_ejector_hp" || (Number.isFinite(fr.steam_pressure_psig) && fr.steam_pressure_psig >= 40);
+          const defaultChimM = steamEnabled ? (isHP ? 4.5 : 5.5) : (isZeroElec ? 9.5 : 4.5);
+          const chimM = (Number.isFinite(fr.chimney_height_m) && String(fr.draft_mode || "").toLowerCase() === uiDraft) ? fr.chimney_height_m : defaultChimM;
           const bedDiamIn = Number.isFinite(fr.bed_diameter_in) ? fr.bed_diameter_in : 30;
           const matBrick = new THREE.MeshStandardMaterial({ color: 0xb4533c, metalness: 0.05, roughness: 0.86, side });
           const matBrickSolid = new THREE.MeshStandardMaterial({ color: 0x9f432e, metalness: 0.05, roughness: 0.88, side: THREE.DoubleSide });
@@ -11275,14 +11944,22 @@
           const matBrass = new THREE.MeshStandardMaterial({ color: 0xd4a238, metalness: 0.78, roughness: 0.28 });
           const matIron = new THREE.MeshStandardMaterial({ color: 0x374151, metalness: 0.56, roughness: 0.46 });
           const matPlinth = new THREE.MeshStandardMaterial({ color: 0x52525b, metalness: 0.08, roughness: 0.90 });
+          // Phase 10B Certified Steam-Jet Boiler & Supersonic Plume Materials
+          const matBoilerSteel = new THREE.MeshStandardMaterial({ color: 0x26313e, metalness: 0.58, roughness: 0.52 });
+          const matSteelTrim = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.72, roughness: 0.30 });
+          const matPrvRed = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.24, roughness: 0.34, emissive: 0x450a0a });
+          const matDialWhite = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.08, roughness: 0.40 });
+          const matSightGlass = new THREE.MeshStandardMaterial({ color: 0x7dd3fc, metalness: 0.15, roughness: 0.12, transparent: true, opacity: 0.75 });
+          const matSteamHeader = new THREE.MeshStandardMaterial({ color: 0xc2864b, metalness: 0.68, roughness: 0.34 });
+          const matSteamPlume = new THREE.MeshStandardMaterial({ color: 0xe0f2fe, emissive: 0x38bdf8, emissiveIntensity: 0.85, transparent: true, opacity: 0.52, side: THREE.DoubleSide, depthWrite: false });
 
           // Concrete foundation plinth
-          const plinth = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.10, 2.5), matPlinth);
-          plinth.position.set(0.55, 0.05, 0.15);
+          const plinth = new THREE.Mesh(new THREE.BoxGeometry(steamEnabled ? 6.1 : 5.6, 0.10, steamEnabled ? 2.9 : 2.5), matPlinth);
+          plinth.position.set(0.55, 0.05, 0.05);
           assemblyGroup.add(plinth);
 
           // 1. Refractory Brick Kiln Inlet Flue + Settling & Gravity-Spray Quench Chamber
-          const qX = -1.65, qZ = 0, qW = 0.88, qH = 1.48, qD = 0.88;
+          const qX = steamEnabled ? -1.85 : -1.65, qZ = 0, qW = 0.88, qH = 1.48, qD = 0.88;
           const qInY = 1.18;
           // Hot kiln flue duct + brick collar
           const flueIn = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.34, 0.34), matBrickSolid);
@@ -11322,14 +11999,155 @@
           qPool.position.set(qX, 0.20, qZ);
           assemblyGroup.add(qPool);
 
-          // Low-ΔP wide brick transfer duct from Quench -> Wide Masonry Packed Tower
-          const pX = -0.25, pZ = 0;
+          // Connecting duct OR Certified Baby Steam Boiler + Supersonic Steam-Jet Ejector Nozzle & Venturi Mixing Throat
+          const pX = steamEnabled ? -0.10 : -0.25, pZ = 0;
           const pR = Math.max(0.46, Math.min(0.64, (bedDiamIn * 0.0254) * 0.56));
           const pH = 2.38;
-          const xferLen = (pX - pR) - (qX + qW * 0.5) + 0.12;
-          const xferFlue = new THREE.Mesh(new THREE.BoxGeometry(xferLen, 0.38, 0.44), matBrickSolid);
-          xferFlue.position.set((qX + qW * 0.5 + pX - pR) * 0.5, 0.56, qZ);
-          assemblyGroup.add(xferFlue);
+          const ejMidX = (qX + qW * 0.5 + pX - pR) * 0.5;
+          const ejY = 0.56;
+          let boilerPos = null;
+
+          if (steamEnabled) {
+            // A. Certified Compact Cylindrical Vertical Baby Steam Boiler / Monotube Flash Coil alongside firebrick kiln flue
+            const boX = qX - 0.32, boZ = -0.86;
+            const boR = isHP ? 0.28 : 0.24;
+            const boH = isHP ? 1.18 : 1.00;
+            boilerPos = new THREE.Vector3(boX, 0.10 + boH, boZ);
+
+            // Refractory plinth + waste-heat firebrick duct feeding kiln flue heat to boiler firebox
+            const boBase = new THREE.Mesh(new THREE.CylinderGeometry(boR * 1.15, boR * 1.22, 0.16, 24), matBrickSolid);
+            boBase.position.set(boX, 0.18, boZ);
+            assemblyGroup.add(boBase);
+            const wasteTap = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.26, Math.abs(boZ - qZ)), matBrickSolid);
+            wasteTap.position.set(qX - qW * 0.5 - 0.12, 0.68, (boZ + qZ) * 0.5);
+            assemblyGroup.add(wasteTap);
+
+            // Matte dark-steel insulated boiler jacket + domed top head + stainless clamping straps
+            const boCyl = new THREE.Mesh(new THREE.CylinderGeometry(boR, boR, boH, 28), matBoilerSteel);
+            boCyl.position.set(boX, 0.26 + boH * 0.5, boZ);
+            assemblyGroup.add(boCyl);
+            const boDome = new THREE.Mesh(new THREE.SphereGeometry(boR, 24, 14, 0, Math.PI * 2, 0, Math.PI * 0.5), matBoilerSteel);
+            boDome.position.set(boX, 0.26 + boH, boZ);
+            assemblyGroup.add(boDome);
+            for (const bf of [0.22, 0.52, 0.82]) {
+              const strap = new THREE.Mesh(new THREE.TorusGeometry(boR + 0.008, 0.010, 8, 28), matSteelTrim);
+              strap.rotation.x = Math.PI / 2;
+              strap.position.set(boX, 0.26 + boH * bf, boZ);
+              assemblyGroup.add(strap);
+            }
+            // Boiler flue stack vent cap on rear-top
+            const boStack = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.072, 0.36, 16), matIron);
+            boStack.position.set(boX - 0.10, 0.26 + boH + boR * 0.72 + 0.16, boZ - 0.06);
+            assemblyGroup.add(boStack);
+
+            // Brass Bourdon pressure gauge dial facing +Z (viewer)
+            const gaugeY = 0.26 + boH * 0.82;
+            const gaugeZ = boZ + boR + 0.05;
+            const gaugeStem = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.07, 10), matBrass);
+            gaugeStem.rotation.x = Math.PI / 2;
+            gaugeStem.position.set(boX + 0.09, gaugeY, boZ + boR + 0.02);
+            assemblyGroup.add(gaugeStem);
+            const gaugeBezel = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.032, 20), matBrass);
+            gaugeBezel.rotation.x = Math.PI / 2;
+            gaugeBezel.position.set(boX + 0.09, gaugeY, gaugeZ);
+            assemblyGroup.add(gaugeBezel);
+            const gaugeFace = new THREE.Mesh(new THREE.CylinderGeometry(0.056, 0.056, 0.036, 20), matDialWhite);
+            gaugeFace.rotation.x = Math.PI / 2;
+            gaugeFace.position.set(boX + 0.09, gaugeY, gaugeZ + 0.003);
+            assemblyGroup.add(gaugeFace);
+            const gaugeNeedle = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.044, 0.01), matPrvRed);
+            gaugeNeedle.position.set(boX + 0.102, gaugeY + 0.01, gaugeZ + 0.020);
+            gaugeNeedle.rotation.z = isHP ? -0.68 : -0.25;
+            assemblyGroup.add(gaugeNeedle);
+
+            // Red-capped spring-loaded ASME/IBR PRV + vertical outdoor vent discharge pipe
+            const prvX = boX + 0.10, prvY = 0.26 + boH + boR * 0.78, prvZ = boZ + 0.06;
+            const prvBody = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.030, 0.11, 12), matBrass);
+            prvBody.position.set(prvX, prvY + 0.055, prvZ);
+            assemblyGroup.add(prvBody);
+            const prvCap = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.055, 14), matPrvRed);
+            prvCap.position.set(prvX, prvY + 0.13, prvZ);
+            assemblyGroup.add(prvCap);
+            const prvVent = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.52, 12), matPrvRed);
+            prvVent.position.set(prvX + 0.045, prvY + 0.30, prvZ);
+            assemblyGroup.add(prvVent);
+
+            // Water-level Sight Glass column on front-left of boiler
+            const sgX = boX - 0.12, sgZ = boZ + boR + 0.035;
+            const sgTube = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.42, 12), matSightGlass);
+            sgTube.position.set(sgX, 0.26 + boH * 0.50, sgZ);
+            assemblyGroup.add(sgTube);
+            for (const sy of [0.26 + boH * 0.30, 0.26 + boH * 0.70]) {
+              const cock = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.06, 10), matBrass);
+              cock.rotation.x = Math.PI / 2;
+              cock.position.set(sgX, sy, boZ + boR + 0.015);
+              assemblyGroup.add(cock);
+            }
+
+            // Insulated Copper/Steel Steam Header (S1) with Brass Isolation Valve + Red Handwheel -> Ejector Nozzle
+            const steamHdrPts = [
+              new THREE.Vector3(boX + 0.02, 0.26 + boH + boR * 0.92, boZ),
+              new THREE.Vector3(boX + 0.02, 0.26 + boH + 0.48, boZ),
+              new THREE.Vector3(ejMidX - 0.28, 0.26 + boH + 0.48, boZ * 0.45),
+              new THREE.Vector3(ejMidX - 0.28, ejY + 0.12, qZ),
+              new THREE.Vector3(ejMidX - 0.16, ejY, qZ),
+            ];
+            const steamCurve = new THREE.CatmullRomCurve3(steamHdrPts);
+            assemblyGroup.add(new THREE.Mesh(new THREE.TubeGeometry(steamCurve, 44, 0.030, 12, false), matSteamHeader));
+            // Red isolation handwheel on vertical steam drop
+            const isoValve = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.07, 14), matBrass);
+            isoValve.position.set(ejMidX - 0.28, ejY + 0.42, qZ + 0.02);
+            assemblyGroup.add(isoValve);
+            const isoWheel = new THREE.Mesh(new THREE.TorusGeometry(0.062, 0.011, 8, 18), matPrvRed);
+            isoWheel.position.set(ejMidX - 0.28, ejY + 0.42, qZ + 0.08);
+            assemblyGroup.add(isoWheel);
+
+            // B. Brass/Stainless Converging-Diverging Steam-Jet Ejector Nozzle & Ceramic-Lined Venturi Mixing Throat
+            const ejStart = qX + qW * 0.5 - 0.02;
+            const ejEnd = pX - pR + 0.08;
+            const ejLen = Math.max(0.55, ejEnd - ejStart);
+            // Converging suction chamber -> narrow throat -> diverging diffuser entering stoneware condensing tower
+            const convL = ejLen * 0.34, thL = ejLen * 0.24, divL = ejLen * 0.42;
+            const convMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.20, convL, 20, 1, cut, thetaStart, thetaLen), matTerracotta);
+            convMesh.rotation.z = -Math.PI / 2;
+            convMesh.position.set(ejStart + convL * 0.5, ejY, qZ);
+            assemblyGroup.add(convMesh);
+            const throatMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.105, thL, 20, 1, cut, thetaStart, thetaLen), matSteelTrim);
+            throatMesh.rotation.z = -Math.PI / 2;
+            throatMesh.position.set(ejStart + convL + thL * 0.5, ejY, qZ);
+            assemblyGroup.add(throatMesh);
+            const divMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.11, divL, 20, 1, cut, thetaStart, thetaLen), matTerracotta);
+            divMesh.rotation.z = -Math.PI / 2;
+            divMesh.position.set(ejStart + convL + thL + divL * 0.5, ejY, qZ);
+            assemblyGroup.add(divMesh);
+            // Brass converging-diverging Laval steam nozzle inside venturi suction axis
+            const lavalNozzle = new THREE.Mesh(new THREE.ConeGeometry(0.044, 0.19, 16), matBrass);
+            lavalNozzle.rotation.z = -Math.PI / 2;
+            lavalNozzle.position.set(ejStart + convL * 0.65, ejY, qZ);
+            assemblyGroup.add(lavalNozzle);
+            // Glowing high-velocity supersonic steam plume shooting through throat into base of stoneware tower
+            const plumeLen = thL + divL + pR * 0.85;
+            const plumeCone = new THREE.Mesh(new THREE.ConeGeometry(0.18, plumeLen, 20, 1, true), matSteamPlume);
+            plumeCone.rotation.z = Math.PI / 2;
+            plumeCone.position.set(ejStart + convL + plumeLen * 0.46, ejY, qZ);
+            assemblyGroup.add(plumeCone);
+
+            // Store steam-jet motive particle polyline (white/cyan fast supersonic particles!)
+            const steamParticlePath = new THREE.CurvePath();
+            const spPts = steamCurve.getSpacedPoints(26);
+            for (let si = 1; si < spPts.length; si++) {
+              steamParticlePath.add(new THREE.LineCurve3(spPts[si - 1], spPts[si]));
+            }
+            steamParticlePath.add(new THREE.LineCurve3(new THREE.Vector3(ejMidX - 0.16, ejY, qZ), new THREE.Vector3(pX, ejY, pZ)));
+            steamParticlePath.add(new THREE.LineCurve3(new THREE.Vector3(pX, ejY, pZ), new THREE.Vector3(pX, 0.10 + pH * 0.85, pZ)));
+            // Raw local coordinates; offset applied below once centerX/centerZ are known
+            boilerPos = { steamParticlePath };
+          } else {
+            const xferLen = (pX - pR) - (qX + qW * 0.5) + 0.12;
+            const xferFlue = new THREE.Mesh(new THREE.BoxGeometry(xferLen, 0.38, 0.44), matBrickSolid);
+            xferFlue.position.set((qX + qW * 0.5 + pX - pR) * 0.5, 0.56, qZ);
+            assemblyGroup.add(xferFlue);
+          }
 
           // 2. Wide Masonry / SWG-Ceramic Packed Tower (Stoneware Clay Raschig Rings + Stacked Terracotta Chevron Baffles)
           const pShell = new THREE.Mesh(new THREE.CylinderGeometry(pR, pR * 1.03, pH, 32, 1, cut, thetaStart, thetaLen), matBrick);
@@ -11391,35 +12209,39 @@
           pTopCap.position.set(pX, 0.10 + pH + 0.035, pZ);
           assemblyGroup.add(pTopCap);
 
-          // 3. Tall Brick / Terracotta Thermal-Reheat Chimney (8-12 m scaled cleanly in dynamic camera framing!)
-          const chX = 1.08, chZ = -0.05;
+          // 3. Brick / Terracotta Chimney — Shorter 4.5-5.5 m stack when Steam-Jet Ejector is active vs 9.5 m passive chimney!
+          const chX = steamEnabled ? 1.18 : 1.08, chZ = -0.05;
           const chBaseW = 0.66;
-          const chH = Math.max(3.8, Math.min(5.4, 2.4 + chimM * 0.28));
-          // Overhead SWG ceramic duct from tower top down into concentric brick thermal-reheat jacket
+          const chH = steamEnabled
+            ? Math.max(2.35, Math.min(3.15, 1.10 + chimM * 0.34))
+            : Math.max(3.8, Math.min(5.4, 2.4 + chimM * 0.28));
+          // Overhead SWG ceramic duct from tower top down into chimney base
           const chDuctPath = new THREE.CurvePath();
           chDuctPath.add(new THREE.LineCurve3(new THREE.Vector3(pX + pR * 0.75, 0.10 + pH - 0.16, pZ), new THREE.Vector3(chX - 0.44, 0.10 + pH - 0.16, chZ)));
           chDuctPath.add(new THREE.LineCurve3(new THREE.Vector3(chX - 0.44, 0.10 + pH - 0.16, chZ), new THREE.Vector3(chX - 0.44, 0.72, chZ)));
           chDuctPath.add(new THREE.LineCurve3(new THREE.Vector3(chX - 0.44, 0.72, chZ), new THREE.Vector3(chX, 0.72, chZ)));
           assemblyGroup.add(new THREE.Mesh(new THREE.TubeGeometry(chDuctPath, 36, 0.14, 16, false), matTerracotta));
 
-          // Concentric Brick Thermal-Reheat Jacket around Chimney Base (hot flue wall heat exchange!)
-          const reheatH = 1.32;
-          const reheatOuter = new THREE.Mesh(new THREE.BoxGeometry(chBaseW + 0.18, reheatH, chBaseW + 0.18), matBrickSolid);
+          // Concentric Brick Thermal-Reheat Jacket (passive draft) OR compact brick plinth base (steam ejector)
+          const reheatH = steamEnabled ? 0.86 : 1.32;
+          const reheatOuter = new THREE.Mesh(new THREE.BoxGeometry(chBaseW + (steamEnabled ? 0.04 : 0.18), reheatH, chBaseW + (steamEnabled ? 0.04 : 0.18)), matBrickSolid);
           reheatOuter.position.set(chX, 0.10 + reheatH * 0.5, chZ);
           assemblyGroup.add(reheatOuter);
-          const reheatCoreBand = new THREE.Mesh(new THREE.BoxGeometry(chBaseW + 0.20, 0.22, chBaseW + 0.20), matHotCore);
-          reheatCoreBand.position.set(chX, 0.10 + reheatH * 0.45, chZ);
-          assemblyGroup.add(reheatCoreBand);
+          if (!steamEnabled) {
+            const reheatCoreBand = new THREE.Mesh(new THREE.BoxGeometry(chBaseW + 0.20, 0.22, chBaseW + 0.20), matHotCore);
+            reheatCoreBand.position.set(chX, 0.10 + reheatH * 0.45, chZ);
+            assemblyGroup.add(reheatCoreBand);
+          }
 
-          // Tall Tapered Terracotta / Brick Chimney Shaft
-          const chShaftH = chH - reheatH;
-          const chShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.26, chShaftH, 24), matTerracotta);
+          // Tapered Terracotta / Brick Chimney Shaft
+          const chShaftH = Math.max(1.2, chH - reheatH);
+          const chShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.25, chShaftH, 24), matTerracotta);
           chShaft.position.set(chX, 0.10 + reheatH + chShaftH * 0.5, chZ);
           assemblyGroup.add(chShaft);
-          // SWG clay pipe bell-socket joint collars up the chimney
-          for (let j = 1; j <= 4; j++) {
-            const jy = 0.10 + reheatH + (chShaftH * j) / 5;
-            const jr = 0.26 - (0.07 * j) / 5 + 0.025;
+          const collarN = steamEnabled ? 2 : 4;
+          for (let j = 1; j <= collarN; j++) {
+            const jy = 0.10 + reheatH + (chShaftH * j) / (collarN + 1);
+            const jr = 0.25 - (0.06 * j) / (collarN + 1) + 0.025;
             const collar = new THREE.Mesh(new THREE.CylinderGeometry(jr, jr, 0.08, 20), matMortar);
             collar.position.set(chX, jy, chZ);
             assemblyGroup.add(collar);
@@ -11431,7 +12253,7 @@
           assemblyGroup.add(chLip);
 
           // 4. Elevated Blue HDPE Kentank / Sintex Overhead Gravity Tank on 4-Post X-Braced Timber/Brick Stand
-          const tkX = 2.45, tkZ = 0.0;
+          const tkX = steamEnabled ? 2.52 : 2.45, tkZ = 0.0;
           const standH = 2.65;
           const stHalf = 0.42;
           const postGeo = new THREE.BoxGeometry(0.085, standH, 0.085);
@@ -11512,10 +12334,12 @@
             monoblock.rotation.z = Math.PI / 2;
             monoblock.position.set(pumpX, 0.22, pumpZ);
             assemblyGroup.add(monoblock);
-            const assistFan = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.16, 20), matIron);
-            assistFan.rotation.x = Math.PI / 2;
-            assistFan.position.set(chX - 0.44, 1.38, chZ + 0.12);
-            assemblyGroup.add(assistFan);
+            if (!steamEnabled) {
+              const assistFan = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.16, 20), matIron);
+              assistFan.rotation.x = Math.PI / 2;
+              assistFan.position.set(chX - 0.44, 1.38, chZ + 0.12);
+              assemblyGroup.add(assistFan);
+            }
           }
 
           // Gravity downcomer pipe from overhead Kentank -> Quench & Stoneware Tower + Pump refill riser
@@ -11545,7 +12369,7 @@
             new THREE.Vector3(tkX - 0.10, tkBaseY + tkH - 0.02, tkZ),
           ], 0.020, matPipeC);
 
-          // Center assembly & dynamic bounding-box camera framing so tall chimney & overhead Kentank fit cleanly!
+          // Center assembly & dynamic bounding-box camera framing so boiler + ejector + tower + Kentank + shorter chimney fit cleanly!
           const rawBox = new THREE.Box3().setFromObject(assemblyGroup);
           const centerX = -(rawBox.min.x + rawBox.max.x) * 0.5;
           const centerZ = -(rawBox.min.z + rawBox.max.z) * 0.5;
@@ -11553,17 +12377,19 @@
 
           const totalW = rawBox.max.x - rawBox.min.x;
           const totalD = rawBox.max.z - rawBox.min.z;
-          const totalH = Math.max(rawBox.max.y, chExitY) + 0.22;
+          const totalH = Math.max(rawBox.max.y, chExitY) + 0.24;
           const tanHalfFov = Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
           const allTargetY = totalH * 0.46;
-          const allDist = Math.max(6.8, Math.max((totalH * 0.56) / tanHalfFov, (totalW * 0.52) / (tanHalfFov * Math.max(1.45, camera.aspect || 2.1))) * 1.18 + totalD * 0.35);
+          const allDist = Math.max(6.4, Math.max((totalH * 0.58) / tanHalfFov, (totalW * 0.54) / (tanHalfFov * Math.max(1.45, camera.aspect || 2.1))) * 1.18 + totalD * 0.38);
 
           stageViews = {
-            all: { target: new THREE.Vector3(0.15, allTargetY, 0), cam: new THREE.Vector3(0.95, allTargetY + totalH * 0.12, allDist) },
-            quench: { target: new THREE.Vector3(qX + centerX + 0.10, 0.88, qZ + centerZ), cam: new THREE.Vector3(qX + centerX + 0.45, 1.25, qZ + centerZ + 2.8) },
-            venturi: { target: new THREE.Vector3(chX + centerX, 0.85, chZ + centerZ), cam: new THREE.Vector3(chX + centerX + 0.65, 1.35, chZ + centerZ + 3.0) },
+            all: { target: new THREE.Vector3(0.10, allTargetY, 0), cam: new THREE.Vector3(0.85, allTargetY + totalH * 0.16, allDist) },
+            quench: { target: new THREE.Vector3(qX + centerX + 0.10, 0.88, qZ + centerZ), cam: new THREE.Vector3(qX + centerX + 0.45, 1.25, qZ + centerZ + 2.9) },
+            venturi: steamEnabled
+              ? { target: new THREE.Vector3(ejMidX + centerX - 0.15, 0.82, qZ + centerZ - 0.25), cam: new THREE.Vector3(ejMidX + centerX + 0.55, 1.35, qZ + centerZ + 2.85) }
+              : { target: new THREE.Vector3(chX + centerX, 0.85, chZ + centerZ), cam: new THREE.Vector3(chX + centerX + 0.65, 1.35, chZ + centerZ + 3.0) },
             packed: { target: new THREE.Vector3(pX + centerX + 0.15, 1.32, pZ + centerZ), cam: new THREE.Vector3(pX + centerX + 0.55, 1.65, pZ + centerZ + 3.4) },
-            blower: { target: new THREE.Vector3(chX + centerX + 0.35, totalH * 0.48, chZ + centerZ), cam: new THREE.Vector3(chX + centerX + 1.15, totalH * 0.56, chZ + centerZ + Math.max(5.5, totalH * 1.15)) },
+            blower: { target: new THREE.Vector3(chX + centerX + 0.25, totalH * 0.48, chZ + centerZ), cam: new THREE.Vector3(chX + centerX + 1.05, totalH * 0.56, chZ + centerZ + Math.max(4.8, totalH * 1.15)) },
           };
 
           const ox = centerX, oz = centerZ;
@@ -11582,6 +12408,18 @@
             return { pt, swirl: (u > 0.25 && u < 0.52) ? 0.08 : 0.022 };
           });
 
+          if (steamEnabled && boilerPos && boilerPos.steamParticlePath) {
+            const sRaw = boilerPos.steamParticlePath.getSpacedPoints(120);
+            motiveSamples = sRaw.map((pt, idx) => {
+              const u = idx / (sRaw.length - 1);
+              return {
+                pt: new THREE.Vector3(pt.x + ox, pt.y, pt.z + oz),
+                swirl: u > 0.55 ? 0.065 : 0.012,
+                steamJet: true,
+              };
+            });
+          }
+
           if (!hasFramedInitial) {
             hasFramedInitial = true;
             const initView = stageViews[state.selectedStage] || stageViews.all;
@@ -11593,6 +12431,10 @@
             targetGoal = vGoal.target.clone();
             camGoal = vGoal.cam.clone();
           }
+        }
+
+        if (isLocalCeramic) {
+          buildLocalCeramicScene();
           return;
         }
 
@@ -12949,10 +13791,12 @@
           const posAttr = particleGeo.attributes.position;
           const colAttr = particleGeo.attributes.color;
           const hasMotive = motiveSamples.length > 1;
+          const isSteamJetMotive = hasMotive && !!motiveSamples[0].steamJet;
           for (let i = 0; i < particleCount; i++) {
-            particlePhase[i] = (particlePhase[i] + dt * 0.14) % 1.0;
-            const t = particlePhase[i];
             const useMotive = hasMotive && (i % 3 === 0);
+            const speedMul = (useMotive && isSteamJetMotive) ? 0.42 : 0.14;
+            particlePhase[i] = (particlePhase[i] + dt * speedMul) % 1.0;
+            const t = particlePhase[i];
             const samples = useMotive ? motiveSamples : flowSamples;
             const maxIdx = samples.length - 1;
             const fIdx = t * maxIdx;
@@ -12968,7 +13812,10 @@
               s0.pt.y + (s1.pt.y - s0.pt.y) * frac + Math.sin(ang) * sw * 0.55,
               s0.pt.z + (s1.pt.z - s0.pt.z) * frac + Math.sin(ang) * sw
             );
-            if (useMotive) {
+            if (useMotive && isSteamJetMotive) {
+              if (t < 0.62) colAttr.setXYZ(i, 0.94, 0.98, 1.0);
+              else colAttr.setXYZ(i, 0.35, 0.90, 0.99);
+            } else if (useMotive) {
               if (t < 0.42) colAttr.setXYZ(i, 0.49, 0.83, 0.99);
               else colAttr.setXYZ(i, 0.28, 0.92, 0.64);
             } else if (t < 0.20) {

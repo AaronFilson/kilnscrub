@@ -153,26 +153,28 @@ type DeluxeFabSpec struct {
 // parts legend, flat-pattern cut sheets, clearances, and full systems schedules
 // (electrical, plumbing, pump station, bracing, acoustics, and deluxe spec).
 type ShopPlan struct {
-	Title            string              `json:"title"`
-	BuildPath        string              `json:"build_path"`
-	IsDeluxe         bool                `json:"is_deluxe"`
-	StageAlignment   string              `json:"stage_alignment"`
-	PackedBedLayout  string              `json:"packed_bed_layout"`
-	VenturiLayout    string              `json:"venturi_layout"`
-	CompactFootprint bool                `json:"compact_footprint"`
-	OverallLengthIn  float64             `json:"overall_length_in"`
-	OverallWidthIn   float64             `json:"overall_width_in"`
-	OverallHeightIn  float64             `json:"overall_height_in"`
-	Parts            []PlanPart          `json:"parts"`
-	CutList          []CutSheetItem      `json:"cut_list"`
-	Clearances       PlanClearances      `json:"clearances"`
-	Electrical       []ElectricalCircuit `json:"electrical"`
-	Plumbing         []PlumbingLine      `json:"plumbing"`
-	PumpStation      PumpStationSpec     `json:"pump_station"`
-	Bracing          []BracingMember     `json:"bracing"`
-	Acoustics        []AcousticZone      `json:"acoustics"`
-	AcousticSummary  AcousticSummary     `json:"acoustic_summary"`
-	DeluxeSpec       *DeluxeFabSpec      `json:"deluxe_spec,omitempty"`
+	Title               string              `json:"title"`
+	BuildPath           string              `json:"build_path"`
+	IsDeluxe            bool                `json:"is_deluxe"`
+	LocalDraftMode      string              `json:"local_draft_mode,omitempty"`
+	SteamEjectorEnabled bool                `json:"steam_ejector_enabled,omitempty"`
+	StageAlignment      string              `json:"stage_alignment"`
+	PackedBedLayout     string              `json:"packed_bed_layout"`
+	VenturiLayout       string              `json:"venturi_layout"`
+	CompactFootprint    bool                `json:"compact_footprint"`
+	OverallLengthIn     float64             `json:"overall_length_in"`
+	OverallWidthIn      float64             `json:"overall_width_in"`
+	OverallHeightIn     float64             `json:"overall_height_in"`
+	Parts               []PlanPart          `json:"parts"`
+	CutList             []CutSheetItem      `json:"cut_list"`
+	Clearances          PlanClearances      `json:"clearances"`
+	Electrical          []ElectricalCircuit `json:"electrical"`
+	Plumbing            []PlumbingLine      `json:"plumbing"`
+	PumpStation         PumpStationSpec     `json:"pump_station"`
+	Bracing             []BracingMember     `json:"bracing"`
+	Acoustics           []AcousticZone      `json:"acoustics"`
+	AcousticSummary     AcousticSummary     `json:"acoustic_summary"`
+	DeluxeSpec          *DeluxeFabSpec      `json:"deluxe_spec,omitempty"`
 }
 
 func frustumBoundingBoxIn(rIn, rOut, thetaRad float64) (w, h float64) {
@@ -1571,6 +1573,53 @@ func buildLocalCeramicShopPlan(
 		},
 	}
 
+	if fr.SteamEnabled {
+		steamCost := 0.0
+		for _, it := range cots.BOM.Items {
+			if it.Category == "Stage 2B: Certified Steam Source & de Laval Ejector" {
+				steamCost = it.UnitCostUSD
+			}
+		}
+		boilerSKU := "LOCAL-MONOTUBE-20PSIG"
+		boilerLabel := "Stage 2B: Code-Rated Small-Bore 316L Monotube Flash Coil + Certified PRV & Gauge (20 psig)"
+		boilerDimsIn := `3/8" seamless 316L monotube (<2 L volume) + 25 psig ASME/IBR/KEBS PRV + 0-100 psig gauge`
+		boilerDimsMM := "10 mm seamless 316L coil (<2 L) + certified PRV & siphon gauge"
+		if fr.DraftMode == LocalDraftSteamEjectorHP {
+			boilerSKU = "LOCAL-BABY-BOILER-60PSIG"
+			boilerLabel = "Stage 2B: Certified Non-IBR (<=25 L) / KEBS Commercial Baby Steam Boiler + PRV & Sight Glass (60 psig)"
+			boilerDimsIn = `<=25 L certified baby boiler (60 psig) + 75 psig PRV, fusible plug, sight glass & check valve`
+			boilerDimsMM = "<=25 L non-IBR / KEBS baby boiler (4.14 barg) + certified safety trim"
+		}
+		parts = append(parts,
+			PlanPart{
+				Num:          10,
+				ID:           "certified_steam_source",
+				Label:        boilerLabel,
+				Stage:        "Stage 2B Steam",
+				Material:     fr.SteamSourceType,
+				DimensionsIn: boilerDimsIn,
+				DimensionsMM: boilerDimsMM,
+				SKU:          boilerSKU,
+				Qty:          1,
+				CostUSD:      round2(steamCost * 0.72),
+				Notes:        fmt.Sprintf("%.1f kg/hr steam (%.1f kW thermal vs %.1f kW kiln flue waste heat); MUST pass 1.5x MAWP cold hydro-test. NEVER build DIY welded drum boilers!", fr.SteamFlowKgHr, fr.SteamThermalKW, fr.KilnWasteHeatKW),
+			},
+			PlanPart{
+				Num:          11,
+				ID:           "de_laval_steam_ejector",
+				Label:        fmt.Sprintf("Stage 2B: Machined 316L de Laval Steam-Jet Ejector Throat (%.2f mm) & Mixing Diffuser", fr.SteamNozzleThroatMM),
+				Stage:        "Stage 2B Steam",
+				Material:     "Machined 316L Stainless de Laval Nozzle + Insulated Steam Header (S1) + Stoneware/316L Mixing Diffuser",
+				DimensionsIn: fmt.Sprintf(`%.3f" (%.2f mm) choked throat, %.0f m/s (Mach %.2f) -> %.3f inWC draft`, fr.SteamNozzleThroatMM/25.4, fr.SteamNozzleThroatMM, fr.SteamNozzleVelMS, fr.SteamNozzleMach, fr.EjectorDraftInWC),
+				DimensionsMM: fmt.Sprintf("%.2f mm choked throat, %.0f m/s (Mach %.2f), entrainment %.1f:1", fr.SteamNozzleThroatMM, fr.SteamNozzleVelMS, fr.SteamNozzleMach, fr.EjectorEntrainmentRatio),
+				SKU:          "LOCAL-DELAVAL-EJECTOR-316L",
+				Qty:          1,
+				CostUSD:      round2(steamCost * 0.28),
+				Notes:        fr.CondensationGrowthNote,
+			},
+		)
+	}
+
 	cutList := []CutSheetItem{
 		{
 			PartNum:      1,
@@ -1633,6 +1682,19 @@ func buildLocalCeramicShopPlan(
 			Notes:        fmt.Sprintf(`Build %.1f m (%.0f ft) vertical chimney on reinforced footing with cleanout door at base and lateral wall ties / 3-way guy-wires every 3 m.`, fr.ChimneyHeightM, fr.ChimneyHeightFt),
 		},
 	}
+	if fr.SteamEnabled {
+		cutList[len(cutList)-1].Name = fmt.Sprintf("Short Brick / SWG Exhaust Chimney (%.1f m / %.0f ft, Steam-Jet Driven)", fr.ChimneyHeightM, fr.ChimneyHeightFt)
+		cutList = append(cutList, CutSheetItem{
+			PartNum:      11,
+			Name:         fmt.Sprintf("Insulated Steam Header (S1) & Machined 316L de Laval Ejector Mixing Throat (%.2f mm Nozzle)", fr.SteamNozzleThroatMM),
+			Shape:        "pipe",
+			Material:     `1/2" Sch 40 Seamless 316L/Steel Steam Pipe + Mineral-Wool Scald Guard + 316L Mixing Diffuser`,
+			FlatWidthIn:  round2(math.Pi * 4.0),
+			FlatHeightIn: 36.0,
+			Qty:          1,
+			Notes:        fmt.Sprintf(`Machine %.2f mm choked 316L de Laval nozzle centered coaxially in the mixing throat; insulate S1 steam header with scald guards and hydro-test to 1.5x MAWP before firing.`, fr.SteamNozzleThroatMM),
+		})
+	}
 
 	// Electrical schedule: strictly EMPTY (0 circuits) when zero_electricity == true!
 	electrical := []ElectricalCircuit{}
@@ -1656,7 +1718,9 @@ func buildLocalCeramicShopPlan(
 				IsSafetyLoop: false,
 				Notes:        "Powers the 0.5 HP (370 W) domestic monoblock recirculation pump; overhead gravity tank maintains flow during grid blackouts.",
 			},
-			{
+		}
+		if !fr.SteamEnabled {
+			electrical = append(electrical, ElectricalCircuit{
 				ID:           "E2",
 				Label:        "Local Low-dP Draft Fan (12V Solar / 230V Jua-Kali Fan)",
 				From:         "12V Solar Charge Controller / Local RCD Circuit",
@@ -1669,7 +1733,7 @@ func buildLocalCeramicShopPlan(
 				NECRef:       "Local Low-Voltage DC / RCD Protected",
 				IsSafetyLoop: false,
 				Notes:        "Provides 1.8 inWC mechanical draft with shorter 4.5 m ceramic chimney; all-ceramic body stays safe even if fan stops.",
-			},
+			})
 		}
 	}
 
@@ -1753,6 +1817,37 @@ func buildLocalCeramicShopPlan(
 		},
 	}
 
+	if fr.SteamEnabled {
+		plumbing = append(plumbing,
+			PlumbingLine{
+				ID:             "S1",
+				Label:          fmt.Sprintf("Insulated Live Steam Header (S1) -> PRV & Gauge -> de Laval Ejector (%.0f psig / %.1f kg/hr)", fr.SteamPressurePSIG, fr.SteamFlowKgHr),
+				Fluid:          fmt.Sprintf("Saturated / Dry Motive Steam (%.0f psig / %.2f barg, %.0f m/s @ %.2f mm nozzle)", fr.SteamPressurePSIG, fr.SteamPressureBar, fr.SteamNozzleVelMS, fr.SteamNozzleThroatMM),
+				From:           "Certified Steam Source (Monotube Coil / Non-IBR Baby Boiler)",
+				To:             "Stage 2B 316L de Laval Steam-Jet Ejector Mixing Throat",
+				SizeIn:         0.5,
+				Material:       `1/2" Sch 40 Seamless 316L/Steel Pipe + Mineral-Wool Insulation & Metal Scald Guard`,
+				FlowGPM:        round2(fr.SteamWaterLHr / 60.0 / 3.785411784),
+				PressurePSI:    fr.SteamPressurePSIG,
+				ValvesFittings: "ASME/IBR/KEBS Certified Spring-Loaded PRV (w/ Pull-Ring), 0-100 psig Glycerin Gauge w/ Siphon, Bronze Throttling Valve",
+				Notes:          fmt.Sprintf("1.5x MAWP cold hydro-tested header S1; pipe PRV discharge safely down toward grade. Delivers %.3f inWC steam-jet ejector draft (%.1f:1 entrainment) at %.0f W electric.", fr.EjectorDraftInWC, fr.EjectorEntrainmentRatio, fr.PowerWatts),
+			},
+			PlumbingLine{
+				ID:             "P6",
+				Label:          fmt.Sprintf("Open Atmospheric 0 psig Feedwater Supply -> Check Valve -> Steam Source (+%.1f L/hr)", fr.SteamWaterLHr),
+				Fluid:          "Clean Soft/Filtered Boiler Feedwater (0 psig Open Tank)",
+				From:           "Open Atmospheric 0 psig Overhead Feed Tank / Hand Feed Pump",
+				To:             "Certified Monotube Coil / Non-IBR Baby Boiler Feed Inlet",
+				SizeIn:         0.5,
+				Material:       `1/2" Copper / 316L Seamless Feed Tubing + Bronze Spring Check Valve`,
+				FlowGPM:        round2(fr.SteamWaterLHr / 60.0 / 3.785411784),
+				PressurePSI:    fr.GravityHeadPSI,
+				ValvesFittings: "Fine Mesh Strainer, Bronze/316L Spring Check Valve, Isolation Valve, Sight Glass",
+				Notes:          "Check valve prevents hot steam from ever backing into plastic atmospheric feed tank; never pressurize plastic tanks.",
+			},
+		)
+	}
+
 	pumpHP := 0.0
 	pumpVolt := 0
 	if !p.ZeroElectricity {
@@ -1815,7 +1910,7 @@ func buildLocalCeramicShopPlan(
 		},
 		{
 			ID:         "B5",
-			Component:  fmt.Sprintf("Tall Brick / Terracotta Chimney Guy-Wires & Wall Ties (%.1f m / %.0f ft)", fr.ChimneyHeightM, fr.ChimneyHeightFt),
+			Component:  fmt.Sprintf("Brick / Terracotta Chimney Guy-Wires & Wall Ties (%.1f m / %.0f ft)", fr.ChimneyHeightM, fr.ChimneyHeightFt),
 			MemberSpec: `3-Way 6 mm Galvanized Steel Guy-Wires + Collar Bands Every 3 m (or Masonry Wall Ties)`,
 			Mounting:   "Turnbuckle Anchors into Concrete Deadmen / Adjacent Masonry Wall",
 			LoadLbs:    chimneyLbs,
@@ -1824,8 +1919,36 @@ func buildLocalCeramicShopPlan(
 		},
 	}
 
+	if fr.SteamEnabled {
+		steamLoadLbs := 65.0
+		if fr.DraftMode == LocalDraftSteamEjectorHP {
+			steamLoadLbs = 125.0
+		}
+		bracing = append(bracing, BracingMember{
+			ID:         "B6",
+			Component:  fmt.Sprintf("Certified %.0f psig Steam Source Cradle, Header S1 Pipe Clamps & de Laval Ejector Thrust Mount", fr.SteamPressurePSIG),
+			MemberSpec: `2"×2" Mild Steel Boiler Cradle + Anchored Steam Header Pipe Clamps + Sheet-Metal Scald Shield`,
+			Mounting:   "Bolted to Masonry Pad Outside Wet Spray Zone w/ PRV Discharge Guide",
+			LoadLbs:    steamLoadLbs,
+			AnchorSpec: `4× M10 Masonry Expansion Anchors + Thermal-Expansion Pipe Guides on S1`,
+			Notes:      "Anchors certified steam coil/baby boiler, absorbs de Laval ejector jet reaction thrust, supports insulated header S1, and anchors PRV vent pipe downward away from operator walkways.",
+		})
+	}
+
 	var acoustics []AcousticZone
-	if p.ZeroElectricity {
+	if fr.SteamEnabled {
+		acoustics = []AcousticZone{
+			{
+				ID:             "S1",
+				Location:       fmt.Sprintf("%.0f psig de Laval Steam-Jet Ejector Throat & Masonry Mixing Diffuser", fr.SteamPressurePSIG),
+				Treatment:      "Thick Brick / SWG Masonry Shroud + Optional Mineral-Wool Diffuser Acoustic Wrap",
+				Material:       "4.5\" Fired Brick / SWG Acoustic Mass Wall + High-Temp Mineral Wool",
+				ThicknessIn:    4.5,
+				AttenuationDBA: round1(math.Max(0.0, urban.Noise.BareDBA3Ft-urban.Noise.SilencedDBA3Ft)),
+				Notes:          fmt.Sprintf("Modest steam-jet hiss (~%.1f dBA bare @ 3 ft — quieter than a 79 dBA 2 HP blower) -> %.1f dBA at %.0f ft property line.", urban.Noise.BareDBA3Ft, urban.Noise.PropertyLineDBA, urban.Noise.PropertyLineFt),
+			},
+		}
+	} else if p.ZeroElectricity {
 		acoustics = []AcousticZone{
 			{
 				ID:             "S1",
@@ -1851,7 +1974,7 @@ func buildLocalCeramicShopPlan(
 		}
 	}
 	treated3Ft := urban.Noise.BareDBA3Ft
-	if !p.ZeroElectricity && p.IncludeSilencer {
+	if (fr.SteamEnabled || !p.ZeroElectricity) && p.IncludeSilencer {
 		treated3Ft = urban.Noise.SilencedDBA3Ft
 	}
 	acousticSummary := AcousticSummary{
@@ -1870,25 +1993,40 @@ func buildLocalCeramicShopPlan(
 	necDepth := 0.0
 	necWidth := 0.0
 	wiringNote := `0V / OFF-GRID (Zero Electricity): No electrical panel, VFD, or NEC 110.26 working clearance required. Maintain >=36" hot-flue clearance to combustibles (NFPA 211), >=36" service aisle around brick cleanouts & treadle pump, and inspect braced overhead gravity tank stand before every firing.`
-	if !p.ZeroElectricity {
+	if fr.SteamEnabled && p.ZeroElectricity {
+		wiringNote = `0V / OFF-GRID STEAM-JET EJECTOR (Zero Electricity): No electrical panel, VFD, or NEC 110.26 working clearance required. Maintain >=36" hot-flue & steam-header S1 clearance, clear access to the certified PRV pull-ring & bronze throttling valve, and inspect braced overhead tank stand before every firing.`
+	} else if !p.ZeroElectricity && fr.SteamEnabled {
+		necDepth = 36.0
+		necWidth = 30.0
+		wiringNote = `Hybrid Steam-Ejector Power (~370 W water pump only; zero electric draft fan): Mount weatherproof RCD/GFCI isolator switch in clear view of the 0.5 HP 230V 50Hz domestic pump with >=36" unobstructed dry access, well clear of live steam header S1 and PRV discharge.`
+	} else if !p.ZeroElectricity {
 		necDepth = 36.0
 		necWidth = 30.0
 		wiringNote = `Local Hybrid Power (~520 W): Mount weatherproof RCD/GFCI isolator switch in clear view of the 0.5 HP 230V 50Hz domestic pump and low-dP fan with >=36" unobstructed dry access.`
 	}
 
+	stageAlign := "passive_masonry_buoyancy"
+	ventLayout := "terracotta_baffle_quench"
+	if fr.SteamEnabled {
+		stageAlign = "steam_jet_ejector_draft"
+		ventLayout = "de_laval_steam_ejector_condensation"
+	}
+
 	return ShopPlan{
-		Title:            fmt.Sprintf("Local Ceramic Shop Plan (%s) — %s (%.1f cu.ft.)", prof.label, p.StudioName, design.Input.KilnVolumeCuFt),
-		BuildPath:        BuildPathLocalCeramic,
-		IsDeluxe:         false,
-		StageAlignment:   "passive_masonry_buoyancy",
-		PackedBedLayout:  "wide_masonry_stoneware_bed",
-		VenturiLayout:    "terracotta_baffle_quench",
-		CompactFootprint: p.CompactFootprint,
-		OverallLengthIn:  overallLenIn,
-		OverallWidthIn:   overallWidthIn,
-		OverallHeightIn:  overallHeightIn,
-		Parts:            parts,
-		CutList:          cutList,
+		Title:               fmt.Sprintf("Local Ceramic Shop Plan (%s) — %s (%.1f cu.ft.)", prof.label, p.StudioName, design.Input.KilnVolumeCuFt),
+		BuildPath:           BuildPathLocalCeramic,
+		IsDeluxe:            false,
+		LocalDraftMode:      fr.DraftMode,
+		SteamEjectorEnabled: fr.SteamEnabled,
+		StageAlignment:      stageAlign,
+		PackedBedLayout:     "wide_masonry_stoneware_bed",
+		VenturiLayout:       ventLayout,
+		CompactFootprint:    p.CompactFootprint,
+		OverallLengthIn:     overallLenIn,
+		OverallWidthIn:      overallWidthIn,
+		OverallHeightIn:     overallHeightIn,
+		Parts:               parts,
+		CutList:             cutList,
 		Clearances: PlanClearances{
 			FlueToCombustiblesIn: 36.0,
 			PropertyLineMinFt:    propMinFt,

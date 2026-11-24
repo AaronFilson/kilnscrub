@@ -1490,8 +1490,8 @@ func EvaluateArchitectureOptions(project StudioProject, design model.ScrubberDes
 	}
 	if p.IsLocalCeramic() {
 		fr := EvaluateFrugal(p, design)
-		savings = append(savings, fmt.Sprintf("Local Ceramic / Masonry Mode (%s, zero_electricity=%v): %s — %.0f\" stoneware bed (%.3f inWC Ergun dP), %.1f m chimney (%.3f inWC avail vs %.3f inWC req), %.0f W electric, %.1f%% HCl / %.0f%% honest submicron NaCl capture.",
-			fr.RegionLabel, fr.ZeroElectricity, fr.LocalCurrencyEstimate, fr.BedDiameterIn, fr.BedDPInWC, fr.ChimneyHeightM, fr.AvailableDraftInWC, fr.RequiredDraftInWC, fr.PowerWatts, fr.HClRemovalPct, fr.SubmicronNaClCapturePct))
+		savings = append(savings, fmt.Sprintf("Local Ceramic / Masonry Mode (%s, draft=%s, zero_electricity=%v): %s — %.0f\" stoneware bed (%.3f inWC Ergun dP), %.1f m chimney (%.3f inWC avail vs %.3f inWC req), %.0f W electric, %.1f%% HCl / %.0f%% submicron NaCl capture.",
+			fr.RegionLabel, fr.DraftMode, fr.ZeroElectricity, fr.LocalCurrencyEstimate, fr.BedDiameterIn, fr.BedDPInWC, fr.ChimneyHeightM, fr.AvailableDraftInWC, fr.RequiredDraftInWC, fr.PowerWatts, fr.HClRemovalPct, fr.SubmicronNaClCapturePct))
 	}
 	if len(savings) == 0 {
 		savings = append(savings, "Standard baseline inline configuration active (toggle budget blower drive, shell-less 4\" parallel bundle, DIY ceramic rings, U-turn skid, or electromechanical controls to compare savings).")

@@ -281,9 +281,15 @@ func buildPacketReadme(eval StudioEvaluation) []byte {
 		eval.Urban.Plume.DilutionCFMNeeded, eval.Urban.Plume.DilutionReheatKW)
 	fmt.Fprintf(&b, "Bulk Baking Soda: %s\n", eval.Urban.Drain.BulkPackagingLabel)
 	if eval.Frugal != nil && eval.Frugal.Enabled {
-		fmt.Fprintf(&b, "Local Ceramic:    %s | Zero-Electricity=%v (%.0f W) | Chimney=%.1f m (%.3f inWC avail vs %.3f inWC req)\n",
-			eval.Frugal.RegionLabel, eval.Frugal.ZeroElectricity, eval.Frugal.PowerWatts,
+		fmt.Fprintf(&b, "Local Ceramic:    %s | Draft=%s | Zero-Electricity=%v (%.0f W) | Chimney=%.1f m (%.3f inWC avail vs %.3f inWC req)\n",
+			eval.Frugal.RegionLabel, eval.Frugal.DraftMode, eval.Frugal.ZeroElectricity, eval.Frugal.PowerWatts,
 			eval.Frugal.ChimneyHeightM, eval.Frugal.AvailableDraftInWC, eval.Frugal.RequiredDraftInWC)
+		if eval.Frugal.SteamEnabled {
+			fmt.Fprintf(&b, "Steam-Jet Ejector: %.0f psig (%.2f barg) | Nozzle=%.1f m/s (Mach %.2f, %.2f mm) | Steam=%.1f kg/hr (%.1f kW vs %.1f kW kiln flue waste heat) | Ejector=%.3f inWC (%.1f:1)\n",
+				eval.Frugal.SteamPressurePSIG, eval.Frugal.SteamPressureBar, eval.Frugal.SteamNozzleVelMS, eval.Frugal.SteamNozzleMach,
+				eval.Frugal.SteamNozzleThroatMM, eval.Frugal.SteamFlowKgHr, eval.Frugal.SteamThermalKW, eval.Frugal.KilnWasteHeatKW,
+				eval.Frugal.EjectorDraftInWC, eval.Frugal.EjectorEntrainmentRatio)
+		}
 		fmt.Fprintf(&b, "Local Cost/Chem:  %s | Alkali=%s (%s): %.2f kg/firing | Capture: %.1f%% HCl / %.0f%% submicron NaCl\n",
 			eval.Frugal.LocalCurrencyEstimate, eval.Frugal.AlkaliName, eval.Frugal.AlkaliFormula,
 			eval.Frugal.AlkaliKgPerFiring, eval.Frugal.HClRemovalPct, eval.Frugal.SubmicronNaClCapturePct)

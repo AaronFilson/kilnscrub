@@ -2290,3 +2290,269 @@ func TestPhase10LocalCeramicNairobiMumbaiAndZeroElectricity(t *testing.T) {
 		mumbaiEval.Frugal.AlkaliKgPerFiring, mumbaiEval.Frugal.HClRemovalPct, mumbaiEval.Frugal.CoarseAshCapturePct, mumbaiEval.Frugal.SubmicronNaClCapturePct,
 	)
 }
+
+func TestPhase10BZeroElectricitySteamJetEjectorAndCondensation(t *testing.T) {
+	eval := NewEvaluator(scrubber.NewDesigner(), cad.NewExporter())
+	bannedPhrases := []string{"Hobby " + "316L", "4-" + "lb", "gro" + "cery", "Switching from Salt " + "(NaCl) to Soda"}
+
+	// 1. Presets count stays 5, and default/empty local_draft_mode normalizes cleanly to natural_chimney.
+	if len(Presets()) != 5 {
+		t.Fatalf("expected 5 curated presets, got %d", len(Presets()))
+	}
+	passiveNB := OffGridSteamCeramicProject(LocalRegionNairobi, LocalDraftNaturalChimney)
+	if passiveNB.LocalDraftMode != LocalDraftNaturalChimney || passiveNB.IsSteamEjector() {
+		t.Fatalf("unexpected natural_chimney helper: %+v", passiveNB)
+	}
+	defaultSteam := OffGridSteamCeramicProject(LocalRegionGeneral, "")
+	if defaultSteam.LocalDraftMode != LocalDraftSteamEjectorLP || !defaultSteam.IsSteamEjector() {
+		t.Fatalf("empty draftMode on OffGridSteamCeramicProject should default to steam_ejector_lp, got %q", defaultSteam.LocalDraftMode)
+	}
+
+	// 2. Evaluate natural_chimney, steam_ejector_lp, and steam_ejector_hp across Nairobi, Mumbai, and General Local.
+	for _, region := range []string{LocalRegionNairobi, LocalRegionMumbai, LocalRegionGeneral} {
+		evPassive, err := eval.Evaluate(OffGridCeramicProject(region))
+		if err != nil {
+			t.Fatalf("%s passive evaluate: %v", region, err)
+		}
+		evLP, err := eval.Evaluate(OffGridSteamCeramicProject(region, LocalDraftSteamEjectorLP))
+		if err != nil {
+			t.Fatalf("%s LP steam evaluate: %v", region, err)
+		}
+		evHP, err := eval.Evaluate(OffGridSteamCeramicProject(region, LocalDraftSteamEjectorHP))
+		if err != nil {
+			t.Fatalf("%s HP steam evaluate: %v", region, err)
+		}
+
+		fp, flp, fhp := evPassive.Frugal, evLP.Frugal, evHP.Frugal
+		if fp.SteamEnabled || fp.DraftMode != LocalDraftNaturalChimney || fp.SteamNozzleVelMS != 0 || fp.EjectorDraftInWC != 0 {
+			t.Errorf("%s passive should have steam_enabled=false & 0 steam metrics: %+v", region, fp)
+		}
+		if !flp.SteamEnabled || flp.DraftMode != LocalDraftSteamEjectorLP || flp.SteamPressurePSIG != 20.0 || math.Abs(flp.SteamPressureBar-1.38) > 0.02 {
+			t.Errorf("%s LP steam metadata wrong: %+v", region, flp)
+		}
+		if !fhp.SteamEnabled || fhp.DraftMode != LocalDraftSteamEjectorHP || fhp.SteamPressurePSIG != 60.0 || math.Abs(fhp.SteamPressureBar-4.14) > 0.02 {
+			t.Errorf("%s HP steam metadata wrong: %+v", region, fhp)
+		}
+
+		// Exact physics monotonicity: v_nozzle_hp > v_nozzle_lp > 0, Mach_hp > Mach_lp > 1,
+		// ejector_draft_hp > ejector_draft_lp > 0, submicron_hp > submicron_lp > submicron_passive,
+		// chimney_steam < chimney_passive.
+		if !(fhp.SteamNozzleVelMS > flp.SteamNozzleVelMS && flp.SteamNozzleVelMS > 500.0 && flp.SteamNozzleVelMS < 560.0 && fhp.SteamNozzleVelMS > 695.0 && fhp.SteamNozzleVelMS < 785.0) {
+			t.Errorf("%s nozzle velocity monotonicity/bounds failed: LP=%.1f HP=%.1f", region, flp.SteamNozzleVelMS, fhp.SteamNozzleVelMS)
+		}
+		if !(fhp.SteamNozzleMach > flp.SteamNozzleMach && flp.SteamNozzleMach >= 1.05 && flp.SteamNozzleMach <= 1.20 && fhp.SteamNozzleMach >= 1.48 && fhp.SteamNozzleMach <= 1.68) {
+			t.Errorf("%s nozzle Mach bounds failed: LP=%.2f HP=%.2f", region, flp.SteamNozzleMach, fhp.SteamNozzleMach)
+		}
+		if flp.SteamNozzleThroatMM < 3.5 || flp.SteamNozzleThroatMM > 6.5 || fhp.SteamNozzleThroatMM < 3.5 || fhp.SteamNozzleThroatMM > 6.5 {
+			t.Errorf("%s throat diameter out of physical bounds: LP=%.2f mm HP=%.2f mm", region, flp.SteamNozzleThroatMM, fhp.SteamNozzleThroatMM)
+		}
+		if flp.SteamFlowKgHr < 18.0 || flp.SteamFlowKgHr > 26.0 || fhp.SteamFlowKgHr < 48.0 || fhp.SteamFlowKgHr > 62.0 {
+			t.Errorf("%s steam flow out of 24 cu.ft. bounds: LP=%.1f HP=%.1f kg/hr", region, flp.SteamFlowKgHr, fhp.SteamFlowKgHr)
+		}
+		if flp.SteamWaterLHr != flp.SteamFlowKgHr || fhp.SteamWaterLHr != fhp.SteamFlowKgHr {
+			t.Errorf("%s steam_water_l_hr should match steam_flow_kg_hr", region)
+		}
+		if flp.EjectorDraftInWC < 0.70 || flp.EjectorDraftInWC > 1.25 || fhp.EjectorDraftInWC < 3.80 || fhp.EjectorDraftInWC > 6.00 {
+			t.Errorf("%s ejector draft out of bounds: LP=%.3f HP=%.3f inWC", region, flp.EjectorDraftInWC, fhp.EjectorDraftInWC)
+		}
+		if !(flp.EjectorEntrainmentRatio > fhp.EjectorEntrainmentRatio && fhp.EjectorEntrainmentRatio > 4.0) {
+			t.Errorf("%s entrainment ratio unexpected: LP=%.2f HP=%.2f", region, flp.EjectorEntrainmentRatio, fhp.EjectorEntrainmentRatio)
+		}
+		if !(flp.SteamThermalKW > 12.0 && flp.SteamThermalKW < 22.0 && fhp.SteamThermalKW > 32.0 && fhp.SteamThermalKW < 48.0) {
+			t.Errorf("%s steam thermal kW unexpected: LP=%.1f HP=%.1f", region, flp.SteamThermalKW, fhp.SteamThermalKW)
+		}
+		if flp.KilnWasteHeatKW <= 40.0 || !flp.WasteHeatSufficient || !fhp.WasteHeatSufficient {
+			t.Errorf("%s expected ample Cone 11 kiln waste heat: avail=%.1f kW LP_suf=%v HP_suf=%v", region, flp.KilnWasteHeatKW, flp.WasteHeatSufficient, fhp.WasteHeatSufficient)
+		}
+		if !(fhp.SubmicronNaClCapturePct > flp.SubmicronNaClCapturePct && flp.SubmicronNaClCapturePct > fp.SubmicronNaClCapturePct) {
+			t.Errorf("%s submicron NaCl capture monotonicity failed: passive=%.1f LP=%.1f HP=%.1f",
+				region, fp.SubmicronNaClCapturePct, flp.SubmicronNaClCapturePct, fhp.SubmicronNaClCapturePct)
+		}
+		if flp.SubmicronNaClCapturePct < 58.0 || flp.SubmicronNaClCapturePct > 66.0 || fhp.SubmicronNaClCapturePct < 76.0 || fhp.SubmicronNaClCapturePct > 84.0 {
+			t.Errorf("%s submicron capture out of targets: LP=%.1f%% HP=%.1f%%", region, flp.SubmicronNaClCapturePct, fhp.SubmicronNaClCapturePct)
+		}
+		if !(flp.ChimneyHeightM < fp.ChimneyHeightM && fhp.ChimneyHeightM < fp.ChimneyHeightM && flp.ChimneyHeightM >= 4.5 && flp.ChimneyHeightM <= 5.5 && fhp.ChimneyHeightM >= 4.5 && fhp.ChimneyHeightM <= 5.5) {
+			t.Errorf("%s steam chimney height should drop to [4.5, 5.5] m vs passive %.1f m: LP=%.1f HP=%.1f",
+				region, fp.ChimneyHeightM, flp.ChimneyHeightM, fhp.ChimneyHeightM)
+		}
+		if !flp.DraftFeasible || !fhp.DraftFeasible || flp.DraftMarginInWC <= 0.5 || fhp.DraftMarginInWC <= 3.0 {
+			t.Errorf("%s steam ejector draft margin should be generous: LP=%+.3f HP=%+.3f", region, flp.DraftMarginInWC, fhp.DraftMarginInWC)
+		}
+
+		// Zero-electricity invariants: 0 W electric, 0 circuits in ShopPlan, exact BOM cost match, steam parts/plumbing/bracing present.
+		for _, ev := range []StudioEvaluation{evLP, evHP} {
+			fr := ev.Frugal
+			if fr.PowerWatts != 0 || ev.Urban.Electrical.RequiredVoltage != 0 || ev.Urban.Electrical.RequiredAmps != 0 {
+				t.Errorf("%s %s off-grid must draw 0 W / 0 V / 0 A: power=%.1f elec=%+v", region, fr.DraftMode, fr.PowerWatts, ev.Urban.Electrical)
+			}
+			if len(ev.ShopPlan.Electrical) != 0 || ev.ShopPlan.Electrical == nil {
+				t.Errorf("%s %s off-grid must have empty non-nil ShopPlan.Electrical", region, fr.DraftMode)
+			}
+			if !ev.ShopPlan.SteamEjectorEnabled || ev.ShopPlan.LocalDraftMode != fr.DraftMode {
+				t.Errorf("%s %s ShopPlan steam flags mismatch: mode=%q enabled=%v", region, fr.DraftMode, ev.ShopPlan.LocalDraftMode, ev.ShopPlan.SteamEjectorEnabled)
+			}
+			if math.Abs(fr.EstimatedLocalCostUSD-ev.COTS.EstimatedTotalUSD) > 0.02 {
+				t.Errorf("%s %s Frugal cost ($%.2f) != COTS BOM total ($%.2f)", region, fr.DraftMode, fr.EstimatedLocalCostUSD, ev.COTS.EstimatedTotalUSD)
+			}
+			if len(ev.ShopPlan.Parts) != 11 || len(ev.ShopPlan.Plumbing) != 7 || len(ev.ShopPlan.Bracing) != 6 {
+				t.Errorf("%s %s expected steam ShopPlan parts=11 plumbing=7 bracing=6, got %d/%d/%d",
+					region, fr.DraftMode, len(ev.ShopPlan.Parts), len(ev.ShopPlan.Plumbing), len(ev.ShopPlan.Bracing))
+			}
+			if len(fr.SteamSafetyRequirements) < 5 {
+				t.Errorf("%s %s expected detailed steam_safety_requirements, got %d", region, fr.DraftMode, len(fr.SteamSafetyRequirements))
+			}
+			// Verify S1 steam header in Plumbing and B6 in Bracing.
+			hasS1 := false
+			for _, pl := range ev.ShopPlan.Plumbing {
+				if pl.ID == "S1" && pl.PressurePSI == fr.SteamPressurePSIG {
+					hasS1 = true
+				}
+			}
+			if !hasS1 {
+				t.Errorf("%s %s missing S1 insulated steam header in ShopPlan.Plumbing", region, fr.DraftMode)
+			}
+			// Verify Urban water reflects steam makeup water and acoustic level matches LP (62 dBA) / HP (68 dBA).
+			if !strings.Contains(ev.Urban.Water.Summary, "L/hr") {
+				t.Errorf("%s %s Urban.Water.Summary missing steam L/hr makeup note: %q", region, fr.DraftMode, ev.Urban.Water.Summary)
+			}
+			wantDBA := 62.0
+			if fr.DraftMode == LocalDraftSteamEjectorHP {
+				wantDBA = 68.0
+			}
+			if ev.Urban.Noise.BareDBA3Ft != wantDBA {
+				t.Errorf("%s %s expected bare %.1f dBA steam hiss, got %.1f dBA", region, fr.DraftMode, wantDBA, ev.Urban.Noise.BareDBA3Ft)
+			}
+			// Verify BuildGuideMD and OperationsChecklistMD document PRV pull-ring, condensation growth, and reject DIY drum boilers.
+			for _, want := range []string{"7.6 Zero-Electricity Steam-Jet Ejector", "PRV", "1.5", "DIY", "Condensation"} {
+				if !strings.Contains(ev.BuildGuideMD, want) {
+					t.Errorf("%s %s BuildGuideMD missing %q", region, fr.DraftMode, want)
+				}
+			}
+			if !strings.Contains(ev.OperationsChecklistMD, "PRV") || !strings.Contains(ev.OperationsChecklistMD, "Zero DIY Welded Drum Boilers") {
+				t.Errorf("%s %s OperationsChecklistMD missing PRV / certified boiler checklist", region, fr.DraftMode)
+			}
+			// Zero banned strings.
+			raw, _ := json.Marshal(ev)
+			haystack := string(raw) + "\n" + ev.BuildGuideMD + "\n" + ev.OperationsChecklistMD + "\n" + string(buildPacketReadme(ev))
+			for _, banned := range bannedPhrases {
+				if strings.Contains(strings.ToLower(haystack), strings.ToLower(banned)) {
+					t.Errorf("%s %s output contains banned phrase %q", region, fr.DraftMode, banned)
+				}
+			}
+		}
+
+		// Verify cost delta bounds: LP adds +$280-$360 less chimney savings (~$235-$330 net), HP adds +$490-$560 less chimney savings (~$440-$530 net).
+		lpDelta := flp.EstimatedLocalCostUSD - fp.EstimatedLocalCostUSD
+		hpDelta := fhp.EstimatedLocalCostUSD - fp.EstimatedLocalCostUSD
+		if lpDelta < 220.0 || lpDelta > 370.0 || hpDelta < 430.0 || hpDelta > 570.0 || hpDelta <= lpDelta {
+			t.Errorf("%s unexpected local steam cost deltas: LP=+$%.2f HP=+$%.2f", region, lpDelta, hpDelta)
+		}
+	}
+
+	// 3. Hybrid mode (zero_electricity=false + steam_ejector_hp): 230V domestic water pump (370 W, 1 circuit E1, no fan E2).
+	hybridHP := OffGridSteamCeramicProject(LocalRegionMumbai, LocalDraftSteamEjectorHP)
+	hybridHP.ZeroElectricity = false
+	hybridHP.AvailableVoltage = 230
+	hybridHP.IncludeSilencer = true
+	hybridHP.PropertyLineFt = 5.0 // trigger Caution/ActionNeeded acoustic branch coverage
+	hybEval, err := eval.Evaluate(hybridHP)
+	if err != nil {
+		t.Fatalf("hybrid steam HP evaluate: %v", err)
+	}
+	if hybEval.Frugal.PowerWatts != 370.0 || len(hybEval.ShopPlan.Electrical) != 1 || hybEval.ShopPlan.Electrical[0].ID != "E1" {
+		t.Errorf("hybrid steam HP expected 370 W & 1 circuit (E1 pump only), got %.0f W & %d circuits", hybEval.Frugal.PowerWatts, len(hybEval.ShopPlan.Electrical))
+	}
+	hybrid120 := hybridHP
+	hybrid120.AvailableVoltage = 120
+	hybrid120.PropertyLineFt = 10.0
+	if ev120, err := eval.Evaluate(hybrid120); err != nil || ev120.Urban.Electrical.RequiredVoltage != 120 {
+		t.Fatalf("hybrid 120V steam evaluate failed: err=%v elec=%+v", err, ev120.Urban.Electrical)
+	}
+
+	// 4. Dynamic waste_heat_sufficient=false edge case: low-temp flue + HP steam demand.
+	lowHeat := OffGridSteamCeramicProject(LocalRegionNairobi, LocalDraftSteamEjectorHP)
+	lowHeat.Input.PeakExitTempF = 650.0
+	lowHeatEval, err := eval.Evaluate(lowHeat)
+	if err != nil {
+		t.Fatalf("low-heat HP evaluate: %v", err)
+	}
+	if lowHeatEval.Frugal.WasteHeatSufficient {
+		t.Errorf("expected waste_heat_sufficient=false at 650 F flue (waste=%.1f kW vs steam=%.1f kW)",
+			lowHeatEval.Frugal.KilnWasteHeatKW, lowHeatEval.Frugal.SteamThermalKW)
+	}
+
+	// 5. Verify exact 18 new JSON contract keys in FrugalAssessment + 2 in ShopPlan + BuildPacketZip.
+	hpNairobi, err := eval.Evaluate(OffGridSteamCeramicProject(LocalRegionNairobi, LocalDraftSteamEjectorHP))
+	if err != nil {
+		t.Fatalf("hpNairobi evaluate: %v", err)
+	}
+	rawJSON, err := json.Marshal(hpNairobi)
+	if err != nil {
+		t.Fatalf("marshal hpNairobi: %v", err)
+	}
+	var top map[string]any
+	if err := json.Unmarshal(rawJSON, &top); err != nil {
+		t.Fatalf("unmarshal top: %v", err)
+	}
+	frRaw := top["frugal"].(map[string]any)
+	for _, key := range []string{
+		"draft_mode", "draft_mode_label", "steam_enabled",
+		"steam_pressure_psig", "steam_pressure_bar",
+		"steam_nozzle_vel_m_s", "steam_nozzle_mach", "steam_nozzle_throat_mm",
+		"steam_flow_kg_hr", "steam_water_l_hr", "steam_thermal_kw",
+		"kiln_waste_heat_kw", "waste_heat_sufficient",
+		"ejector_draft_inwc", "ejector_entrainment_ratio",
+		"condensation_growth_note", "steam_source_type", "steam_safety_requirements",
+	} {
+		if _, ok := frRaw[key]; !ok {
+			t.Errorf("FrugalAssessment JSON missing Phase 10B contract key %q", key)
+		}
+	}
+	spRaw := top["shop_plan"].(map[string]any)
+	if spRaw["local_draft_mode"] != LocalDraftSteamEjectorHP || spRaw["steam_ejector_enabled"] != true {
+		t.Errorf("ShopPlan JSON missing Phase 10B keys: local_draft_mode=%v steam_ejector_enabled=%v", spRaw["local_draft_mode"], spRaw["steam_ejector_enabled"])
+	}
+	if zipBytes, _, err := eval.BuildPacketZip(OffGridSteamCeramicProject(LocalRegionNairobi, LocalDraftSteamEjectorHP)); err != nil || len(zipBytes) == 0 {
+		t.Fatalf("Steam-Jet BuildPacketZip failed: err=%v len=%d", err, len(zipBytes))
+	}
+
+	// 6. Validation & ParseProject round-trip: valid steam modes, empty build_path with steam mode, and invalid draft mode error.
+	if parsed, err := ParseProject([]byte(`{"preset_id":"wood_salt_24","build_path":"local_ceramic_masonry","zero_electricity":true,"local_region":"nairobi","local_draft_mode":"steam_ejector_hp"}`)); err != nil {
+		t.Fatalf("ParseProject steam_ejector_hp failed: %v", err)
+	} else if parsed.LocalDraftMode != LocalDraftSteamEjectorHP {
+		t.Errorf("unexpected parsed local_draft_mode: %q", parsed.LocalDraftMode)
+	}
+	emptyBP := DefaultProject()
+	emptyBP.BuildPath = ""
+	emptyBP.LocalDraftMode = LocalDraftSteamEjectorLP
+	if err := emptyBP.Validate(); err != nil {
+		t.Errorf("expected empty build_path with steam_ejector_lp to validate cleanly, got: %v", err)
+	}
+	if emptyBP.Normalize().BuildPath != BuildPathLocalCeramic {
+		t.Errorf("expected empty build_path with steam_ejector_lp to normalize to local_ceramic_masonry")
+	}
+	emptyBPNoSteam := DefaultProject()
+	emptyBPNoSteam.BuildPath = ""
+	emptyBPNoSteam.LocalDraftMode = ""
+	if err := emptyBPNoSteam.Validate(); err == nil {
+		t.Errorf("expected empty build_path without steam mode to fail validation")
+	}
+	if _, err := ParseProject([]byte(`{"local_draft_mode":"rocket_nozzle"}`)); err == nil {
+		t.Errorf("expected validation error for unknown local_draft_mode")
+	}
+
+	// Log exact summary table for engineering verification.
+	evNBLP, _ := eval.Evaluate(OffGridSteamCeramicProject(LocalRegionNairobi, LocalDraftSteamEjectorLP))
+	evMBLP, _ := eval.Evaluate(OffGridSteamCeramicProject(LocalRegionMumbai, LocalDraftSteamEjectorLP))
+	evMBHP, _ := eval.Evaluate(OffGridSteamCeramicProject(LocalRegionMumbai, LocalDraftSteamEjectorHP))
+	t.Logf("Phase 10B Zero-Electricity Steam-Jet Ejector Summary (24 cu.ft. Cone 11 Wood-Salt):\n"+
+		"  Nairobi LP (20 psig, 83.5 kPa): v_e=%.1f m/s (M=%.2f), d*=%.2f mm, m_s=%.1f kg/hr (%.1f kW vs %.1f kW flue), dP_ej=%.3f inWC (ER=%.1f), H=%.1f m, NaCl=%.0f%%, Cost=%s\n"+
+		"  Nairobi HP (60 psig, 83.5 kPa): v_e=%.1f m/s (M=%.2f), d*=%.2f mm, m_s=%.1f kg/hr (%.1f kW vs %.1f kW flue), dP_ej=%.3f inWC (ER=%.1f), H=%.1f m, NaCl=%.0f%%, Cost=%s\n"+
+		"  Mumbai  LP (20 psig, 101.3kPa): v_e=%.1f m/s (M=%.2f), d*=%.2f mm, m_s=%.1f kg/hr (%.1f kW vs %.1f kW flue), dP_ej=%.3f inWC (ER=%.1f), H=%.1f m, NaCl=%.0f%%, Cost=%s\n"+
+		"  Mumbai  HP (60 psig, 101.3kPa): v_e=%.1f m/s (M=%.2f), d*=%.2f mm, m_s=%.1f kg/hr (%.1f kW vs %.1f kW flue), dP_ej=%.3f inWC (ER=%.1f), H=%.1f m, NaCl=%.0f%%, Cost=%s",
+		evNBLP.Frugal.SteamNozzleVelMS, evNBLP.Frugal.SteamNozzleMach, evNBLP.Frugal.SteamNozzleThroatMM, evNBLP.Frugal.SteamFlowKgHr, evNBLP.Frugal.SteamThermalKW, evNBLP.Frugal.KilnWasteHeatKW, evNBLP.Frugal.EjectorDraftInWC, evNBLP.Frugal.EjectorEntrainmentRatio, evNBLP.Frugal.ChimneyHeightM, evNBLP.Frugal.SubmicronNaClCapturePct, evNBLP.Frugal.LocalCurrencyEstimate,
+		hpNairobi.Frugal.SteamNozzleVelMS, hpNairobi.Frugal.SteamNozzleMach, hpNairobi.Frugal.SteamNozzleThroatMM, hpNairobi.Frugal.SteamFlowKgHr, hpNairobi.Frugal.SteamThermalKW, hpNairobi.Frugal.KilnWasteHeatKW, hpNairobi.Frugal.EjectorDraftInWC, hpNairobi.Frugal.EjectorEntrainmentRatio, hpNairobi.Frugal.ChimneyHeightM, hpNairobi.Frugal.SubmicronNaClCapturePct, hpNairobi.Frugal.LocalCurrencyEstimate,
+		evMBLP.Frugal.SteamNozzleVelMS, evMBLP.Frugal.SteamNozzleMach, evMBLP.Frugal.SteamNozzleThroatMM, evMBLP.Frugal.SteamFlowKgHr, evMBLP.Frugal.SteamThermalKW, evMBLP.Frugal.KilnWasteHeatKW, evMBLP.Frugal.EjectorDraftInWC, evMBLP.Frugal.EjectorEntrainmentRatio, evMBLP.Frugal.ChimneyHeightM, evMBLP.Frugal.SubmicronNaClCapturePct, evMBLP.Frugal.LocalCurrencyEstimate,
+		evMBHP.Frugal.SteamNozzleVelMS, evMBHP.Frugal.SteamNozzleMach, evMBHP.Frugal.SteamNozzleThroatMM, evMBHP.Frugal.SteamFlowKgHr, evMBHP.Frugal.SteamThermalKW, evMBHP.Frugal.KilnWasteHeatKW, evMBHP.Frugal.EjectorDraftInWC, evMBHP.Frugal.EjectorEntrainmentRatio, evMBHP.Frugal.ChimneyHeightM, evMBHP.Frugal.SubmicronNaClCapturePct, evMBHP.Frugal.LocalCurrencyEstimate,
+	)
+}

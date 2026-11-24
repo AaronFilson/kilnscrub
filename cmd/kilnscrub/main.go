@@ -424,6 +424,7 @@ type studioOptionFlags struct {
 	zeroElectricity *bool
 	localRegion     *string
 	localAlkali     *string
+	localDraftMode  *string
 }
 
 func bindStudioOptionFlags(fs *flag.FlagSet) studioOptionFlags {
@@ -442,6 +443,7 @@ func bindStudioOptionFlags(fs *flag.FlagSet) studioOptionFlags {
 		zeroElectricity: fs.Bool("zero-electricity", false, "Zero electricity on site (passive thermal-reheat chimney draft + manual gravity tank; implies local_ceramic_masonry)"),
 		localRegion:     fs.String("local-region", "", "Local sourcing region: nairobi, mumbai, or general_local"),
 		localAlkali:     fs.String("local-alkali", "", "Local neutralizing alkali: soda_ash, slaked_lime, wood_ash_lye, or baking_soda"),
+		localDraftMode:  fs.String("local-draft-mode", "", "Passive velocity/draft driver for local_ceramic_masonry (natural_chimney|steam_ejector_lp|steam_ejector_hp)"),
 	}
 }
 
@@ -491,6 +493,12 @@ func (f studioOptionFlags) applyExplicit(base studio.StudioProject, setFlags map
 	}
 	if setFlags["local-alkali"] {
 		proj.LocalAlkali = strings.ToLower(strings.TrimSpace(*f.localAlkali))
+	}
+	if setFlags["local-draft-mode"] {
+		proj.LocalDraftMode = strings.ToLower(strings.TrimSpace(*f.localDraftMode))
+		if (proj.LocalDraftMode == studio.LocalDraftSteamEjectorLP || proj.LocalDraftMode == studio.LocalDraftSteamEjectorHP) && !setFlags["build-path"] {
+			proj.BuildPath = studio.BuildPathLocalCeramic
+		}
 	}
 	return proj
 }
@@ -591,6 +599,12 @@ func printStudioSummary(w io.Writer, eval studio.StudioEvaluation) {
 		fmt.Fprintf(w, "  Chimney & Draft : %.1f m (%.1f ft) @ %.0f F reheat | %.3f vs %.3f inWC (feasible=%v)\n",
 			f.ChimneyHeightM, f.ChimneyHeightFt, f.StackReheatTempF,
 			f.AvailableDraftInWC, f.RequiredDraftInWC, f.DraftFeasible)
+		if f.SteamEnabled {
+			fmt.Fprintf(w, "  Steam-Jet Ejector : %.0f psig (%.2f barg) | %.1f m/s (Mach %.2f) | throat %.2f mm | %.1f kg/hr | %.1f vs %.1f kW waste heat | %.3f inWC (ER=%.2f) | %s\n",
+				f.SteamPressurePSIG, f.SteamPressureBar, f.SteamNozzleVelMS, f.SteamNozzleMach,
+				f.SteamNozzleThroatMM, f.SteamFlowKgHr, f.SteamThermalKW, f.KilnWasteHeatKW,
+				f.EjectorDraftInWC, f.EjectorEntrainmentRatio, f.SteamSourceType)
+		}
 		fmt.Fprintf(w, "  Ceramic Bed     : %.0f\" wide stoneware (v_s=%.2f m/s, Ergun dP=%.3f inWC)\n",
 			f.BedDiameterIn, f.BedSuperficialVelMS, f.BedDPInWC)
 		fmt.Fprintf(w, "  Gravity & Labor : %.0f L (%.0f gal) @ %.1f ft (%.2f PSI, %.2f L/min) | %s\n",

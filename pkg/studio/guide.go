@@ -344,8 +344,8 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 			fr = EvaluateFrugal(p, d)
 		}
 		b.WriteString("\n## 7. Local Ceramic & Zero-Electricity Build + Manual Firing Guide\n\n")
-		fmt.Fprintf(&b, "> **Region:** %s | **Zero Electricity:** `%v` (`%.0f W`) | **Est. Local Cost:** %s | **Alkali:** %s (`%s`)\n\n",
-			fr.RegionLabel, fr.ZeroElectricity, fr.PowerWatts, fr.LocalCurrencyEstimate, fr.AlkaliName, fr.AlkaliFormula)
+		fmt.Fprintf(&b, "> **Region:** %s | **Draft Mode:** `%s` (%s) | **Zero Electricity:** `%v` (`%.0f W`) | **Est. Local Cost:** %s | **Alkali:** %s (`%s`)\n\n",
+			fr.RegionLabel, fr.DraftMode, fr.DraftModeLabel, fr.ZeroElectricity, fr.PowerWatts, fr.LocalCurrencyEstimate, fr.AlkaliName, fr.AlkaliFormula)
 		fmt.Fprintf(&b, "%s\n\n", fr.Summary)
 
 		b.WriteString("### 7.1 Firing Your Own Stoneware Raschig Rings & Terracotta Mist Baffles\n")
@@ -387,6 +387,25 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 		b.WriteString("\n### 7.5 Critical Safety Warnings (NO DIY Pressurized Steam Boilers!)\n")
 		for _, w := range fr.Warnings {
 			fmt.Fprintf(&b, "- **SAFETY WARNING:** %s\n", w)
+		}
+
+		if fr.SteamEnabled {
+			b.WriteString("\n### 7.6 Zero-Electricity Steam-Jet Ejector Startup, PRV Check & Condensation Scrubbing\n\n")
+			fmt.Fprintf(&b, "- **Certified Steam Source (`%.0f psig` / `%.2f barg`):** %s\n", fr.SteamPressurePSIG, fr.SteamPressureBar, fr.SteamSourceType)
+			fmt.Fprintf(&b, "- **de Laval Steam Nozzle & 1D Ejector Performance:** Choked throat **`%.2f mm`**, exit jet **`%.1f m/s` (`Mach %.2f`)**, motive steam **`%.1f kg/hr` (`%.1f L/hr` feedwater)**, entrainment **`%.1f:1`**, ejector draft **`%.3f inWC`** -> shrinks chimney from `8.5–9.5 m` down to **`%.1f m` (`%.1f ft`)** with zero electric blower!\n",
+				fr.SteamNozzleThroatMM, fr.SteamNozzleVelMS, fr.SteamNozzleMach, fr.SteamFlowKgHr, fr.SteamWaterLHr,
+				fr.EjectorEntrainmentRatio, fr.EjectorDraftInWC, fr.ChimneyHeightM, fr.ChimneyHeightFt)
+			fmt.Fprintf(&b, "- **Thermal Balance:** Steam generation load **`%.1f kW`** vs kiln flue waste heat above `400 F` **`%.1f kW`** (`waste_heat_sufficient=%v`).\n",
+				fr.SteamThermalKW, fr.KilnWasteHeatKW, fr.WasteHeatSufficient)
+			fmt.Fprintf(&b, "- **Condensation Nucleation & Submicron Capture (`%.0f%%` NaCl):** %s\n", fr.SubmicronNaClCapturePct, fr.CondensationGrowthNote)
+			b.WriteString("- **Pre-Firing PRV Pull-Ring & Startup Sequence:**\n")
+			b.WriteString("  1. **Cold PRV Pull-Ring Test:** Pull the manual test ring on the stamped ASME/IBR/KEBS spring-loaded PRV to confirm free snap action and unobstructed downward vent pipe.\n")
+			b.WriteString("  2. **Verify `1.5× MAWP` Hydro-Test, Gauge & Open `0 psig` Feed Tank:** Confirm cold hydrostatic proof test record, zeroed `0–100 psig` glycerin gauge on siphon pigtail, working bronze feedwater check valve, and full open atmospheric `0 psig` feed tank.\n")
+			b.WriteString("  3. **Wet Tower Spray First -> Gradual Steam Admission:** Establish overhead gravity spray across the quench baffle & stoneware rings BEFORE warming steam pressure; smoothly crack the bronze throttling valve on insulated header `S1` to establish steady inward kiln draft.\n")
+			b.WriteString("- **Mandatory Certified-Boiler Safety Checklist (NO DIY Welded Drum Boilers):**\n")
+			for _, req := range fr.SteamSafetyRequirements {
+				fmt.Fprintf(&b, "  - [ ] %s\n", req)
+			}
 		}
 	}
 
@@ -486,7 +505,13 @@ func GenerateOperationsChecklist(eval StudioEvaluation) string {
 		}
 		fmt.Fprintf(&b, "- [ ] **Local Alkali Dosing (`%s` / `%s`):** Stage **`%.2f kg` (`%.1f lbs`)** per firing and verify sump `pH 7.5 - 8.5` hourly with litmus strips.\n",
 			fr.AlkaliName, fr.AlkaliFormula, fr.AlkaliKgPerFiring, fr.AlkaliLbsPerFiring)
-		b.WriteString("- [ ] **Zero-Steam-Boiler Rule:** NEVER attempt to build a DIY pressurized steam boiler or steam-jet ejector on the kiln flue (lethal boiler explosion hazard).\n")
+		if fr.SteamEnabled {
+			fmt.Fprintf(&b, "- [ ] **Pre-Firing Certified Steam Safety Check (`%.0f psig` / `%.1f L/hr`):** Pull the certified PRV test ring to verify free snap action, confirm `1.5× MAWP` cold hydro-test record, check pressure gauge zero & bronze feedwater check valve, verify open `0 psig` atmospheric feed tank level, and check insulated header `S1` scald guards.\n",
+				fr.SteamPressurePSIG, fr.SteamWaterLHr)
+			b.WriteString("- [ ] **Certified-Boiler-Only Rule (Zero DIY Welded Drum Boilers):** NEVER fabricate an uncertified DIY welded drum or scrap-pipe boiler on a kiln flue — operate ONLY factory-certified non-IBR (`<=25 L`)/KEBS/ASME baby boilers or code-rated small-bore (`<2 L`) monotube coils with stamped PRV.\n")
+		} else {
+			b.WriteString("- [ ] **Zero-Steam-Boiler Rule:** NEVER attempt to build a DIY pressurized steam boiler or steam-jet ejector on the kiln flue (lethal boiler explosion hazard).\n")
+		}
 	}
 
 	return b.String()

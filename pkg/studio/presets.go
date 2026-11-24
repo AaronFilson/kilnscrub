@@ -31,6 +31,11 @@ const (
 	LocalAlkaliWoodAshLye = "wood_ash_lye"
 	LocalAlkaliBakingSoda = "baking_soda"
 
+	// Phase 10B local ceramic draft / zero-electricity steam-jet ejector mode constants.
+	LocalDraftNaturalChimney = "natural_chimney"
+	LocalDraftSteamEjectorLP = "steam_ejector_lp"
+	LocalDraftSteamEjectorHP = "steam_ejector_hp"
+
 	// CorrosionTierStandard316L is the canonical light/occasional 316L SS tier.
 	CorrosionTierStandard316L = "standard_316l"
 	// CorrosionTierHobby316L is accepted as a backward-compatible alias for CorrosionTierStandard316L.
@@ -121,6 +126,7 @@ type StudioProject struct {
 	ZeroElectricity     bool              `json:"zero_electricity,omitempty"`
 	LocalRegion         string            `json:"local_region,omitempty"`
 	LocalAlkali         string            `json:"local_alkali,omitempty"`
+	LocalDraftMode      string            `json:"local_draft_mode,omitempty"`
 	PropertyLineFt      float64           `json:"property_line_ft"`
 	AmbientWinterF      float64           `json:"ambient_winter_f"`
 	AvailableVoltage    int               `json:"available_voltage"`
@@ -395,10 +401,44 @@ func OffGridCeramicProject(region string) StudioProject {
 	return p.Normalize()
 }
 
+// OffGridSteamCeramicProject returns a pre-configured 24 cu.ft. Local Ceramic / Masonry
+// zero-electricity scrubber project equipped with a certified steam-jet ejector
+// ("steam_ejector_lp", "steam_ejector_hp", or "natural_chimney"; empty defaults to "steam_ejector_lp").
+func OffGridSteamCeramicProject(region, draftMode string) StudioProject {
+	p := OffGridCeramicProject(region)
+	switch strings.ToLower(strings.TrimSpace(draftMode)) {
+	case LocalDraftNaturalChimney:
+		p.LocalDraftMode = LocalDraftNaturalChimney
+	case LocalDraftSteamEjectorHP:
+		p.LocalDraftMode = LocalDraftSteamEjectorHP
+		p.StudioName += " (Steam-Jet HP 60 psig)"
+	default:
+		p.LocalDraftMode = LocalDraftSteamEjectorLP
+		p.StudioName += " (Steam-Jet LP 20 psig)"
+	}
+	return p.Normalize()
+}
+
 // IsLocalCeramic reports whether the project runs in Phase 10 Local Ceramic / Masonry
-// or 100% Zero-Electricity passive draft mode.
+// or 100% Zero-Electricity passive/steam-ejector draft mode.
 func (p StudioProject) IsLocalCeramic() bool {
 	return p.BuildPath == BuildPathLocalCeramic || p.ZeroElectricity
+}
+
+// EffectiveLocalDraftMode returns the canonical Phase 10B local draft mode
+// ("natural_chimney", "steam_ejector_lp", or "steam_ejector_hp"), defaulting to "natural_chimney".
+func (p StudioProject) EffectiveLocalDraftMode() string {
+	switch p.LocalDraftMode {
+	case LocalDraftSteamEjectorLP, LocalDraftSteamEjectorHP, LocalDraftNaturalChimney:
+		return p.LocalDraftMode
+	default:
+		return LocalDraftNaturalChimney
+	}
+}
+
+// IsSteamEjector reports whether a Phase 10B steam-jet ejector draft mode is selected.
+func (p StudioProject) IsSteamEjector() bool {
+	return p.LocalDraftMode == LocalDraftSteamEjectorLP || p.LocalDraftMode == LocalDraftSteamEjectorHP
 }
 
 // EffectiveLocalRegion returns the canonical regional sourcing key ("nairobi",
@@ -453,6 +493,12 @@ func (p StudioProject) Normalize() StudioProject {
 	}
 	if out.ShopCompressorSCFM == 0 {
 		out.ShopCompressorSCFM = 15.0
+	}
+	if out.LocalDraftMode == "" {
+		out.LocalDraftMode = LocalDraftNaturalChimney
+	}
+	if out.BuildPath == "" && out.IsSteamEjector() {
+		out.BuildPath = BuildPathLocalCeramic
 	}
 	if out.IsLocalCeramic() {
 		if out.LocalRegion == "" {
@@ -551,6 +597,11 @@ func (p StudioProject) Validate() error {
 	}
 	switch p.BuildPath {
 	case BuildPathCOTSNoWeld, BuildPathWeldedDXF, BuildPathCustomFabDeluxe, BuildPathLocalCeramic:
+	case "":
+		if !p.IsSteamEjector() {
+			return fmt.Errorf("build_path must be %q, %q, %q, or %q, got %q",
+				BuildPathCOTSNoWeld, BuildPathWeldedDXF, BuildPathCustomFabDeluxe, BuildPathLocalCeramic, p.BuildPath)
+		}
 	default:
 		return fmt.Errorf("build_path must be %q, %q, %q, or %q, got %q",
 			BuildPathCOTSNoWeld, BuildPathWeldedDXF, BuildPathCustomFabDeluxe, BuildPathLocalCeramic, p.BuildPath)
@@ -566,6 +617,12 @@ func (p StudioProject) Validate() error {
 	default:
 		return fmt.Errorf("local_alkali must be %q, %q, %q, or %q, got %q",
 			LocalAlkaliSodaAsh, LocalAlkaliSlakedLime, LocalAlkaliWoodAshLye, LocalAlkaliBakingSoda, p.LocalAlkali)
+	}
+	switch p.LocalDraftMode {
+	case "", LocalDraftNaturalChimney, LocalDraftSteamEjectorLP, LocalDraftSteamEjectorHP:
+	default:
+		return fmt.Errorf("local_draft_mode must be %q, %q, or %q, got %q",
+			LocalDraftNaturalChimney, LocalDraftSteamEjectorLP, LocalDraftSteamEjectorHP, p.LocalDraftMode)
 	}
 	switch p.CorrosionTier {
 	case CorrosionTierStandard316L, CorrosionTierHobby316L, CorrosionTierHeavyC276FRP:
