@@ -415,19 +415,20 @@ func computeSteamEjectorPhysics(
 	}
 	kilnWasteKW := round1(math.Max(0.0, mFlue*cpFlueKJ*math.Max(0.0, tFlueK-tPinchK)))
 
-	if draftMode != LocalDraftSteamEjectorLP && draftMode != LocalDraftSteamEjectorHP {
+	if draftMode != LocalDraftSteamEjectorSubsonic && draftMode != LocalDraftSteamEjectorLP && draftMode != LocalDraftSteamEjectorHP {
 		return steamEjectorPhysics{
 			draftMode:              LocalDraftNaturalChimney,
 			draftModeLabel:         "Natural Chimney Buoyancy (Passive 0 psig)",
 			steamEnabled:           false,
 			kilnWasteHeatKW:        kilnWasteKW,
 			wasteHeatSufficient:    false,
-			condensationGrowthNote: "Passive natural chimney draft (~30% submicron NaCl capture): no pressurized steam injection; select LP (20 psig) or HP (60 psig) Steam-Jet Ejector for hygroscopic NaCl condensation nucleation growth & submicron capture at 0 W electric.",
+			condensationGrowthNote: "Passive natural chimney draft (~30% submicron NaCl capture): no pressurized steam injection; select Subsonic Quiet (6 psig), LP (20 psig), or HP (60 psig) Steam-Jet Ejector for hygroscopic NaCl condensation nucleation growth & submicron capture at 0 W electric.",
 			steamSourceType:        "None (Passive Natural Chimney Buoyancy)",
 			safetyRequirements:     []string{},
 		}
 	}
 
+	isSubsonic := draftMode == LocalDraftSteamEjectorSubsonic
 	isHP := draftMode == LocalDraftSteamEjectorHP
 	psig := 20.0
 	draftLabel := "Low-Pressure Steam-Jet Ejector (20 psig / 1.38 barg — Draft + Condensation Assist)"
@@ -436,7 +437,15 @@ func computeSteamEjectorPhysics(
 	vMix := 14.0 // m/s moderate LP ejector mixing throat
 	mawpPSIG := 25.0
 	hydroPSIG := 38.0
-	if isHP {
+	if isSubsonic {
+		psig = 6.0
+		draftLabel = "Subsonic Quiet Steam-Jet Ejector (6 psig / 0.414 barg — Mach < 1.0, ~52 dBA, Catering Steamer + 4.2 m Standpipe)"
+		steamMassFrac = 0.0528 // ~18.5 kg/hr at m_gas = 0.0974 kg/s (entrainment ~18.9)
+		minSteamKgS = 0.0018
+		vMix = 13.0 // m/s subsonic mixing tube yielding ~0.38-0.42 inWC draft
+		mawpPSIG = 15.0
+		hydroPSIG = 23.0
+	} else if isHP {
 		psig = 60.0
 		draftLabel = "High-Velocity Hydro-Sonic Steam-Jet Ejector (60 psig / 4.14 barg — Certified Baby Boiler)"
 		steamMassFrac = 0.155 // ~54 kg/hr at m_gas = 0.097 kg/s (entrainment ~6.45)
@@ -446,6 +455,9 @@ func computeSteamEjectorPhysics(
 		hydroPSIG = 115.0
 	}
 	barG := round2(psig * barPerPSI)
+	if isSubsonic {
+		barG = round3(psig * barPerPSI) // 0.414 barg exact
+	}
 
 	pAmb := prof.ambientPa
 	p0Pa := pAmb + psig*paPerPSI
@@ -471,21 +483,36 @@ func computeSteamEjectorPhysics(
 	h2sKJ := hfAmbKJ + x2s*(hgAmbKJ-hfAmbKJ)
 	deltaHsJ := math.Max(1000.0, (h0KJ-h2sKJ)*1000.0)
 
-	// Converging-diverging de Laval nozzle exit velocity & local Mach number.
+	// Nozzle / converging orifice exit velocity & local Mach number.
 	vExit := math.Sqrt(2.0 * etaNozzle * deltaHsJ)
 	aExit := math.Sqrt(kSteam * rVapor * tSatAmbK)
 	machExit := vExit / aExit
 
-	// Motive steam mass flow & choked throat diameter (d_throat in mm).
+	// Motive steam mass flow & nozzle throat / drilled brass orifice diameter (in mm).
 	mSteamKgS := math.Max(minSteamKgS, mGas*steamMassFrac)
 	steamFlowKgHr := round1(mSteamKgS * 3600.0)
 	steamWaterLHr := steamFlowKgHr // 1 kg water = 1.0 L feedwater
 	entrainRatio := round2(mGas / mSteamKgS)
 
-	critFactor := math.Pow(2.0/(kSteam+1.0), (kSteam+1.0)/(2.0*(kSteam-1.0)))
-	gStar := cdNozzle * p0Pa * math.Sqrt(kSteam/(rVapor*t0K)) * critFactor
-	aStar := mSteamKgS / gStar
-	throatMM := round2(math.Sqrt(4.0*aStar/math.Pi) * 1000.0)
+	rhoSteamAmb := pAmb / (rVapor * tSatAmbK)
+	var throatMM float64
+	if isSubsonic {
+		// Unchoked subsonic simple drilled brass pipe-cap converging orifice (6 psig is well below
+		// the sonic choking threshold of 12.2 psig sea-level / 10.1 psig Nairobi — NO CNC de Laval bell!).
+		// m_dot = C_d * A * rho_exit * v_e, with sharp-edged hand-drilled orifice C_d = 0.58
+		// (vena contracta contraction on flat drilled brass cap -> ~7.6-8.0 mm drill bore).
+		const cdSubsonic = 0.58
+		h2KJ := h0KJ - etaNozzle*(h0KJ-h2sKJ)
+		x2 := math.Min(1.0, math.Max(0.75, (h2KJ-hfAmbKJ)/(hgAmbKJ-hfAmbKJ)))
+		rhoExit := rhoSteamAmb / x2
+		aOrifice := mSteamKgS / (cdSubsonic * rhoExit * vExit)
+		throatMM = round2(math.Sqrt(4.0*aOrifice/math.Pi) * 1000.0)
+	} else {
+		critFactor := math.Pow(2.0/(kSteam+1.0), (kSteam+1.0)/(2.0*(kSteam-1.0)))
+		gStar := cdNozzle * p0Pa * math.Sqrt(kSteam/(rVapor*t0K)) * critFactor
+		aStar := mSteamKgS / gStar
+		throatMM = round2(math.Sqrt(4.0*aStar/math.Pi) * 1000.0)
+	}
 
 	// 1D constant-area mixing-tube ejector momentum balance with 7-deg diffuser pressure recovery.
 	// dP_ej = eta_jet * [ m_s*(v_e - v_m)/A_m - (1 - eta_d + K_f) * 0.5 * rho_mix * v_m^2 ]
@@ -494,7 +521,6 @@ func computeSteamEjectorPhysics(
 		kFriction   = 0.20
 		etaJet      = 0.78
 	)
-	rhoSteamAmb := pAmb / (rVapor * tSatAmbK)
 	qMix := qLocal + mSteamKgS/rhoSteamAmb
 	rhoMix := (mGas + mSteamKgS) / qMix
 	aMix := qMix / vMix
@@ -507,7 +533,30 @@ func computeSteamEjectorPhysics(
 	wasteSufficient := kilnWasteKW >= steamThermalKW
 
 	var sourceType, condNote string
-	if isHP {
+	var safetyReqs []string
+	if isSubsonic {
+		switch prof.id {
+		case LocalRegionMumbai:
+			sourceType = "Certified 12-15 psig Commercial Hotel/Catering Stainless Pressure Steamer / Low-Pressure Idli/Catering Kettle (Run @ 6 psig / 0.414 barg) + 4.2 m Open Hydrostatic Standpipe Relief & Drilled Brass Converging Orifice"
+		case LocalRegionNairobi:
+			sourceType = "Certified 12-15 psig Commercial Hotel/Catering Stainless Pressure Steamer / Low-Pressure Kettle (Run @ 6 psig / 0.414 barg, River Rd / Industrial Area Supply) + 4.2 m Open Hydrostatic Standpipe Relief & Drilled Brass Converging Orifice"
+		default:
+			sourceType = "Certified 12-15 psig Commercial Hotel/Catering Stainless Pressure Steamer / Low-Pressure Kettle (Run @ 6 psig / 0.414 barg) + 4.2 m Open Hydrostatic Standpipe Relief & Drilled Brass Converging Orifice"
+		}
+		condNote = fmt.Sprintf(
+			"SUBSONIC CONDENSATION NUCLEATION GROWTH (6 psig / Mach %.2f < 1.0): %.1f kg/hr unchoked subsonic steam (%.0f m/s, ~52 dBA quiet operation with zero supersonic shock screech) cools through the wide irrigated stoneware bed to nucleate condensation directly onto deliquescent NaCl fume nuclei (growing 0.1-0.3 um salt aerosol to 1.5-3.5 um droplets -> ~55%% submicron NaCl capture at 0 W electric, with gentler droplet shear than 60 psig Hydro-Sonic).",
+			machExit, steamFlowKgHr, vExit,
+		)
+		safetyReqs = []string{
+			"4.2 m (13.8 ft) OPEN WATER-COLUMN HYDROSTATIC RELIEF STANDPIPE (S2 — 6.0 psig PHYSICAL LIMIT): Connect a dedicated unvalved 3/4\" vertical open-top standpipe (P = rho*g*h = 41.2 kPa ≈ 6.0 psig at 4.2 m) directly to the steamer lower liquid manifold so over-pressure physically overflows water and vents steam freely with ZERO moving parts!",
+			"FACTORY-CERTIFIED 10-15 PSIG SPRING-LOADED BRASS PRV & FUSIBLE PLUG: Retain the factory-stamped 10-15 psig brass spring-loaded PRV (with manual pull-ring test lever) and low-water fusible plug as secondary backup; pipe PRV discharge downward to a safe outdoor grade.",
+			fmt.Sprintf("1.5x MAWP COLD HYDROSTATIC PROOF TEST (%.0f psig): Cold-water hydrostatically test the catering steamer, steam header S1, drilled brass orifice union, and threaded fittings to %.0f psig (1.5x %.0f psig MAWP) for 30 minutes with zero weeping prior to first live steam firing.", hydroPSIG, hydroPSIG, mawpPSIG),
+			"CALIBRATED LOW-RANGE PRESSURE GAUGE (0-15 PSIG): Mount a 0-15 psig (or 0-30 psig) glycerin-filled pressure gauge on a brass siphon pigtail so 6.0 psig operating pressure reads clearly mid-scale.",
+			"BRONZE CHECK VALVE & OPEN ATMOSPHERIC 0 PSIG FEED TANK: Supply feedwater ONLY from an open vented atmospheric 0 psig gravity tank/pump through a bronze/316L spring check valve so steam can never back-pressurize plastic tanks.",
+			"INSULATED STEAM HEADER (S1) & SCALD GUARDS: Wrap live steam pipe S1 (~106-110 C) and the 4.2 m standpipe top overflow splash elbow in mineral-wool insulation / sheet-metal scald guards, and place the bronze throttling valve outside the spray zone.",
+			"STRICT BAN ON UNVENTED DIY WELDED DRUM BOILERS: NEVER fabricate an unvented homemade welded steel drum, converted LPG cylinder, or scrap-pipe pressure boiler on a kiln flue — operate ONLY a factory-certified 12-15 psig commercial catering steamer/kettle equipped with BOTH the 4.2 m open hydrostatic standpipe and a stamped brass PRV.",
+		}
+	} else if isHP {
 		switch prof.id {
 		case LocalRegionMumbai:
 			sourceType = "Certified Non-IBR (<=25 L Water Capacity, Indian Boilers Act Exempt) Commercial Baby Steam Boiler (60 psig / 4.14 barg) + 316L de Laval Hydro-Sonic Ejector"
@@ -535,13 +584,15 @@ func computeSteamEjectorPhysics(
 		)
 	}
 
-	safetyReqs := []string{
-		fmt.Sprintf("CERTIFIED SPRING-LOADED PRV: Install a factory-stamped ASME/IBR/KEBS spring-loaded brass/316L pressure relief valve set <= %.0f psig MAWP with a manual pull-ring test lever; pipe discharge downward to a safe outdoor grade away from operators.", mawpPSIG),
-		fmt.Sprintf("1.5x MAWP HYDROSTATIC PROOF TEST: Cold-water hydrostatically test the steam coil/boiler, header S1, and all threaded fittings to %.0f psig (1.5x MAWP) for 30 minutes with zero weeping prior to first live steam firing.", hydroPSIG),
-		"CALIBRATED PRESSURE GAUGE & BOILER TRIM: Mount a 0-100 psig glycerin-filled pressure gauge on a brass siphon pigtail (plus armored water sight glass and fusible low-water plug on HP certified baby boilers).",
-		"FEEDWATER CHECK VALVE & OPEN ATMOSPHERIC 0 PSIG FEED TANK: Supply feedwater ONLY from an open vented atmospheric 0 psig gravity tank/pump through a bronze/316L spring check valve so steam can never back-pressurize plastic tanks.",
-		"INSULATED STEAM HEADER (S1) & SCALD GUARDS: Wrap live steam pipe S1 in mineral wool / calcium-silicate insulation with sheet-metal scald guards and locate the bronze steam throttling valve outside the spray/jet zone.",
-		"STRICT BAN ON DIY UNCERTIFIED WELDED DRUM BOILERS: NEVER fabricate a homemade welded steel drum, converted LPG cylinder, or scrap-pipe pressure boiler on a kiln flue — only factory-certified non-IBR (<=25 L)/KEBS/ASME baby boilers or code-rated small-bore (<2 L) seamless monotube flash coils are permitted.",
+	if len(safetyReqs) == 0 {
+		safetyReqs = []string{
+			fmt.Sprintf("CERTIFIED SPRING-LOADED PRV: Install a factory-stamped ASME/IBR/KEBS spring-loaded brass/316L pressure relief valve set <= %.0f psig MAWP with a manual pull-ring test lever; pipe discharge downward to a safe outdoor grade away from operators.", mawpPSIG),
+			fmt.Sprintf("1.5x MAWP HYDROSTATIC PROOF TEST: Cold-water hydrostatically test the steam coil/boiler, header S1, and all threaded fittings to %.0f psig (1.5x MAWP) for 30 minutes with zero weeping prior to first live steam firing.", hydroPSIG),
+			"CALIBRATED PRESSURE GAUGE & BOILER TRIM: Mount a 0-100 psig glycerin-filled pressure gauge on a brass siphon pigtail (plus armored water sight glass and fusible low-water plug on HP certified baby boilers).",
+			"FEEDWATER CHECK VALVE & OPEN ATMOSPHERIC 0 PSIG FEED TANK: Supply feedwater ONLY from an open vented atmospheric 0 psig gravity tank/pump through a bronze/316L spring check valve so steam can never back-pressurize plastic tanks.",
+			"INSULATED STEAM HEADER (S1) & SCALD GUARDS: Wrap live steam pipe S1 in mineral wool / calcium-silicate insulation with sheet-metal scald guards and locate the bronze steam throttling valve outside the spray/jet zone.",
+			"STRICT BAN ON DIY UNCERTIFIED WELDED DRUM BOILERS: NEVER fabricate a homemade welded steel drum, converted LPG cylinder, or scrap-pipe pressure boiler on a kiln flue — only factory-certified non-IBR (<=25 L)/KEBS/ASME baby boilers or code-rated small-bore (<2 L) seamless monotube flash coils are permitted.",
+		}
 	}
 
 	return steamEjectorPhysics{
@@ -594,11 +645,15 @@ func computeLocalCeramicCosts(
 	plumbing := round2(40.0 * s)
 
 	draftMode := p.EffectiveLocalDraftMode()
-	steamEnabled := draftMode == LocalDraftSteamEjectorLP || draftMode == LocalDraftSteamEjectorHP
+	steamEnabled := draftMode == LocalDraftSteamEjectorSubsonic || draftMode == LocalDraftSteamEjectorLP || draftMode == LocalDraftSteamEjectorHP
 
 	var pumpUSD, fanUSD, steamSystemUSD, chimneyUSD float64
 	if steamEnabled {
-		if draftMode == LocalDraftSteamEjectorHP {
+		if draftMode == LocalDraftSteamEjectorSubsonic {
+			// Certified 12-15 psig commercial catering stainless pressure steamer + simple drilled brass orifice ($22)
+			// + 4.2 m open hydrostatic standpipe relief ($32) + certified 10-15 psig brass PRV & gauge (~$149 Mumbai / ~$177 Nairobi).
+			steamSystemUSD = round2(177.0 * s)
+		} else if draftMode == LocalDraftSteamEjectorHP {
 			// Certified non-IBR <=25 L / KEBS commercial baby steam boiler + PRV/fusible plug/sight glass + 316L de Laval ejector ($490-$560).
 			steamSystemUSD = round2(530.0 * math.Max(0.925, math.Min(1.055, s)))
 		} else {
@@ -754,23 +809,47 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 
 	if steam.steamEnabled {
 		// Steam-jet ejector eliminates the tall 8.5-9.5 m reheat chimney & ember hearth!
-		chimneyM = 4.5
-		if prof.id == LocalRegionNairobi && draftMode == LocalDraftSteamEjectorLP {
-			chimneyM = 5.0 // 16.4 ft highland clearance at Nairobi 83.5 kPa
-		} else if prof.id == LocalRegionNairobi {
-			chimneyM = 4.8 // 15.7 ft highland clearance for HP Hydro-Sonic jet
-		}
-		stackReheatF = round1(math.Max(188.0, design.OutletGas.Temperature.Fahrenheit()))
-		if draftMode == LocalDraftSteamEjectorLP {
-			stackReheatF = round1(math.Max(195.0, stackReheatF))
+		if draftMode == LocalDraftSteamEjectorSubsonic {
+			chimneyM = 5.2 // 17.1 ft compact sea-level / Mumbai stack
+			if prof.id == LocalRegionNairobi {
+				chimneyM = 5.5 // 18.0 ft compact highland stack at Nairobi 83.5 kPa
+			}
+			stackReheatF = round1(math.Max(190.0, design.OutletGas.Temperature.Fahrenheit()))
 		} else {
-			stackReheatF = round1(math.Max(202.0, stackReheatF))
+			chimneyM = 4.5
+			if prof.id == LocalRegionNairobi && draftMode == LocalDraftSteamEjectorLP {
+				chimneyM = 5.0 // 16.4 ft highland clearance at Nairobi 83.5 kPa
+			} else if prof.id == LocalRegionNairobi {
+				chimneyM = 4.8 // 15.7 ft highland clearance for HP Hydro-Sonic jet
+			}
+			stackReheatF = round1(math.Max(188.0, design.OutletGas.Temperature.Fahrenheit()))
+			if draftMode == LocalDraftSteamEjectorLP {
+				stackReheatF = round1(math.Max(195.0, stackReheatF))
+			} else {
+				stackReheatF = round1(math.Max(202.0, stackReheatF))
+			}
 		}
 		tStackK := float64(model.FahrenheitToKelvin(stackReheatF))
 		rhoStack := (pAmb * mwStack) / (model.UniversalGasConst * tStackK)
 		natBuoyInWC := (gAccel * chimneyM * (rhoAmb - rhoStack)) / paPerInWC
 		availDraftInWC = round3(natBuoyInWC + steam.ejectorDraftInWC + gravityAssist)
-		if zeroElec {
+		if draftMode == LocalDraftSteamEjectorSubsonic {
+			if zeroElec {
+				powerWatts = 0.0
+				draftMechanism = fmt.Sprintf(
+					"Zero-Electricity 6 psig (0.414 barg) Subsonic Quiet Steam-Jet Ejector (%.0f m/s, Mach %.2f < 1.0, drilled %.2f mm brass orifice + 4.2 m open hydrostatic standpipe -> %.3f inWC ejector draft + %.3f inWC %.1f m chimney buoyancy + %.3f inWC gravity assist, no reheat hearth, ~52 dBA) — 0 W electric.",
+					steam.nozzleVelMS, steam.nozzleMach, steam.nozzleThroatMM,
+					steam.ejectorDraftInWC, natBuoyInWC, chimneyM, gravityAssist,
+				)
+			} else {
+				powerWatts = 370.0
+				draftMechanism = fmt.Sprintf(
+					"6 psig (0.414 barg) Subsonic Quiet Steam-Jet Ejector (%.0f m/s, Mach %.2f < 1.0, drilled %.2f mm brass orifice + 4.2 m open hydrostatic standpipe -> %.3f inWC ejector draft + %.3f inWC %.1f m chimney) + 0.5 HP 230V 50Hz Domestic Water Pump (~%.0f W, zero electric draft fan).",
+					steam.nozzleVelMS, steam.nozzleMach, steam.nozzleThroatMM,
+					steam.ejectorDraftInWC, natBuoyInWC, chimneyM, powerWatts,
+				)
+			}
+		} else if zeroElec {
 			powerWatts = 0.0
 			draftMechanism = fmt.Sprintf(
 				"Zero-Electricity %.0f psig (%.2f barg) Steam-Jet de Laval Ejector (%.0f m/s, Mach %.2f -> %.3f inWC ejector draft + %.3f inWC %.1f m chimney buoyancy + %.3f inWC gravity assist, no reheat hearth) — 0 W electric.",
@@ -896,7 +975,18 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 			hclPct, coarseAshPct, submicronPct,
 		)
 	}
-	if draftMode == LocalDraftSteamEjectorLP {
+	if draftMode == LocalDraftSteamEjectorSubsonic {
+		hclPct = 97.5
+		coarseAshPct = 92.5
+		submicronPct = 55.0
+		if !zeroElec {
+			submicronPct = 56.5
+		}
+		submicronNote = fmt.Sprintf(
+			"SUBSONIC CONDENSATION GROWTH CHECK (6 psig / 0.414 barg): Unchoked %.0f m/s (Mach %.2f < 1.0, ~52 dBA quiet) steam from a certified commercial catering steamer injects %.1f kg/hr into the cooled wide stoneware bed, growing deliquescent NaCl nuclei to ~%.0f%% submicron NaCl capture + %.1f%% HCl and %.1f%% coarse ash capture at %.0f W electric (honestly noting gentler droplet shear than 60 psig Hydro-Sonic's ~80%%).",
+			steam.nozzleVelMS, steam.nozzleMach, steam.steamFlowKgHr, submicronPct, hclPct, coarseAshPct, powerWatts,
+		)
+	} else if draftMode == LocalDraftSteamEjectorLP {
 		hclPct = 97.8
 		coarseAshPct = 94.0
 		submicronPct = 62.0
@@ -937,6 +1027,8 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 	}
 	if !steam.steamEnabled {
 		localMaterials[0] = fmt.Sprintf("Stage 1 & Recuperator: %s (~$%.0f) — concentric brick flue wall warms scrubbed exhaust back to %.0f F without mixing raw flue gas", prof.pipeLocalSpec, costs.quenchChamberUSD, stackReheatF)
+	} else if draftMode == LocalDraftSteamEjectorSubsonic {
+		localMaterials = append(localMaterials, fmt.Sprintf("Subsonic Quiet Steam-Jet Package (~$%.0f): Certified 12-15 psig commercial catering stainless steamer + 4.2 m open hydrostatic water-column standpipe relief (S2, $32) + simple drilled %.2f mm brass converging orifice ($22, no CNC bell) + insulated header (S1), 10-15 psig brass PRV, 0-15 psig gauge & check valve (%.1f kg/hr @ 6 psig / 0.414 barg)", costs.steamSystemUSD, steam.nozzleThroatMM, steam.steamFlowKgHr))
 	} else {
 		localMaterials = append(localMaterials, fmt.Sprintf("Certified Steam-Jet Ejector Package (~$%.0f): %s + insulated steam header (S1), ASME/IBR/KEBS spring-loaded PRV, pressure gauge, check valve & %.2f mm throat 316L de Laval ejector (%.1f kg/hr @ %.0f psig)", costs.steamSystemUSD, steam.steamSourceType, steam.nozzleThroatMM, steam.steamFlowKgHr, steam.pressurePSIG))
 	}
@@ -950,12 +1042,22 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 		if !zeroElec {
 			pumpStep = fmt.Sprintf("3. Start 0.5 HP Domestic Water Pump (%.0f W) & Open Gravity Spray: Confirm RCD/GFCI protection, maintain %.2f L/min (%.2f GPM) tower spray plus %.1f L/hr clean feedwater to the open 0 psig steam feed tank (overhead tank rides through grid blackouts).", powerWatts, sprayFlowLPM, sprayFlowGPM, steam.steamWaterLHr)
 		}
-		manualSteps = []string{
-			fmt.Sprintf("1. Cold Pre-Firing Steam Safety Check (PRV & Hydro-Test): Pull the certified spring-loaded PRV test ring to verify free snap action, confirm 1.5x MAWP cold hydro-test record, verify pressure gauge zeros cleanly, check feedwater check valve, and fill the open atmospheric 0 psig overhead feed tank."),
-			fmt.Sprintf("2. Pre-Fill Overhead Tank & Dose Local Alkali: Fill the %.0f L (%.0f gal) %s (%.1f ft / %.2f PSI) and dissolve/stir %.2f kg (%.1f lbs) %s (%s) in the baffled brick sump to pH 8.0-8.5.", tankLiters, tankGal, prof.tankBrand, tankElevFt, gravityHeadPSI, alkali.kgPerFiring, alkali.lbsPerFiring, alkali.name, alkali.formula),
-			pumpStep,
-			fmt.Sprintf("4. Bring Certified Steam Source to %.0f psig (%.2f barg) & Establish Ejector Draft: Start wet tower spray FIRST, warm steam source steadily (%.1f kW thermal vs %.1f kW kiln flue waste heat), then smoothly open the bronze throttling valve on insulated header S1 to drive the %.2f mm de Laval nozzle (%.0f m/s, Mach %.2f -> %.3f inWC ejector draft, %.1f m short chimney).", steam.pressurePSIG, steam.pressureBar, steam.steamThermalKW, steam.kilnWasteHeatKW, steam.nozzleThroatMM, steam.nozzleVelMS, steam.nozzleMach, steam.ejectorDraftInWC, chimneyM),
-			"5. Hourly Monitoring, Cooldown & Neutralized Disposal: Verify steady inward kiln spyhole draw, check steam pressure gauge & sight glass/feed tank level, test sump pH 7.5-8.5 hourly with litmus strips, depressurize steam header at shutdown, cool sump <=140 F (60 C), check SG < 1.105, and flush spray rose clean.",
+		if draftMode == LocalDraftSteamEjectorSubsonic {
+			manualSteps = []string{
+				"1. Cold Pre-Firing Subsonic Safety Check (4.2 m Standpipe & PRV): Verify the 4.2 m (13.8 ft) open vertical hydrostatic standpipe (S2) is unvalved, unobstructed, and water-primed (physically caps pressure at 6.0 psig!), pull the factory 10-15 psig brass PRV test ring, confirm 1.5x MAWP (23 psig) cold hydro-test record, zero the 0-15 psig gauge, verify the bronze check valve, and fill the open 0 psig feed tank.",
+				fmt.Sprintf("2. Pre-Fill Overhead Tank & Dose Local Alkali: Fill the %.0f L (%.0f gal) %s (%.1f ft / %.2f PSI) and dissolve/stir %.2f kg (%.1f lbs) %s (%s) in the baffled brick sump to pH 8.0-8.5.", tankLiters, tankGal, prof.tankBrand, tankElevFt, gravityHeadPSI, alkali.kgPerFiring, alkali.lbsPerFiring, alkali.name, alkali.formula),
+				pumpStep,
+				fmt.Sprintf("4. Bring Catering Steamer to 6 psig (0.414 barg) & Establish Quiet Subsonic Draft: Start wet tower spray FIRST, warm the catering steamer steadily (%.1f kW thermal vs %.1f kW kiln flue waste heat), then crack the bronze valve on insulated header S1 to feed the simple drilled %.2f mm brass converging orifice (%.0f m/s, Mach %.2f < 1.0, ~52 dBA -> %.3f inWC ejector draft, %.1f m compact chimney).", steam.steamThermalKW, steam.kilnWasteHeatKW, steam.nozzleThroatMM, steam.nozzleVelMS, steam.nozzleMach, steam.ejectorDraftInWC, chimneyM),
+				"5. Hourly Monitoring, Cooldown & Neutralized Disposal: Verify steady inward kiln spyhole draw, confirm 6 psig mid-scale gauge reading and dry standpipe overflow cup, test sump pH 7.5-8.5 hourly with litmus strips, depressurize header S1 at shutdown, cool sump <=140 F (60 C), check SG < 1.105, and flush spray rose clean.",
+			}
+		} else {
+			manualSteps = []string{
+				fmt.Sprintf("1. Cold Pre-Firing Steam Safety Check (PRV & Hydro-Test): Pull the certified spring-loaded PRV test ring to verify free snap action, confirm 1.5x MAWP cold hydro-test record, verify pressure gauge zeros cleanly, check feedwater check valve, and fill the open atmospheric 0 psig overhead feed tank."),
+				fmt.Sprintf("2. Pre-Fill Overhead Tank & Dose Local Alkali: Fill the %.0f L (%.0f gal) %s (%.1f ft / %.2f PSI) and dissolve/stir %.2f kg (%.1f lbs) %s (%s) in the baffled brick sump to pH 8.0-8.5.", tankLiters, tankGal, prof.tankBrand, tankElevFt, gravityHeadPSI, alkali.kgPerFiring, alkali.lbsPerFiring, alkali.name, alkali.formula),
+				pumpStep,
+				fmt.Sprintf("4. Bring Certified Steam Source to %.0f psig (%.2f barg) & Establish Ejector Draft: Start wet tower spray FIRST, warm steam source steadily (%.1f kW thermal vs %.1f kW kiln flue waste heat), then smoothly open the bronze throttling valve on insulated header S1 to drive the %.2f mm de Laval nozzle (%.0f m/s, Mach %.2f -> %.3f inWC ejector draft, %.1f m short chimney).", steam.pressurePSIG, steam.pressureBar, steam.steamThermalKW, steam.kilnWasteHeatKW, steam.nozzleThroatMM, steam.nozzleVelMS, steam.nozzleMach, steam.ejectorDraftInWC, chimneyM),
+				"5. Hourly Monitoring, Cooldown & Neutralized Disposal: Verify steady inward kiln spyhole draw, check steam pressure gauge & sight glass/feed tank level, test sump pH 7.5-8.5 hourly with litmus strips, depressurize steam header at shutdown, cool sump <=140 F (60 C), check SG < 1.105, and flush spray rose clean.",
+			}
 		}
 	} else if zeroElec {
 		manualSteps = []string{
@@ -977,13 +1079,21 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 
 	var warnings []string
 	if steam.steamEnabled {
-		warnings = []string{
-			fmt.Sprintf("NEVER BUILD DIY UNCERTIFIED WELDED DRUM BOILERS: Pressurized steam (%.0f psig / %.2f barg) MUST ONLY come from a factory-certified non-IBR (<=25 L)/KEBS/ASME baby boiler or code-rated small-bore (<2 L) seamless monotube coil equipped with a stamped spring-loaded PRV, 1.5x MAWP hydro-test, pressure gauge, check valve, scald guards, and open 0 psig feed tank!", steam.pressurePSIG, steam.pressureBar),
-			fmt.Sprintf("GRAVITY TANK STAND STRUCTURAL BRACING: A filled %.0f L %s weighs ~%.0f kg (%.0f lbs) at 3.5 m (11.5 ft) elevation — build a diagonally X-braced timber/steel or reinforced masonry pier stand on level compacted footings to prevent collapse!", tankLiters, prof.tankBrand, tankLiters*1.05+20.0, (tankLiters*1.05+20.0)/model.KgPerLb),
-			fmt.Sprintf("OUTDOOR-ONLY SITING & STEAM SCALD CLEARANCE: Never operate indoors — terminate the %.1f m (%.0f ft) brick/terracotta chimney outdoors above studio eaves, insulate steam header S1 with scald guards, and aim the PRV discharge pipe safely down toward grade.", chimneyM, chimneyFt),
+		if draftMode == LocalDraftSteamEjectorSubsonic {
+			warnings = []string{
+				"NEVER BUILD UNVENTED DIY WELDED DRUM BOILERS: Even at 6 psig (0.414 barg), steam MUST ONLY come from a factory-certified 12-15 psig commercial catering stainless steamer/kettle protected by BOTH an unvalved 4.2 m (13.8 ft) open water-column hydrostatic relief standpipe (S2 — physically caps pressure at 6.0 psig with zero moving parts!) and a stamped 10-15 psig brass PRV, fusible plug, 1.5x MAWP cold hydro-test, bronze check valve, and open 0 psig feed tank!",
+				fmt.Sprintf("GRAVITY TANK STAND STRUCTURAL BRACING: A filled %.0f L %s weighs ~%.0f kg (%.0f lbs) at 3.5 m (11.5 ft) elevation — build a diagonally X-braced timber/steel or reinforced masonry pier stand on level compacted footings to prevent collapse!", tankLiters, prof.tankBrand, tankLiters*1.05+20.0, (tankLiters*1.05+20.0)/model.KgPerLb),
+				fmt.Sprintf("OUTDOOR-ONLY SITING & STEAM SCALD CLEARANCE: Never operate indoors — terminate the %.1f m (%.0f ft) brick/terracotta chimney outdoors above studio eaves, insulate steam header S1 with scald guards, and route the 4.2 m standpipe overflow & PRV discharge safely down toward grade.", chimneyM, chimneyFt),
+			}
+		} else {
+			warnings = []string{
+				fmt.Sprintf("NEVER BUILD DIY UNCERTIFIED WELDED DRUM BOILERS: Pressurized steam (%.0f psig / %.2f barg) MUST ONLY come from a factory-certified non-IBR (<=25 L)/KEBS/ASME baby boiler or code-rated small-bore (<2 L) seamless monotube coil equipped with a stamped spring-loaded PRV, 1.5x MAWP hydro-test, pressure gauge, check valve, scald guards, and open 0 psig feed tank!", steam.pressurePSIG, steam.pressureBar),
+				fmt.Sprintf("GRAVITY TANK STAND STRUCTURAL BRACING: A filled %.0f L %s weighs ~%.0f kg (%.0f lbs) at 3.5 m (11.5 ft) elevation — build a diagonally X-braced timber/steel or reinforced masonry pier stand on level compacted footings to prevent collapse!", tankLiters, prof.tankBrand, tankLiters*1.05+20.0, (tankLiters*1.05+20.0)/model.KgPerLb),
+				fmt.Sprintf("OUTDOOR-ONLY SITING & STEAM SCALD CLEARANCE: Never operate indoors — terminate the %.1f m (%.0f ft) brick/terracotta chimney outdoors above studio eaves, insulate steam header S1 with scald guards, and aim the PRV discharge pipe safely down toward grade.", chimneyM, chimneyFt),
+			}
 		}
 		if !steam.wasteHeatSufficient {
-			warnings = append(warnings, fmt.Sprintf("KILN WASTE-HEAT DEFICIT: Steam generation needs %.1f kW thermal, exceeding estimated kiln flue waste heat (%.1f kW above 400 F) — fire the certified baby boiler on its dedicated wood/LPG burner rather than relying solely on kiln flue heat.", steam.steamThermalKW, steam.kilnWasteHeatKW))
+			warnings = append(warnings, fmt.Sprintf("KILN WASTE-HEAT DEFICIT: Steam generation needs %.1f kW thermal, exceeding estimated kiln flue waste heat (%.1f kW above 400 F) — fire the certified steamer/boiler on its dedicated wood/LPG burner rather than relying solely on kiln flue heat.", steam.steamThermalKW, steam.kilnWasteHeatKW))
 		}
 	} else {
 		warnings = []string{
@@ -1308,17 +1418,29 @@ func buildLocalCeramicCOTSSummary(project StudioProject, design model.ScrubberDe
 	if frugal.SteamEnabled {
 		steamSKU := "LOCAL-STEAM-LP-20PSIG"
 		steamWt := 24.0
-		if frugal.DraftMode == LocalDraftSteamEjectorHP {
+		steamCat := "Stage 2B: Certified Steam Source & de Laval Ejector"
+		steamMat := "Certified Non-IBR/KEBS/ASME Pressure Trim, 316L de Laval Nozzle, Spring-Loaded PRV, Gauge, Check Valve & Insulated Header S1"
+		steamName := fmt.Sprintf("%.0f psig (%.2f barg) %s", frugal.SteamPressurePSIG, frugal.SteamPressureBar, frugal.SteamSourceType)
+		steamSpec := fmt.Sprintf("[%s] %.1f kg/hr steam @ %.0f psig -> %.0f m/s (Mach %.2f, %.2f mm throat), %.3f inWC ejector draft (entrainment %.1f:1), %.1f kW thermal; MUST pass 1.5x MAWP cold hydro-test and NEVER use DIY welded drum boilers.", steamSKU, frugal.SteamFlowKgHr, frugal.SteamPressurePSIG, frugal.SteamNozzleVelMS, frugal.SteamNozzleMach, frugal.SteamNozzleThroatMM, frugal.EjectorDraftInWC, frugal.EjectorEntrainmentRatio, frugal.SteamThermalKW)
+		if frugal.DraftMode == LocalDraftSteamEjectorSubsonic {
+			steamSKU = "LOCAL-STEAM-SUBSONIC-6PSIG"
+			steamWt = 18.0
+			steamCat = "Stage 2B: Commercial Catering Steamer, 4.2 m Standpipe & Brass Orifice"
+			steamMat = "Certified 12-15 psig Commercial Stainless Catering Steamer, 4.2 m Open Hydrostatic Standpipe (S2), Drilled Brass Converging Orifice, 10-15 psig Brass PRV, 0-15 psig Gauge, Bronze Check Valve & Insulated Header S1"
+			steamName = fmt.Sprintf("6 psig (%.3f barg) %s", frugal.SteamPressureBar, frugal.SteamSourceType)
+			steamSpec = fmt.Sprintf("[%s] %.1f kg/hr unchoked subsonic steam @ 6 psig -> %.0f m/s (Mach %.2f < 1.0, %.2f mm drilled brass orifice, ~52 dBA), %.3f inWC ejector draft (entrainment %.1f:1), %.1f kW thermal + 4.2 m open hydrostatic water-column standpipe (6.0 psig physical limit) & 10-15 psig brass PRV; MUST pass 1.5x MAWP cold hydro-test and NEVER use unvented DIY welded drum boilers.", steamSKU, frugal.SteamFlowKgHr, frugal.SteamNozzleVelMS, frugal.SteamNozzleMach, frugal.SteamNozzleThroatMM, frugal.EjectorDraftInWC, frugal.EjectorEntrainmentRatio, frugal.SteamThermalKW)
+		} else if frugal.DraftMode == LocalDraftSteamEjectorHP {
 			steamSKU = "LOCAL-STEAM-HP-60PSIG"
 			steamWt = 46.0
+			steamSpec = fmt.Sprintf("[%s] %.1f kg/hr steam @ %.0f psig -> %.0f m/s (Mach %.2f, %.2f mm throat), %.3f inWC ejector draft (entrainment %.1f:1), %.1f kW thermal; MUST pass 1.5x MAWP cold hydro-test and NEVER use DIY welded drum boilers.", steamSKU, frugal.SteamFlowKgHr, frugal.SteamPressurePSIG, frugal.SteamNozzleVelMS, frugal.SteamNozzleMach, frugal.SteamNozzleThroatMM, frugal.EjectorDraftInWC, frugal.EjectorEntrainmentRatio, frugal.SteamThermalKW)
 		}
 		items = append(items, model.BOMItem{
-			Category:    "Stage 2B: Certified Steam Source & de Laval Ejector",
-			Name:        fmt.Sprintf("%.0f psig (%.2f barg) %s", frugal.SteamPressurePSIG, frugal.SteamPressureBar, frugal.SteamSourceType),
-			Material:    "Certified Non-IBR/KEBS/ASME Pressure Trim, 316L de Laval Nozzle, Spring-Loaded PRV, Gauge, Check Valve & Insulated Header S1",
+			Category:    steamCat,
+			Name:        steamName,
+			Material:    steamMat,
 			Quantity:    1,
 			Unit:        "assy",
-			Spec:        fmt.Sprintf("[%s] %.1f kg/hr steam @ %.0f psig -> %.0f m/s (Mach %.2f, %.2f mm throat), %.3f inWC ejector draft (entrainment %.1f:1), %.1f kW thermal; MUST pass 1.5x MAWP cold hydro-test and NEVER use DIY welded drum boilers.", steamSKU, frugal.SteamFlowKgHr, frugal.SteamPressurePSIG, frugal.SteamNozzleVelMS, frugal.SteamNozzleMach, frugal.SteamNozzleThroatMM, frugal.EjectorDraftInWC, frugal.EjectorEntrainmentRatio, frugal.SteamThermalKW),
+			Spec:        steamSpec,
 			UnitCostUSD: costs.steamSystemUSD,
 			WeightKg:    steamWt,
 		})
@@ -1326,7 +1448,11 @@ func buildLocalCeramicCOTSSummary(project StudioProject, design model.ScrubberDe
 
 	bomSafetyNote := "SAFETY: NEVER build an uncertified DIY pressurized steam boiler on the kiln flue. Brace the 3.5 m overhead gravity tank stand for >350-550 kg wet load, and discharge strictly outdoors."
 	if frugal.SteamEnabled {
-		bomSafetyNote = fmt.Sprintf("STEAM SAFETY: Use ONLY a factory-certified non-IBR (<=25 L)/KEBS/ASME baby boiler or code-rated small-bore (<2 L) seamless monotube coil with stamped spring-loaded PRV, 1.5x MAWP cold hydro-test, pressure gauge, check valve, scald guards, and open 0 psig feed tank — NEVER fabricate a DIY welded drum boiler! (%.0f psig / %.1f kg/hr).", frugal.SteamPressurePSIG, frugal.SteamFlowKgHr)
+		if frugal.DraftMode == LocalDraftSteamEjectorSubsonic {
+			bomSafetyNote = fmt.Sprintf("SUBSONIC STEAM SAFETY (6 psig / 0.414 barg): Use ONLY a factory-certified 12-15 psig commercial catering stainless steamer/kettle equipped with BOTH an unvalved 4.2 m open vertical hydrostatic water-column relief standpipe (6.0 psig physical cap, zero moving parts) and a stamped 10-15 psig brass PRV + fusible plug, 1.5x MAWP (23 psig) cold hydro-test, 0-15 psig gauge, bronze check valve, scald guards, and open 0 psig feed tank — NEVER fabricate an unvented DIY welded drum boiler! (%.1f kg/hr).", frugal.SteamFlowKgHr)
+		} else {
+			bomSafetyNote = fmt.Sprintf("STEAM SAFETY: Use ONLY a factory-certified non-IBR (<=25 L)/KEBS/ASME baby boiler or code-rated small-bore (<2 L) seamless monotube coil with stamped spring-loaded PRV, 1.5x MAWP cold hydro-test, pressure gauge, check valve, scald guards, and open 0 psig feed tank — NEVER fabricate a DIY welded drum boiler! (%.0f psig / %.1f kg/hr).", frugal.SteamPressurePSIG, frugal.SteamFlowKgHr)
+		}
 	}
 
 	bom := model.BOM{

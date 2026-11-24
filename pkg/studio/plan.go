@@ -1576,15 +1576,34 @@ func buildLocalCeramicShopPlan(
 	if fr.SteamEnabled {
 		steamCost := 0.0
 		for _, it := range cots.BOM.Items {
-			if it.Category == "Stage 2B: Certified Steam Source & de Laval Ejector" {
+			if it.Category == "Stage 2B: Certified Steam Source & de Laval Ejector" ||
+				it.Category == "Stage 2B: Commercial Catering Steamer, 4.2 m Standpipe & Brass Orifice" {
 				steamCost = it.UnitCostUSD
 			}
 		}
+		isSubsonic := fr.DraftMode == LocalDraftSteamEjectorSubsonic
 		boilerSKU := "LOCAL-MONOTUBE-20PSIG"
 		boilerLabel := "Stage 2B: Code-Rated Small-Bore 316L Monotube Flash Coil + Certified PRV & Gauge (20 psig)"
 		boilerDimsIn := `3/8" seamless 316L monotube (<2 L volume) + 25 psig ASME/IBR/KEBS PRV + 0-100 psig gauge`
 		boilerDimsMM := "10 mm seamless 316L coil (<2 L) + certified PRV & siphon gauge"
-		if fr.DraftMode == LocalDraftSteamEjectorHP {
+		ejectorID := "de_laval_steam_ejector"
+		ejectorLabel := fmt.Sprintf("Stage 2B: Machined 316L de Laval Steam-Jet Ejector Throat (%.2f mm) & Mixing Diffuser", fr.SteamNozzleThroatMM)
+		ejectorMat := "Machined 316L Stainless de Laval Nozzle + Insulated Steam Header (S1) + Stoneware/316L Mixing Diffuser"
+		ejectorDimsIn := fmt.Sprintf(`%.3f" (%.2f mm) choked throat, %.0f m/s (Mach %.2f) -> %.3f inWC draft`, fr.SteamNozzleThroatMM/25.4, fr.SteamNozzleThroatMM, fr.SteamNozzleVelMS, fr.SteamNozzleMach, fr.EjectorDraftInWC)
+		ejectorDimsMM := fmt.Sprintf("%.2f mm choked throat, %.0f m/s (Mach %.2f), entrainment %.1f:1", fr.SteamNozzleThroatMM, fr.SteamNozzleVelMS, fr.SteamNozzleMach, fr.EjectorEntrainmentRatio)
+		ejectorSKU := "LOCAL-DELAVAL-EJECTOR-316L"
+		if isSubsonic {
+			boilerSKU = "LOCAL-CATERING-STEAMER-6PSIG"
+			boilerLabel = "Stage 2B: Certified Commercial Catering Stainless Steamer (6 psig / 0.414 barg) + 4.2 m Open Hydrostatic Standpipe (S2)"
+			boilerDimsIn = `12-15 psig commercial catering steamer (run @ 6 psig) + 13.8 ft (4.2 m) open water-column standpipe + 10-15 psig brass PRV & 0-15 psig gauge`
+			boilerDimsMM = "Commercial catering steamer (0.414 barg) + 4,200 mm open hydrostatic standpipe (6 psig physical cap) + 10-15 psig brass PRV"
+			ejectorID = "subsonic_brass_orifice_ejector"
+			ejectorLabel = fmt.Sprintf("Stage 2B: Simple Drilled Brass Converging Orifice (%.2f mm, Unchoked Mach %.2f) & Masonry Mixing Diffuser", fr.SteamNozzleThroatMM, fr.SteamNozzleMach)
+			ejectorMat = "Simple Drilled 1/2\" Brass Pipe-Cap Converging Orifice (No CNC Bell) + Insulated Low-Pressure Header (S1) + Stoneware Mixing Diffuser"
+			ejectorDimsIn = fmt.Sprintf(`%.3f" (%.2f mm) drilled brass orifice, %.0f m/s (Mach %.2f < 1.0, ~52 dBA) -> %.3f inWC draft`, fr.SteamNozzleThroatMM/25.4, fr.SteamNozzleThroatMM, fr.SteamNozzleVelMS, fr.SteamNozzleMach, fr.EjectorDraftInWC)
+			ejectorDimsMM = fmt.Sprintf("%.2f mm drilled brass orifice (unchoked Mach %.2f), entrainment %.1f:1", fr.SteamNozzleThroatMM, fr.SteamNozzleMach, fr.EjectorEntrainmentRatio)
+			ejectorSKU = "LOCAL-BRASS-ORIFICE-SUBSONIC"
+		} else if fr.DraftMode == LocalDraftSteamEjectorHP {
 			boilerSKU = "LOCAL-BABY-BOILER-60PSIG"
 			boilerLabel = "Stage 2B: Certified Non-IBR (<=25 L) / KEBS Commercial Baby Steam Boiler + PRV & Sight Glass (60 psig)"
 			boilerDimsIn = `<=25 L certified baby boiler (60 psig) + 75 psig PRV, fusible plug, sight glass & check valve`
@@ -1602,17 +1621,17 @@ func buildLocalCeramicShopPlan(
 				SKU:          boilerSKU,
 				Qty:          1,
 				CostUSD:      round2(steamCost * 0.72),
-				Notes:        fmt.Sprintf("%.1f kg/hr steam (%.1f kW thermal vs %.1f kW kiln flue waste heat); MUST pass 1.5x MAWP cold hydro-test. NEVER build DIY welded drum boilers!", fr.SteamFlowKgHr, fr.SteamThermalKW, fr.KilnWasteHeatKW),
+				Notes:        fmt.Sprintf("%.1f kg/hr steam (%.1f kW thermal vs %.1f kW kiln flue waste heat); MUST pass 1.5x MAWP cold hydro-test. NEVER build unvented DIY welded drum boilers!", fr.SteamFlowKgHr, fr.SteamThermalKW, fr.KilnWasteHeatKW),
 			},
 			PlanPart{
 				Num:          11,
-				ID:           "de_laval_steam_ejector",
-				Label:        fmt.Sprintf("Stage 2B: Machined 316L de Laval Steam-Jet Ejector Throat (%.2f mm) & Mixing Diffuser", fr.SteamNozzleThroatMM),
+				ID:           ejectorID,
+				Label:        ejectorLabel,
 				Stage:        "Stage 2B Steam",
-				Material:     "Machined 316L Stainless de Laval Nozzle + Insulated Steam Header (S1) + Stoneware/316L Mixing Diffuser",
-				DimensionsIn: fmt.Sprintf(`%.3f" (%.2f mm) choked throat, %.0f m/s (Mach %.2f) -> %.3f inWC draft`, fr.SteamNozzleThroatMM/25.4, fr.SteamNozzleThroatMM, fr.SteamNozzleVelMS, fr.SteamNozzleMach, fr.EjectorDraftInWC),
-				DimensionsMM: fmt.Sprintf("%.2f mm choked throat, %.0f m/s (Mach %.2f), entrainment %.1f:1", fr.SteamNozzleThroatMM, fr.SteamNozzleVelMS, fr.SteamNozzleMach, fr.EjectorEntrainmentRatio),
-				SKU:          "LOCAL-DELAVAL-EJECTOR-316L",
+				Material:     ejectorMat,
+				DimensionsIn: ejectorDimsIn,
+				DimensionsMM: ejectorDimsMM,
+				SKU:          ejectorSKU,
 				Qty:          1,
 				CostUSD:      round2(steamCost * 0.28),
 				Notes:        fr.CondensationGrowthNote,
@@ -1684,16 +1703,29 @@ func buildLocalCeramicShopPlan(
 	}
 	if fr.SteamEnabled {
 		cutList[len(cutList)-1].Name = fmt.Sprintf("Short Brick / SWG Exhaust Chimney (%.1f m / %.0f ft, Steam-Jet Driven)", fr.ChimneyHeightM, fr.ChimneyHeightFt)
-		cutList = append(cutList, CutSheetItem{
-			PartNum:      11,
-			Name:         fmt.Sprintf("Insulated Steam Header (S1) & Machined 316L de Laval Ejector Mixing Throat (%.2f mm Nozzle)", fr.SteamNozzleThroatMM),
-			Shape:        "pipe",
-			Material:     `1/2" Sch 40 Seamless 316L/Steel Steam Pipe + Mineral-Wool Scald Guard + 316L Mixing Diffuser`,
-			FlatWidthIn:  round2(math.Pi * 4.0),
-			FlatHeightIn: 36.0,
-			Qty:          1,
-			Notes:        fmt.Sprintf(`Machine %.2f mm choked 316L de Laval nozzle centered coaxially in the mixing throat; insulate S1 steam header with scald guards and hydro-test to 1.5x MAWP before firing.`, fr.SteamNozzleThroatMM),
-		})
+		if fr.DraftMode == LocalDraftSteamEjectorSubsonic {
+			cutList = append(cutList, CutSheetItem{
+				PartNum:      11,
+				Name:         fmt.Sprintf("Insulated Low-Pressure Steam Header (S1), 4.2 m Open Hydrostatic Standpipe (S2) & Drilled Brass Converging Orifice (%.2f mm)", fr.SteamNozzleThroatMM),
+				Shape:        "pipe",
+				Material:     `1/2" Copper/Brass Steam Header (S1) + 3/4" × 4.2 m Open Vertical Standpipe (S2) + Hand-Drilled 1/2" Brass Pipe-Cap Orifice (No CNC Bell)`,
+				FlatWidthIn:  round2(math.Pi * 4.0),
+				FlatHeightIn: 165.4, // 4.2 m vertical open hydrostatic standpipe
+				Qty:          1,
+				Notes:        fmt.Sprintf(`Drill %.2f mm center bore in standard 1/2" brass pipe cap (no CNC de Laval bell needed); plumb unvalved 4.2 m (13.8 ft) vertical open water-column standpipe S2 directly to steamer liquid space (physically caps pressure at 6.0 psig), insulate header S1, and hydro-test to 1.5x MAWP (23 psig).`, fr.SteamNozzleThroatMM),
+			})
+		} else {
+			cutList = append(cutList, CutSheetItem{
+				PartNum:      11,
+				Name:         fmt.Sprintf("Insulated Steam Header (S1) & Machined 316L de Laval Ejector Mixing Throat (%.2f mm Nozzle)", fr.SteamNozzleThroatMM),
+				Shape:        "pipe",
+				Material:     `1/2" Sch 40 Seamless 316L/Steel Steam Pipe + Mineral-Wool Scald Guard + 316L Mixing Diffuser`,
+				FlatWidthIn:  round2(math.Pi * 4.0),
+				FlatHeightIn: 36.0,
+				Qty:          1,
+				Notes:        fmt.Sprintf(`Machine %.2f mm choked 316L de Laval nozzle centered coaxially in the mixing throat; insulate S1 steam header with scald guards and hydro-test to 1.5x MAWP before firing.`, fr.SteamNozzleThroatMM),
+			})
+		}
 	}
 
 	// Electrical schedule: strictly EMPTY (0 circuits) when zero_electricity == true!
@@ -1818,34 +1850,78 @@ func buildLocalCeramicShopPlan(
 	}
 
 	if fr.SteamEnabled {
-		plumbing = append(plumbing,
-			PlumbingLine{
-				ID:             "S1",
-				Label:          fmt.Sprintf("Insulated Live Steam Header (S1) -> PRV & Gauge -> de Laval Ejector (%.0f psig / %.1f kg/hr)", fr.SteamPressurePSIG, fr.SteamFlowKgHr),
-				Fluid:          fmt.Sprintf("Saturated / Dry Motive Steam (%.0f psig / %.2f barg, %.0f m/s @ %.2f mm nozzle)", fr.SteamPressurePSIG, fr.SteamPressureBar, fr.SteamNozzleVelMS, fr.SteamNozzleThroatMM),
-				From:           "Certified Steam Source (Monotube Coil / Non-IBR Baby Boiler)",
-				To:             "Stage 2B 316L de Laval Steam-Jet Ejector Mixing Throat",
-				SizeIn:         0.5,
-				Material:       `1/2" Sch 40 Seamless 316L/Steel Pipe + Mineral-Wool Insulation & Metal Scald Guard`,
-				FlowGPM:        round2(fr.SteamWaterLHr / 60.0 / 3.785411784),
-				PressurePSI:    fr.SteamPressurePSIG,
-				ValvesFittings: "ASME/IBR/KEBS Certified Spring-Loaded PRV (w/ Pull-Ring), 0-100 psig Glycerin Gauge w/ Siphon, Bronze Throttling Valve",
-				Notes:          fmt.Sprintf("1.5x MAWP cold hydro-tested header S1; pipe PRV discharge safely down toward grade. Delivers %.3f inWC steam-jet ejector draft (%.1f:1 entrainment) at %.0f W electric.", fr.EjectorDraftInWC, fr.EjectorEntrainmentRatio, fr.PowerWatts),
-			},
-			PlumbingLine{
-				ID:             "P6",
-				Label:          fmt.Sprintf("Open Atmospheric 0 psig Feedwater Supply -> Check Valve -> Steam Source (+%.1f L/hr)", fr.SteamWaterLHr),
-				Fluid:          "Clean Soft/Filtered Boiler Feedwater (0 psig Open Tank)",
-				From:           "Open Atmospheric 0 psig Overhead Feed Tank / Hand Feed Pump",
-				To:             "Certified Monotube Coil / Non-IBR Baby Boiler Feed Inlet",
-				SizeIn:         0.5,
-				Material:       `1/2" Copper / 316L Seamless Feed Tubing + Bronze Spring Check Valve`,
-				FlowGPM:        round2(fr.SteamWaterLHr / 60.0 / 3.785411784),
-				PressurePSI:    fr.GravityHeadPSI,
-				ValvesFittings: "Fine Mesh Strainer, Bronze/316L Spring Check Valve, Isolation Valve, Sight Glass",
-				Notes:          "Check valve prevents hot steam from ever backing into plastic atmospheric feed tank; never pressurize plastic tanks.",
-			},
-		)
+		if fr.DraftMode == LocalDraftSteamEjectorSubsonic {
+			plumbing = append(plumbing,
+				PlumbingLine{
+					ID:             "S1",
+					Label:          fmt.Sprintf("Insulated Low-Pressure Steam Line (S1) -> 10-15 psig PRV & Gauge -> Drilled Brass Converging Orifice (6 psig / 0.414 barg, %.1f kg/hr)", fr.SteamFlowKgHr),
+					Fluid:          fmt.Sprintf("Unchoked Subsonic Saturated Steam (6 psig / 0.414 barg, %.0f m/s, Mach %.2f < 1.0 @ %.2f mm drilled brass orifice)", fr.SteamNozzleVelMS, fr.SteamNozzleMach, fr.SteamNozzleThroatMM),
+					From:           "Certified 12-15 psig Commercial Catering Stainless Steamer / Low-Pressure Kettle",
+					To:             "Stage 2B Simple Drilled Brass Converging Orifice & Stoneware Mixing Diffuser",
+					SizeIn:         0.5,
+					Material:       `1/2" Copper / Seamless Brass Steam Line + Mineral-Wool Insulation & Metal Scald Guard`,
+					FlowGPM:        round2(fr.SteamWaterLHr / 60.0 / 3.785411784),
+					PressurePSI:    fr.SteamPressurePSIG,
+					ValvesFittings: "Factory 10-15 psig Brass Spring-Loaded PRV (w/ Pull-Ring), 0-15 psig Glycerin Gauge w/ Siphon, Bronze Throttling Valve",
+					Notes:          fmt.Sprintf("1.5x MAWP (23 psig) cold hydro-tested header S1; simple drilled %.2f mm brass pipe-cap orifice needs NO CNC de Laval bell. Delivers %.3f inWC quiet subsonic draft (~52 dBA, %.1f:1 entrainment) at %.0f W electric.", fr.SteamNozzleThroatMM, fr.EjectorDraftInWC, fr.EjectorEntrainmentRatio, fr.PowerWatts),
+				},
+				PlumbingLine{
+					ID:             "S2",
+					Label:          "4.2 m (13.8 ft) Open Vertical Hydrostatic Water-Column Relief Standpipe (S2 — 6.0 psig Physical Cap)",
+					Fluid:          "Open Atmospheric Water Column / Automatic Over-Pressure Steam Vent (Zero Moving Parts)",
+					From:           "Certified Catering Steamer Lower Liquid Manifold (Unvalved Direct Connection)",
+					To:             "Open-Top Atmospheric Overflow Elbow @ +4.2 m (+13.8 ft) Elevation -> Outdoor Splash Drain",
+					SizeIn:         0.75,
+					Material:       `3/4" Rigid Copper / Galvanized Steel Vertical Standpipe w/ Unobstructed Open Overflow Bend`,
+					FlowGPM:        round2(fr.SteamWaterLHr / 60.0 / 3.785411784),
+					PressurePSI:    fr.SteamPressurePSIG,
+					ValvesFittings: "ZERO Shutoff Valves Permitted — Open Top Atmospheric Overflow Cup & Downward Splash Deflector",
+					Notes:          "Hydrostatic water-column relief: P_max = rho*g*h = 998 * 9.81 * 4.2 m = 41.1 kPa (6.0 psig). Physically caps steamer pressure at 6.0 psig with zero springs or moving parts, backing up the factory 10-15 psig brass PRV.",
+				},
+				PlumbingLine{
+					ID:             "P6",
+					Label:          fmt.Sprintf("Open Atmospheric 0 psig Feedwater Supply -> Bronze Check Valve -> Catering Steamer (+%.1f L/hr)", fr.SteamWaterLHr),
+					Fluid:          "Clean Soft/Filtered Boiler Feedwater (0 psig Open Tank)",
+					From:           "Open Atmospheric 0 psig Overhead Feed Tank / Hand Feed Pump",
+					To:             "Certified Commercial Catering Steamer Feed Inlet",
+					SizeIn:         0.5,
+					Material:       `1/2" Copper / 316L Seamless Feed Tubing + Bronze Spring Check Valve`,
+					FlowGPM:        round2(fr.SteamWaterLHr / 60.0 / 3.785411784),
+					PressurePSI:    fr.GravityHeadPSI,
+					ValvesFittings: "Fine Mesh Strainer, Bronze Spring Check Valve, Isolation Valve, Water-Level Sight Glass",
+					Notes:          "Bronze check valve prevents hot steam from ever backing into plastic atmospheric feed tank; never pressurize plastic tanks.",
+				},
+			)
+		} else {
+			plumbing = append(plumbing,
+				PlumbingLine{
+					ID:             "S1",
+					Label:          fmt.Sprintf("Insulated Live Steam Header (S1) -> PRV & Gauge -> de Laval Ejector (%.0f psig / %.1f kg/hr)", fr.SteamPressurePSIG, fr.SteamFlowKgHr),
+					Fluid:          fmt.Sprintf("Saturated / Dry Motive Steam (%.0f psig / %.2f barg, %.0f m/s @ %.2f mm nozzle)", fr.SteamPressurePSIG, fr.SteamPressureBar, fr.SteamNozzleVelMS, fr.SteamNozzleThroatMM),
+					From:           "Certified Steam Source (Monotube Coil / Non-IBR Baby Boiler)",
+					To:             "Stage 2B 316L de Laval Steam-Jet Ejector Mixing Throat",
+					SizeIn:         0.5,
+					Material:       `1/2" Sch 40 Seamless 316L/Steel Pipe + Mineral-Wool Insulation & Metal Scald Guard`,
+					FlowGPM:        round2(fr.SteamWaterLHr / 60.0 / 3.785411784),
+					PressurePSI:    fr.SteamPressurePSIG,
+					ValvesFittings: "ASME/IBR/KEBS Certified Spring-Loaded PRV (w/ Pull-Ring), 0-100 psig Glycerin Gauge w/ Siphon, Bronze Throttling Valve",
+					Notes:          fmt.Sprintf("1.5x MAWP cold hydro-tested header S1; pipe PRV discharge safely down toward grade. Delivers %.3f inWC steam-jet ejector draft (%.1f:1 entrainment) at %.0f W electric.", fr.EjectorDraftInWC, fr.EjectorEntrainmentRatio, fr.PowerWatts),
+				},
+				PlumbingLine{
+					ID:             "P6",
+					Label:          fmt.Sprintf("Open Atmospheric 0 psig Feedwater Supply -> Check Valve -> Steam Source (+%.1f L/hr)", fr.SteamWaterLHr),
+					Fluid:          "Clean Soft/Filtered Boiler Feedwater (0 psig Open Tank)",
+					From:           "Open Atmospheric 0 psig Overhead Feed Tank / Hand Feed Pump",
+					To:             "Certified Monotube Coil / Non-IBR Baby Boiler Feed Inlet",
+					SizeIn:         0.5,
+					Material:       `1/2" Copper / 316L Seamless Feed Tubing + Bronze Spring Check Valve`,
+					FlowGPM:        round2(fr.SteamWaterLHr / 60.0 / 3.785411784),
+					PressurePSI:    fr.GravityHeadPSI,
+					ValvesFittings: "Fine Mesh Strainer, Bronze/316L Spring Check Valve, Isolation Valve, Sight Glass",
+					Notes:          "Check valve prevents hot steam from ever backing into plastic atmospheric feed tank; never pressurize plastic tanks.",
+				},
+			)
+		}
 	}
 
 	pumpHP := 0.0
@@ -1920,33 +1996,59 @@ func buildLocalCeramicShopPlan(
 	}
 
 	if fr.SteamEnabled {
-		steamLoadLbs := 65.0
-		if fr.DraftMode == LocalDraftSteamEjectorHP {
-			steamLoadLbs = 125.0
+		if fr.DraftMode == LocalDraftSteamEjectorSubsonic {
+			bracing = append(bracing, BracingMember{
+				ID:         "B6",
+				Component:  "Certified 6 psig Catering Steamer Cradle, Header S1 Pipe Clamps & 4.2 m Open Standpipe (S2) Straps",
+				MemberSpec: `2"×2" Mild Steel Steamer Stand + Vertical Wall/Post Straps Every 1.2 m Along 4.2 m Standpipe S2 + Scald Shield`,
+				Mounting:   "Bolted to Masonry Pad Outside Wet Spray Zone w/ Vertical Standpipe S2 & PRV Overflow Guide",
+				LoadLbs:    48.0,
+				AnchorSpec: `4× M10 Masonry Expansion Anchors + 4× 3/4" Pipe Straps Supporting 4.2 m Open Hydrostatic Standpipe S2`,
+				Notes:      "Anchors certified catering steamer, holds the 4.2 m vertical open hydrostatic relief standpipe S2 plumb and kink-free, supports insulated header S1, and directs standpipe/PRV overflow safely to grade.",
+			})
+		} else {
+			steamLoadLbs := 65.0
+			if fr.DraftMode == LocalDraftSteamEjectorHP {
+				steamLoadLbs = 125.0
+			}
+			bracing = append(bracing, BracingMember{
+				ID:         "B6",
+				Component:  fmt.Sprintf("Certified %.0f psig Steam Source Cradle, Header S1 Pipe Clamps & de Laval Ejector Thrust Mount", fr.SteamPressurePSIG),
+				MemberSpec: `2"×2" Mild Steel Boiler Cradle + Anchored Steam Header Pipe Clamps + Sheet-Metal Scald Shield`,
+				Mounting:   "Bolted to Masonry Pad Outside Wet Spray Zone w/ PRV Discharge Guide",
+				LoadLbs:    steamLoadLbs,
+				AnchorSpec: `4× M10 Masonry Expansion Anchors + Thermal-Expansion Pipe Guides on S1`,
+				Notes:      "Anchors certified steam coil/baby boiler, absorbs de Laval ejector jet reaction thrust, supports insulated header S1, and anchors PRV vent pipe downward away from operator walkways.",
+			})
 		}
-		bracing = append(bracing, BracingMember{
-			ID:         "B6",
-			Component:  fmt.Sprintf("Certified %.0f psig Steam Source Cradle, Header S1 Pipe Clamps & de Laval Ejector Thrust Mount", fr.SteamPressurePSIG),
-			MemberSpec: `2"×2" Mild Steel Boiler Cradle + Anchored Steam Header Pipe Clamps + Sheet-Metal Scald Shield`,
-			Mounting:   "Bolted to Masonry Pad Outside Wet Spray Zone w/ PRV Discharge Guide",
-			LoadLbs:    steamLoadLbs,
-			AnchorSpec: `4× M10 Masonry Expansion Anchors + Thermal-Expansion Pipe Guides on S1`,
-			Notes:      "Anchors certified steam coil/baby boiler, absorbs de Laval ejector jet reaction thrust, supports insulated header S1, and anchors PRV vent pipe downward away from operator walkways.",
-		})
 	}
 
 	var acoustics []AcousticZone
 	if fr.SteamEnabled {
-		acoustics = []AcousticZone{
-			{
-				ID:             "S1",
-				Location:       fmt.Sprintf("%.0f psig de Laval Steam-Jet Ejector Throat & Masonry Mixing Diffuser", fr.SteamPressurePSIG),
-				Treatment:      "Thick Brick / SWG Masonry Shroud + Optional Mineral-Wool Diffuser Acoustic Wrap",
-				Material:       "4.5\" Fired Brick / SWG Acoustic Mass Wall + High-Temp Mineral Wool",
-				ThicknessIn:    4.5,
-				AttenuationDBA: round1(math.Max(0.0, urban.Noise.BareDBA3Ft-urban.Noise.SilencedDBA3Ft)),
-				Notes:          fmt.Sprintf("Modest steam-jet hiss (~%.1f dBA bare @ 3 ft — quieter than a 79 dBA 2 HP blower) -> %.1f dBA at %.0f ft property line.", urban.Noise.BareDBA3Ft, urban.Noise.PropertyLineDBA, urban.Noise.PropertyLineFt),
-			},
+		if fr.DraftMode == LocalDraftSteamEjectorSubsonic {
+			acoustics = []AcousticZone{
+				{
+					ID:             "S1",
+					Location:       "6 psig Subsonic Quiet Steam-Jet Brass Orifice (Mach < 1.0, Zero Shock Screech) & Masonry Diffuser",
+					Treatment:      "Thick Brick / SWG Masonry Shroud + Inherently Quiet Subsonic Lighthill v^8 Jet",
+					Material:       "4.5\" Fired Brick / SWG Acoustic Mass Wall + Optional Mineral-Wool Diffuser Wrap",
+					ThicknessIn:    4.5,
+					AttenuationDBA: round1(math.Max(0.0, urban.Noise.BareDBA3Ft-urban.Noise.SilencedDBA3Ft)),
+					Notes:          fmt.Sprintf("Whisper-quiet unchoked subsonic steam jet (%.1f dBA bare @ 3 ft via Lighthill v^8 drop & zero supersonic shock screech) -> %.1f dBA at %.0f ft property line.", urban.Noise.BareDBA3Ft, urban.Noise.PropertyLineDBA, urban.Noise.PropertyLineFt),
+				},
+			}
+		} else {
+			acoustics = []AcousticZone{
+				{
+					ID:             "S1",
+					Location:       fmt.Sprintf("%.0f psig de Laval Steam-Jet Ejector Throat & Masonry Mixing Diffuser", fr.SteamPressurePSIG),
+					Treatment:      "Thick Brick / SWG Masonry Shroud + Optional Mineral-Wool Diffuser Acoustic Wrap",
+					Material:       "4.5\" Fired Brick / SWG Acoustic Mass Wall + High-Temp Mineral Wool",
+					ThicknessIn:    4.5,
+					AttenuationDBA: round1(math.Max(0.0, urban.Noise.BareDBA3Ft-urban.Noise.SilencedDBA3Ft)),
+					Notes:          fmt.Sprintf("Modest steam-jet hiss (~%.1f dBA bare @ 3 ft — quieter than a 79 dBA 2 HP blower) -> %.1f dBA at %.0f ft property line.", urban.Noise.BareDBA3Ft, urban.Noise.PropertyLineDBA, urban.Noise.PropertyLineFt),
+				},
+			}
 		}
 	} else if p.ZeroElectricity {
 		acoustics = []AcousticZone{
@@ -1994,7 +2096,11 @@ func buildLocalCeramicShopPlan(
 	necWidth := 0.0
 	wiringNote := `0V / OFF-GRID (Zero Electricity): No electrical panel, VFD, or NEC 110.26 working clearance required. Maintain >=36" hot-flue clearance to combustibles (NFPA 211), >=36" service aisle around brick cleanouts & treadle pump, and inspect braced overhead gravity tank stand before every firing.`
 	if fr.SteamEnabled && p.ZeroElectricity {
-		wiringNote = `0V / OFF-GRID STEAM-JET EJECTOR (Zero Electricity): No electrical panel, VFD, or NEC 110.26 working clearance required. Maintain >=36" hot-flue & steam-header S1 clearance, clear access to the certified PRV pull-ring & bronze throttling valve, and inspect braced overhead tank stand before every firing.`
+		if fr.DraftMode == LocalDraftSteamEjectorSubsonic {
+			wiringNote = `0V / OFF-GRID SUBSONIC STEAM-JET EJECTOR (6 psig, Zero Electricity): No electrical panel, VFD, or NEC 110.26 working clearance required. Maintain >=36" hot-flue & steam-header S1 clearance, keep the 4.2 m open hydrostatic standpipe (S2) completely unvalved & unobstructed, keep clear access to the 10-15 psig PRV pull-ring & bronze throttling valve, and inspect braced overhead tank stand before every firing.`
+		} else {
+			wiringNote = `0V / OFF-GRID STEAM-JET EJECTOR (Zero Electricity): No electrical panel, VFD, or NEC 110.26 working clearance required. Maintain >=36" hot-flue & steam-header S1 clearance, clear access to the certified PRV pull-ring & bronze throttling valve, and inspect braced overhead tank stand before every firing.`
+		}
 	} else if !p.ZeroElectricity && fr.SteamEnabled {
 		necDepth = 36.0
 		necWidth = 30.0
@@ -2009,7 +2115,11 @@ func buildLocalCeramicShopPlan(
 	ventLayout := "terracotta_baffle_quench"
 	if fr.SteamEnabled {
 		stageAlign = "steam_jet_ejector_draft"
-		ventLayout = "de_laval_steam_ejector_condensation"
+		if fr.DraftMode == LocalDraftSteamEjectorSubsonic {
+			ventLayout = "subsonic_brass_orifice_condensation"
+		} else {
+			ventLayout = "de_laval_steam_ejector_condensation"
+		}
 	}
 
 	return ShopPlan{

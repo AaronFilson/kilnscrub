@@ -906,6 +906,73 @@ func TestRunGuideStdoutAndOutDirAndProject(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("phase10c_nairobi_and_mumbai_steam_ejector_subsonic_zero_electricity", func(t *testing.T) {
+		for _, tc := range []struct {
+			region     string
+			alkali     string
+			wantRegion string
+			wantMach   string
+			wantSource string
+		}{
+			{
+				region:     "nairobi",
+				alkali:     "soda_ash",
+				wantRegion: "Nairobi / East Africa (KES)",
+				wantMach:   "Mach 0.7",
+				wantSource: "River Rd",
+			},
+			{
+				region:     "mumbai",
+				alkali:     "slaked_lime",
+				wantRegion: "Mumbai / Western India (INR)",
+				wantMach:   "Mach 0.6",
+				wantSource: "Idli/Catering Kettle",
+			},
+		} {
+			t.Run(tc.region, func(t *testing.T) {
+				var stdout, stderr bytes.Buffer
+				err := run(context.Background(), []string{
+					"guide",
+					"--preset", "wood_salt_24",
+					"--zero-electricity",
+					"--local-region", tc.region,
+					"--local-alkali", tc.alkali,
+					"--local-draft-mode", "steam_ejector_subsonic",
+				}, &stdout, &stderr)
+				if err != nil {
+					t.Fatalf("guide %s steam_ejector_subsonic failed: %v (stderr: %s)", tc.region, err, stderr.String())
+				}
+				out := stdout.String()
+				for _, want := range []string{
+					"path=local_ceramic_masonry",
+					tc.wantRegion,
+					"Power: 0 W Off-Grid",
+					"Steam-Jet Ejector : 6 psig (0.414 barg)",
+					tc.wantMach,
+					"Mach < 1.0",
+					"~52 dBA",
+					"4.2 m",
+					"throat ",
+					"kg/hr",
+					"kW waste heat",
+					"inWC (ER=",
+					tc.wantSource,
+					"Submicron NaCl 55.0%",
+					"0 electrical circuits",
+				} {
+					if !strings.Contains(out, want) {
+						t.Errorf("phase 10c %s subsonic guide stdout missing %q;\n%s", tc.region, want, out)
+					}
+				}
+				for _, bad := range []string{"4-lb box", "Hobby 316L", "Switching from Salt (NaCl) to Soda"} {
+					if strings.Contains(out, bad) {
+						t.Errorf("phase 10c %s subsonic guide stdout must not contain deprecated string %q", tc.region, bad)
+					}
+				}
+			})
+		}
+	})
 }
 
 func TestRunPacketCreatesValid11FileZip(t *testing.T) {
@@ -1266,6 +1333,107 @@ func TestRunPacketCreatesValid11FileZip(t *testing.T) {
 				for _, sub := range tc.wantGuideSubstr {
 					if !strings.Contains(guideText, sub) {
 						t.Errorf("BUILD_GUIDE.md for %s missing %q", tc.name, sub)
+					}
+				}
+			})
+		}
+	})
+
+	t.Run("phase10c_steam_ejector_subsonic_packets", func(t *testing.T) {
+		cases := []struct {
+			name            string
+			region          string
+			alkali          string
+			wantGuideSubstr []string
+		}{
+			{
+				name:   "nairobi_steam_ejector_subsonic",
+				region: studio.LocalRegionNairobi,
+				alkali: studio.LocalAlkaliSodaAsh,
+				wantGuideSubstr: []string{
+					"Nairobi",
+					"6 psig",
+					"0.414 barg",
+					"Mach < 1.0",
+					"~52 dBA",
+					"55%",
+					"4.2 m",
+					"0 W",
+				},
+			},
+			{
+				name:   "mumbai_steam_ejector_subsonic",
+				region: studio.LocalRegionMumbai,
+				alkali: studio.LocalAlkaliSlakedLime,
+				wantGuideSubstr: []string{
+					"Mumbai",
+					"6 psig",
+					"0.414 barg",
+					"Mach < 1.0",
+					"~52 dBA",
+					"55%",
+					"4.2 m",
+					"0 W",
+				},
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				optZip := filepath.Join(t.TempDir(), tc.name+".zip")
+				var oStdout, oStderr bytes.Buffer
+				err := run(context.Background(), []string{
+					"packet",
+					"--preset", "wood_salt_24",
+					"--zero-electricity",
+					"--local-region", tc.region,
+					"--local-alkali", tc.alkali,
+					"--local-draft-mode", studio.LocalDraftSteamEjectorSubsonic,
+					"--out", optZip,
+				}, &oStdout, &oStderr)
+				if err != nil {
+					t.Fatalf("packet %s failed: %v (stderr: %s)", tc.name, err, oStderr.String())
+				}
+				data, err := os.ReadFile(optZip)
+				if err != nil {
+					t.Fatalf("read zip %s: %v", optZip, err)
+				}
+				files := assertValid11FilePacketZip(t, data)
+
+				var proj studio.StudioProject
+				if err := json.Unmarshal(files["project.json"], &proj); err != nil {
+					t.Fatalf("unmarshal project.json: %v", err)
+				}
+				if proj.BuildPath != studio.BuildPathLocalCeramic ||
+					!proj.ZeroElectricity ||
+					proj.LocalRegion != tc.region ||
+					proj.LocalAlkali != tc.alkali ||
+					proj.LocalDraftMode != studio.LocalDraftSteamEjectorSubsonic {
+					t.Errorf("project.json mismatch: got build=%q zero=%v region=%q alkali=%q draft=%q",
+						proj.BuildPath, proj.ZeroElectricity, proj.LocalRegion, proj.LocalAlkali, proj.LocalDraftMode)
+				}
+
+				var plan studio.ShopPlan
+				if err := json.Unmarshal(files["shop_plan.json"], &plan); err != nil {
+					t.Fatalf("unmarshal shop_plan.json: %v", err)
+				}
+				if plan.BuildPath != studio.BuildPathLocalCeramic ||
+					plan.LocalDraftMode != studio.LocalDraftSteamEjectorSubsonic ||
+					!plan.SteamEjectorEnabled ||
+					len(plan.Electrical) != 0 {
+					t.Errorf("shop_plan.json mismatch: build=%q draft=%q steam=%v electrical=%d",
+						plan.BuildPath, plan.LocalDraftMode, plan.SteamEjectorEnabled, len(plan.Electrical))
+				}
+
+				guideText := string(files["BUILD_GUIDE.md"])
+				for _, sub := range tc.wantGuideSubstr {
+					if !strings.Contains(guideText, sub) {
+						t.Errorf("BUILD_GUIDE.md for %s missing %q", tc.name, sub)
+					}
+				}
+				for _, bad := range []string{"4-lb box", "Hobby 316L", "Switching from Salt (NaCl) to Soda"} {
+					if strings.Contains(guideText, bad) {
+						t.Errorf("BUILD_GUIDE.md for %s must not contain deprecated string %q", tc.name, bad)
 					}
 				}
 			})

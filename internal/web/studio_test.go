@@ -286,6 +286,34 @@ func TestStudioEvaluateEndpoint(t *testing.T) {
 		}
 	})
 
+	t.Run("subsonic steam ejector draft mode round-trips cleanly", func(t *testing.T) {
+		srv := web.NewServer(&mockDesigner{}, newMockExporter())
+		b := newMockStudioBackend(t)
+		b.evalJSON = []byte(`{"project":{"preset_id":"wood_salt_24","studio_name":"Quiet Kiln","build_path":"local_ceramic_masonry","zero_electricity":true,"local_region":"nairobi","local_alkali":"soda_ash","local_draft_mode":"steam_ejector_subsonic"},"frugal":{"enabled":true,"zero_electricity":true,"region":"nairobi","draft_mode":"steam_ejector_subsonic","draft_mode_label":"Subsonic Quiet Steam-Jet (6 psig · Mach < 1 · ~52 dBA · 0W)","steam_enabled":true,"steam_pressure_psig":6.0,"steam_pressure_bar":0.414,"steam_nozzle_vel_m_s":352.0,"steam_nozzle_mach":0.75,"steam_nozzle_throat_mm":8.2,"steam_flow_kg_hr":18.5,"steam_water_l_hr":18.5,"steam_thermal_kw":13.4,"kiln_waste_heat_kw":86.4,"waste_heat_sufficient":true,"ejector_draft_inwc":0.38,"chimney_height_m":5.5,"hcl_removal_pct":97.5,"coarse_ash_capture_pct":92.5,"submicron_nacl_capture_pct":55.0,"estimated_local_cost_usd":955,"power_watts":0},"shop_plan":{"build_path":"local_ceramic_masonry","local_draft_mode":"steam_ejector_subsonic","steam_ejector_enabled":true,"electrical":[]}}`)
+		srv.SetStudioBackend(b)
+
+		payload := `{"preset_id":"wood_salt_24","build_path":"local_ceramic_masonry","zero_electricity":true,"local_region":"nairobi","local_alkali":"soda_ash","local_draft_mode":"steam_ejector_subsonic"}`
+		rec := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/studio/evaluate", strings.NewReader(payload)))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+		}
+		var out map[string]any
+		if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+			t.Fatalf("unmarshal subsonic evaluation: %v", err)
+		}
+		frugalObj := out["frugal"].(map[string]any)
+		if frugalObj["draft_mode"] != "steam_ejector_subsonic" {
+			t.Errorf("frugal.draft_mode = %v, want steam_ejector_subsonic", frugalObj["draft_mode"])
+		}
+		if mach, ok := frugalObj["steam_nozzle_mach"].(float64); !ok || mach >= 1.0 || mach <= 0.5 {
+			t.Errorf("frugal.steam_nozzle_mach = %v, want subsonic (0.5 < Mach < 1.0)", frugalObj["steam_nozzle_mach"])
+		}
+		if se, ok := frugalObj["steam_enabled"].(bool); !ok || !se {
+			t.Errorf("frugal.steam_enabled = %v, want true", frugalObj["steam_enabled"])
+		}
+	})
+
 	t.Run("invalid JSON or validation error returns 400", func(t *testing.T) {
 		srv := web.NewServer(&mockDesigner{}, newMockExporter())
 		b := newMockStudioBackend(t)
@@ -598,12 +626,22 @@ func TestEmbeddedHTMLStudioUXAndJSIntegrity(t *testing.T) {
 		"Off-Grid Steam-Jet (60 psig, 0W)",
 		`id="in-local-draft-mode"`,
 		`value="natural_chimney"`,
+		`value="steam_ejector_subsonic"`,
 		`value="steam_ejector_lp"`,
 		`value="steam_ejector_hp"`,
 		"Velocity / Draft Driver (0 W Options)",
 		"Natural Reheat Chimney (0 psig · 9.5m stack · ~30% NaCl)",
+		"Subsonic Quiet Steam-Jet (6 psig · ~340 m/s · ~52 dBA · ~55% NaCl · 0W)",
 		"LP Steam-Jet Ejector (20 psig · ~520 m/s · ~62% NaCl · 0W)",
 		"HP Steam-Drive Hydro-Sonic (60 psig Baby Boiler · ~750 m/s · ~80% NaCl · 0W)",
+		"Subsonic Quiet Steam-Jet",
+		"~52 dBA Quiet Subsonic",
+		"Drilled Brass Converging Orifice (No CNC Bell)",
+		"4.2 m Open Hydrostatic Water-Column Standpipe",
+		"CATERING STEAMER (6 psig)",
+		"S2 4.2m HYDROSTATIC STANDPIPE (6 psig MAX)",
+		"HYDROSTATIC STANDPIPE",
+		"BRASS ORIFICE (SUBSONIC)",
 		"local_draft_mode",
 		"steam_ejector_enabled",
 		"draft_mode",
@@ -724,6 +762,20 @@ func TestEmbeddedHTMLStudioUXAndJSIntegrity(t *testing.T) {
 		if !strings.Contains(body, needle) {
 			t.Errorf("embedded index.html missing studio marker %q", needle)
 		}
+	}
+
+	// Verify 4-option local_draft_mode ordering: natural_chimney -> steam_ejector_subsonic -> steam_ejector_lp -> steam_ejector_hp.
+	idxNat := strings.Index(body, `<option value="natural_chimney">`)
+	idxSub := strings.Index(body, `<option value="steam_ejector_subsonic">`)
+	idxLP := strings.Index(body, `<option value="steam_ejector_lp">`)
+	idxHP := strings.Index(body, `<option value="steam_ejector_hp">`)
+	if !(idxNat >= 0 && idxSub > idxNat && idxLP > idxSub && idxHP > idxLP) {
+		t.Errorf("local_draft_mode options out of order: nat=%d sub=%d lp=%d hp=%d", idxNat, idxSub, idxLP, idxHP)
+	}
+
+	// Verify Top/Footprint Plan S1 STEAM label is nudged up 4px (boTopY - 8) for crisp clearance above BOILER+PRV.
+	if !strings.Contains(body, `y="${boTopY - 8}" text-anchor="middle" fill="#fde68a" font-family="monospace" font-size="7.2" font-weight="700">S1 STEAM</text>`) {
+		t.Errorf("expected Top/Footprint Plan S1 STEAM label nudged up to boTopY - 8")
 	}
 
 	// Verify removed terminology & nag strings do NOT appear anywhere in embedded HTML.

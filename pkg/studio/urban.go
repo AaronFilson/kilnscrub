@@ -168,11 +168,15 @@ func assessElectrical(project StudioProject, design model.ScrubberDesign) Electr
 	if project.ZeroElectricity {
 		summary := "100% off-grid zero-electricity ceramic scrubber (0 V, 0 A, 0 W): natural chimney buoyancy draft + elevated overhead gravity water tank + manual treadle/hand pump eliminate all electric blowers, pumps, VFDs, and grid circuits."
 		if project.IsSteamEjector() {
-			psig := 20.0
-			if project.LocalDraftMode == LocalDraftSteamEjectorHP {
-				psig = 60.0
+			if project.LocalDraftMode == LocalDraftSteamEjectorSubsonic {
+				summary = "100% off-grid zero-electricity 6 psig subsonic quiet steam-jet ceramic scrubber (0 V, 0 A, 0 W): certified commercial catering steamer + 4.2 m open hydrostatic relief standpipe + drilled brass converging orifice + elevated overhead gravity water tank + manual treadle/hand pump eliminate all electric blowers, pumps, VFDs, and grid circuits."
+			} else {
+				psig := 20.0
+				if project.LocalDraftMode == LocalDraftSteamEjectorHP {
+					psig = 60.0
+				}
+				summary = fmt.Sprintf("100%% off-grid zero-electricity %.0f psig steam-jet ceramic scrubber (0 V, 0 A, 0 W): certified steam-jet de Laval ejector draft + elevated overhead gravity water tank + manual treadle/hand pump eliminate all electric blowers, pumps, VFDs, and grid circuits.", psig)
 			}
-			summary = fmt.Sprintf("100%% off-grid zero-electricity %.0f psig steam-jet ceramic scrubber (0 V, 0 A, 0 W): certified steam-jet de Laval ejector draft + elevated overhead gravity water tank + manual treadle/hand pump eliminate all electric blowers, pumps, VFDs, and grid circuits.", psig)
 		}
 		return ElectricalAssessment{
 			Status:               StatusOK,
@@ -418,7 +422,13 @@ func assessNoise(project StudioProject, design model.ScrubberDesign) NoiseAssess
 		bareSteam := 62.0 // LP 20 psig steam-jet hiss inside masonry diffuser (17 dBA quieter than a 79 dBA 2 HP blower)
 		silSteam := 56.0
 		steamLabel := "20 psig LP steam-jet ejector"
-		if project.LocalDraftMode == LocalDraftSteamEjectorHP {
+		noisePrefix := "Modest"
+		if project.LocalDraftMode == LocalDraftSteamEjectorSubsonic {
+			bareSteam = 52.0 // Subsonic 6 psig Mach ~0.69-0.75 quiet jet (Lighthill v^8 reduction + zero supersonic shock screech!)
+			silSteam = 48.0
+			steamLabel = "6 psig subsonic quiet steam-jet ejector (Mach < 1.0, Lighthill v^8 reduction, zero shock screech)"
+			noisePrefix = "Whisper-quiet"
+		} else if project.LocalDraftMode == LocalDraftSteamEjectorHP {
 			bareSteam = 68.0 // HP 60 psig Mach ~1.55 Hydro-Sonic steam-jet hiss inside masonry shroud (still 11 dBA quieter than a 79 dBA 2 HP blower)
 			silSteam = 60.0
 			steamLabel = "60 psig HP Hydro-Sonic steam-jet ejector"
@@ -442,7 +452,7 @@ func assessNoise(project StudioProject, design model.ScrubberDesign) NoiseAssess
 			PropertyLineFt:      d2,
 			UrbanLimitDBA:       urbanLimitDBA,
 			SilencerRecommended: bareSteam-atten > 55.0,
-			Summary:             fmt.Sprintf("Modest %s hiss inside masonry shroud: %.1f dBA at 3 ft (quieter than a 79 dBA 2 HP radial blower) -> %.1f dBA at %.0f ft property line (limit %.0f dBA).", steamLabel, src, propDBA, d2, urbanLimitDBA),
+			Summary:             fmt.Sprintf("%s %s inside masonry shroud: %.1f dBA at 3 ft (quieter than a 79 dBA 2 HP radial blower) -> %.1f dBA at %.0f ft property line (limit %.0f dBA).", noisePrefix, steamLabel, src, propDBA, d2, urbanLimitDBA),
 		}
 	}
 	if project.ZeroElectricity {

@@ -285,8 +285,12 @@ func buildPacketReadme(eval StudioEvaluation) []byte {
 			eval.Frugal.RegionLabel, eval.Frugal.DraftMode, eval.Frugal.ZeroElectricity, eval.Frugal.PowerWatts,
 			eval.Frugal.ChimneyHeightM, eval.Frugal.AvailableDraftInWC, eval.Frugal.RequiredDraftInWC)
 		if eval.Frugal.SteamEnabled {
-			fmt.Fprintf(&b, "Steam-Jet Ejector: %.0f psig (%.2f barg) | Nozzle=%.1f m/s (Mach %.2f, %.2f mm) | Steam=%.1f kg/hr (%.1f kW vs %.1f kW kiln flue waste heat) | Ejector=%.3f inWC (%.1f:1)\n",
-				eval.Frugal.SteamPressurePSIG, eval.Frugal.SteamPressureBar, eval.Frugal.SteamNozzleVelMS, eval.Frugal.SteamNozzleMach,
+			barFmt := fmt.Sprintf("%.2f barg", eval.Frugal.SteamPressureBar)
+			if eval.Frugal.SteamPressureBar < 1.0 {
+				barFmt = fmt.Sprintf("%.3f barg", eval.Frugal.SteamPressureBar)
+			}
+			fmt.Fprintf(&b, "Steam-Jet Ejector: %.0f psig (%s) | Nozzle=%.1f m/s (Mach %.2f, %.2f mm) | Steam=%.1f kg/hr (%.1f kW vs %.1f kW kiln flue waste heat) | Ejector=%.3f inWC (%.1f:1)\n",
+				eval.Frugal.SteamPressurePSIG, barFmt, eval.Frugal.SteamNozzleVelMS, eval.Frugal.SteamNozzleMach,
 				eval.Frugal.SteamNozzleThroatMM, eval.Frugal.SteamFlowKgHr, eval.Frugal.SteamThermalKW, eval.Frugal.KilnWasteHeatKW,
 				eval.Frugal.EjectorDraftInWC, eval.Frugal.EjectorEntrainmentRatio)
 		}

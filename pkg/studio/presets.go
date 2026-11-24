@@ -31,10 +31,11 @@ const (
 	LocalAlkaliWoodAshLye = "wood_ash_lye"
 	LocalAlkaliBakingSoda = "baking_soda"
 
-	// Phase 10B local ceramic draft / zero-electricity steam-jet ejector mode constants.
-	LocalDraftNaturalChimney = "natural_chimney"
-	LocalDraftSteamEjectorLP = "steam_ejector_lp"
-	LocalDraftSteamEjectorHP = "steam_ejector_hp"
+	// Phase 10B/10C local ceramic draft / zero-electricity steam-jet ejector mode constants.
+	LocalDraftNaturalChimney       = "natural_chimney"
+	LocalDraftSteamEjectorSubsonic = "steam_ejector_subsonic"
+	LocalDraftSteamEjectorLP       = "steam_ejector_lp"
+	LocalDraftSteamEjectorHP       = "steam_ejector_hp"
 
 	// CorrosionTierStandard316L is the canonical light/occasional 316L SS tier.
 	CorrosionTierStandard316L = "standard_316l"
@@ -403,12 +404,16 @@ func OffGridCeramicProject(region string) StudioProject {
 
 // OffGridSteamCeramicProject returns a pre-configured 24 cu.ft. Local Ceramic / Masonry
 // zero-electricity scrubber project equipped with a certified steam-jet ejector
-// ("steam_ejector_lp", "steam_ejector_hp", or "natural_chimney"; empty defaults to "steam_ejector_lp").
+// ("steam_ejector_subsonic", "steam_ejector_lp", "steam_ejector_hp", or "natural_chimney";
+// empty defaults to "steam_ejector_lp").
 func OffGridSteamCeramicProject(region, draftMode string) StudioProject {
 	p := OffGridCeramicProject(region)
 	switch strings.ToLower(strings.TrimSpace(draftMode)) {
 	case LocalDraftNaturalChimney:
 		p.LocalDraftMode = LocalDraftNaturalChimney
+	case LocalDraftSteamEjectorSubsonic:
+		p.LocalDraftMode = LocalDraftSteamEjectorSubsonic
+		p.StudioName += " (Steam-Jet Subsonic 6 psig)"
 	case LocalDraftSteamEjectorHP:
 		p.LocalDraftMode = LocalDraftSteamEjectorHP
 		p.StudioName += " (Steam-Jet HP 60 psig)"
@@ -425,20 +430,23 @@ func (p StudioProject) IsLocalCeramic() bool {
 	return p.BuildPath == BuildPathLocalCeramic || p.ZeroElectricity
 }
 
-// EffectiveLocalDraftMode returns the canonical Phase 10B local draft mode
-// ("natural_chimney", "steam_ejector_lp", or "steam_ejector_hp"), defaulting to "natural_chimney".
+// EffectiveLocalDraftMode returns the canonical Phase 10B/10C local draft mode
+// ("natural_chimney", "steam_ejector_subsonic", "steam_ejector_lp", or "steam_ejector_hp"),
+// defaulting to "natural_chimney".
 func (p StudioProject) EffectiveLocalDraftMode() string {
 	switch p.LocalDraftMode {
-	case LocalDraftSteamEjectorLP, LocalDraftSteamEjectorHP, LocalDraftNaturalChimney:
+	case LocalDraftSteamEjectorSubsonic, LocalDraftSteamEjectorLP, LocalDraftSteamEjectorHP, LocalDraftNaturalChimney:
 		return p.LocalDraftMode
 	default:
 		return LocalDraftNaturalChimney
 	}
 }
 
-// IsSteamEjector reports whether a Phase 10B steam-jet ejector draft mode is selected.
+// IsSteamEjector reports whether a Phase 10B/10C steam-jet ejector draft mode is selected.
 func (p StudioProject) IsSteamEjector() bool {
-	return p.LocalDraftMode == LocalDraftSteamEjectorLP || p.LocalDraftMode == LocalDraftSteamEjectorHP
+	return p.LocalDraftMode == LocalDraftSteamEjectorSubsonic ||
+		p.LocalDraftMode == LocalDraftSteamEjectorLP ||
+		p.LocalDraftMode == LocalDraftSteamEjectorHP
 }
 
 // EffectiveLocalRegion returns the canonical regional sourcing key ("nairobi",
@@ -619,10 +627,10 @@ func (p StudioProject) Validate() error {
 			LocalAlkaliSodaAsh, LocalAlkaliSlakedLime, LocalAlkaliWoodAshLye, LocalAlkaliBakingSoda, p.LocalAlkali)
 	}
 	switch p.LocalDraftMode {
-	case "", LocalDraftNaturalChimney, LocalDraftSteamEjectorLP, LocalDraftSteamEjectorHP:
+	case "", LocalDraftNaturalChimney, LocalDraftSteamEjectorSubsonic, LocalDraftSteamEjectorLP, LocalDraftSteamEjectorHP:
 	default:
-		return fmt.Errorf("local_draft_mode must be %q, %q, or %q, got %q",
-			LocalDraftNaturalChimney, LocalDraftSteamEjectorLP, LocalDraftSteamEjectorHP, p.LocalDraftMode)
+		return fmt.Errorf("local_draft_mode must be %q, %q, %q, or %q, got %q",
+			LocalDraftNaturalChimney, LocalDraftSteamEjectorSubsonic, LocalDraftSteamEjectorLP, LocalDraftSteamEjectorHP, p.LocalDraftMode)
 	}
 	switch p.CorrosionTier {
 	case CorrosionTierStandard316L, CorrosionTierHobby316L, CorrosionTierHeavyC276FRP:

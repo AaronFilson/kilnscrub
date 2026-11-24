@@ -443,7 +443,7 @@ func bindStudioOptionFlags(fs *flag.FlagSet) studioOptionFlags {
 		zeroElectricity: fs.Bool("zero-electricity", false, "Zero electricity on site (passive thermal-reheat chimney draft + manual gravity tank; implies local_ceramic_masonry)"),
 		localRegion:     fs.String("local-region", "", "Local sourcing region: nairobi, mumbai, or general_local"),
 		localAlkali:     fs.String("local-alkali", "", "Local neutralizing alkali: soda_ash, slaked_lime, wood_ash_lye, or baking_soda"),
-		localDraftMode:  fs.String("local-draft-mode", "", "Passive velocity/draft driver for local_ceramic_masonry (natural_chimney|steam_ejector_lp|steam_ejector_hp)"),
+		localDraftMode:  fs.String("local-draft-mode", "", "Passive velocity/draft driver for local_ceramic_masonry (natural_chimney|steam_ejector_subsonic|steam_ejector_lp|steam_ejector_hp)"),
 	}
 }
 
@@ -496,7 +496,9 @@ func (f studioOptionFlags) applyExplicit(base studio.StudioProject, setFlags map
 	}
 	if setFlags["local-draft-mode"] {
 		proj.LocalDraftMode = strings.ToLower(strings.TrimSpace(*f.localDraftMode))
-		if (proj.LocalDraftMode == studio.LocalDraftSteamEjectorLP || proj.LocalDraftMode == studio.LocalDraftSteamEjectorHP) && !setFlags["build-path"] {
+		if (proj.LocalDraftMode == studio.LocalDraftSteamEjectorSubsonic ||
+			proj.LocalDraftMode == studio.LocalDraftSteamEjectorLP ||
+			proj.LocalDraftMode == studio.LocalDraftSteamEjectorHP) && !setFlags["build-path"] {
 			proj.BuildPath = studio.BuildPathLocalCeramic
 		}
 	}
@@ -600,8 +602,12 @@ func printStudioSummary(w io.Writer, eval studio.StudioEvaluation) {
 			f.ChimneyHeightM, f.ChimneyHeightFt, f.StackReheatTempF,
 			f.AvailableDraftInWC, f.RequiredDraftInWC, f.DraftFeasible)
 		if f.SteamEnabled {
-			fmt.Fprintf(w, "  Steam-Jet Ejector : %.0f psig (%.2f barg) | %.1f m/s (Mach %.2f) | throat %.2f mm | %.1f kg/hr | %.1f vs %.1f kW waste heat | %.3f inWC (ER=%.2f) | %s\n",
-				f.SteamPressurePSIG, f.SteamPressureBar, f.SteamNozzleVelMS, f.SteamNozzleMach,
+			barStr := fmt.Sprintf("%.2f barg", f.SteamPressureBar)
+			if f.DraftMode == studio.LocalDraftSteamEjectorSubsonic {
+				barStr = fmt.Sprintf("%.3f barg", f.SteamPressureBar)
+			}
+			fmt.Fprintf(w, "  Steam-Jet Ejector : %.0f psig (%s) | %.1f m/s (Mach %.2f) | throat %.2f mm | %.1f kg/hr | %.1f vs %.1f kW waste heat | %.3f inWC (ER=%.2f) | %s\n",
+				f.SteamPressurePSIG, barStr, f.SteamNozzleVelMS, f.SteamNozzleMach,
 				f.SteamNozzleThroatMM, f.SteamFlowKgHr, f.SteamThermalKW, f.KilnWasteHeatKW,
 				f.EjectorDraftInWC, f.EjectorEntrainmentRatio, f.SteamSourceType)
 		}

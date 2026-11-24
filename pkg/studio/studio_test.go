@@ -2556,3 +2556,229 @@ func TestPhase10BZeroElectricitySteamJetEjectorAndCondensation(t *testing.T) {
 		evMBHP.Frugal.SteamNozzleVelMS, evMBHP.Frugal.SteamNozzleMach, evMBHP.Frugal.SteamNozzleThroatMM, evMBHP.Frugal.SteamFlowKgHr, evMBHP.Frugal.SteamThermalKW, evMBHP.Frugal.KilnWasteHeatKW, evMBHP.Frugal.EjectorDraftInWC, evMBHP.Frugal.EjectorEntrainmentRatio, evMBHP.Frugal.ChimneyHeightM, evMBHP.Frugal.SubmicronNaClCapturePct, evMBHP.Frugal.LocalCurrencyEstimate,
 	)
 }
+
+func TestPhase10CSubsonicQuietSteamJetEjector(t *testing.T) {
+	eval := NewEvaluator(scrubber.NewDesigner(), cad.NewExporter())
+	bannedPhrases := []string{"Hobby " + "316L", "4-" + "lb", "gro" + "cery", "Switching from Salt " + "(NaCl) to Soda"}
+
+	// 1. Helper & predicate checks for steam_ejector_subsonic.
+	subNBProj := OffGridSteamCeramicProject(LocalRegionNairobi, LocalDraftSteamEjectorSubsonic)
+	if subNBProj.LocalDraftMode != LocalDraftSteamEjectorSubsonic || !subNBProj.IsSteamEjector() || subNBProj.EffectiveLocalDraftMode() != LocalDraftSteamEjectorSubsonic {
+		t.Fatalf("unexpected subsonic project helpers: %+v", subNBProj)
+	}
+
+	// 2. Evaluate all 4 modes across Nairobi, Mumbai, and General Local and verify strict physics,
+	// capture, acoustic, and cost monotonicity!
+	for _, region := range []string{LocalRegionNairobi, LocalRegionMumbai, LocalRegionGeneral} {
+		evPassive, err := eval.Evaluate(OffGridCeramicProject(region))
+		if err != nil {
+			t.Fatalf("%s passive evaluate: %v", region, err)
+		}
+		evSub, err := eval.Evaluate(OffGridSteamCeramicProject(region, LocalDraftSteamEjectorSubsonic))
+		if err != nil {
+			t.Fatalf("%s subsonic evaluate: %v", region, err)
+		}
+		evLP, err := eval.Evaluate(OffGridSteamCeramicProject(region, LocalDraftSteamEjectorLP))
+		if err != nil {
+			t.Fatalf("%s LP evaluate: %v", region, err)
+		}
+		evHP, err := eval.Evaluate(OffGridSteamCeramicProject(region, LocalDraftSteamEjectorHP))
+		if err != nil {
+			t.Fatalf("%s HP evaluate: %v", region, err)
+		}
+
+		fp, fs, flp, fhp := evPassive.Frugal, evSub.Frugal, evLP.Frugal, evHP.Frugal
+
+		// Core subsonic metadata & pressure.
+		if !fs.SteamEnabled || fs.DraftMode != LocalDraftSteamEjectorSubsonic || fs.SteamPressurePSIG != 6.0 || fs.SteamPressureBar != 0.414 {
+			t.Errorf("%s subsonic metadata wrong: enabled=%v mode=%q psig=%.1f bar=%.3f",
+				region, fs.SteamEnabled, fs.DraftMode, fs.SteamPressurePSIG, fs.SteamPressureBar)
+		}
+
+		// Strict Mach monotonicity: 0 < Mach_subsonic < 1.0 < Mach_lp < Mach_hp.
+		if !(0.0 < fs.SteamNozzleMach && fs.SteamNozzleMach < 1.0 && 1.0 < flp.SteamNozzleMach && flp.SteamNozzleMach < fhp.SteamNozzleMach) {
+			t.Errorf("%s Mach monotonicity failed: sub=%.2f LP=%.2f HP=%.2f",
+				region, fs.SteamNozzleMach, flp.SteamNozzleMach, fhp.SteamNozzleMach)
+		}
+		if region == LocalRegionNairobi {
+			if fs.SteamNozzleVelMS < 345.0 || fs.SteamNozzleVelMS > 360.0 || fs.SteamNozzleMach < 0.72 || fs.SteamNozzleMach > 0.78 {
+				t.Errorf("Nairobi subsonic velocity/Mach out of IAPWS-95 bounds: v=%.1f m/s M=%.2f", fs.SteamNozzleVelMS, fs.SteamNozzleMach)
+			}
+			if fs.ChimneyHeightM != 5.5 {
+				t.Errorf("Nairobi subsonic chimney expected 5.5 m, got %.1f m", fs.ChimneyHeightM)
+			}
+		} else {
+			if fs.SteamNozzleVelMS < 322.0 || fs.SteamNozzleVelMS > 335.0 || fs.SteamNozzleMach < 0.67 || fs.SteamNozzleMach > 0.72 {
+				t.Errorf("%s subsonic velocity/Mach out of IAPWS-95 bounds: v=%.1f m/s M=%.2f", region, fs.SteamNozzleVelMS, fs.SteamNozzleMach)
+			}
+			if fs.ChimneyHeightM != 5.2 {
+				t.Errorf("%s subsonic chimney expected 5.2 m, got %.1f m", region, fs.ChimneyHeightM)
+			}
+		}
+
+		// Drilled brass converging orifice sizing (7.5-9.0 mm) & 1D momentum balance.
+		if fs.SteamNozzleThroatMM < 7.5 || fs.SteamNozzleThroatMM > 9.0 {
+			t.Errorf("%s subsonic brass orifice diameter out of [7.5, 9.0] mm: %.2f mm", region, fs.SteamNozzleThroatMM)
+		}
+		if fs.SteamFlowKgHr < 17.0 || fs.SteamFlowKgHr > 20.5 || fs.SteamWaterLHr != fs.SteamFlowKgHr {
+			t.Errorf("%s subsonic steam flow out of bounds: %.1f kg/hr (water=%.1f L/hr)", region, fs.SteamFlowKgHr, fs.SteamWaterLHr)
+		}
+		if fs.SteamThermalKW < 12.0 || fs.SteamThermalKW > 15.0 || !fs.WasteHeatSufficient {
+			t.Errorf("%s subsonic thermal load unexpected: %.1f kW vs %.1f kW kiln flue (suf=%v)",
+				region, fs.SteamThermalKW, fs.KilnWasteHeatKW, fs.WasteHeatSufficient)
+		}
+		if fs.EjectorEntrainmentRatio < 17.5 || fs.EjectorEntrainmentRatio > 20.5 {
+			t.Errorf("%s subsonic entrainment ratio unexpected: %.2f:1", region, fs.EjectorEntrainmentRatio)
+		}
+		if fs.EjectorDraftInWC < 0.35 || fs.EjectorDraftInWC > 0.45 {
+			t.Errorf("%s subsonic ejector draft out of [0.35, 0.45] inWC: %.3f inWC", region, fs.EjectorDraftInWC)
+		}
+		if !fs.DraftFeasible || fs.DraftMarginInWC < 0.25 {
+			t.Errorf("%s subsonic draft margin should be generous (>=+0.25 inWC): avail=%.3f req=%.3f margin=%+.3f",
+				region, fs.AvailableDraftInWC, fs.RequiredDraftInWC, fs.DraftMarginInWC)
+		}
+
+		// Strict submicron NaCl capture monotonicity: 30% < 55% < 62% < 80%.
+		if fp.SubmicronNaClCapturePct != 30.0 || fs.SubmicronNaClCapturePct != 55.0 || flp.SubmicronNaClCapturePct != 62.0 || fhp.SubmicronNaClCapturePct != 80.0 {
+			t.Errorf("%s submicron NaCl capture monotonicity mismatch: passive=%.1f sub=%.1f LP=%.1f HP=%.1f",
+				region, fp.SubmicronNaClCapturePct, fs.SubmicronNaClCapturePct, flp.SubmicronNaClCapturePct, fhp.SubmicronNaClCapturePct)
+		}
+		if fs.HClRemovalPct != 97.5 || fs.CoarseAshCapturePct != 92.5 {
+			t.Errorf("%s subsonic HCl/ash targets mismatch: HCl=%.1f%% ash=%.1f%%", region, fs.HClRemovalPct, fs.CoarseAshCapturePct)
+		}
+
+		// Strict acoustic monotonicity: 45 dBA < 52 dBA < 62 dBA < 68 dBA (and ~29.5 dBA @ 40 ft).
+		if evPassive.Urban.Noise.BareDBA3Ft != 45.0 || evSub.Urban.Noise.BareDBA3Ft != 52.0 || evLP.Urban.Noise.BareDBA3Ft != 62.0 || evHP.Urban.Noise.BareDBA3Ft != 68.0 {
+			t.Errorf("%s acoustic monotonicity mismatch: passive=%.1f sub=%.1f LP=%.1f HP=%.1f",
+				region, evPassive.Urban.Noise.BareDBA3Ft, evSub.Urban.Noise.BareDBA3Ft, evLP.Urban.Noise.BareDBA3Ft, evHP.Urban.Noise.BareDBA3Ft)
+		}
+		if math.Abs(evSub.Urban.Noise.PropertyLineDBA-29.5) > 0.2 {
+			t.Errorf("%s subsonic 40 ft property line noise expected ~29.5 dBA, got %.1f dBA", region, evSub.Urban.Noise.PropertyLineDBA)
+		}
+
+		// Strict cost monotonicity: cost_passive < cost_subsonic < cost_lp < cost_hp & BOM match.
+		if !(fp.EstimatedLocalCostUSD < fs.EstimatedLocalCostUSD && fs.EstimatedLocalCostUSD < flp.EstimatedLocalCostUSD && flp.EstimatedLocalCostUSD < fhp.EstimatedLocalCostUSD) {
+			t.Errorf("%s cost monotonicity failed: passive=$%.2f sub=$%.2f LP=$%.2f HP=$%.2f",
+				region, fp.EstimatedLocalCostUSD, fs.EstimatedLocalCostUSD, flp.EstimatedLocalCostUSD, fhp.EstimatedLocalCostUSD)
+		}
+		if math.Abs(fs.EstimatedLocalCostUSD-evSub.COTS.EstimatedTotalUSD) > 0.02 {
+			t.Errorf("%s subsonic Frugal cost ($%.2f) != COTS BOM total ($%.2f)", region, fs.EstimatedLocalCostUSD, evSub.COTS.EstimatedTotalUSD)
+		}
+		if region == LocalRegionNairobi && (fs.EstimatedLocalCostUSD < 920.0 || fs.EstimatedLocalCostUSD > 990.0) {
+			t.Errorf("Nairobi subsonic total cost expected ~$955, got $%.2f", fs.EstimatedLocalCostUSD)
+		}
+		if region == LocalRegionMumbai && (fs.EstimatedLocalCostUSD < 755.0 || fs.EstimatedLocalCostUSD > 815.0) {
+			t.Errorf("Mumbai subsonic total cost expected ~$785, got $%.2f", fs.EstimatedLocalCostUSD)
+		}
+
+		// Zero-electricity & ShopPlan invariants: 0 W, 0 electrical circuits, S1 + S2 + P6 plumbing, brass orifice part.
+		if fs.PowerWatts != 0 || evSub.Urban.Electrical.RequiredVoltage != 0 || evSub.Urban.Electrical.RequiredAmps != 0 {
+			t.Errorf("%s subsonic off-grid must draw 0 W / 0 V / 0 A: power=%.1f elec=%+v", region, fs.PowerWatts, evSub.Urban.Electrical)
+		}
+		if len(evSub.ShopPlan.Electrical) != 0 || evSub.ShopPlan.Electrical == nil {
+			t.Errorf("%s subsonic off-grid must have empty non-nil ShopPlan.Electrical", region)
+		}
+		if !evSub.ShopPlan.SteamEjectorEnabled || evSub.ShopPlan.LocalDraftMode != LocalDraftSteamEjectorSubsonic || evSub.ShopPlan.VenturiLayout != "subsonic_brass_orifice_condensation" {
+			t.Errorf("%s subsonic ShopPlan flags mismatch: enabled=%v mode=%q vent=%q",
+				region, evSub.ShopPlan.SteamEjectorEnabled, evSub.ShopPlan.LocalDraftMode, evSub.ShopPlan.VenturiLayout)
+		}
+		if len(evSub.ShopPlan.Parts) != 11 || len(evSub.ShopPlan.Plumbing) != 8 || len(evSub.ShopPlan.Bracing) != 6 {
+			t.Errorf("%s subsonic ShopPlan expected parts=11 plumbing=8 (P1..P5,S1,S2,P6) bracing=6, got %d/%d/%d",
+				region, len(evSub.ShopPlan.Parts), len(evSub.ShopPlan.Plumbing), len(evSub.ShopPlan.Bracing))
+		}
+		var hasS1, hasS2, hasP6 bool
+		for _, pl := range evSub.ShopPlan.Plumbing {
+			switch pl.ID {
+			case "S1":
+				if pl.PressurePSI == 6.0 {
+					hasS1 = true
+				}
+			case "S2":
+				if strings.Contains(pl.Label, "4.2 m") && strings.Contains(strings.ToLower(pl.Label), "hydrostatic") {
+					hasS2 = true
+				}
+			case "P6":
+				hasP6 = true
+			}
+		}
+		if !hasS1 || !hasS2 || !hasP6 {
+			t.Errorf("%s subsonic ShopPlan.Plumbing missing S1/S2/P6: S1=%v S2=%v P6=%v", region, hasS1, hasS2, hasP6)
+		}
+
+		// Safety requirements, guide, checklist & zero banned strings.
+		if len(fs.SteamSafetyRequirements) < 7 {
+			t.Errorf("%s subsonic expected >=7 safety requirements, got %d", region, len(fs.SteamSafetyRequirements))
+		}
+		safetyJoined := strings.Join(fs.SteamSafetyRequirements, "\n")
+		for _, must := range []string{"4.2 m", "6.0 psig", "PRV", "fusible", "1.5x MAWP", "check valve", "DIY"} {
+			if !strings.Contains(strings.ToLower(safetyJoined), strings.ToLower(must)) {
+				t.Errorf("%s subsonic steam_safety_requirements missing %q", region, must)
+			}
+		}
+		for _, want := range []string{"0.414 barg", "4.2 m", "Drilled Brass Converging Orifice", "Mach < 1.0", "52 dBA", "DIY"} {
+			if !strings.Contains(evSub.BuildGuideMD, want) {
+				t.Errorf("%s subsonic BuildGuideMD missing %q", region, want)
+			}
+		}
+		if !strings.Contains(evSub.OperationsChecklistMD, "4.2 m") || !strings.Contains(evSub.OperationsChecklistMD, "Zero Unvented DIY Welded Drum Boilers") {
+			t.Errorf("%s subsonic OperationsChecklistMD missing standpipe/DIY safety items", region)
+		}
+		raw, _ := json.Marshal(evSub)
+		haystack := string(raw) + "\n" + evSub.BuildGuideMD + "\n" + evSub.OperationsChecklistMD + "\n" + string(buildPacketReadme(evSub))
+		for _, banned := range bannedPhrases {
+			if strings.Contains(strings.ToLower(haystack), strings.ToLower(banned)) {
+				t.Errorf("%s subsonic output contains banned phrase %q", region, banned)
+			}
+		}
+	}
+
+	// 3. Hybrid pump mode (zero_electricity=false + steam_ejector_subsonic): 370 W pump only, 1 circuit E1, 56.5% NaCl.
+	hybSub := OffGridSteamCeramicProject(LocalRegionMumbai, LocalDraftSteamEjectorSubsonic)
+	hybSub.ZeroElectricity = false
+	hybSub.AvailableVoltage = 230
+	hybSub.IncludeSilencer = true
+	hybEv, err := eval.Evaluate(hybSub)
+	if err != nil {
+		t.Fatalf("hybrid subsonic evaluate: %v", err)
+	}
+	if hybEv.Frugal.PowerWatts != 370.0 || len(hybEv.ShopPlan.Electrical) != 1 || hybEv.Frugal.SubmicronNaClCapturePct != 56.5 || hybEv.Urban.Noise.SilencedDBA3Ft != 48.0 {
+		t.Errorf("hybrid subsonic unexpected metrics: power=%.0f elec=%d nacl=%.1f sil=%.1f",
+			hybEv.Frugal.PowerWatts, len(hybEv.ShopPlan.Electrical), hybEv.Frugal.SubmicronNaClCapturePct, hybEv.Urban.Noise.SilencedDBA3Ft)
+	}
+
+	// 4. ParseProject round-trip, empty build_path normalization, exact 63 FrugalAssessment JSON keys, & BuildPacketZip.
+	parsed, err := ParseProject([]byte(`{"preset_id":"wood_salt_24","build_path":"local_ceramic_masonry","zero_electricity":true,"local_region":"nairobi","local_draft_mode":"steam_ejector_subsonic"}`))
+	if err != nil || parsed.LocalDraftMode != LocalDraftSteamEjectorSubsonic {
+		t.Fatalf("ParseProject steam_ejector_subsonic failed: err=%v mode=%q", err, parsed.LocalDraftMode)
+	}
+	emptyBP := DefaultProject()
+	emptyBP.BuildPath = ""
+	emptyBP.LocalDraftMode = LocalDraftSteamEjectorSubsonic
+	if err := emptyBP.Validate(); err != nil || emptyBP.Normalize().BuildPath != BuildPathLocalCeramic {
+		t.Errorf("empty build_path with steam_ejector_subsonic failed: err=%v bp=%q", err, emptyBP.Normalize().BuildPath)
+	}
+	evNairobiSub, err := eval.Evaluate(parsed)
+	if err != nil {
+		t.Fatalf("evNairobiSub evaluate: %v", err)
+	}
+	rawJSON, _ := json.Marshal(evNairobiSub)
+	var top map[string]any
+	if err := json.Unmarshal(rawJSON, &top); err != nil {
+		t.Fatalf("unmarshal evNairobiSub: %v", err)
+	}
+	frRaw := top["frugal"].(map[string]any)
+	if len(frRaw) != 63 {
+		t.Errorf("expected exact 63 FrugalAssessment JSON fields intact, got %d", len(frRaw))
+	}
+	if zipBytes, _, err := eval.BuildPacketZip(parsed); err != nil || len(zipBytes) == 0 {
+		t.Fatalf("Subsonic BuildPacketZip failed: err=%v len=%d", err, len(zipBytes))
+	}
+
+	evMumbaiSub, _ := eval.Evaluate(OffGridSteamCeramicProject(LocalRegionMumbai, LocalDraftSteamEjectorSubsonic))
+	t.Logf("Phase 10C Subsonic Quiet Steam-Jet Summary (6 psig / 0.414 barg, 24 cu.ft. Cone 11 Wood-Salt):\n"+
+		"  Nairobi (83.5 kPa):  v_e=%.1f m/s (M=%.2f < 1), d_orif=%.2f mm, m_s=%.1f kg/hr (%.1f kW vs %.1f kW flue), dP_ej=%.3f inWC (ER=%.1f), H=%.1f m, NaCl=%.0f%%, Noise=%.1f->%.1f dBA, Cost=%s\n"+
+		"  Mumbai  (101.3 kPa): v_e=%.1f m/s (M=%.2f < 1), d_orif=%.2f mm, m_s=%.1f kg/hr (%.1f kW vs %.1f kW flue), dP_ej=%.3f inWC (ER=%.1f), H=%.1f m, NaCl=%.0f%%, Noise=%.1f->%.1f dBA, Cost=%s",
+		evNairobiSub.Frugal.SteamNozzleVelMS, evNairobiSub.Frugal.SteamNozzleMach, evNairobiSub.Frugal.SteamNozzleThroatMM, evNairobiSub.Frugal.SteamFlowKgHr, evNairobiSub.Frugal.SteamThermalKW, evNairobiSub.Frugal.KilnWasteHeatKW, evNairobiSub.Frugal.EjectorDraftInWC, evNairobiSub.Frugal.EjectorEntrainmentRatio, evNairobiSub.Frugal.ChimneyHeightM, evNairobiSub.Frugal.SubmicronNaClCapturePct, evNairobiSub.Urban.Noise.BareDBA3Ft, evNairobiSub.Urban.Noise.PropertyLineDBA, evNairobiSub.Frugal.LocalCurrencyEstimate,
+		evMumbaiSub.Frugal.SteamNozzleVelMS, evMumbaiSub.Frugal.SteamNozzleMach, evMumbaiSub.Frugal.SteamNozzleThroatMM, evMumbaiSub.Frugal.SteamFlowKgHr, evMumbaiSub.Frugal.SteamThermalKW, evMumbaiSub.Frugal.KilnWasteHeatKW, evMumbaiSub.Frugal.EjectorDraftInWC, evMumbaiSub.Frugal.EjectorEntrainmentRatio, evMumbaiSub.Frugal.ChimneyHeightM, evMumbaiSub.Frugal.SubmicronNaClCapturePct, evMumbaiSub.Urban.Noise.BareDBA3Ft, evMumbaiSub.Urban.Noise.PropertyLineDBA, evMumbaiSub.Frugal.LocalCurrencyEstimate,
+	)
+}
