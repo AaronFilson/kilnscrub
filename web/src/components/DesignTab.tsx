@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import type { StudioEvaluation } from "@/types/kilnscrub";
-import { fmt, fmtUSD, kToF, mToIn } from "@/lib/api";
+import { fmt, fmtUSD, kToF, mToIn, triggerBlobDownload } from "@/lib/api";
 import { Viewport3D } from "./Viewport3D";
 import type { StageKey } from "./scene3d/types";
 import { Schematic2D } from "./Schematic2D";
@@ -16,6 +16,10 @@ interface DesignTabProps {
 
 export function DesignTab({ evaluation, units, active }: DesignTabProps) {
   const [viewMode, setViewMode] = useState<"3d" | "2d">("3d");
+  const [detail2DMode, setDetail2DMode] = useState<"detail" | "outline">("detail");
+  const [show2DPlumbing, setShow2DPlumbing] = useState(true);
+  const [show2DControls, setShow2DControls] = useState(true);
+  const svg2DRef = useRef<SVGSVGElement | null>(null);
   const [cutaway, setCutaway] = useState(true);
   const [particles, setParticles] = useState(true);
   const [showSystems3D, setShowSystems3D] = useState(false);
@@ -307,8 +311,54 @@ export function DesignTab({ evaluation, units, active }: DesignTabProps) {
               className={`btn btn-sm ${viewMode === "2d" ? "btn-primary" : ""}`}
               onClick={() => setViewMode("2d")}
             >
-              2D Cutaway
+              2D Cutaway &amp; P&amp;ID
             </button>
+            {viewMode === "2d" && (
+              <>
+                <button
+                  id="btn-2d-detail-mode"
+                  type="button"
+                  className={`btn btn-sm ${detail2DMode === "detail" ? "btn-accent" : ""}`}
+                  onClick={() =>
+                    setDetail2DMode((m) => (m === "detail" ? "outline" : "detail"))
+                  }
+                >
+                  {detail2DMode === "detail" ? "Detail P&ID" : "Block Outline"}
+                </button>
+                {detail2DMode === "detail" && (
+                  <>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${show2DPlumbing ? "btn-accent" : ""}`}
+                      onClick={() => setShow2DPlumbing((v) => !v)}
+                    >
+                      Plumbing: {show2DPlumbing ? "ON" : "OFF"}
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${show2DControls ? "btn-accent" : ""}`}
+                      onClick={() => setShow2DControls((v) => !v)}
+                    >
+                      Controls: {show2DControls ? "ON" : "OFF"}
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => {
+                    if (!svg2DRef.current) return;
+                    const xml = new XMLSerializer().serializeToString(svg2DRef.current);
+                    triggerBlobDownload(
+                      new Blob([xml], { type: "image/svg+xml;charset=utf-8" }),
+                      `kilnscrub-${project.preset_id || "studio"}-2d-${detail2DMode}.svg`
+                    );
+                  }}
+                >
+                  Save 2D SVG
+                </button>
+              </>
+            )}
             {viewMode === "3d" && (
               <>
                 <button
@@ -379,19 +429,17 @@ export function DesignTab({ evaluation, units, active }: DesignTabProps) {
           </div>
         </div>
 
-        <div className="viewport-shell">
-          <div className="viewport-hud">
-            <span className="hud-chip" id="hud-renderer">
-              {viewMode === "3d"
-                ? `Three.js 0.170.0 WebGL · ${scaleSummary}`
-                : "Renderer: 2D Parametric Cutaway SVG"}
-            </span>
-            <span className="hud-chip" id="hud-controls">
-              {viewMode === "3d"
-                ? "Drag to orbit · Scroll to zoom · Right-drag to pan"
-                : "Click stage pills above to highlight components"}
-            </span>
-          </div>
+        <div className="viewport-shell" style={viewMode === "2d" && detail2DMode === "detail" ? { height: "auto", minHeight: 540 } : undefined}>
+          {viewMode === "3d" && (
+            <div className="viewport-hud">
+              <span className="hud-chip" id="hud-renderer">
+                Three.js 0.170.0 WebGL · {scaleSummary}
+              </span>
+              <span className="hud-chip" id="hud-controls">
+                Drag to orbit · Scroll to zoom · Right-drag to pan
+              </span>
+            </div>
+          )}
 
           {viewMode === "3d" && particles && (
             <div className="viewport-legend" aria-label="Flow Particle Legend">
@@ -421,6 +469,11 @@ export function DesignTab({ evaluation, units, active }: DesignTabProps) {
               evaluation={evaluation}
               units={units}
               highlightStage={focusStage}
+              detailMode={detail2DMode}
+              showPlumbing={show2DPlumbing}
+              showControls={show2DControls}
+              showDimensions={showDimensions}
+              svgRef={svg2DRef}
             />
           )}
         </div>

@@ -3,20 +3,60 @@
 import React from "react";
 import type { StudioEvaluation } from "@/types/kilnscrub";
 import { fmt, kToF, mToIn } from "@/lib/api";
+import { IndustrialDetail2D } from "./schematic2d/IndustrialDetail2D";
+import { LocalCeramicDetail2D } from "./schematic2d/LocalCeramicDetail2D";
 
 interface Schematic2DProps {
   evaluation: StudioEvaluation;
   units: "in" | "mm";
   highlightStage: string | null;
+  detailMode?: "detail" | "outline";
+  showPlumbing?: boolean;
+  showControls?: boolean;
+  showDimensions?: boolean;
+  svgRef?: React.RefObject<SVGSVGElement | null>;
 }
 
 export function Schematic2D({
   evaluation,
   units,
   highlightStage,
+  detailMode = "detail",
+  showPlumbing = true,
+  showControls = true,
+  showDimensions = true,
+  svgRef,
 }: Schematic2DProps) {
   const { project, design, frugal } = evaluation;
   const isLocal = project.build_path === "local_ceramic_masonry";
+
+  // Phase 15: High-detail 2D P&ID & Cross-Section Layout (default), with instant
+  // toggle back to the clean Block Outline view whenever desired.
+  if (detailMode === "detail") {
+    return isLocal ? (
+      <LocalCeramicDetail2D
+        evaluation={evaluation}
+        units={units}
+        highlightStage={highlightStage}
+        showPlumbing={showPlumbing}
+        showControls={showControls}
+        showDimensions={showDimensions}
+        svgRef={svgRef}
+      />
+    ) : (
+      <IndustrialDetail2D
+        evaluation={evaluation}
+        units={units}
+        highlightStage={highlightStage}
+        showPlumbing={showPlumbing}
+        showControls={showControls}
+        showDimensions={showDimensions}
+        svgRef={svgRef}
+      />
+    );
+  }
+
+  // Clean Block Outline mode
   const isSteam = isLocal && !!frugal?.steam_enabled;
   const isSubsonic = isSteam && frugal?.draft_mode === "steam_ejector_subsonic";
   const isSumpPoolOnly = isSteam && frugal?.has_overhead_tank === false;
@@ -32,6 +72,7 @@ export function Schematic2D({
 
   return (
     <svg
+      ref={svgRef}
       id="viewport-2d"
       viewBox="0 0 960 410"
       width="100%"
@@ -91,7 +132,6 @@ export function Schematic2D({
 
       {!isLocal && (
         <>
-          {/* Fail-Safe Bypass Damper Tee */}
           <rect
             x="66"
             y="84"
@@ -225,7 +265,6 @@ export function Schematic2D({
         stroke={strokeFor("packed", "#10b981")}
         strokeWidth="2.2"
       />
-      {/* Packing bed hatch */}
       <rect
         x="570"
         y="150"
@@ -261,9 +300,9 @@ export function Schematic2D({
       </text>
       <text x="641" y="212" textAnchor="middle" fill="#a7f3d0" fontSize="9.5" fontFamily="monospace">
         {isSumpPoolOnly
-          ? "2-Stage 0.5\" Ceramic Sieve"
+          ? '2-Stage 0.5" Ceramic Sieve'
           : isLocal
-            ? "1\" Stoneware Rings"
+            ? '1" Stoneware Rings'
             : evaluation.architecture_options.packing_media.label.slice(0, 22)}
       </text>
       <text x="641" y="334" textAnchor="middle" fill="#7dd3fc" fontSize="9.5" fontFamily="monospace">

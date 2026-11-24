@@ -3,6 +3,7 @@
 import React, { useRef, useState } from "react";
 import type { StudioEvaluation } from "@/types/kilnscrub";
 import { fmt, fmtUSD, triggerBlobDownload } from "@/lib/api";
+import { Schematic2D } from "./Schematic2D";
 
 interface ShopPlansTabProps {
   evaluation: StudioEvaluation;
@@ -16,6 +17,7 @@ export function ShopPlansTab({ evaluation, units }: ShopPlansTabProps) {
   const plan = evaluation.shop_plan;
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [selectedPart, setSelectedPart] = useState<number | null>(null);
+  const [blueprintStyle, setBlueprintStyle] = useState<"pid" | "blocks">("pid");
   const [schedTab, setSchedTab] = useState<SchedTab>("parts");
   const [layers, setLayers] = useState<Record<PlanLayer, boolean>>({
     electrical: true,
@@ -57,6 +59,13 @@ export function ShopPlansTab({ evaluation, units }: ShopPlansTabProps) {
             </div>
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className={`btn btn-sm ${blueprintStyle === "pid" ? "btn-accent" : ""}`}
+              onClick={() => setBlueprintStyle((s) => (s === "pid" ? "blocks" : "pid"))}
+            >
+              {blueprintStyle === "pid" ? "View: Detailed 2D P&ID" : "View: Numbered Blocks"}
+            </button>
             <button type="button" className="btn btn-sm" onClick={handleDownloadSVG}>
               Download SVG
             </button>
@@ -90,8 +99,32 @@ export function ShopPlansTab({ evaluation, units }: ShopPlansTabProps) {
         </div>
       </div>
 
-      {/* Architectural Blueprint SVG (Elevation + System Overlays) */}
+      {/* Architectural Blueprint SVG (Detailed 2D P&ID or Clickable Numbered Blocks) */}
       <div className="card" style={{ padding: 10 }}>
+        {blueprintStyle === "pid" ? (
+          <Schematic2D
+            evaluation={evaluation}
+            units={units}
+            highlightStage={
+              selectedPart === 1
+                ? "inlet"
+                : selectedPart === 2
+                  ? "quench"
+                  : selectedPart === 3
+                    ? "venturi"
+                    : selectedPart === 4
+                      ? "packed"
+                      : selectedPart === 6 || selectedPart === 8
+                        ? "blower"
+                        : null
+            }
+            detailMode="detail"
+            showPlumbing={layers.plumbing}
+            showControls={layers.electrical}
+            showDimensions={layers.clearances}
+            svgRef={svgRef}
+          />
+        ) : (
         <svg
           ref={svgRef}
           viewBox="0 0 1100 420"
@@ -102,9 +135,31 @@ export function ShopPlansTab({ evaluation, units }: ShopPlansTabProps) {
             <pattern id="bpGrid" width="22" height="22" patternUnits="userSpaceOnUse">
               <path d="M 22 0 L 0 0 0 22" fill="none" stroke="#1d3c62" strokeWidth="0.5" opacity="0.45" />
             </pattern>
+            <marker id="bpArr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8" />
+            </marker>
           </defs>
           <rect width="1100" height="420" fill="url(#bpGrid)" />
           <rect x="12" y="12" width="1076" height="396" fill="none" stroke="#38bdf8" strokeWidth="1.2" />
+
+          {/* Connecting process gas arrows between numbered stage boxes */}
+          {[
+            [192, 215, 224, 215],
+            [391, 215, 422, 215],
+            [589, 215, 620, 215],
+            [807, 215, 840, 215],
+          ].map(([x1, y1, x2, y2], idx) => (
+            <line
+              key={idx}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="#38bdf8"
+              strokeWidth="2.4"
+              markerEnd="url(#bpArr)"
+            />
+          ))}
 
           {/* Title Stamp */}
           <text x="26" y="34" fill="#f8fafc" fontSize="13" fontWeight="700" fontFamily="monospace">
@@ -236,6 +291,7 @@ export function ShopPlansTab({ evaluation, units }: ShopPlansTabProps) {
             </g>
           )}
         </svg>
+        )}
       </div>
 
       {/* 6-Tab Interactive Engineering Schedules */}
