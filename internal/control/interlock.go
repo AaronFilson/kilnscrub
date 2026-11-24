@@ -91,6 +91,25 @@ func (i *Interlock) Evaluate(readings model.SensorReadings, readErr error, now t
 	return i.stateLocked()
 }
 
+// Trip immediately latches the fail-safe bypass damper and alarm for the given fault reason
+// (for example, when writing actuator commands to hardware fails).
+func (i *Interlock) Trip(reason string) InterlockState {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	if reason == "" || reason == model.TripNone {
+		reason = model.TripSensorFault
+	}
+	i.hasEvaluated = true
+	i.faultActive = true
+	i.activeFaultReason = reason
+	if !i.latched {
+		i.latched = true
+		i.tripReason = reason
+	}
+	return i.stateLocked()
+}
+
 // Reset clears a latched interlock trip only if all hard faults have cleared in the most
 // recent evaluation. Returns an error and keeps the interlock latched if a fault is still active.
 func (i *Interlock) Reset() error {
@@ -140,18 +159,37 @@ func (i *Interlock) stateLocked() InterlockState {
 }
 
 func (i *Interlock) detectHardFaultLocked(readings model.SensorReadings, readErr error, now time.Time) string {
-	// 1. HAL read error, non-finite sensor readings, or missing/stale timestamp.
+	// 1. HAL read error, non-finite sensor readings, or missing/stale/future timestamp.
 	if readErr != nil {
 		return model.TripSensorFault
 	}
 	if !readingsAreFinite(readings) {
 		return model.TripSensorFault
 	}
-	if readings.Timestamp.IsZero() || now.Sub(readings.Timestamp) > i.limits.SensorFaultTimeout {
+	if readings.Timestamp.IsZero() {
+		return model.TripSensorFault
+	}
+	age := now.Sub(readings.Timestamp)
+	if age > i.limits.SensorFaultTimeout || age < -i.limits.SensorFaultTimeout {
 		return model.TripSensorFault
 	}
 
-	// 2. CPVC thermal protection: quench outlet temperature >= MaxQuenchOutletTemp (default 210 F).
+	// 1b. Open-thermocouple / wire-break / under-range sensor plausibility guard.
+	// Real 16-bit Modbus RTD/TC modules report finite sentinel values (e.g. 0x8000 / -3276.8 F or 0 F)
+	// on open sensor; without a lower plausibility bound, the quench PID would drive spray to minimum.
+	const (
+		minPlausibleOutletTempK = 273.15 // 32 F / 0 C (wet quench tower cannot operate frozen)
+		minPlausibleInletTempK  = 250.0  // -9.7 F
+	)
+	if float64(readings.QuenchOutletTemp) < minPlausibleOutletTempK ||
+		float64(readings.QuenchInletTemp) < minPlausibleInletTempK ||
+		float64(readings.WaterFlow) < 0 ||
+		readings.WaterFlowGPM < 0 ||
+		readings.BlowerSpeedFraction < -0.05 {
+		return model.TripSensorFault
+	}
+
+	// 2. CPVC thermal protection: quench outlet temperature >= MaxQuenchOutletTemp (default 200 F).
 	if readings.QuenchOutletTemp >= i.limits.MaxQuenchOutletTemp {
 		return model.TripHighQuenchTemp
 	}

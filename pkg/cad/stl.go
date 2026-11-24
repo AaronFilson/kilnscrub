@@ -216,12 +216,20 @@ func (m *stlMesh) addVoluteHousing(center vec3, width, rStart, rEnd float64, seg
 		// Therefore outward winding is (front[i], back[i], back[i+1], front[i+1]).
 		m.addQuad(frontPts[i], backPts[i], backPts[i+1], frontPts[i+1])
 
-		// Front face (-Y outward normal):
-		// (front[i] - c) x (front[i+1] - c) = (cos,0,sin) x (cos-d*sin, 0, sin+d*cos) = (0, -d, 0) = -Y outward!
-		m.addTri(frontCenter, frontPts[i], frontPts[i+1])
+		if i < segs-1 {
+			// Front face (-Y outward normal):
+			m.addTri(frontCenter, frontPts[i], frontPts[i+1])
+			// Back face (+Y outward normal): reverse winding.
+			m.addTri(backCenter, backPts[i+1], backPts[i])
+		} else {
+			// Split the final wedge through frontPts[0]/backPts[0] (collinear with center and pts[segs])
+			// so the radial cutoff step edge (pts[0], pts[segs]) shares exact vertices with zero T-junctions.
+			m.addTri(frontCenter, frontPts[i], frontPts[0])
+			m.addTri(frontPts[0], frontPts[i], frontPts[segs])
 
-		// Back face (+Y outward normal): reverse winding.
-		m.addTri(backCenter, backPts[i+1], backPts[i])
+			m.addTri(backCenter, backPts[0], backPts[i])
+			m.addTri(backPts[0], backPts[segs], backPts[i])
+		}
 	}
 
 	// Close spiral radial step (cutoff tongue) from rStart to rEnd at ang=0 (+X):
@@ -487,8 +495,12 @@ func (e *Exporter) ExportSTL(design model.ScrubberDesign) ([]byte, error) {
 	mesh.addFlangeRing(vec3{xPacked, 0, 0.5 * colFlangeT}, vec3{0, 0, 1}, colFlangeOD, colFlangeT, stlSegments)
 	mesh.addFlangeRing(vec3{xPacked, 0, sumpH}, vec3{0, 0, 1}, colFlangeOD, colFlangeT, stlSegments)
 
-	// Main packed-bed & demister column shell (Z = sumpH to sumpH + colH).
-	zColTop := sumpH + colH
+	// Main packed-bed & demister column shell. PackedBed.ColumnHeight (colH) already includes
+	// the integral liquid sump height (Z = 0 to sumpH), so the upper shell spans Z = sumpH..colH.
+	zColTop := colH
+	if zColTop <= sumpH+2.0*colFlangeT {
+		zColTop = sumpH + colH
+	}
 	mesh.addCylinder(vec3{xPacked, 0, sumpH}, vec3{xPacked, 0, zColTop}, colR, stlSegments)
 
 	// Mid-column bolted service flange between packing zone and demister section.

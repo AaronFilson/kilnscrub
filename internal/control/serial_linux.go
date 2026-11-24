@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	// Linux ioctl constants for flushing serial queues (uniform across Linux architectures).
+	// Linux ioctl constants for flushing serial queues (x86_64/arm64/asm-generic).
 	ioctlTCFLSH uintptr = 0x540B
+	tciflush    uintptr = 0
 	tcioflush   uintptr = 2
 )
 
@@ -112,6 +113,15 @@ func (s *serialPort) Write(p []byte) (int, error) {
 
 func (s *serialPort) Close() error {
 	return s.file.Close()
+}
+
+// FlushInput discards any stale unread bytes in the kernel serial RX buffer before a new RTU frame.
+func (s *serialPort) FlushInput() error {
+	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, s.file.Fd(), ioctlTCFLSH, tciflush)
+	if errno != 0 {
+		return errno
+	}
+	return nil
 }
 
 func (s *serialPort) SetDeadline(t time.Time) error {

@@ -179,10 +179,10 @@ func buildDaemonJSON(eval StudioEvaluation) ([]byte, error) {
 	ctrl := model.DefaultControlConfig()
 	ctrl.SetTargetDraftInWC(eval.Design.Input.TargetKilnDraftInWC)
 
-	// Keep quench setpoint safely above adiabatic saturation and below the 210 F CPVC trip.
-	spF := math.Max(188.0, eval.Design.Quench.OutletTemp.Fahrenheit()+4.0)
-	if spF > 202.0 {
-		spF = 202.0
+	// Keep quench setpoint safely above adiabatic saturation and below the aligned 200 F CPVC trip.
+	spF := math.Max(186.0, eval.Design.Quench.OutletTemp.Fahrenheit()+4.0)
+	if spF > 195.0 {
+		spF = 195.0
 	}
 	ctrl.QuenchSetpoint = model.FahrenheitToKelvin(spF)
 	ctrl.Sync()
@@ -192,6 +192,7 @@ func buildDaemonJSON(eval StudioEvaluation) ([]byte, error) {
 
 	nomWater := math.Max(0.5, round2(eval.Design.Quench.TotalSprayWaterGPM))
 	maxWater := math.Max(2.5, round2(nomWater*2.0))
+	maxSuctionPa := round1(math.Max(30.0, math.Abs(float64(ctrl.TargetDraftPa))*2.5))
 
 	cfg := daemonFileConfig{
 		Description: fmt.Sprintf("%s (%.1f cu.ft., %s) Control Daemon Config — switch hal_mode to \"modbus\" for physical RS-485 PLC/VFD hardware",
@@ -199,11 +200,12 @@ func buildDaemonJSON(eval StudioEvaluation) ([]byte, error) {
 		HALMode: "sim",
 		Control: ctrl,
 		Modbus: daemonModbusConfig{
-			Device:              "/dev/ttyUSB0",
-			BaudRate:            9600,
-			SlaveID:             1,
-			TimeoutNs:           500 * time.Millisecond,
-			UseHoldingRegisters: false,
+			Device:                     "/dev/ttyUSB0",
+			BaudRate:                   19200,
+			SlaveID:                    1,
+			TimeoutNs:                  500 * time.Millisecond,
+			UseHoldingRegisters:        false,
+			BypassCoilDeenergizeToTrip: true,
 			Registers: daemonRegisterMap{
 				TempUnit:             "F",
 				DraftPa:              daemonRegisterSpec{Address: 0, Scale: 0.01, Signed: true},
@@ -224,7 +226,7 @@ func buildDaemonJSON(eval StudioEvaluation) ([]byte, error) {
 			BaselineQuenchTempK:   float64(ctrl.QuenchSetpoint),
 			MaxWaterFlowGPM:       maxWater,
 			NominalWaterFlowGPM:   nomWater,
-			BlowerMaxSuctionPa:    30.0,
+			BlowerMaxSuctionPa:    maxSuctionPa,
 			BlowerTimeConstNs:     400 * time.Millisecond,
 			DraftTimeConstNs:      300 * time.Millisecond,
 			ValveTimeConstNs:      300 * time.Millisecond,
@@ -300,43 +302,81 @@ func buildPacketReadme(eval StudioEvaluation) []byte {
 	}
 	b.WriteString("\n")
 
+	isLocal := eval.Project.IsLocalCeramic()
+	includeDaemon := !isLocal && eval.Project.ControlTier != ControlTierElectromechanicalOnly
+
 	b.WriteString("FILES INCLUDED IN THIS PACKET\n")
 	b.WriteString("-----------------------------\n")
-	b.WriteString("1.  BUILD_GUIDE.md          Step-by-step fabrication, assembly & cold-water commissioning guide\n")
-	b.WriteString("2.  OPERATIONS_CHECKLIST.md Firing-day safety, draft, recirculation & drain neutralization checklist\n")
-	b.WriteString("3.  bom_cots.md             Off-the-shelf (COTS) hardware shopping list (Markdown)\n")
-	b.WriteString("4.  bom_cots.csv            Off-the-shelf (COTS) hardware shopping list (Spreadsheet CSV)\n")
-	b.WriteString("5.  bom_engineered.csv      Sheet-metal fabrication BOM (Spreadsheet CSV)\n")
-	b.WriteString("6.  scrubber.stl            3D assembly model (millimeters) for visual review & layout\n")
-	b.WriteString("7.  scrubber.dxf            2D AutoCAD R12 flat-pattern cut sheets (millimeters) for CNC/fab\n")
-	b.WriteString("8.  shop_plan.json          Structured Complete Systems Plan (parts, cuts, electrical, plumbing, pump, bracing, acoustics, clearances & deluxe spec)\n")
-	b.WriteString("9.  project.json            Saved studio project settings (re-import into kilnscrub UI/CLI)\n")
-	b.WriteString("10. daemon.json             Pre-tuned kilnscrub control daemon config (sim or Modbus RS-485)\n")
-	b.WriteString("11. README_PACKET.txt       This overview file\n\n")
-	b.WriteString("SAFETY REMINDER (NFPA 86 / IPC 608 / NEC 430): Always install and test the\n")
-	b.WriteString("independent hardwired 200 F snap-disc + 24VDC de-energize-to-trip safety relay\n")
-	b.WriteString("driving the spring-return fail-open hot-gas bypass damper (ahead of the 210 F /\n")
-	b.WriteString("0.25 GPM software backup), IPC 608 Air Gap/RPZ backflow preventer, and NEC 430.102\n")
-	b.WriteString("lockable sight disconnect before firing.\n")
+	idx := 1
+	addEntry := func(name, desc string) {
+		fmt.Fprintf(&b, "%-3d %-23s %s\n", idx, name, desc)
+		idx++
+	}
+	addEntry("BUILD_GUIDE.md", "Step-by-step fabrication, assembly & commissioning guide")
+	addEntry("OPERATIONS_CHECKLIST.md", "Firing-day safety, draft, recirculation & disposal checklist")
+	addEntry("bom_cots.md", "Tailored hardware & materials shopping list (Markdown)")
+	addEntry("bom_cots.csv", "Tailored hardware & materials shopping list (Spreadsheet CSV)")
+	if !isLocal {
+		addEntry("bom_engineered.csv", "Baseline sheet-metal fabrication BOM (Spreadsheet CSV)")
+		addEntry("scrubber.stl", "Baseline 4-stage 3D assembly model (millimeters)")
+		addEntry("scrubber.dxf", "Baseline 4-stage 2D AutoCAD R12 flat-pattern cut sheets (millimeters)")
+	}
+	addEntry("shop_plan.svg", "Standalone architectural blueprint schematic (SVG, tailored to active build path)")
+	addEntry("shop_plan.json", "Structured Complete Systems Plan (parts, cuts, electrical, plumbing, bracing, acoustics)")
+	addEntry("project.json", "Saved studio project settings (re-import into kilnscrub UI/CLI)")
+	if includeDaemon {
+		addEntry("daemon.json", "Pre-tuned kilnscrub control daemon config (sim or Modbus RS-485)")
+	}
+	addEntry("README_PACKET.txt", "This overview file")
+	b.WriteString("\n")
+
+	if isLocal {
+		b.WriteString("NOTE ON TAILORED PACKET CONTENTS (Local Ceramic / Masonry Build):\n")
+		b.WriteString("Sheet-metal STL/DXF files (scrubber.stl, scrubber.dxf, bom_engineered.csv) and\n")
+		b.WriteString("electric Modbus daemon.json are intentionally omitted because this build uses\n")
+		b.WriteString("local firebrick masonry, stoneware Raschig rings, and gravity/steam-jet hardware.\n")
+		b.WriteString("Use shop_plan.svg, shop_plan.json, bom_cots.csv, and BUILD_GUIDE.md for layout.\n\n")
+		b.WriteString("SAFETY REMINDER (Masonry / Gravity / Certified Steam): Cross-brace the 3.5 m\n")
+		b.WriteString("overhead gravity tank stand (200-500 kg wet load), keep >= 36\" clearance from\n")
+		b.WriteString("hot flues to combustibles (NFPA 211), NEVER fabricate DIY welded-drum steam\n")
+		b.WriteString("boilers, and cool sump liquor <= 140 F & neutralize to pH 6.5-8.5 before disposal.\n")
+	} else {
+		p := eval.Project
+		if p.StageAlignment != StageAlignmentInlineIDBlower ||
+			p.PackedBedLayout != PackedBedLayoutSingleColumn ||
+			p.VenturiLayout != VenturiLayoutSingleThroat ||
+			p.CompactFootprint ||
+			p.IsDeluxe() {
+			b.WriteString("NOTE ON BASELINE CAD FILES: scrubber.stl and scrubber.dxf represent the baseline\n")
+			b.WriteString("inline 4-stage vessel geometry. Refer to shop_plan.svg, shop_plan.json, and\n")
+			b.WriteString("BUILD_GUIDE.md for your selected Phase 7-9 options (eductor, Uniseal parallel\n")
+			b.WriteString("bundle, mini-venturi manifold, U-turn skid, or Deluxe ANSI flanges/skid).\n\n")
+		}
+		if !includeDaemon {
+			b.WriteString("NOTE ON CONTROLS (Electromechanical Only): daemon.json is omitted because this\n")
+			b.WriteString("build uses a 100% hardwired 24VDC safety relay panel with zero software daemon.\n\n")
+		}
+		b.WriteString("SAFETY REMINDER (NFPA 86 / IPC 608 / NEC 430): Always install and test the\n")
+		b.WriteString("independent hardwired 200 F snap-disc + 24VDC de-energize-to-trip safety relay\n")
+		b.WriteString("driving the spring-return fail-open hot-gas bypass damper (aligned with the 200 F /\n")
+		b.WriteString("0.25 GPM software backup), IPC 608 Air Gap/RPZ backflow preventer, and NEC 430.102\n")
+		b.WriteString("lockable sight disconnect before firing.\n")
+	}
 	return []byte(b.String())
 }
 
-// BuildPacketZip evaluates the project and packages all 11 fabrication, shopping,
-// guide, CAD, structured shop plan, and control configuration files into an in-memory .zip archive.
+// BuildPacketZip evaluates the project and packages tailored fabrication, shopping,
+// guide, schematic SVG, CAD (when applicable), structured shop plan, and control
+// configuration files into an in-memory .zip archive.
 func (e *Evaluator) BuildPacketZip(project StudioProject) ([]byte, StudioEvaluation, error) {
 	eval, err := e.Evaluate(project)
 	if err != nil {
 		return nil, StudioEvaluation{}, err
 	}
 
-	stlBytes, err := e.exporter.ExportSTL(eval.Design)
-	if err != nil {
-		return nil, StudioEvaluation{}, fmt.Errorf("packet export STL: %w", err)
-	}
-	dxfBytes, err := e.exporter.ExportDXF(eval.Design)
-	if err != nil {
-		return nil, StudioEvaluation{}, fmt.Errorf("packet export DXF: %w", err)
-	}
+	isLocal := eval.Project.IsLocalCeramic()
+	includeDaemon := !isLocal && eval.Project.ControlTier != ControlTierElectromechanicalOnly
+
 	bomCOTSCSV, err := e.exporter.FormatBOMCSV(eval.COTS.BOM)
 	if err != nil {
 		return nil, StudioEvaluation{}, fmt.Errorf("packet format COTS BOM CSV: %w", err)
@@ -345,19 +385,12 @@ func (e *Evaluator) BuildPacketZip(project StudioProject) ([]byte, StudioEvaluat
 	if err != nil {
 		return nil, StudioEvaluation{}, fmt.Errorf("packet format COTS BOM MD: %w", err)
 	}
-	engBOM, err := e.exporter.GenerateBOM(eval.Design)
-	if err != nil {
-		return nil, StudioEvaluation{}, fmt.Errorf("packet generate engineered BOM: %w", err)
-	}
-	bomEngCSV, err := e.exporter.FormatBOMCSV(engBOM)
-	if err != nil {
-		return nil, StudioEvaluation{}, fmt.Errorf("packet format engineered BOM CSV: %w", err)
-	}
 	shopPlanJSON, err := json.MarshalIndent(eval.ShopPlan, "", "  ")
 	if err != nil {
 		return nil, StudioEvaluation{}, fmt.Errorf("packet marshal shop_plan.json: %w", err)
 	}
 	shopPlanJSON = append(shopPlanJSON, '\n')
+	shopPlanSVG := RenderShopPlanSVG(eval.ShopPlan)
 
 	projectJSON, err := json.MarshalIndent(eval.Project, "", "  ")
 	if err != nil {
@@ -365,28 +398,54 @@ func (e *Evaluator) BuildPacketZip(project StudioProject) ([]byte, StudioEvaluat
 	}
 	projectJSON = append(projectJSON, '\n')
 
-	daemonJSON, err := buildDaemonJSON(eval)
-	if err != nil {
-		return nil, StudioEvaluation{}, fmt.Errorf("packet build daemon.json: %w", err)
-	}
-
 	type packetEntry struct {
 		name string
 		data []byte
 	}
-	entries := []packetEntry{
-		{name: "scrubber.stl", data: stlBytes},
-		{name: "scrubber.dxf", data: dxfBytes},
-		{name: "shop_plan.json", data: shopPlanJSON},
-		{name: "bom_cots.csv", data: bomCOTSCSV},
-		{name: "bom_cots.md", data: bomCOTSMD},
-		{name: "bom_engineered.csv", data: bomEngCSV},
-		{name: "BUILD_GUIDE.md", data: []byte(eval.BuildGuideMD)},
-		{name: "OPERATIONS_CHECKLIST.md", data: []byte(eval.OperationsChecklistMD)},
-		{name: "project.json", data: projectJSON},
-		{name: "daemon.json", data: daemonJSON},
-		{name: "README_PACKET.txt", data: buildPacketReadme(eval)},
+	var entries []packetEntry
+
+	if !isLocal {
+		stlBytes, err := e.exporter.ExportSTL(eval.Design)
+		if err != nil {
+			return nil, StudioEvaluation{}, fmt.Errorf("packet export STL: %w", err)
+		}
+		dxfBytes, err := e.exporter.ExportDXF(eval.Design)
+		if err != nil {
+			return nil, StudioEvaluation{}, fmt.Errorf("packet export DXF: %w", err)
+		}
+		engBOM, err := e.exporter.GenerateBOM(eval.Design)
+		if err != nil {
+			return nil, StudioEvaluation{}, fmt.Errorf("packet generate engineered BOM: %w", err)
+		}
+		bomEngCSV, err := e.exporter.FormatBOMCSV(engBOM)
+		if err != nil {
+			return nil, StudioEvaluation{}, fmt.Errorf("packet format engineered BOM CSV: %w", err)
+		}
+		entries = append(entries,
+			packetEntry{name: "scrubber.stl", data: stlBytes},
+			packetEntry{name: "scrubber.dxf", data: dxfBytes},
+			packetEntry{name: "bom_engineered.csv", data: bomEngCSV},
+		)
 	}
+
+	entries = append(entries,
+		packetEntry{name: "shop_plan.svg", data: shopPlanSVG},
+		packetEntry{name: "shop_plan.json", data: shopPlanJSON},
+		packetEntry{name: "bom_cots.csv", data: bomCOTSCSV},
+		packetEntry{name: "bom_cots.md", data: bomCOTSMD},
+		packetEntry{name: "BUILD_GUIDE.md", data: []byte(eval.BuildGuideMD)},
+		packetEntry{name: "OPERATIONS_CHECKLIST.md", data: []byte(eval.OperationsChecklistMD)},
+		packetEntry{name: "project.json", data: projectJSON},
+	)
+
+	if includeDaemon {
+		daemonJSON, err := buildDaemonJSON(eval)
+		if err != nil {
+			return nil, StudioEvaluation{}, fmt.Errorf("packet build daemon.json: %w", err)
+		}
+		entries = append(entries, packetEntry{name: "daemon.json", data: daemonJSON})
+	}
+	entries = append(entries, packetEntry{name: "README_PACKET.txt", data: buildPacketReadme(eval)})
 
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)

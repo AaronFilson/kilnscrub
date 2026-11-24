@@ -90,15 +90,17 @@ type ModbusConfig struct {
 	Registers                  ModbusRegisterMap `json:"registers"`
 }
 
-// DefaultModbusConfig returns standard RS-485 9600-8N1 defaults and a contiguous register map
-// suitable for industrial PLC / Modbus RTU studio kiln I/O modules.
+// DefaultModbusConfig returns standard RS-485 19200-8N1 defaults (fast enough for 4 RTU
+// transactions inside a 100 ms control tick), fail-safe de-energize-to-trip bypass coil polarity,
+// and a contiguous register map suitable for industrial PLC / Modbus RTU studio kiln I/O modules.
 func DefaultModbusConfig() ModbusConfig {
 	return ModbusConfig{
-		Device:              "/dev/ttyUSB0",
-		BaudRate:            9600,
-		SlaveID:             1,
-		Timeout:             500 * time.Millisecond,
-		UseHoldingRegisters: false, // FC04 Input Registers for sensors
+		Device:                     "/dev/ttyUSB0",
+		BaudRate:                   19200,
+		SlaveID:                    1,
+		Timeout:                    500 * time.Millisecond,
+		UseHoldingRegisters:        false, // FC04 Input Registers for sensors
+		BypassCoilDeenergizeToTrip: true,  // Fail-safe: coil ON = healthy hold-closed; coil OFF / power loss = damper OPEN
 		Registers: ModbusRegisterMap{
 			TempUnit: ModbusTempUnitF,
 			DraftPa: ModbusRegisterSpec{
@@ -410,16 +412,15 @@ func (h *ModbusHAL) ApplyCommands(ctx context.Context, cmd model.ActuatorCommand
 	}
 
 	if cmd.BypassDamperOpen {
-		// Fail-safe priority: energize/open bypass damper & alarm latch coils first, then zero VFD / open spray valve.
+		// Fail-safe priority: open bypass damper & alarm latch coils first, then zero VFD / open spray valve.
 		coilErr := writeCoils()
 		analogErr := writeAnalogs()
 		return errors.Join(coilErr, analogErr)
 	}
 
-	if err := writeAnalogs(); err != nil {
-		return err
-	}
-	return writeCoils()
+	analogErr := writeAnalogs()
+	coilErr := writeCoils()
+	return errors.Join(analogErr, coilErr)
 }
 
 func scaleUnitToRegister(fraction float64, fullScale uint16) uint16 {

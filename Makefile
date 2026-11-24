@@ -10,11 +10,14 @@ PKG := ./cmd/kilnscrub
 VERSION ?= $(shell git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: help build test vet fmt fmt-check check coverage coverage-branch smoke packet-smoke release-all release-archives clean
+.PHONY: help web-install web-build build build-full test vet fmt fmt-check check coverage coverage-branch smoke packet-smoke release-all release-archives clean
 
 help: ## Show available make targets
 	@echo "kilnscrub Makefile targets:"
-	@echo "  build             Build static pure-Go binary ($(BINARY))"
+	@echo "  web-install       Install Next.js frontend dependencies in web/"
+	@echo "  web-build         Typecheck & export Next.js static UI into internal/web/static/ for //go:embed"
+	@echo "  build             Build static pure-Go single binary ($(BINARY)) using embedded UI"
+	@echo "  build-full        Rebuild Next.js static export + compile static Go single binary"
 	@echo "  test              Run full test suite with race detector (CGO_ENABLED=1)"
 	@echo "  vet               Run go vet across all packages"
 	@echo "  fmt               Format all Go files with gofmt -w"
@@ -28,9 +31,18 @@ help: ## Show available make targets
 	@echo "  release-archives  Build packaged release archives (.tar.gz/.zip) + SHA256SUMS.txt"
 	@echo "  clean             Remove $(BINARY), bin/, $(DIST_DIR)/, and coverage.out"
 
+web-install: ## Install Next.js frontend dependencies
+	npm --prefix web install --no-audit --no-fund
+
+web-build: ## Typecheck and build Next.js static export into internal/web/static/
+	NEXT_TELEMETRY_DISABLED=1 npm --prefix web run typecheck
+	NEXT_TELEMETRY_DISABLED=1 npm --prefix web run export:go
+
 build: ## Build static pure-Go binary for current host
 	@mkdir -p $(dir $(BINARY))
 	CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o $(BINARY) $(PKG)
+
+build-full: web-build build ## Rebuild Next.js static export and compile single Go binary
 
 test: ## Run full test suite with race detector
 	CGO_ENABLED=1 $(GO) test -race -count=1 ./...

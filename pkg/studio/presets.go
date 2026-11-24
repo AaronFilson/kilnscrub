@@ -505,7 +505,7 @@ func (p StudioProject) Normalize() StudioProject {
 	if out.LocalDraftMode == "" {
 		out.LocalDraftMode = LocalDraftNaturalChimney
 	}
-	if out.BuildPath == "" && out.IsSteamEjector() {
+	if out.BuildPath == "" && (out.IsSteamEjector() || out.ZeroElectricity) {
 		out.BuildPath = BuildPathLocalCeramic
 	}
 	if out.IsLocalCeramic() {
@@ -571,10 +571,26 @@ func (p StudioProject) EffectiveDesignInput() model.DesignInput {
 	}
 	// Phase 8: Twin-fluid air-atomizing venturi nozzle produces 25 um SMD droplets,
 	// unlocking reduced 48 m/s throat velocity with d_50 <= 0.22 um parity and ~45% lower dP.
-	if p.BlowerDriveOption == BlowerDriveCompressorAirAtomize {
+	if !p.IsLocalCeramic() && p.StageAlignment != StageAlignmentEductorDryFan && p.BlowerDriveOption == BlowerDriveCompressorAirAtomize {
 		in.VenturiDropletDiameter = model.MicronsToMeters(25.0)
 		if in.VenturiThroatVelocity > 48.0 {
 			in.VenturiThroatVelocity = 48.0
+		}
+	}
+	// Phase 8: Propagate alternative packing media hydraulics into the core packed-bed solver
+	// so Eckert flooding velocity, column diameter, and blower static pressure stay physically consistent.
+	if !p.IsLocalCeramic() {
+		switch p.PackingMediaOption {
+		case PackingMediaDIYCeramicRings:
+			in.PackingName = `3/4" Potter-Extruded Thin-Wall Stoneware Raschig Rings`
+			in.PackingDiameter = model.InchesToMeters(0.75)
+			in.PackingVoidage = 0.72
+			in.PackingFactor = 620.0
+		case PackingMediaAquacultureBioballs:
+			in.PackingName = `1.125" High-Surface Aquaculture PP Bio-Balls`
+			in.PackingDiameter = model.InchesToMeters(1.125)
+			in.PackingVoidage = 0.85
+			in.PackingFactor = 210.0
 		}
 	}
 	return in
@@ -606,13 +622,34 @@ func (p StudioProject) Validate() error {
 	switch p.BuildPath {
 	case BuildPathCOTSNoWeld, BuildPathWeldedDXF, BuildPathCustomFabDeluxe, BuildPathLocalCeramic:
 	case "":
-		if !p.IsSteamEjector() {
+		if !p.IsSteamEjector() && !p.ZeroElectricity {
 			return fmt.Errorf("build_path must be %q, %q, %q, or %q, got %q",
 				BuildPathCOTSNoWeld, BuildPathWeldedDXF, BuildPathCustomFabDeluxe, BuildPathLocalCeramic, p.BuildPath)
 		}
 	default:
 		return fmt.Errorf("build_path must be %q, %q, %q, or %q, got %q",
 			BuildPathCOTSNoWeld, BuildPathWeldedDXF, BuildPathCustomFabDeluxe, BuildPathLocalCeramic, p.BuildPath)
+	}
+	// Reject mutually contradictory cross-phase architecture combinations cleanly.
+	if p.ZeroElectricity && p.BuildPath != "" && p.BuildPath != BuildPathLocalCeramic {
+		return fmt.Errorf("zero_electricity=true requires build_path=%q (got %q)", BuildPathLocalCeramic, p.BuildPath)
+	}
+	if p.IsSteamEjector() && p.BuildPath != "" && p.BuildPath != BuildPathLocalCeramic {
+		return fmt.Errorf("local_draft_mode=%q requires build_path=%q (got %q)", p.LocalDraftMode, BuildPathLocalCeramic, p.BuildPath)
+	}
+	if p.BuildPath == BuildPathCustomFabDeluxe && p.PackedBedLayout == PackedBedLayoutParallelManifold {
+		return fmt.Errorf("build_path=%q specifies a single filament-wound FRP column with bolted manway and cannot be combined with packed_bed_layout=%q", BuildPathCustomFabDeluxe, PackedBedLayoutParallelManifold)
+	}
+	if p.StageAlignment == StageAlignmentEductorDryFan {
+		switch p.BlowerDriveOption {
+		case BlowerDriveCompressorAirAtomize, BlowerDriveCompressorEductor, BlowerDriveDualBypassBlowers:
+			return fmt.Errorf("stage_alignment=%q cannot be combined with blower_drive_option=%q (use %q or %q)",
+				StageAlignmentEductorDryFan, p.BlowerDriveOption, BlowerDriveIndustrialRadialVFD, BlowerDriveRegenSideChannel)
+		}
+		if p.VenturiLayout == VenturiLayoutParallelMiniVenturis {
+			return fmt.Errorf("stage_alignment=%q replaces Stage 2 with a single downflow static eductor and cannot be combined with venturi_layout=%q",
+				StageAlignmentEductorDryFan, VenturiLayoutParallelMiniVenturis)
+		}
 	}
 	switch p.LocalRegion {
 	case "", LocalRegionNairobi, LocalRegionMumbai, LocalRegionGeneral:

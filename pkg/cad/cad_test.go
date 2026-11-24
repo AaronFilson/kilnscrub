@@ -546,3 +546,54 @@ func TestInvalidDesignErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestSTLVoluteEdgeManifoldAndR12DXFCompliance(t *testing.T) {
+	exp := cad.NewExporter()
+	d := sampleSaltKilnDesign()
+
+	// Verify DXF header omits R2000-only $INSUNITS when claiming AC1009 (R12).
+	dxfBytes, err := exp.ExportDXF(d)
+	if err != nil {
+		t.Fatalf("ExportDXF: %v", err)
+	}
+	if strings.Contains(string(dxfBytes), "$INSUNITS") {
+		t.Errorf("R12 AC1009 DXF must not contain R2000-only $INSUNITS header variable")
+	}
+
+	// Verify the entire exported binary STL mesh is edge-manifold (zero unmatched half-edges / T-junctions).
+	stlBytes, err := exp.ExportSTL(d)
+	if err != nil {
+		t.Fatalf("ExportSTL: %v", err)
+	}
+	if len(stlBytes) < 84 {
+		t.Fatalf("STL too short: %d bytes", len(stlBytes))
+	}
+	triCount := int(binary.LittleEndian.Uint32(stlBytes[80:84]))
+	type qpt struct{ x, y, z int64 }
+	readPt := func(off int) qpt {
+		fx := math.Float32frombits(binary.LittleEndian.Uint32(stlBytes[off : off+4]))
+		fy := math.Float32frombits(binary.LittleEndian.Uint32(stlBytes[off+4 : off+8]))
+		fz := math.Float32frombits(binary.LittleEndian.Uint32(stlBytes[off+8 : off+12]))
+		return qpt{int64(math.Round(float64(fx) * 1e2)), int64(math.Round(float64(fy) * 1e2)), int64(math.Round(float64(fz) * 1e2))}
+	}
+	type edge struct{ a, b qpt }
+	edges := make(map[edge]int, triCount*3)
+	for i := 0; i < triCount; i++ {
+		base := 84 + i*50 + 12
+		p0 := readPt(base)
+		p1 := readPt(base + 12)
+		p2 := readPt(base + 24)
+		edges[edge{p0, p1}]++
+		edges[edge{p1, p2}]++
+		edges[edge{p2, p0}]++
+	}
+	unmatched := 0
+	for e, cnt := range edges {
+		if cnt != edges[edge{e.b, e.a}] {
+			unmatched++
+		}
+	}
+	if unmatched != 0 {
+		t.Errorf("exported binary STL has %d unbalanced/non-manifold half-edges, want 0", unmatched)
+	}
+}

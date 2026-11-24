@@ -90,7 +90,9 @@ func (e *Exporter) GenerateBOM(design model.ScrubberDesign) (model.BOM, error) {
 		2.0*flangeRingWeightKg(g.flangeVentOut, density316LSS))
 
 	// --- Stage 3: Packed-Bed Absorber Column + Sump + Packing + Demister (CPVC/PP) ---
-	colShellArea := math.Pi * g.colDia * g.colH
+	// ColumnHeight already includes sumpH, so subtract sumpH from the upper shell to avoid double-counting.
+	upperColH := math.Max(0.25, g.colH-g.sumpH)
+	colShellArea := math.Pi * g.colDia * upperColH
 	reducerArea := frustumLateralArea(g.colDia, g.stackDia, g.reducerH)
 	stackArea := math.Pi * g.stackDia * g.stackRiserH
 	colSheetM2 := round2((colShellArea + reducerArea + stackArea) * 1.12)
@@ -140,12 +142,13 @@ func (e *Exporter) GenerateBOM(design model.ScrubberDesign) (model.BOM, error) {
 	damperWeightKg := round2(8.0 + 18.0*g.ductDia)
 
 	// --- Gaskets & 316 SS Fasteners ---
-	totalFlangePairs := 6.0 // duct, quench top/bot, venturi in/out, column sump/mid/top
+	// Count one bolt set and one full-face gasket per mated flange joint (not per individual face).
+	totalFlangePairs := 7.0 // duct, quench top/bot, venturi in/out, column mid, stack
 	gasketWeightKg := round2(totalFlangePairs * 0.35)
 
-	totalBolts := 2*g.flangeDuct.BoltCount + 2*g.flangeQuench.BoltCount +
-		2*g.flangeVentIn.BoltCount + 2*g.flangeVentOut.BoltCount +
-		3*g.flangeColumn.BoltCount + g.flangeStack.BoltCount
+	totalBolts := g.flangeDuct.BoltCount + g.flangeQuench.BoltCount +
+		g.flangeVentIn.BoltCount + g.flangeVentOut.BoltCount +
+		2*g.flangeColumn.BoltCount + g.flangeStack.BoltCount
 	fastenerWeightKg := round2(float64(totalBolts) * 0.085)
 
 	items := []model.BOMItem{
@@ -295,7 +298,7 @@ func (e *Exporter) GenerateBOM(design model.ScrubberDesign) (model.BOM, error) {
 			Material:    "316L SS / 24VDC Spring-Return Actuator",
 			Quantity:    1,
 			Unit:        "ea",
-			Spec:        fmt.Sprintf("D=%.0fmm butterfly damper, fails OPEN on 200 F hardwired snap-disc / 210 F software / <0.25 GPM / power loss", g.ductDia*1000),
+			Spec:        fmt.Sprintf("D=%.0fmm butterfly damper, fails OPEN on 200 F hardwired snap-disc & 200 F software limit / <0.25 GPM / power loss", g.ductDia*1000),
 			UnitCostUSD: damperCost,
 			WeightKg:    damperWeightKg,
 		},

@@ -7,10 +7,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -478,371 +474,112 @@ func TestEmbeddedHTMLStudioUXAndJSIntegrity(t *testing.T) {
 	}
 	body := rec.Body.String()
 
-	// 1. Verify all 4 tabs, potter-friendly Studio UX, Phase 7 selectable options, bulk soda, recirculation,
-	//    complete Shop Plans & Cut Sheets tab, plume diluter, tooltips, unit literals, and 3D builders.
+	// Collect the pre-rendered HTML plus all encapsulated Next.js /_next/static/* chunks served by Go.
+	assetPaths := extractNextStaticPaths(body)
+	if len(assetPaths) == 0 {
+		t.Fatalf("expected /_next/static/ assets referenced in Next.js exported index.html")
+	}
+	var all strings.Builder
+	all.WriteString(body)
+	for _, ap := range assetPaths {
+		aRec := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(aRec, httptest.NewRequest(http.MethodGet, ap, nil))
+		if aRec.Code != http.StatusOK {
+			t.Errorf("embedded asset GET %s status = %d, want 200", ap, aRec.Code)
+			continue
+		}
+		all.WriteString("\n")
+		all.WriteString(aRec.Body.String())
+	}
+	bundle := strings.ReplaceAll(strings.ReplaceAll(all.String(), `\xb0`, "°"), `\u00b0`, "°")
+
+	// 1. Verify all 4 workspace tabs, Studio API routes, Phase 7-10 options, Shop Plans, and offline Three.js.
 	requiredMarkers := []string{
 		"Design &amp; 3D Studio",
 		"Build &amp; Firing Guide",
 		"Live Control &amp; Telemetry",
 		"Shop Plans &amp; Cut Sheets",
-		`id="tab-plans"`,
-		`id="view-plans"`,
-		`id="plan-svg"`,
-		`id="plan-cutsheet-svg"`,
-		`id="plan-parts-tbody"`,
-		`id="btn-plan-download-svg"`,
-		`id="btn-plan-print"`,
-		`id="btn-plan-unit-in"`,
-		`id="btn-plan-unit-mm"`,
 		"/api/studio/presets",
 		"/api/studio/evaluate",
 		"/api/studio/packet",
-		`id="preset-picker-list"`,
-		`id="readiness-bar"`,
-		`id="panel-stage-options"`,
-		"Stage Design &amp; Cost-Saving Options",
-		`data-stage-alignment="inline_id_blower"`,
-		`data-stage-alignment="eductor_dry_fan"`,
-		`data-packed-bed-layout="single_column"`,
-		`data-packed-bed-layout="parallel_manifold"`,
-		`id="ctrl-parallel-pipe-size-wrap"`,
-		"Shell-Less Uniseal Bundle (No Big Pipe)",
-		`data-parallel-pipe-size="2"`,
-		`data-parallel-pipe-size="3"`,
-		`data-parallel-pipe-size="4"`,
-		"parallel_pipe_size_in",
-		`id="in-blower-drive"`,
-		`value="industrial_radial_vfd"`,
-		`value="regen_side_channel"`,
-		`value="dual_bypass_blowers"`,
-		`value="compressor_air_atomize"`,
-		`value="compressor_eductor_only"`,
-		"Industrial Radial + VFD (Baseline)",
-		"Side-Channel Ring Blower (Low-Cost High Push)",
-		"Dual 3-Stage Bypass Blowers (~$420)",
-		"Shop Compressor Air-Atomize + Low-ΔP Fan",
-		"Shop Compressor Main Eductor (Feasibility Check)",
-		"blower_drive_option",
-		`id="in-compressor-scfm"`,
-		"shop_compressor_scfm",
-		"SCFM @ 90 PSI",
-		`data-packing-media="pp_pall_rings"`,
-		`data-packing-media="aquaculture_bioballs"`,
-		`data-packing-media="diy_ceramic_rings"`,
-		"Commercial PP Pall Rings",
-		"Aquaculture Bio-Balls",
-		"DIY Kiln-Fired Ceramic Rings",
-		"packing_media_option",
-		`id="btn-apply-budget-combo"`,
-		"Apply Budget Studio Combo",
-		`id="design-budget-card"`,
-		`id="guide-budget-panel"`,
-		"Shop Compressor &amp; Affordable Fan Comparison",
-		"As Main Air Mover (Eductor)",
-		"As Twin-Fluid Air-Atomizing Nozzle",
-		"blower_drive",
-		"compressor",
-		"packing_media",
-		"shellless_plenum",
-		"pipe_material",
-		"eductor_scfm_needed",
-		"eductor_hp_needed",
-		"eductor_verdict",
-		"atomize_scfm_needed",
-		"atomize_dp_saved_inwc",
-		"atomize_cost_saved_usd",
-		"atomize_verdict",
-		"seenWarn",
-		`align === "eductor_dry_fan" && Array.isArray(ed.warnings)`,
-		`replace(/^\s*\d+\.\s*/, "")`,
-		`data-venturi-layout="single_throat"`,
-		`data-venturi-layout="parallel_mini_venturis"`,
-		`data-control-tier="rpi_modbus"`,
-		`data-control-tier="electromechanical_only"`,
-		`id="in-compact-footprint"`,
-		`id="in-shared-baffled-sump"`,
-		`id="in-salting-hours"`,
-		"Active Salting Window",
-		"Standard 316L SS (Light / Occasional)",
-		`data-corrosion="standard_316l"`,
-		"15 lb",
-		"50 lb",
-		"baking_soda_15lb_bags",
-		"baking_soda_50lb_sacks",
-		"salting_hours",
-		"bulk_packaging_label",
-		"architecture_options",
-		"recirculation",
-		"shop_plan",
-		"Sump Recirculation &amp; Dump Schedule",
-		"Architecture Cost &amp; Trade-Off Comparison",
-		"1.105",
-		"NFPA 211",
-		`id="advanced-engineering-drawer"`,
-		"Advanced Engineering Parameters",
+		"/api/export",
+		"cots_no_weld",
+		"welded_dxf",
+		"custom_fab_deluxe",
+		"local_ceramic_masonry",
+		"inline_id_blower",
+		"eductor_dry_fan",
+		"single_column",
+		"parallel_manifold",
+		"single_throat",
+		"parallel_mini_venturis",
+		"industrial_radial_vfd",
+		"regen_side_channel",
+		"dual_bypass_blowers",
+		"compressor_air_atomize",
+		"compressor_eductor_only",
+		"pp_pall_rings",
+		"aquaculture_bioballs",
+		"diy_ceramic_rings",
+		"rpi_modbus",
+		"electromechanical_only",
+		"natural_chimney",
+		"steam_ejector_subsonic",
+		"steam_ejector_lp",
+		"steam_ejector_hp",
+		"nairobi",
+		"mumbai",
+		"general_local",
+		"soda_ash",
+		"slaked_lime",
+		"wood_ash_lye",
+		"baking_soda",
+		"CPVC 200°F Cutoff",
+		"Cone 06",
+		"Cone 6",
+		"Cone 8",
+		"Cone 10",
+		"Cone 11",
 		"Download Complete Build Packet (.zip)",
 		"Step-by-Step Build Guide",
 		"Firing-Day How-To Checklist",
-		"COTS Parts &amp; Shopping List",
+		"COTS Parts & Shopping List",
 		"Save project.json",
 		"Load project.json",
-		"Cone 06",
-		"Cone 6",
-		"Cone 10",
-		"Cone 11",
-		"No-Weld COTS",
-		"Welded Sheet Metal",
-		`data-build-path="custom_fab_deluxe"`,
-		"Custom Fab Deluxe",
-		"TIG / FRP / Acoustic Skid",
-		`data-build-path="local_ceramic_masonry"`,
-		"Local Ceramic / Brick",
-		"Nairobi / Mumbai",
-		"seg-grid-2x2",
-		`id="in-zero-electricity"`,
-		"Zero Electricity On Site (No Motors / No Grid)",
-		`id="panel-local-ceramic-settings"`,
-		`id="in-local-region"`,
-		`value="nairobi"`,
-		`value="mumbai"`,
-		`value="general_local"`,
-		"Nairobi / East Africa (KES)",
-		"Mumbai / India (INR)",
-		"General Local Pottery",
-		`id="in-local-alkali"`,
-		`value="soda_ash"`,
-		`value="slaked_lime"`,
-		`value="wood_ash_lye"`,
-		`value="baking_soda"`,
-		"Magadi Soda Ash (Na₂CO₃)",
-		"Slaked Lime / Chuna (Ca(OH)₂)",
-		"Kiln Wood-Ash Lye (K₂CO₃ — Free)",
-		"Bulk Baking Soda (NaHCO₃)",
-		`id="btn-apply-deluxe-fab"`,
-		"Apply Custom Fab Deluxe",
-		`id="btn-apply-offgrid-ceramic"`,
-		"Apply Off-Grid Ceramic (Zero Electricity)",
-		`id="btn-apply-offgrid-steam"`,
-		"Off-Grid Steam-Jet (60 psig, 0W)",
-		`id="in-local-draft-mode"`,
-		`value="natural_chimney"`,
-		`value="steam_ejector_subsonic"`,
-		`value="steam_ejector_lp"`,
-		`value="steam_ejector_hp"`,
-		"Velocity / Draft Driver (0 W Options)",
-		"Natural Reheat Chimney (0 psig · 9.5m stack · ~30% NaCl)",
-		"Subsonic Quiet Steam-Jet (6 psig · ~340 m/s · ~52 dBA · ~55% NaCl · 0W)",
-		"LP Steam-Jet Ejector (20 psig · ~520 m/s · ~62% NaCl · 0W)",
-		"HP Steam-Drive Hydro-Sonic (60 psig Baby Boiler · ~750 m/s · ~80% NaCl · 0W)",
-		"Subsonic Quiet Steam-Jet",
-		"~52 dBA Quiet Subsonic",
-		"Drilled Brass Converging Orifice (No CNC Bell)",
-		"4.2 m Open Hydrostatic Water-Column Standpipe",
-		"CATERING STEAMER (6 psig)",
-		"S2 4.2m HYDROSTATIC STANDPIPE (6 psig MAX)",
-		"HYDROSTATIC STANDPIPE",
-		"BRASS ORIFICE (SUBSONIC)",
-		"local_draft_mode",
-		"steam_ejector_enabled",
-		"draft_mode",
-		"draft_mode_label",
-		"steam_enabled",
-		"steam_pressure_psig",
-		"steam_pressure_bar",
-		"steam_nozzle_vel_m_s",
-		"steam_nozzle_mach",
-		"steam_nozzle_throat_mm",
-		"steam_flow_kg_hr",
-		"steam_water_l_hr",
-		"steam_thermal_kw",
-		"kiln_waste_heat_kw",
-		"waste_heat_sufficient",
-		"ejector_draft_inwc",
-		"ejector_entrainment_ratio",
-		"condensation_growth_note",
-		"steam_source_type",
-		"steam_safety_requirements",
-		"evaluateFrugalFallback",
-		"buildLocalCeramicScene",
-		"Supersonic Steam-Jet Ejector",
-		"Certified Steam Hardware &amp; PRV Safety Mandate",
-		"S1 INSULATED STEAM",
-		"BOILER+PRV",
-		"STEAM EJECTOR",
-		`id="deluxe-spec-banner"`,
-		`id="deluxe-spec-grid"`,
-		`id="frugal-spec-banner"`,
-		`id="frugal-spec-grid"`,
-		`id="frugal-honest-strip"`,
-		`id="guide-frugal-panel"`,
-		`id="guide-frugal-body"`,
-		"zero_electricity",
-		"local_region",
-		"local_alkali",
-		"jerrycans_20l_per_hr",
-		"treadle_minutes_per_hr",
-		"submicron_honest_note",
-		"thermal_immunity_note",
-		"local_currency_estimate",
-		"0V / OFF-GRID — ZERO ELECTRICAL CIRCUITS",
-		"bp-brick-hatch",
-		`<span class="unit-literal">Ca(OH)₂</span>`,
-		`<span class="unit-literal">K₂CO₃</span>`,
-		`id="plan-overlay-toolbar"`,
-		`id="btn-plan-full-systems"`,
-		"Full Systems Mode: ON",
-		`id="btn-layer-electrical"`,
-		`data-plan-layer="electrical"`,
-		`id="btn-layer-plumbing"`,
-		`data-plan-layer="plumbing"`,
-		`id="btn-layer-bracing"`,
-		`data-plan-layer="bracing"`,
-		`id="btn-layer-clearances"`,
-		`data-plan-layer="clearances"`,
-		`id="btn-layer-acoustics"`,
-		`data-plan-layer="acoustics"`,
-		"Electrical &amp; Wiring",
-		"Pumps &amp; Hosing",
-		"Bracing &amp; Mounting",
-		"Clearances &amp; Codes",
+		"Advanced Engineering Parameters",
+		"Electrical & Wiring",
+		"Pumps & Hosing",
+		"Bracing & Mounting",
+		"Clearances & Codes",
 		"Sound Baffling",
-		`id="plan-schedules-panel"`,
-		`id="sched-tab-electrical"`,
-		`id="sched-tab-plumbing"`,
-		`id="sched-tab-bracing"`,
-		`id="sched-tab-acoustics"`,
-		`id="plan-elec-tbody"`,
-		`id="plan-pump-summary"`,
-		`id="plan-plumb-tbody"`,
-		`id="plan-bracing-tbody"`,
-		`id="plan-acoustic-summary"`,
-		`id="plan-acoustics-tbody"`,
-		`id="btn-systems-3d"`,
-		"Skid, Pump &amp; Baffling: OFF",
-		"addSystemsOverlay3D",
-		"setSystemsOverlay",
-		"formatCircuitVoltage",
-		"formatPumpVoltage",
-		"formatPlumbingFlow",
-		"nec_panel_depth_in",
-		"nec_panel_width_in",
-		"pump_service_in",
-		"cleanout_swing_in",
-		"hose_bend_radius_in",
-		"wiring_access_note",
-		"pump_station",
-		"acoustic_summary",
-		"deluxe_spec",
-		"include_plume_diluter",
-		"squirrel_cage_verdict",
-		"dilution_cfm_needed",
-		"dilution_reheat_kw",
-		"bare_plume_length_ft",
-		"diluted_plume_length_ft",
-		".sidebar > details.adv-drawer",
-		"flex-shrink: 0;",
-		"CPVC 210°F Cutoff",
-		`<span class="unit-literal">Na₂CO₃</span>`,
-		`<span class="unit-literal">NaCl</span>`,
-		`<span class="unit-literal">HCl</span>`,
-		`<span class="unit-literal">µm</span>`,
-		`<span class="unit-literal">d₅₀</span>`,
-		`<span class="unit-literal">pH</span>`,
-		`<span class="unit-literal">inWC</span>`,
-		`<span class="unit-literal">GPM</span>`,
-		"TubeGeometry",
-		"CurvePath",
-		"ExtrudeGeometry",
-		"computeVoluteProfiles",
-		"buildRectToRoundGeometry",
-		"buildImpellerGroup",
-		"addBoltedFlange",
+		"OrbitControls",
+		"WebGLRenderer",
 	}
 	for _, needle := range requiredMarkers {
-		if !strings.Contains(body, needle) {
-			t.Errorf("embedded index.html missing studio marker %q", needle)
+		if !strings.Contains(bundle, needle) {
+			t.Errorf("encapsulated Next.js bundle missing studio marker %q", needle)
 		}
 	}
 
-	// Verify 4-option local_draft_mode ordering: natural_chimney -> steam_ejector_subsonic -> steam_ejector_lp -> steam_ejector_hp.
-	idxNat := strings.Index(body, `<option value="natural_chimney">`)
-	idxSub := strings.Index(body, `<option value="steam_ejector_subsonic">`)
-	idxLP := strings.Index(body, `<option value="steam_ejector_lp">`)
-	idxHP := strings.Index(body, `<option value="steam_ejector_hp">`)
-	if !(idxNat >= 0 && idxSub > idxNat && idxLP > idxSub && idxHP > idxLP) {
-		t.Errorf("local_draft_mode options out of order: nat=%d sub=%d lp=%d hp=%d", idxNat, idxSub, idxLP, idxHP)
-	}
-
-	// Verify Top/Footprint Plan S1 STEAM label is nudged up 4px (boTopY - 8) for crisp clearance above BOILER+PRV.
-	if !strings.Contains(body, `y="${boTopY - 8}" text-anchor="middle" fill="#fde68a" font-family="monospace" font-size="7.2" font-weight="700">S1 STEAM</text>`) {
-		t.Errorf("expected Top/Footprint Plan S1 STEAM label nudged up to boTopY - 8")
-	}
-
-	// Verify removed terminology & nag strings do NOT appear anywhere in embedded HTML.
+	// 2. Verify deprecated terminology & external CDN Three.js links do NOT appear in embedded bundle.
 	forbiddenMarkers := []string{
 		"Hobby 316L",
-		"4-lb",
-		"4lb",
 		"Grocery 4-lb",
-		"Switching from Salt (NaCl) to Soda",
-		"Switching to Soda",
+		"unpkg.com/three",
+		"cdn.jsdelivr.net/npm/three",
 	}
 	for _, bad := range forbiddenMarkers {
-		if strings.Contains(body, bad) {
-			t.Errorf("embedded index.html must NOT contain deprecated string %q", bad)
+		if strings.Contains(bundle, bad) {
+			t.Errorf("encapsulated Next.js bundle must NOT contain deprecated/CDN string %q", bad)
 		}
 	}
 
-	// Verify Advanced Engineering drawer is collapsed by default (no `open` attribute).
-	if strings.Contains(body, `<details id="advanced-engineering-drawer" open`) ||
-		strings.Contains(body, `<details id="advanced-engineering-drawer" class="adv-drawer" open`) {
-		t.Errorf("advanced-engineering-drawer should be collapsed by default")
-	}
-
-	// 2. Verify every static el("...") and document.getElementById("...") references an existing id="..." in HTML.
-	idDefRe := regexp.MustCompile(`\bid="([a-zA-Z0-9_-]+)"`)
-	definedIDs := make(map[string]bool)
-	for _, m := range idDefRe.FindAllStringSubmatch(body, -1) {
-		definedIDs[m[1]] = true
-	}
-
-	scriptRe := regexp.MustCompile(`(?s)<script(?:\s+type="module")?>(.*?)</script>`)
-	scripts := scriptRe.FindAllStringSubmatch(body, -1)
-	if len(scripts) < 2 {
-		t.Fatalf("expected at least 2 inline <script> blocks, found %d", len(scripts))
-	}
-
-	refRe := regexp.MustCompile(`(?:document\.getElementById|\bel)\("([a-zA-Z0-9_-]+)"\)`)
-	for idx, match := range scripts {
-		jsCode := match[1]
-		for _, ref := range refRe.FindAllStringSubmatch(jsCode, -1) {
-			id := ref[1]
-			if !definedIDs[id] {
-				t.Errorf("script[%d] references missing DOM id %q", idx, id)
-			}
-		}
-	}
-
-	// 3. Syntax-check embedded scripts with `node --check` if node is available.
-	nodeBin, err := exec.LookPath("node")
-	if err != nil {
-		t.Log("node not found in PATH; skipping node --check syntax verification")
-		return
-	}
-
-	tmpDir := t.TempDir()
-	for idx, match := range scripts {
-		ext := ".js"
-		if strings.Contains(match[0], `type="module"`) {
-			ext = ".mjs"
-		}
-		scriptPath := filepath.Join(tmpDir, "embedded_"+string(rune('0'+idx))+ext)
-		if err := os.WriteFile(scriptPath, []byte(match[1]), 0o600); err != nil {
-			t.Fatalf("write temp script: %v", err)
-		}
-		cmd := exec.Command(nodeBin, "--check", scriptPath)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("node --check failed for script[%d]: %v\n%s", idx, err, string(out))
+	// 3. Verify unknown/directory/parent static paths never leak source files.
+	for _, badPath := range []string{"/server.go", "/_next/static/does-not-exist.js", "/_next/"} {
+		bRec := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(bRec, httptest.NewRequest(http.MethodGet, badPath, nil))
+		if bRec.Code != http.StatusNotFound {
+			t.Errorf("GET %s status = %d, want 404", badPath, bRec.Code)
 		}
 	}
 }

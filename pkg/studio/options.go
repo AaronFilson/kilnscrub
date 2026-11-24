@@ -946,7 +946,7 @@ func analyzeCompressor(project StudioProject, activeDesign, baseDesign model.Scr
 }
 
 func voltageForHP(project StudioProject, hp float64) int {
-	if hp <= 0.5 || (hp <= 1.0 && project.AvailableVoltage < 240) {
+	if hp <= 0.5 || (hp <= 1.0 && project.AvailableVoltage < 230) {
 		return 120
 	}
 	return 240
@@ -1031,7 +1031,7 @@ func analyzeBlowerDrive(
 		}
 		feasible := qCFM <= 285.0 && reqStatic <= 35.0
 		voltage := 120
-		if p.AvailableVoltage >= 240 {
+		if p.AvailableVoltage >= 230 {
 			voltage = 240
 		}
 		delta := round2(cost - baseFanCost)

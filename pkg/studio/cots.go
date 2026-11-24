@@ -560,7 +560,7 @@ func vfdSpecForHP(project StudioProject, hp float64) (voltageStr, vfdSKU string)
 	case hp <= 0.5:
 		return "120V 1-Ph Input VFD in NEMA 4X Enclosure", "GS21-10P5"
 	case hp <= 1.0:
-		if project.AvailableVoltage >= 240 {
+		if project.AvailableVoltage >= 230 {
 			return "240V 1-Ph Input -> 3-Ph Motor VFD in NEMA 4X Enclosure", "GS21-21P0"
 		}
 		return "120V 1-Ph Input (30A) VFD in NEMA 4X Enclosure", "GS21-11P0"
@@ -1195,11 +1195,21 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 		)
 	}
 
+	// NEC 430.102 lockable sight disconnect & 3% VFD line reactor.
+	// In Deluxe mode, DLX-UL508A-N4X-PANEL already includes the through-door NEC 430.102 disconnect,
+	// 3% input line reactor, and HF-GFCI breaker — do not bill a second duplicate disconnect/reactor.
+	// Non-VFD budget blower drives (dual bypass blowers, regen side-channel) only need a $65 NEMA 4X disconnect.
+	// Shop compressor eductor has no electric blower circuit on the scrubber skid.
+	includeDisconnect := !p.IsDeluxe() && p.BlowerDriveOption != BlowerDriveCompressorEductor
+	discName := "NEC 430.102 Lockable NEMA 4X Local Disconnect Switch & 3% VFD Input Line Reactor"
 	discSpec := "[NEC430-DISC-LR] Padlockable line-side disconnect within sight (<=50 ft) of VFD & blower + 3% input line reactor for NEC 210.8(F) HF-GFCI stability (Square D / AutomationDirect)"
 	discCost := 215.0
-	if p.IsDeluxe() {
-		discSpec = "[NEC430-DISC-LR] UL 508A through-door lockable NEC 430.102 disconnect handle + 3% copper-wound input line reactor + NEC 210.8(F) HF-GFCI breaker kit (Square D / AutomationDirect)"
-		discCost = 310.0
+	discWt := 4.8
+	if p.BlowerDriveOption == BlowerDriveDualBypassBlowers || p.BlowerDriveOption == BlowerDriveRegenSideChannel {
+		discName = "NEC 430.102 Lockable NEMA 4X Local Disconnect Switch (Non-VFD)"
+		discSpec = "[NEC430-DISC-N4X] Padlockable NEMA 4X line-side disconnect within sight (<=50 ft) of blower motor (no VFD line reactor required)"
+		discCost = 65.0
+		discWt = 2.1
 	}
 
 	items = append(items,
@@ -1213,16 +1223,20 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 			UnitCostUSD: 185.0,
 			WeightKg:    3.5,
 		},
-		model.BOMItem{
+	)
+	if includeDisconnect {
+		items = append(items, model.BOMItem{
 			Category:    "Safety & Instrumentation",
-			Name:        "NEC 430.102 Lockable NEMA 4X Local Disconnect Switch & 3% VFD Input Line Reactor",
+			Name:        discName,
 			Material:    "NEMA 4X Non-Fused Disconnect / Copper-Wound Line Reactor",
 			Quantity:    1,
 			Unit:        "assy",
 			Spec:        discSpec,
 			UnitCostUSD: discCost,
-			WeightKg:    4.8,
-		},
+			WeightKg:    discWt,
+		})
+	}
+	items = append(items,
 		model.BOMItem{
 			Category:    "Safety & Instrumentation",
 			Name:        sensorPart.Name,
@@ -1256,7 +1270,7 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 			fmt.Sprintf("Architecture: alignment=%s, packed_bed=%s (%.0f\" pipe), venturi=%s, blower_drive=%s, packing_media=%s, compact_u_turn=%v, shared_sump=%v, controls=%s.",
 				p.StageAlignment, p.PackedBedLayout, p.ParallelPipeSizeIn, p.VenturiLayout, p.BlowerDriveOption, p.PackingMediaOption, p.CompactFootprint, p.SharedBaffledSump, p.ControlTier),
 			fmt.Sprintf("Packed absorber snapped=%v -> %.1f\" equiv ID operating at %.1f%% of Eckert flooding velocity (design limit <= 75%%).", p.SnapToCOTS, actualColIDIn, actualPctFlood),
-			"NFPA 86 & ASTM F441: Stage 3 Sch 80 CPVC/FRP components MUST be protected by an independent hardwired 200 F manual-reset snap-disc + 24VDC de-energize-to-trip latching safety relay driving the spring-return fail-open hot-gas bypass damper (ahead of the 210 F / 0.25 GPM software backup).",
+			"NFPA 86 & ASTM F441: Stage 3 Sch 80 CPVC/FRP components MUST be protected by an independent hardwired 200 F manual-reset snap-disc + 24VDC de-energize-to-trip latching safety relay driving the spring-return fail-open hot-gas bypass damper (matched to the 200 F / 0.25 GPM software backup).",
 			"NEC 430.102 / 430.122 / 210.8(F) / 110.28: Size VFD branch circuit at >=125% VFD rated 1-phase input current, install lockable NEMA 4X sight disconnect (<=50 ft), house IP20 VFD in NEMA 4X enclosure, and use line-side HF-rated GFCI + input line reactor.",
 			"IPC 608 / 702.5 / 803.1 & NFPA 91: Isolate potable water via Air Gap (>=1\") or ASSE 1013 RPZ; cool drain/blowdown <=140 F and neutralize to pH 6.5-8.5 (>=5.0 per 40 CFR 403.5) before sanitary discharge; include NFPA 91 duct cleanouts/low-point drains and ASTM E84 Class 1 plastic ducting.",
 		},

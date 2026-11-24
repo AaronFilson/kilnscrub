@@ -176,8 +176,8 @@ func TestDefaultsAndValidation(t *testing.T) {
 	if err := limits.Validate(); err != nil {
 		t.Fatalf("DefaultSafetyLimits().Validate() failed: %v", err)
 	}
-	if !almostEqual(limits.MaxQuenchOutletTemp.Fahrenheit(), 210.0, 1e-9) {
-		t.Errorf("expected default MaxQuenchOutletTemp 210 F (372.04 K), got %.2f F (%.2f K)",
+	if !almostEqual(limits.MaxQuenchOutletTemp.Fahrenheit(), 200.0, 1e-9) {
+		t.Errorf("expected default MaxQuenchOutletTemp 200 F (366.48 K), got %.2f F (%.2f K)",
 			limits.MaxQuenchOutletTemp.Fahrenheit(), limits.MaxQuenchOutletTemp)
 	}
 	if TripHighQuenchTemp == "" || TripWaterLoss == "" || TripSensorFault == "" {

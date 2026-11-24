@@ -549,7 +549,6 @@ func TestRunGuideStdoutAndOutDirAndProject(t *testing.T) {
 			"--salting-hours", "2.5",
 			"--alignment", "eductor_dry_fan",
 			"--bed-layout", "parallel_manifold",
-			"--venturi-layout", "parallel_mini_venturis",
 			"--compact",
 			"--controls", "electromechanical_only",
 		}, &stdout, &stderr)
@@ -561,7 +560,6 @@ func TestRunGuideStdoutAndOutDirAndProject(t *testing.T) {
 			"Stage Options",
 			"alignment=eductor_dry_fan",
 			"bed=parallel_manifold",
-			"venturi=parallel_mini_venturis",
 			"compact=true",
 			"controls=electromechanical_only",
 			"Recirculation",
@@ -986,8 +984,8 @@ func TestRunPacketCreatesValid11FileZip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("packet failed: %v (stderr: %s)", err, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "11 files") {
-		t.Errorf("packet stdout missing '11 files': %q", stdout.String())
+	if !strings.Contains(stdout.String(), "12 files") {
+		t.Errorf("packet stdout missing '12 files': %q", stdout.String())
 	}
 
 	zipBytes, err := os.ReadFile(outZip)
@@ -1005,7 +1003,6 @@ func TestRunPacketCreatesValid11FileZip(t *testing.T) {
 			"--salting-hours", "2.5",
 			"--alignment", "eductor_dry_fan",
 			"--bed-layout", "parallel_manifold",
-			"--venturi-layout", "parallel_mini_venturis",
 			"--compact",
 			"--controls", "electromechanical_only",
 			"--out", optZip,
@@ -1026,7 +1023,6 @@ func TestRunPacketCreatesValid11FileZip(t *testing.T) {
 		if proj.SaltingHours != 2.5 ||
 			proj.StageAlignment != studio.StageAlignmentEductorDryFan ||
 			proj.PackedBedLayout != studio.PackedBedLayoutParallelManifold ||
-			proj.VenturiLayout != studio.VenturiLayoutParallelMiniVenturis ||
 			!proj.CompactFootprint ||
 			proj.ControlTier != studio.ControlTierElectromechanicalOnly {
 			t.Errorf("project.json did not preserve Phase 7 CLI flags: %+v", proj)
@@ -1593,45 +1589,63 @@ func assertValid11FilePacketZip(t *testing.T, zipBytes []byte) map[string][]byte
 	if err != nil {
 		t.Fatalf("invalid zip archive: %v", err)
 	}
-	expected := map[string]bool{
-		"scrubber.stl":            false,
-		"scrubber.dxf":            false,
-		"shop_plan.json":          false,
-		"bom_cots.csv":            false,
-		"bom_cots.md":             false,
-		"bom_engineered.csv":      false,
-		"BUILD_GUIDE.md":          false,
-		"OPERATIONS_CHECKLIST.md": false,
-		"project.json":            false,
-		"daemon.json":             false,
-		"README_PACKET.txt":       false,
-	}
-	if len(zr.File) != len(expected) {
-		t.Fatalf("zip contains %d files, want %d", len(zr.File), len(expected))
-	}
-	contents := make(map[string][]byte, len(expected))
+	contents := make(map[string][]byte, len(zr.File))
 	for _, f := range zr.File {
-		if _, ok := expected[f.Name]; !ok {
-			t.Errorf("unexpected zip entry %q", f.Name)
-			continue
-		}
 		rc, err := f.Open()
 		if err != nil {
-			t.Errorf("open zip entry %q: %v", f.Name, err)
-			continue
+			t.Fatalf("open zip entry %q: %v", f.Name, err)
 		}
 		data, err := io.ReadAll(rc)
 		rc.Close()
 		if err != nil || len(data) == 0 {
 			t.Errorf("zip entry %q empty or unreadable: len=%d err=%v", f.Name, len(data), err)
 		}
-		expected[f.Name] = true
 		contents[f.Name] = data
+	}
+
+	var proj studio.StudioProject
+	if rawProj, ok := contents["project.json"]; ok {
+		_ = json.Unmarshal(rawProj, &proj)
+	}
+	isLocal := proj.BuildPath == studio.BuildPathLocalCeramic
+	includeDaemon := !isLocal && proj.ControlTier != studio.ControlTierElectromechanicalOnly
+
+	expected := map[string]bool{
+		"shop_plan.svg":           false,
+		"shop_plan.json":          false,
+		"bom_cots.csv":            false,
+		"bom_cots.md":             false,
+		"BUILD_GUIDE.md":          false,
+		"OPERATIONS_CHECKLIST.md": false,
+		"project.json":            false,
+		"README_PACKET.txt":       false,
+	}
+	if !isLocal {
+		expected["scrubber.stl"] = false
+		expected["scrubber.dxf"] = false
+		expected["bom_engineered.csv"] = false
+	}
+	if includeDaemon {
+		expected["daemon.json"] = false
+	}
+
+	if len(contents) != len(expected) {
+		t.Fatalf("zip contains %d files, want %d (isLocal=%v includeDaemon=%v)", len(contents), len(expected), isLocal, includeDaemon)
+	}
+	for name := range contents {
+		if _, ok := expected[name]; !ok {
+			t.Errorf("unexpected zip entry %q", name)
+			continue
+		}
+		expected[name] = true
 	}
 	for name, seen := range expected {
 		if !seen {
 			t.Errorf("zip missing expected entry %q", name)
 		}
+	}
+	if !strings.Contains(string(contents["shop_plan.svg"]), "<svg") {
+		t.Errorf("shop_plan.svg missing <svg root element")
 	}
 	return contents
 }

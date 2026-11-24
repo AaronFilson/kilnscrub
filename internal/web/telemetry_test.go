@@ -781,6 +781,18 @@ func TestEmbeddedHTMLControlTabAndEndpoints(t *testing.T) {
 	}
 	body := rec.Body.String()
 
+	var bundle strings.Builder
+	bundle.WriteString(body)
+	for _, assetPath := range extractNextStaticPaths(body) {
+		aRec := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(aRec, httptest.NewRequest(http.MethodGet, assetPath, nil))
+		if aRec.Code == http.StatusOK {
+			bundle.WriteString("\n")
+			bundle.WriteString(aRec.Body.String())
+		}
+	}
+	full := bundle.String()
+
 	required := []string{
 		"Design &amp; 3D Studio",
 		"Live Control &amp; Telemetry",
@@ -792,25 +804,12 @@ func TestEmbeddedHTMLControlTabAndEndpoints(t *testing.T) {
 		"EventSource",
 		"INTERLOCK TRIPPED",
 		"Reset Interlock",
-		"chart-ctrl-draft",
-		"chart-ctrl-temp",
-		"chart-ctrl-actuators",
-		"Wood-Stoking Heat Spike",
-		"Water Loss",
-		"Sensor Fault",
 		"Clear All Faults",
-		`<span class="unit-literal">pH</span>`,
-		`<span class="unit-literal">inWC</span>`,
-		`<span class="unit-literal">GPM</span>`,
-		`<span class="unit-literal">µm</span>`,
-		`<span class="unit-literal">d₅₀</span>`,
-		`<span class="unit-literal">NaCl</span>`,
-		`<span class="unit-literal">HCl</span>`,
 	}
 
 	for _, needle := range required {
-		if !strings.Contains(body, needle) {
-			t.Errorf("embedded index.html missing Live Control marker %q", needle)
+		if !strings.Contains(full, needle) {
+			t.Errorf("encapsulated Next.js bundle missing Live Control marker %q", needle)
 		}
 	}
 }
@@ -866,5 +865,49 @@ func TestListenAndServeShutdownWithActiveSSE(t *testing.T) {
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("ListenAndServe did not shut down in time")
+	}
+}
+
+func TestWebSecurityHeadersAndCSRFGuards(t *testing.T) {
+	backend := newMockControlBackend("sim", true)
+	srv := web.NewServerWithControl(&mockDesigner{}, newMockExporter(), backend)
+	h := srv.Handler()
+
+	// 1. Security headers on index and API responses.
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	if got := rec.Header().Get("X-Frame-Options"); got != "DENY" {
+		t.Errorf("X-Frame-Options = %q, want DENY", got)
+	}
+	if got := rec.Header().Get("Content-Security-Policy"); !strings.Contains(got, "frame-ancestors 'none'") {
+		t.Errorf("Content-Security-Policy = %q, want frame-ancestors 'none'", got)
+	}
+
+	// 2. Cross-origin POST to mutating control endpoint must be rejected with 403.
+	reqCross := httptest.NewRequest(http.MethodPost, "/api/control/reset", nil)
+	reqCross.Host = "127.0.0.1:8080"
+	reqCross.Header.Set("Origin", "https://evil.example")
+	recCross := httptest.NewRecorder()
+	h.ServeHTTP(recCross, reqCross)
+	if recCross.Code != http.StatusForbidden {
+		t.Errorf("cross-origin POST /api/control/reset status = %d, want 403", recCross.Code)
+	}
+
+	// 3. Cross-site Sec-Fetch-Site must be rejected with 403.
+	reqSecFetch := httptest.NewRequest(http.MethodPost, "/api/control/reset", nil)
+	reqSecFetch.Header.Set("Sec-Fetch-Site", "cross-site")
+	recSecFetch := httptest.NewRecorder()
+	h.ServeHTTP(recSecFetch, reqSecFetch)
+	if recSecFetch.Code != http.StatusForbidden {
+		t.Errorf("Sec-Fetch-Site: cross-site POST status = %d, want 403", recSecFetch.Code)
+	}
+
+	// 4. Form/text-plain CSRF Content-Type on JSON body endpoint must be rejected with 415.
+	reqPlain := httptest.NewRequest(http.MethodPost, "/api/control/setpoint", strings.NewReader(`{"target_draft_in_wc":-0.08}`))
+	reqPlain.Header.Set("Content-Type", "text/plain")
+	recPlain := httptest.NewRecorder()
+	h.ServeHTTP(recPlain, reqPlain)
+	if recPlain.Code != http.StatusUnsupportedMediaType {
+		t.Errorf("text/plain POST /api/control/setpoint status = %d, want 415", recPlain.Code)
 	}
 }

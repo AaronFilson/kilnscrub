@@ -122,12 +122,20 @@ func verifyModbusCRC(frame []byte) bool {
 	return want == got
 }
 
+// modbusFlusher is an optional interface implemented by real serial transports to flush stale
+// RX bytes between Modbus RTU half-duplex frames (preventing frame desynchronization after timeouts).
+type modbusFlusher interface {
+	FlushInput() error
+}
+
 // ModbusRTUClient implements pure-Go Modbus RTU master framing over a ModbusTransport.
 // All bus transactions are serialized with a mutex to prevent byte interleaving on half-duplex RS-485.
 type ModbusRTUClient struct {
-	mu        sync.Mutex
-	transport ModbusTransport
-	timeout   time.Duration
+	mu              sync.Mutex
+	transport       ModbusTransport
+	timeout         time.Duration
+	interFrameDelay time.Duration
+	lastTxDone      time.Time
 }
 
 // NewModbusRTUClient creates a new RTU master over transport with a per-request timeout.
@@ -138,9 +146,16 @@ func NewModbusRTUClient(transport ModbusTransport, timeout time.Duration) (*Modb
 	if timeout <= 0 {
 		timeout = 500 * time.Millisecond
 	}
+	var ifd time.Duration
+	if _, isSerial := transport.(modbusFlusher); isSerial {
+		// Modbus Serial Line Spec V1.02 §2.5.1.1: >= 3.5 char silent interval (>= 1.75 ms at >= 19200 baud,
+		// ~4 ms at 9600 baud). Applied on physical serial ports only so mock unit tests stay instantaneous.
+		ifd = 4 * time.Millisecond
+	}
 	return &ModbusRTUClient{
-		transport: transport,
-		timeout:   timeout,
+		transport:       transport,
+		timeout:         timeout,
+		interFrameDelay: ifd,
 	}, nil
 }
 
@@ -302,12 +317,44 @@ func (c *ModbusRTUClient) roundTrip(ctx context.Context, slaveID, expectedFC uin
 		return nil, err
 	}
 
+	// Enforce Modbus RTU t3.5 silent interval on physical serial lines and discard any stale RX bytes.
+	if c.interFrameDelay > 0 && !c.lastTxDone.IsZero() {
+		if wait := c.interFrameDelay - time.Since(c.lastTxDone); wait > 0 {
+			timer := time.NewTimer(wait)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return nil, ctx.Err()
+			case <-timer.C:
+			}
+		}
+	}
+	if fl, ok := c.transport.(modbusFlusher); ok {
+		_ = fl.FlushInput()
+	}
+	defer func() {
+		c.lastTxDone = time.Now()
+	}()
+
 	deadline := time.Now().Add(c.timeout)
 	if ctxDeadline, ok := ctx.Deadline(); ok && ctxDeadline.Before(deadline) {
 		deadline = ctxDeadline
 	}
 	if err := c.transport.SetDeadline(deadline); err != nil {
 		return nil, fmt.Errorf("modbus: set deadline: %w", err)
+	}
+
+	// Interrupt blocked serial Read/Write immediately if ctx is canceled mid-transaction.
+	doneCh := make(chan struct{})
+	defer close(doneCh)
+	if ctx.Done() != nil {
+		go func() {
+			select {
+			case <-ctx.Done():
+				_ = c.transport.SetDeadline(time.Now())
+			case <-doneCh:
+			}
+		}()
 	}
 
 	if err := writeAll(c.transport, req); err != nil {
@@ -350,6 +397,14 @@ func (c *ModbusRTUClient) roundTrip(ctx context.Context, slaveID, expectedFC uin
 	var frame []byte
 	switch expectedFC {
 	case FuncReadHoldingRegisters, FuncReadInputRegisters:
+		// If a stray non-read frame arrived (e.g. a late 8-byte FC05/FC06 echo), reject before
+		// misinterpreting its address byte as a variable byte count.
+		if respFC != expectedFC {
+			if fl, ok := c.transport.(modbusFlusher); ok {
+				_ = fl.FlushInput()
+			}
+			return nil, fmt.Errorf("%w: got FC 0x%02X, want 0x%02X", ErrModbusFunctionMismatch, respFC, expectedFC)
+		}
 		// Read byte count byte first so we know exact remaining frame size.
 		bcBuf := make([]byte, 1)
 		if err := readExact(ctx, c.transport, bcBuf, deadline); err != nil {

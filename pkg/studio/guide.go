@@ -11,6 +11,9 @@ import (
 // recirculation plan, and exact kiln dimensions.
 func GenerateBuildGuide(eval StudioEvaluation) string {
 	p := eval.Project.Normalize()
+	if p.IsLocalCeramic() {
+		return generateLocalCeramicBuildGuide(eval)
+	}
 	d := eval.Design
 	c := eval.COTS
 	u := eval.Urban
@@ -214,6 +217,11 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 		fmt.Fprintf(&b, "1. Position the dual dedicated sumps (ash-settling sump + absorber neutralizing sump, ~%.0f gal combined fill) beneath Stage 1-2 and **%s**.\n",
 			r.SumpVolumeGal, c.PackedColumn.Name)
 	}
+	if !a.Eductor.Enabled {
+		sealDropIn := math.Max(26.0, math.Ceil(d.Blower.TotalStaticPressureInWC+6.0))
+		fmt.Fprintf(&b, "   - **MANDATORY Barometric Water-Seal Leg (Negative-Pressure ID Blower):** Route the Stage 3 gravity return pipe into the atmospheric vented sump through a submerged U-trap / barometric seal leg with at least **`%.0f\"` vertical drop** (exceeding the `%.1f inWC` blower suction + 6\" margin) so suction never pulls ambient air backward up the drain or holds liquid up in the column.\n",
+			sealDropIn, d.Blower.TotalStaticPressureInWC)
+	}
 	b.WriteString("2. **CPVC Solvent-Welding Best Practice:** Chamfer pipe edges, wipe clean, apply purple ASTM F656 primer liberally to both pipe and socket, apply heavy-bodied Schedule 80 CPVC cement, seat with a 1/4-turn twist, hold 30 seconds, and allow **24 hours full cure** before hot-water or firing service.\n")
 	if a.ParallelBed.Enabled {
 		fmt.Fprintf(&b, "3. **Shell-Less Uniseal %.0f\" Parallel Pipe Bundle (NO External Large Pipe):** Hole-saw **%d ports** in the top and bottom `1/2\"` HDPE/CPVC flat collector plates (`$95`), press in **%d rubber Uniseals** (`$5.50` each), slide in **%d bare risers** of `%.0f\"` %s (`ID %.3f\"`), seat packing support screens at the bottom of every pipe, fill each riser to **%.1f\" depth** with **%s** (`D/d_p = %.2f >= 7.5`), and mount the **balanced %d-port calibrated liquid spray manifold** (`$65`, `%.1f GPM` total) above the top plate.\n",
@@ -235,7 +243,14 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 	} else {
 		fmt.Fprintf(&b, "1. Mount the **%s** on rubber vibration-isolation pads downstream of the column demister (induced-draft suction keeps the entire scrubber under slight negative pressure so fumes cannot leak out). Include **NFPA 91** cleanout/access hatches and low-point condensate drains on horizontal wet ducts, and use **ASTM E84 Class 1 (FSI <= 25 / SDI <= 50)** CPVC/FRP ductwork.\n", c.BlowerVFD.Name)
 	}
-	fmt.Fprintf(&b, "2. **NEC Electrical Hookup:** Wire the VFD in fixed conduit (**NEC 400.12**) to a **%s** (`%.1f A` min ampacity per **NEC 430.122(A)**) via a **lockable NEMA 4X sight disconnect (`<= 50 ft`, NEC 430.102)**, **line-side HF-rated GFCI breaker (`NEC 210.8(F)`)**, **3%% input line reactor**, and shielded VFD motor cable. %s\n", u.Electrical.CircuitLabel, u.Electrical.RequiredAmps, u.Electrical.Summary)
+	usesVFD := p.BlowerDriveOption == BlowerDriveIndustrialRadialVFD || p.BlowerDriveOption == BlowerDriveCompressorAirAtomize
+	if p.BlowerDriveOption == BlowerDriveCompressorEductor {
+		fmt.Fprintf(&b, "2. **Electrical Hookup (No Electric Blower):** Wire the recirculation pump and 24 VDC safety loop to a **%s** (`%.1f A` min ampacity) via a **GFCI breaker (`NEC 210.8(F)`)**. %s\n", u.Electrical.CircuitLabel, u.Electrical.RequiredAmps, u.Electrical.Summary)
+	} else if !usesVFD {
+		fmt.Fprintf(&b, "2. **NEC Electrical Hookup (Non-VFD Drive):** Wire the blower motor in fixed conduit (**NEC 400.12**) to a **%s** (`%.1f A` min ampacity) via a **lockable NEMA 4X sight disconnect (`<= 50 ft`, NEC 430.102)** and **GFCI breaker (`NEC 210.8(F)`)**. %s\n", u.Electrical.CircuitLabel, u.Electrical.RequiredAmps, u.Electrical.Summary)
+	} else {
+		fmt.Fprintf(&b, "2. **NEC Electrical Hookup:** Wire the VFD in fixed conduit (**NEC 400.12**) to a **%s** (`%.1f A` min ampacity per **NEC 430.122(A)**) via a **lockable NEMA 4X sight disconnect (`<= 50 ft`, NEC 430.102)**, **line-side HF-rated GFCI breaker (`NEC 210.8(F)`)**, **3%% input line reactor**, and shielded VFD motor cable. %s\n", u.Electrical.CircuitLabel, u.Electrical.RequiredAmps, u.Electrical.Summary)
+	}
 	if c.Silencer != nil {
 		fmt.Fprintf(&b, "3. Install the **%s** and enclose the blower housing with foil-faced Rockwool panels (leaving motor cooling vents unobstructed) — predicted property-line sound: **%.1f dBA at %.0f ft**.\n",
 			c.Silencer.Name, u.Noise.PropertyLineDBA, u.Noise.PropertyLineFt)
@@ -262,16 +277,20 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 	b.WriteString("### Step 5 — NFPA 86 Independent Hardwired Safety Loop & Fail-Safe Bypass Damper\n")
 	b.WriteString("1. **NEVER skip this step (NFPA 86 / ASTM F441):** Stage 3 Sch 80 CPVC/PP components are rated to `200 F` max continuous. Install the **spring-return fail-open hot-gas bypass damper** on a refractory/316L tee between the kiln flue and an **NFPA 211 high-heat auxiliary bypass chimney** (`>= 36\"` clearance to combustibles).\n")
 	if p.ControlTier == ControlTierElectromechanicalOnly {
-		b.WriteString("2. **Electromechanical Safety & Manual Control Panel (`electromechanical_only`):** Zero software required — wire the 24 VDC spring-return actuator and VFD Run-Enable/STO directly through the **latching manual-reset safety relay** driven by:\n")
+		b.WriteString("2. **Electromechanical Safety & Manual Control Panel (`electromechanical_only`):** Zero software required — wire the 24 VDC spring-return actuator and blower Run-Enable/contactor directly through the **latching manual-reset safety relay** driven by:\n")
 		b.WriteString("   - **Hardwired thermal limit:** Independent `200 F (93.3 C)` manual-reset bimetallic snap-disc thermostat on the quench outlet transition\n")
 		b.WriteString("   - **Low-flow switch:** Mechanical paddle quench spray flow switch (`< 0.25 GPM`)\n")
-		b.WriteString("   - **E-Stop & Manual Draft Dial:** NEMA 4X twist-to-release E-Stop (NC) + analog Dwyer Magnehelic draft gauge + manual VFD frequency knob\n")
+		if usesVFD {
+			b.WriteString("   - **E-Stop & Manual Draft Dial:** NEMA 4X twist-to-release E-Stop (NC) + analog Dwyer Magnehelic draft gauge + manual VFD frequency knob\n")
+		} else {
+			b.WriteString("   - **E-Stop & Manual Blast Gate:** NEMA 4X twist-to-release E-Stop (NC) + analog Dwyer Magnehelic draft gauge + manual intake/bleed damper\n")
+		}
 	} else {
 		b.WriteString("2. **Independent Hardwired 24 VDC Safety Loop (De-Energize to Trip — Overrides Software/Pi):** Wire the 24 VDC spring-return actuator and VFD Run-Enable/STO through a **latching manual-reset safety relay** driven by normally-closed hardwired field switches:\n")
-		b.WriteString("   - **Primary hardwired thermal limit:** Independent `200 F (93.3 C)` manual-reset bimetallic snap-disc thermostat on the quench outlet transition (ahead of the `210 F / 98.9 C` software RTD backup limit)\n")
+		b.WriteString("   - **Primary hardwired thermal limit:** Independent `200 F (93.3 C)` manual-reset bimetallic snap-disc thermostat on the quench outlet transition (aligned with the `200 F / 93.3 C` software RTD cutoff)\n")
 		b.WriteString("   - **Low-flow switch:** Mechanical paddle quench spray flow switch (`< 0.25 GPM`)\n")
-		b.WriteString("   - **E-Stop & Exhaust Proving (NFPA 86):** NEMA 4X twist-to-release E-Stop (NC) + optional VFD running/airflow proving interlock for gas-fired kilns\n")
-		b.WriteString("   - **Power loss or Modbus software trip (`210 F` / `> 5 s` fault):** Enable `bypass_coil_deenergize_to_trip: true` on fail-safe PLC/relay coils so any power loss, RS-485 disconnect, or OS freeze releases the spring-return damper **OPEN**\n")
+		b.WriteString("   - **E-Stop & Exhaust Proving (NFPA 86):** NEMA 4X twist-to-release E-Stop (NC) + optional blower running/airflow proving interlock for gas-fired kilns\n")
+		b.WriteString("   - **Power loss or Modbus software trip (`200 F` / `> 5 s` fault):** Keep `bypass_coil_deenergize_to_trip: true` (default) on fail-safe PLC/relay coils so any power loss, RS-485 disconnect, or OS freeze releases the spring-return damper **OPEN**\n")
 	}
 	b.WriteString("3. **Gravity Backup Tip:** A small 5-gallon elevated emergency water tank with a normally-open solenoid provides 3–5 minutes of gravity quench spray while the bypass damper swings open during a power outage.\n\n")
 
@@ -293,11 +312,19 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 	}
 	fmt.Fprintf(&b, "- [ ] **Nozzle Pattern Verification:** Inspect quench (`%.2f GPM`) and venturi (`%.2f GPM`) sprays through inspection port — confirm uniform fine cone coverage with no plugged orifices.\n",
 		d.Quench.TotalSprayWaterGPM, d.Venturi.LiquidFlowGPM)
-	b.WriteString("- [ ] **Blower Rotation & VFD Ramp:** Confirm NEC 430.102 lockable sight disconnect operates cleanly; jog VFD at 15 Hz to verify correct wheel rotation direction; ramp smoothly to 60 Hz and confirm vibration-free operation.\n")
+	if usesVFD {
+		b.WriteString("- [ ] **Blower Rotation & VFD Ramp:** Confirm NEC 430.102 lockable sight disconnect operates cleanly; jog VFD at 15 Hz to verify correct wheel rotation direction; ramp smoothly to 60 Hz and confirm vibration-free operation.\n")
+	} else if p.BlowerDriveOption != BlowerDriveCompressorEductor {
+		b.WriteString("- [ ] **Blower Rotation & Damper Trim:** Confirm NEC 430.102 lockable sight disconnect operates cleanly; start blower with bleed/trim damper partially open and verify smooth, vibration-free airflow.\n")
+	}
 	fmt.Fprintf(&b, "- [ ] **Draft Sensor Zero & Calibration:** With blower OFF, zero the `+/-2 inWC` draft gauge/transmitter; start blower and confirm smooth tracking at `%.2f inWC` gentle kiln suction.\n",
 		d.Input.TargetKilnDraftInWC)
 	b.WriteString("- [ ] **Fail-Safe Bypass Trip Drill (Water Loss):** Close the quench water valve until flow drops below `0.25 GPM` — confirm hardwired safety relay latches and spring-return bypass damper snaps **OPEN** within 3 seconds.\n")
-	b.WriteString("- [ ] **Fail-Safe Bypass Trip Drill (200 F Hardwired Limit / 210 F Software / Power Loss):** Pull 24 VDC control power (and test the `200 F` hardwired snap-disc & `210 F` software trip) — confirm bypass damper springs **OPEN** immediately and VFD stops via hardwired STO/Run-Enable.\n")
+	if p.ControlTier == ControlTierElectromechanicalOnly {
+		b.WriteString("- [ ] **Fail-Safe Bypass Trip Drill (200 F Hardwired Limit / Power Loss):** Pull 24 VDC control power and test the `200 F` hardwired snap-disc — confirm bypass damper springs **OPEN** immediately and blower contactor drops out.\n")
+	} else {
+		b.WriteString("- [ ] **Fail-Safe Bypass Trip Drill (200 F Hardwired + Software Limit / Power Loss):** Pull 24 VDC control power (and test both the `200 F` hardwired snap-disc and `200 F` software trip) — confirm bypass damper springs **OPEN** immediately and VFD stops via hardwired STO/Run-Enable.\n")
+	}
 	fmt.Fprintf(&b, "- [ ] **Water Supply Check:** Verify potable supply (through Air Gap / ASSE 1013 RPZ) delivers at least `%.2f GPM` continuously.\n",
 		math.Max(0.5, d.Quench.TotalSprayWaterGPM))
 
@@ -338,93 +365,159 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 		b.WriteString("- **Segregation & NEC 110.26 Sign-Off:** Route shielded VFD motor cable in dedicated LFMC **`>= 12\"`** away from `24VDC` NFPA 86 safety loop & RS-485 instrumentation conduit, and verify unobstructed **`36\"` depth × `30\"` width × `78\"` height** electrical working clearance (**NEC 110.26(A)**) plus **`24\"`** pump & cleanout door service swing.\n")
 	}
 
-	if p.IsLocalCeramic() {
-		fr := eval.Frugal
-		if fr == nil {
-			fr = EvaluateFrugal(p, d)
-		}
-		b.WriteString("\n## 7. Local Ceramic & Zero-Electricity Build + Manual Firing Guide\n\n")
-		fmt.Fprintf(&b, "> **Region:** %s | **Draft Mode:** `%s` (%s) | **Zero Electricity:** `%v` (`%.0f W`) | **Est. Local Cost:** %s | **Alkali:** %s (`%s`)\n\n",
-			fr.RegionLabel, fr.DraftMode, fr.DraftModeLabel, fr.ZeroElectricity, fr.PowerWatts, fr.LocalCurrencyEstimate, fr.AlkaliName, fr.AlkaliFormula)
-		fmt.Fprintf(&b, "%s\n\n", fr.Summary)
+	return b.String()
+}
 
-		b.WriteString("### 7.1 Firing Your Own Stoneware Raschig Rings & Terracotta Mist Baffles\n")
-		fmt.Fprintf(&b, "- **Packing Spec:** %s.\n", fr.PackingMaterial)
-		b.WriteString("- **Extrusion & Firing:** Wedge coarse grogged stoneware clay (15–20% sand/grog for thermal-shock immunity), extrude `1\" OD × 3/4\" ID` hollow tubes, slice to `1\"` lengths, dry slowly, and fire unglazed to **Cone 6–10** tucked into unused corners of normal studio firings.\n")
-		b.WriteString("- **Heavy Ceramic Support Arch:** Stoneware rings weigh `~46 lb/cu.ft.` (`~21 kg/cu.ft.`) — lay an open **firebrick arch grate** (or heavy stoneware kiln shelves with `1/2\"` gas slots) at the bottom of the wide masonry tower so the bed never sags.\n")
-		b.WriteString("- **Terracotta Chevron Baffles:** Slab-roll `3/8\"` unglazed terracotta strips and set 3 alternating 45° chevron tiers above the spray rose to knock down mist droplets at `<= 0.020 inWC` pressure drop.\n\n")
+func generateLocalCeramicBuildGuide(eval StudioEvaluation) string {
+	p := eval.Project.Normalize()
+	d := eval.Design
+	c := eval.COTS
+	u := eval.Urban
+	fr := eval.Frugal
+	if fr == nil {
+		fr = EvaluateFrugal(p, d)
+	}
 
+	var b strings.Builder
+	fmt.Fprintf(&b, "# Local Ceramic & Off-Grid Build Guide — %s\n\n", p.StudioName)
+	fmt.Fprintf(&b, "> **Kiln Profile:** %.1f cu.ft. | **Firing:** %s (%.0f F peak, %.0f hrs; %.1f hr salting) | **Glaze Mode:** `%s` | **Build Path:** `%s`\n",
+		d.Input.KilnVolumeCuFt, p.FiringCone, d.Input.PeakExitTempF, p.FiringDurationHours, p.EffectiveSaltingHours(),
+		p.VaporGlazeMode, p.BuildPath)
+	fmt.Fprintf(&b, "> **Region:** %s | **Draft Mode:** `%s` (%s) | **Zero Electricity:** `%v` (`%.0f W`) | **Est. Local Cost:** %s | **Alkali:** %s (`%s`)\n\n",
+		fr.RegionLabel, fr.DraftMode, fr.DraftModeLabel, fr.ZeroElectricity, fr.PowerWatts, fr.LocalCurrencyEstimate, fr.AlkaliName, fr.AlkaliFormula)
+
+	b.WriteString("## 1. Key Masonry & Gravity Dimensions at a Glance\n\n")
+	b.WriteString("| Stage / Component | Studio Size (Imperial) | Engineering Size (Metric) | Notes |\n")
+	b.WriteString("|---|---|---|---|\n")
+	fmt.Fprintf(&b, "| Inlet Refractory Flue | %.1f\" masonry flue | %.0f mm | NFPA 211 >= 36\" clearance to combustibles |\n",
+		math.Max(10.0, d.Envelope.DuctDiameter.Inches()+2.0), math.Max(10.0, d.Envelope.DuctDiameter.Inches()+2.0)*25.4)
+	fmt.Fprintf(&b, "| Stage 1: Masonry Quench Chamber | %.1f\" bore | %.0f mm | All-ceramic firebrick (>1,800 F dry-run immune) |\n",
+		c.QuenchVessel.NominalIn, c.QuenchVessel.NominalIn*25.4)
+	fmt.Fprintf(&b, "| Stage 2: Terracotta Baffles & Gravity Rose | %.2f GPM @ %.2f PSI | %.2f L/min | Gravity-fed from 3.5 m overhead tank |\n",
+		fr.SprayFlowGPM, fr.GravityHeadPSI, fr.SprayFlowLPM)
+	fmt.Fprintf(&b, "| Stage 3: Wide Stoneware Packed Tower | %.1f\" bore | %.0f mm | v_s=%.2f m/s, %.3f inWC Ergun dP, %.1f%% HCl |\n",
+		fr.BedDiameterIn, fr.BedDiameterIn*25.4, fr.BedSuperficialVelMS, fr.BedDPInWC, fr.HClRemovalPct)
+	fmt.Fprintf(&b, "| Overhead Gravity Tank | %.0f gal @ %.1f ft | %.0f L @ 3.5 m | Diagonally X-braced stand (~%.0f kg wet load) |\n",
+		fr.GravityTankGal, fr.TankElevationFt, fr.GravityTankLiters, fr.GravityTankLiters*1.05+22.0)
+	fmt.Fprintf(&b, "| Stage 4: Exhaust Stack / Draft | %.1f ft chimney | %.1f m | Avail %.3f inWC vs %.3f inWC req (feasible=%v) |\n\n",
+		fr.ChimneyHeightFt, fr.ChimneyHeightM, fr.AvailableDraftInWC, fr.RequiredDraftInWC, fr.DraftFeasible)
+
+	b.WriteString("## 2. Tools & Local Workshop Preparation\n\n")
+	b.WriteString("**Build Path: Local Ceramic & Masonry (`local_ceramic_masonry`)** — designed for Nairobi, Mumbai, and local pottery studios using fired firebrick, IS 651 salt-glazed stoneware (SWG) pipes, potter-extruded stoneware Raschig rings, terracotta baffles, an elevated HDPE gravity tank, and manual treadle/hand pumping (or a local 0.5 HP 230V 50Hz domestic pump):\n\n")
+	b.WriteString("- Masonry trowel, spirit level, plumb bob, mortar mixing tub, and firebrick / lime-sand refractory mortar\n")
+	b.WriteString("- Studio clay extruder (or hollow wooden dowel) + wire cutter to produce `1\"` unglazed grogged stoneware Raschig rings fired in your own kiln to Cone 6–10\n")
+	b.WriteString("- Hand saw, drill, wrenches, and M12 through-bolts for the **diagonally X-braced `3.5 m (11.5 ft)` overhead gravity tank stand** (`200–500 kg` water load!)\n")
+	b.WriteString("- Basic plumbing cutters & PVC/HDPE pipe fittings for the gravity downcomer, brass/PVC spray rose, foot valve, and drain valve\n")
+	b.WriteString("- `$10` brine hydrometer (`SG 1.000–1.200`), litmus pH test strips (`pH 1–14`), and mechanical bimetallic stem thermometer\n\n")
+
+	b.WriteString("## 3. Materials, Corrosion Immunity & Local Chemistry\n\n")
+	fmt.Fprintf(&b, "- **All-Ceramic Material Immunity:** %s\n", u.Corrosion.MaterialSummary)
+	fmt.Fprintf(&b, "- **Local Alkali Chemistry:** %s\n", u.Corrosion.SodaComparison)
+	fmt.Fprintf(&b, "- **Inspection Schedule:** %s\n\n", u.Corrosion.InspectionInterval)
+
+	b.WriteString("## 4. Step-by-Step Masonry & Gravity Assembly\n\n")
+	fmt.Fprintf(&b, "1. **NFPA 211 Flue Clearances & Masonry Quench Chamber:** Lay the firebrick flue and quench chamber on a compacted masonry slab with **>= 36\" clearance to unprotected combustibles** (NFPA 211) and an **NFPA 91** brick ash cleanout arch. Seal hot brick joints strictly with `>= 2300 F` fireclay/refractory mortar.\n")
+	fmt.Fprintf(&b, "2. **Wide Stoneware Packed Tower (%.0f\" bore):** Construct the wide masonry or IS 651 SWG tower with an open firebrick support arch, fill with `1\"` kiln-fired unglazed stoneware Raschig rings, and set 3 alternating 45° terracotta chevron mist baffles above the gravity spray rose.\n", fr.BedDiameterIn)
+	fmt.Fprintf(&b, "3. **Plastered Brick Baffled Sump & Elevated 3.5 m Gravity Tank:** Plaster the 208 L brick settling sump with a central ash-weir baffle; erect the diagonally X-braced `3.5 m` stand for the `%.0f L` overhead HDPE tank and plumb the `1\"` gravity downcomer (`%.2f L/min` @ `%.2f PSI`) with a manual brass ball valve.\n", fr.GravityTankLiters, fr.SprayFlowLPM, fr.GravityHeadPSI)
+	fmt.Fprintf(&b, "4. **Outdoor Exhaust Stack & Setbacks:** Terminate the outdoor masonry/SWG chimney at least **%.1f m (%.1f ft)** above grade, guy-wired/wall-tied every `3 m`, keeping hazardous salt-firing HCl exhaust strictly outdoors (`>= 30 ft` from property lines, `>= 10 ft` from operable windows).\n\n", fr.ChimneyHeightM, fr.ChimneyHeightFt)
+
+	b.WriteString("## 5. Cold-Water Commissioning & Smoke Check\n\n")
+	b.WriteString("- [ ] **Masonry Smoke & Leak Test:** Burn damp cardboard/newspaper in the cold kiln firebox and verify zero smoke leaks at brick joints before first firing.\n")
+	b.WriteString("- [ ] **Overhead Stand Stability Check:** Fill the `3.5 m` overhead gravity tank to capacity and verify zero rack/sway on all 4 diagonally X-braced legs.\n")
+	fmt.Fprintf(&b, "- [ ] **Gravity Spray Rose Flow Check:** Open the downcomer valve and verify uniform `%.2f L/min` (`%.2f GPM`) gravity rain over the quench baffles and stoneware rings.\n", fr.SprayFlowLPM, fr.SprayFlowGPM)
+	if !fr.ZeroElectricity {
+		b.WriteString("- [ ] **Local 230V 50Hz Pump & RCD Check:** Verify the local domestic monoblock pump circuit is protected by a `30 mA` RCD/ELCB and confirm clean closed-loop tank refill.\n")
+	}
+	b.WriteString("\n## 7. Local Ceramic & Zero-Electricity Build + Manual Firing Guide\n\n")
+	fmt.Fprintf(&b, "%s\n\n", fr.Summary)
+
+	b.WriteString("### 7.1 Firing Your Own Stoneware Raschig Rings & Terracotta Mist Baffles\n")
+	fmt.Fprintf(&b, "- **Packing Spec:** %s.\n", fr.PackingMaterial)
+	b.WriteString("- **Extrusion & Firing:** Wedge coarse grogged stoneware clay (15–20% sand/grog for thermal-shock immunity), extrude `1\" OD × 3/4\" ID` hollow tubes, slice to `1\"` lengths, dry slowly, and fire unglazed to **Cone 6–10** tucked into unused corners of normal studio firings.\n")
+	b.WriteString("- **Heavy Ceramic Support Arch:** Stoneware rings weigh `~46 lb/cu.ft.` (`~21 kg/cu.ft.`) — lay an open **firebrick arch grate** (or heavy stoneware kiln shelves with `1/2\"` gas slots) at the bottom of the wide masonry tower so the bed never sags.\n")
+	b.WriteString("- **Terracotta Chevron Baffles:** Slab-roll `3/8\"` unglazed terracotta strips and set 3 alternating 45° chevron tiers above the spray rose to knock down mist droplets at `<= 0.020 inWC` pressure drop.\n\n")
+
+	if fr.SteamEnabled {
+		b.WriteString("### 7.2 Masonry Mortar Sealing, Steam-Jet Chimney Sizing & Zero-Meltdown Immunity\n")
+		fmt.Fprintf(&b, "- **Thermal Immunity:** %s\n", fr.ThermalImmunityNote)
+		fmt.Fprintf(&b, "- **Direct Refractory Flue & Compact Steam-Driven Stack:** Because the certified `%.0f psig` steam-jet ejector provides `%.3f inWC` motive draft (total available `%.3f inWC` vs `%.3f inWC` required, margin `%+.3f inWC`, feasible=`%v`), NO tall concentric brick reheat recuperator is required — point every masonry joint tightly with refractory clay/lime-sand mortar and smoke-test cold before firing.\n\n",
+			fr.SteamPressurePSIG, fr.EjectorDraftInWC, fr.AvailableDraftInWC, fr.RequiredDraftInWC, fr.DraftMarginInWC, fr.DraftFeasible)
+	} else if !fr.ZeroElectricity {
+		b.WriteString("### 7.2 Masonry Mortar Sealing, Hybrid Draft & Zero-Meltdown Immunity\n")
+		fmt.Fprintf(&b, "- **Thermal Immunity:** %s\n", fr.ThermalImmunityNote)
+		fmt.Fprintf(&b, "- **Direct Refractory Flue & Local Low-dP Fan:** Local hybrid draft provides `%.3f inWC` available draft vs `%.3f inWC` required (margin `%+.3f inWC`, feasible=`%v`) without requiring a tall concentric thermal-reheat chimney; point every masonry joint tightly and smoke-test cold before firing.\n\n",
+			fr.AvailableDraftInWC, fr.RequiredDraftInWC, fr.DraftMarginInWC, fr.DraftFeasible)
+	} else {
 		b.WriteString("### 7.2 Masonry Mortar Sealing, Concentric Flue Reheat & Zero-Meltdown Immunity\n")
 		fmt.Fprintf(&b, "- **Thermal Immunity:** %s\n", fr.ThermalImmunityNote)
 		fmt.Fprintf(&b, "- **Concentric Brick Flue-Wall Recuperator:** Build a gas-tight `65 mm` split-firebrick partition wall between the `%.0f F` kiln exit flue and the clean chimney riser so waste heat warms scrubbed gas back to **`%.0f F`** (`%.3f inWC` available draft vs `%.3f inWC` required, margin `%+.3f inWC`, feasible=`%v`). Point every masonry joint tightly with refractory clay/lime-sand mortar and smoke-test cold before first firing so raw flue gas never short-circuits past the packed bed.\n\n",
 			d.Input.PeakExitTempF, fr.StackReheatTempF, fr.AvailableDraftInWC, fr.RequiredDraftInWC, fr.DraftMarginInWC, fr.DraftFeasible)
-
-		b.WriteString("### 7.3 Elevated Overhead Gravity Tank Stand Bracing (200–500 kg Load)\n")
-		fmt.Fprintf(&b, "- Mount the **`%.0f L` (`%.0f gal`)** overhead HDPE gravity tank at **`%.1f ft` (`3.5 m`)** elevation (`%.2f PSI` static gravity head, `%.2f L/min` / `%.2f GPM` downcomer flow).\n",
-			fr.GravityTankLiters, fr.GravityTankGal, fr.TankElevationFt, fr.GravityHeadPSI, fr.SprayFlowLPM, fr.SprayFlowGPM)
-		fmt.Fprintf(&b, "- **CRITICAL STRUCTURAL BRACING:** Full of water, the tank weighs **`~%.0f kg` (`%.0f lbs`)** — build a 4-post treated hardwood or mild-steel stand on concrete pier footings with **full diagonal X-bracing on all 4 sides** and M12 through-bolts. Never stack loose dry bricks under an overhead water tank!\n\n",
-			fr.GravityTankLiters*1.05+22.0, (fr.GravityTankLiters*1.05+22.0)/0.45359237)
-
-		b.WriteString("### 7.4 Chimney Pre-Warming, Manual Pumping Cadence & Local Alkali Dosing\n")
-		fmt.Fprintf(&b, "- **Draft & Pumping Mechanism:** %s | **Pump:** %s\n", fr.DraftMechanism, fr.ManualPumpType)
-		if fr.ZeroElectricity {
-			fmt.Fprintf(&b, "- **Manual Pumping Budget:** Closed-loop recirculation at `%.2f L/min` requires **`%.1f minutes/hour`** on a treadle or cast-iron semi-rotary hand pump (or **`%d × 20L jerrycans/hour`**) during the active salting window.\n",
-				fr.SprayFlowLPM, fr.TreadleMinutesPerHr, fr.Jerrycans20LPerHr)
-		} else {
-			fmt.Fprintf(&b, "- **Local Hybrid Power (`%.0f W`):** Local `0.5 HP` 230V 50Hz domestic monoblock pump + low-dP fan automate recirculation and draft; if grid power cuts out mid-firing, the elevated `%.0f L` gravity tank and all-ceramic body continue safely.\n",
-				fr.PowerWatts, fr.GravityTankLiters)
-		}
-		fmt.Fprintf(&b, "- **Local Alkali (`%s` / `%s`):** %s\n", fr.AlkaliName, fr.AlkaliFormula, fr.AlkaliLocalNote)
-		if fr.ScalingWarning != "" {
-			fmt.Fprintf(&b, "  - *Alkali Caution:* %s\n", fr.ScalingWarning)
-		}
-		fmt.Fprintf(&b, "- **Honest Capture Performance:** HCl acid gas **`%.1f%%`** | Coarse wood fly ash **`%.1f%%`** | Submicron NaCl fume **`%.0f%%`**. %s\n",
-			fr.HClRemovalPct, fr.CoarseAshCapturePct, fr.SubmicronNaClCapturePct, fr.SubmicronHonestNote)
-		b.WriteString("- **Manual Firing-Day Sequence:**\n")
-		for _, step := range fr.ManualSteps {
-			fmt.Fprintf(&b, "  - %s\n", step)
-		}
-		b.WriteString("\n### 7.5 Critical Safety Warnings (NO DIY Pressurized Steam Boilers!)\n")
-		for _, w := range fr.Warnings {
-			fmt.Fprintf(&b, "- **SAFETY WARNING:** %s\n", w)
-		}
-
-		if fr.SteamEnabled {
-			b.WriteString("\n### 7.6 Zero-Electricity Steam-Jet Ejector Startup, PRV Check & Condensation Scrubbing\n\n")
-			if fr.DraftMode == LocalDraftSteamEjectorSubsonic {
-				fmt.Fprintf(&b, "- **Certified Low-Pressure Steam Source (`6 psig` / `%.3f barg`):** %s\n", fr.SteamPressureBar, fr.SteamSourceType)
-				fmt.Fprintf(&b, "- **Simple Drilled Brass Converging Orifice (Unchoked Subsonic `Mach < 1.0`, Zero Shock Screech):** Hand-drilled **`%.2f mm`** brass pipe-cap orifice (NO CNC de Laval bell needed!), exit jet **`%.1f m/s` (`Mach %.2f < 1.0`, `~52 dBA @ 3 ft` via Lighthill `v^8` reduction)**, motive steam **`%.1f kg/hr` (`%.1f L/hr` feedwater)**, entrainment **`%.1f:1`**, ejector draft **`%.3f inWC`** -> shrinks chimney from `8.5–9.5 m` down to **`%.1f m` (`%.1f ft`)** with zero electric blower!\n",
-					fr.SteamNozzleThroatMM, fr.SteamNozzleVelMS, fr.SteamNozzleMach, fr.SteamFlowKgHr, fr.SteamWaterLHr,
-					fr.EjectorEntrainmentRatio, fr.EjectorDraftInWC, fr.ChimneyHeightM, fr.ChimneyHeightFt)
-				fmt.Fprintf(&b, "- **4.2 m (`13.8 ft`) Open Water-Column Hydrostatic Relief Standpipe (`S2`):** Physically caps boiler pressure at **`6.0 psig`** (`P = ρ·g·h = 41.1 kPa`) with **zero moving parts** — keep standpipe `S2` permanently unvalved and unobstructed, backed up by the factory `10–15 psig` brass PRV & fusible plug.\n")
-				fmt.Fprintf(&b, "- **Thermal Balance:** Steam generation load **`%.1f kW`** vs kiln flue waste heat above `400 F` **`%.1f kW`** (`waste_heat_sufficient=%v`).\n",
-					fr.SteamThermalKW, fr.KilnWasteHeatKW, fr.WasteHeatSufficient)
-				fmt.Fprintf(&b, "- **Condensation Nucleation & Submicron Capture (`%.0f%%` NaCl):** %s\n", fr.SubmicronNaClCapturePct, fr.CondensationGrowthNote)
-				b.WriteString("- **Pre-Firing Hydrostatic Standpipe, PRV Pull-Ring & Startup Sequence:**\n")
-				b.WriteString("  1. **Verify `4.2 m` Open Hydrostatic Standpipe (`S2`) & Cold PRV Pull-Ring Test:** Confirm standpipe `S2` has zero shutoff valves, clear open top overflow, and clean water prime; pull the manual test ring on the factory `10–15 psig` brass PRV to confirm free snap action.\n")
-				b.WriteString("  2. **Verify `1.5× MAWP` (`23 psig`) Hydro-Test, `0–15 psig` Gauge & Open `0 psig` Feed Tank:** Confirm cold hydrostatic proof test record, zeroed low-range glycerin gauge on brass siphon pigtail, working bronze feedwater check valve, and full open atmospheric `0 psig` feed tank.\n")
-				b.WriteString("  3. **Wet Tower Spray First -> Gradual 6 psig Steam Admission:** Establish overhead gravity spray across the quench baffle & stoneware rings BEFORE warming the catering steamer; smoothly crack the bronze throttling valve on insulated header `S1` to establish steady quiet inward kiln draft.\n")
-				b.WriteString("- **Mandatory Subsonic Steamer & Standpipe Safety Checklist (NO Unvented DIY Welded Drum Boilers):**\n")
-			} else {
-				fmt.Fprintf(&b, "- **Certified Steam Source (`%.0f psig` / `%.2f barg`):** %s\n", fr.SteamPressurePSIG, fr.SteamPressureBar, fr.SteamSourceType)
-				fmt.Fprintf(&b, "- **de Laval Steam Nozzle & 1D Ejector Performance:** Choked throat **`%.2f mm`**, exit jet **`%.1f m/s` (`Mach %.2f`)**, motive steam **`%.1f kg/hr` (`%.1f L/hr` feedwater)**, entrainment **`%.1f:1`**, ejector draft **`%.3f inWC`** -> shrinks chimney from `8.5–9.5 m` down to **`%.1f m` (`%.1f ft`)** with zero electric blower!\n",
-					fr.SteamNozzleThroatMM, fr.SteamNozzleVelMS, fr.SteamNozzleMach, fr.SteamFlowKgHr, fr.SteamWaterLHr,
-					fr.EjectorEntrainmentRatio, fr.EjectorDraftInWC, fr.ChimneyHeightM, fr.ChimneyHeightFt)
-				fmt.Fprintf(&b, "- **Thermal Balance:** Steam generation load **`%.1f kW`** vs kiln flue waste heat above `400 F` **`%.1f kW`** (`waste_heat_sufficient=%v`).\n",
-					fr.SteamThermalKW, fr.KilnWasteHeatKW, fr.WasteHeatSufficient)
-				fmt.Fprintf(&b, "- **Condensation Nucleation & Submicron Capture (`%.0f%%` NaCl):** %s\n", fr.SubmicronNaClCapturePct, fr.CondensationGrowthNote)
-				b.WriteString("- **Pre-Firing PRV Pull-Ring & Startup Sequence:**\n")
-				b.WriteString("  1. **Cold PRV Pull-Ring Test:** Pull the manual test ring on the stamped ASME/IBR/KEBS spring-loaded PRV to confirm free snap action and unobstructed downward vent pipe.\n")
-				b.WriteString("  2. **Verify `1.5× MAWP` Hydro-Test, Gauge & Open `0 psig` Feed Tank:** Confirm cold hydrostatic proof test record, zeroed `0–100 psig` glycerin gauge on siphon pigtail, working bronze feedwater check valve, and full open atmospheric `0 psig` feed tank.\n")
-				b.WriteString("  3. **Wet Tower Spray First -> Gradual Steam Admission:** Establish overhead gravity spray across the quench baffle & stoneware rings BEFORE warming steam pressure; smoothly crack the bronze throttling valve on insulated header `S1` to establish steady inward kiln draft.\n")
-				b.WriteString("- **Mandatory Certified-Boiler Safety Checklist (NO DIY Welded Drum Boilers):**\n")
-			}
-			for _, req := range fr.SteamSafetyRequirements {
-				fmt.Fprintf(&b, "  - [ ] %s\n", req)
-			}
-		}
 	}
 
+	b.WriteString("### 7.3 Elevated Overhead Gravity Tank Stand Bracing (200–500 kg Load)\n")
+	fmt.Fprintf(&b, "- Mount the **`%.0f L` (`%.0f gal`)** overhead HDPE gravity tank at **`%.1f ft` (`3.5 m`)** elevation (`%.2f PSI` static gravity head, `%.2f L/min` / `%.2f GPM` downcomer flow).\n",
+		fr.GravityTankLiters, fr.GravityTankGal, fr.TankElevationFt, fr.GravityHeadPSI, fr.SprayFlowLPM, fr.SprayFlowGPM)
+	fmt.Fprintf(&b, "- **CRITICAL STRUCTURAL BRACING:** Full of water, the tank weighs **`~%.0f kg` (`%.0f lbs`)** — build a 4-post treated hardwood or mild-steel stand on concrete pier footings with **full diagonal X-bracing on all 4 sides** and M12 through-bolts. Never stack loose dry bricks under an overhead water tank!\n\n",
+		fr.GravityTankLiters*1.05+22.0, (fr.GravityTankLiters*1.05+22.0)/0.45359237)
+
+	b.WriteString("### 7.4 Chimney Pre-Warming, Manual Pumping Cadence & Local Alkali Dosing\n")
+	fmt.Fprintf(&b, "- **Draft & Pumping Mechanism:** %s | **Pump:** %s\n", fr.DraftMechanism, fr.ManualPumpType)
+	if fr.ZeroElectricity {
+		fmt.Fprintf(&b, "- **Manual Pumping Budget:** Closed-loop recirculation at `%.2f L/min` requires **`%.1f minutes/hour`** on a treadle or cast-iron semi-rotary hand pump (or **`%d × 20L jerrycans/hour`**) during the active salting window.\n",
+			fr.SprayFlowLPM, fr.TreadleMinutesPerHr, fr.Jerrycans20LPerHr)
+	} else {
+		fmt.Fprintf(&b, "- **Local Hybrid Power (`%.0f W`):** Local `0.5 HP` 230V 50Hz domestic monoblock pump automates recirculation; if grid power cuts out mid-firing, the elevated `%.0f L` gravity tank and all-ceramic body continue safely.\n",
+			fr.PowerWatts, fr.GravityTankLiters)
+	}
+	fmt.Fprintf(&b, "- **Local Alkali (`%s` / `%s`):** %s\n", fr.AlkaliName, fr.AlkaliFormula, fr.AlkaliLocalNote)
+	if fr.ScalingWarning != "" {
+		fmt.Fprintf(&b, "  - *Alkali Caution:* %s\n", fr.ScalingWarning)
+	}
+	fmt.Fprintf(&b, "- **Honest Capture Performance:** HCl acid gas **`%.1f%%`** | Coarse wood fly ash **`%.1f%%`** | Submicron NaCl fume **`%.0f%%`**. %s\n",
+		fr.HClRemovalPct, fr.CoarseAshCapturePct, fr.SubmicronNaClCapturePct, fr.SubmicronHonestNote)
+	b.WriteString("- **Manual Firing-Day Sequence:**\n")
+	for _, step := range fr.ManualSteps {
+		fmt.Fprintf(&b, "  - %s\n", step)
+	}
+	b.WriteString("\n### 7.5 Critical Safety Warnings (NO DIY Pressurized Steam Boilers!)\n")
+	for _, w := range fr.Warnings {
+		fmt.Fprintf(&b, "- **SAFETY WARNING:** %s\n", w)
+	}
+
+	if fr.SteamEnabled {
+		b.WriteString("\n### 7.6 Zero-Electricity Steam-Jet Ejector Startup, PRV Check & Condensation Scrubbing\n\n")
+		if fr.DraftMode == LocalDraftSteamEjectorSubsonic {
+			fmt.Fprintf(&b, "- **Certified Low-Pressure Steam Source (`6 psig` / `%.3f barg`):** %s\n", fr.SteamPressureBar, fr.SteamSourceType)
+			fmt.Fprintf(&b, "- **Simple Drilled Brass Converging Orifice (Unchoked Subsonic `Mach < 1.0`, Zero Shock Screech):** Hand-drilled **`%.2f mm`** brass pipe-cap orifice (NO CNC de Laval bell needed!), exit jet **`%.1f m/s` (`Mach %.2f < 1.0`, `~52 dBA @ 3 ft` via Lighthill `v^8` reduction)**, motive steam **`%.1f kg/hr` (`%.1f L/hr` feedwater)**, entrainment **`%.1f:1`**, ejector draft **`%.3f inWC`** -> shrinks chimney down to **`%.1f m` (`%.1f ft`)** with zero electric blower!\n",
+				fr.SteamNozzleThroatMM, fr.SteamNozzleVelMS, fr.SteamNozzleMach, fr.SteamFlowKgHr, fr.SteamWaterLHr,
+				fr.EjectorEntrainmentRatio, fr.EjectorDraftInWC, fr.ChimneyHeightM, fr.ChimneyHeightFt)
+			b.WriteString("- **4.2 m (`13.8 ft` cold / `4.4 m` hot water) Open Water-Column Hydrostatic Relief Standpipe (`S2`):** Physically caps boiler pressure at **`6.0 psig`** with **zero moving parts** — keep standpipe `S2` permanently unvalved and unobstructed, backed up by the factory `10–15 psig` brass PRV & fusible plug.\n")
+			fmt.Fprintf(&b, "- **Thermal Balance:** Steam generation load **`%.1f kW`** vs kiln flue waste heat above `400 F` **`%.1f kW`** (`waste_heat_sufficient=%v`).\n",
+				fr.SteamThermalKW, fr.KilnWasteHeatKW, fr.WasteHeatSufficient)
+			fmt.Fprintf(&b, "- **Condensation Nucleation & Submicron Capture (`%.0f%%` NaCl):** %s\n", fr.SubmicronNaClCapturePct, fr.CondensationGrowthNote)
+			b.WriteString("- **Pre-Firing Hydrostatic Standpipe, PRV Pull-Ring & Startup Sequence:**\n")
+			b.WriteString("  1. **Verify `4.2 m` (`4.4 m` hot water) Open Hydrostatic Standpipe (`S2`) & Cold PRV Pull-Ring Test:** Confirm standpipe `S2` has zero shutoff valves, clear open top overflow, and clean water prime; pull the manual test ring on the factory `10–15 psig` brass PRV to confirm free snap action.\n")
+			b.WriteString("  2. **Verify `1.5× MAWP` (`23 psig`) Hydro-Test, `0–15 psig` Gauge & Feedwater Supply:** Confirm cold hydrostatic proof test record, zeroed low-range glycerin gauge on brass siphon pigtail, working bronze feedwater check valve, and full open atmospheric `0 psig` feed tank + hand/feed pump.\n")
+			b.WriteString("  3. **Wet Tower Spray First -> Gradual 6 psig Steam Admission:** Establish overhead gravity spray across the quench baffle & stoneware rings BEFORE warming the catering steamer; smoothly crack the bronze throttling valve on insulated header `S1` to establish steady quiet inward kiln draft.\n")
+			b.WriteString("- **Mandatory Subsonic Steamer & Standpipe Safety Checklist (NO Unvented DIY Welded Drum Boilers):**\n")
+		} else {
+			fmt.Fprintf(&b, "- **Certified Steam Source (`%.0f psig` / `%.2f barg`):** %s\n", fr.SteamPressurePSIG, fr.SteamPressureBar, fr.SteamSourceType)
+			fmt.Fprintf(&b, "- **de Laval Steam Nozzle & 1D Ejector Performance:** Choked throat **`%.2f mm`**, exit jet **`%.1f m/s` (`Mach %.2f`)**, motive steam **`%.1f kg/hr` (`%.1f L/hr` feedwater)**, entrainment **`%.1f:1`**, ejector draft **`%.3f inWC`** -> shrinks chimney down to **`%.1f m` (`%.1f ft`)** with zero electric blower!\n",
+				fr.SteamNozzleThroatMM, fr.SteamNozzleVelMS, fr.SteamNozzleMach, fr.SteamFlowKgHr, fr.SteamWaterLHr,
+				fr.EjectorEntrainmentRatio, fr.EjectorDraftInWC, fr.ChimneyHeightM, fr.ChimneyHeightFt)
+			fmt.Fprintf(&b, "- **Thermal Balance:** Steam generation load **`%.1f kW`** vs kiln flue waste heat above `400 F` **`%.1f kW`** (`waste_heat_sufficient=%v`).\n",
+				fr.SteamThermalKW, fr.KilnWasteHeatKW, fr.WasteHeatSufficient)
+			fmt.Fprintf(&b, "- **Condensation Nucleation & Submicron Capture (`%.0f%%` NaCl):** %s\n", fr.SubmicronNaClCapturePct, fr.CondensationGrowthNote)
+			b.WriteString("- **Pre-Firing PRV Pull-Ring & Startup Sequence:**\n")
+			b.WriteString("  1. **Cold PRV Pull-Ring Test:** Pull the manual test ring on the stamped ASME/IBR/KEBS spring-loaded PRV to confirm free snap action and unobstructed downward vent pipe.\n")
+			b.WriteString("  2. **Verify `1.5× MAWP` Hydro-Test, Gauge & Feedwater Pump:** Confirm cold hydrostatic proof test record, zeroed `0–100 psig` glycerin gauge on siphon pigtail, working bronze feedwater check valve, and manual/positive-displacement boiler feed pump (gravity alone cannot feed a pressurized boiler!).\n")
+			b.WriteString("  3. **Wet Tower Spray First -> Gradual Steam Admission:** Establish overhead gravity spray across the quench baffle & stoneware rings BEFORE warming steam pressure; smoothly crack the bronze throttling valve on insulated header `S1` to establish steady inward kiln draft.\n")
+			b.WriteString("- **Mandatory Certified-Boiler Safety Checklist (NO DIY Welded Drum Boilers):**\n")
+		}
+		for _, req := range fr.SteamSafetyRequirements {
+			fmt.Fprintf(&b, "  - [ ] %s\n", req)
+		}
+	}
 	return b.String()
 }
 
@@ -432,14 +525,18 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 // closed-loop recirculation, and post-firing disposal checklist customized for the studio project.
 func GenerateOperationsChecklist(eval StudioEvaluation) string {
 	p := eval.Project.Normalize()
+	if p.IsLocalCeramic() {
+		return generateLocalCeramicOperationsChecklist(eval)
+	}
 	d := eval.Design
 	u := eval.Urban
 	r := eval.Recirculation
+	usesVFD := p.BlowerDriveOption == BlowerDriveIndustrialRadialVFD || p.BlowerDriveOption == BlowerDriveCompressorAirAtomize
 
 	var b strings.Builder
 
 	fmt.Fprintf(&b, "# Firing-Day Operations Checklist — %s\n\n", p.StudioName)
-	fmt.Fprintf(&b, "> **Target Firing:** %s (%.0f F, %.0f hrs; %.1f hr salting) | **Glaze Mode:** `%s` | **Target Kiln Draft:** `%.2f inWC` | **CPVC Hardwired / Software Cutoff:** `200 F / 210 F`\n\n",
+	fmt.Fprintf(&b, "> **Target Firing:** %s (%.0f F, %.0f hrs; %.1f hr salting) | **Glaze Mode:** `%s` | **Target Kiln Draft:** `%.2f inWC` | **CPVC Hardwired & Software Cutoff:** `200 F`\n\n",
 		p.FiringCone, d.Input.PeakExitTempF, p.FiringDurationHours, p.EffectiveSaltingHours(), p.VaporGlazeMode, d.Input.TargetKilnDraftInWC)
 
 	// 1. Pre-Firing Preparation.
@@ -456,19 +553,27 @@ func GenerateOperationsChecklist(eval StudioEvaluation) string {
 	b.WriteString("- [ ] **Inspect Ash Strainer & Nozzles:** Clean the 50-mesh pump Y-strainer basket and confirm quench + venturi nozzles spray evenly.\n")
 	fmt.Fprintf(&b, "- [ ] **Verify Utilities & IPC 608 Backflow Protection:** Confirm `%s` breaker and NEC 430.102 sight disconnect are ON, and potable water supply (`>= %.2f GPM`) feeds through an **IPC 608 Air Gap (`>= 1\"`) or certified ASSE 1013 RPZ backflow preventer**.\n",
 		u.Electrical.CircuitLabel, u.Water.RequiredGPM)
-	b.WriteString("- [ ] **Mandatory Bypass Trip Test:** Toggle the flow switch (`< 0.25 GPM`) and verify the **hardwired `200 F` snap-disc safety relay** (and `210 F` software backup) — confirm the spring-return hot-gas bypass damper snaps **OPEN** cleanly, then press manual Reset.\n")
-	b.WriteString("- [ ] **Start Wet Stages BEFORE Lighting Kiln:** Start recirculation pump -> open quench spray -> start blower at low VFD speed (20–25 Hz).\n\n")
+	if p.ControlTier == ControlTierElectromechanicalOnly {
+		b.WriteString("- [ ] **Mandatory Bypass Trip Test:** Toggle the flow switch (`< 0.25 GPM`) and verify the **hardwired `200 F` snap-disc safety relay** — confirm the spring-return hot-gas bypass damper snaps **OPEN** cleanly, then press manual Reset.\n")
+	} else {
+		b.WriteString("- [ ] **Mandatory Bypass Trip Test:** Toggle the flow switch (`< 0.25 GPM`) and verify the **hardwired `200 F` snap-disc safety relay** (and aligned `200 F` software cutoff) — confirm the spring-return hot-gas bypass damper snaps **OPEN** cleanly, then press manual Reset.\n")
+	}
+	if usesVFD {
+		b.WriteString("- [ ] **Start Wet Stages BEFORE Lighting Kiln:** Start recirculation pump -> open quench spray -> start blower at low VFD speed (20–25 Hz).\n\n")
+	} else {
+		b.WriteString("- [ ] **Start Wet Stages BEFORE Lighting Kiln:** Start recirculation pump -> open quench spray -> start draft motive air/blower with trim damper set for gentle inward draft.\n\n")
+	}
 
 	// 2. During Firing.
 	b.WriteString("## 2. During Firing (Ramp, High-Fire & Glaze Introduction)\n\n")
 	fmt.Fprintf(&b, "- [ ] **Hold Gentle Kiln Draft (`%.2f inWC`):** Watch the draft gauge/UI — slight negative suction pulls exhaust cleanly into the scrubber without chilling ware or blowing flame out spyholes.\n",
 		d.Input.TargetKilnDraftInWC)
-	fmt.Fprintf(&b, "- [ ] **Watch Quench Outlet Temp (`%.0f - 188 F` normal):** Adiabatic saturation sits near **%.1f F** at peak heat. If outlet temp climbs above `195 F`, inspect quench water pressure immediately; the hardwired snap-disc trips at **`200 F`** and software backup latches at **`210 F`** to protect CPVC.\n",
+	fmt.Fprintf(&b, "- [ ] **Watch Quench Outlet Temp (`%.0f - 188 F` normal):** Adiabatic saturation sits near **%.1f F** at peak heat. If outlet temp climbs above `192 F`, inspect quench water pressure immediately; both the hardwired snap-disc and software backup latch at **`200 F`** to protect CPVC.\n",
 		d.Quench.OutletTemp.Fahrenheit(), d.Quench.OutletTemp.Fahrenheit())
 	b.WriteString("- [ ] **Hourly Sump pH & Level Checks:** Dip a pH strip every hour (target **`pH 7.5 - 8.5`**). If pH dips below `7.0`, stir in another 2–3 lbs of bulk baking soda slurry.\n")
 
 	if d.Input.FuelType == "wood_salt" || d.Input.FuelType == "wood" {
-		b.WriteString("- [ ] **Wood-Stoking Surge & Cooled Blowdown Tips:** Heavy wood stokes create 20–60 second gas bursts (`1.5x-2.0x` average flow). Feed smaller, drier splits steadily so the VFD tracks smoothly, and route any hot sump bleed/blowdown (`~184 F`) into a **heat-rated cooling catch tank or cold-water tempering tee (`<= 140 F` per IPC 702.5)** — NEVER discharge hot `184 F` blowdown directly into PVC/ABS building drains!\n")
+		b.WriteString("- [ ] **Wood-Stoking Surge & Cooled Blowdown Tips:** Heavy wood stokes create 20–60 second gas bursts (`1.5x-2.0x` average flow). Feed smaller, drier splits steadily so draft tracks smoothly, and route any hot sump bleed/blowdown (`~184 F`) into a **heat-rated cooling catch tank or cold-water tempering tee (`<= 140 F` per IPC 702.5)** — NEVER discharge hot `184 F` blowdown directly into PVC/ABS building drains!\n")
 	}
 	if p.VaporGlazeMode == VaporGlazeSalt {
 		fmt.Fprintf(&b, "- [ ] **Salt Introduction Pacing (`%.1f lbs/hr` over %.1f hrs):** Introduce damp rock salt in small, evenly spaced burritos/packets (every 10–15 min) while dosing the remaining bulk baking soda steadily so HCl stays within the absorber's 99%% capture envelope.\n",
@@ -487,7 +592,7 @@ func GenerateOperationsChecklist(eval StudioEvaluation) string {
 	// 3. Emergency / Fault Response.
 	b.WriteString("## 3. If the Safety Interlock Trips Mid-Firing\n\n")
 	b.WriteString("1. **Do NOT panic or seal the kiln:** The spring-return bypass damper is designed to fail **OPEN**, safely venting hot flue gas up the NFPA 211 auxiliary bypass chimney while protecting the plastic scrubber stages.\n")
-	b.WriteString("2. **Check the trip reason:** Most trips are either a kinked supply line / clogged strainer (`QUENCH_WATER_LOSS < 0.25 GPM`) or temporary nozzle fouling (`200 F` hardwired snap-disc / `HIGH_QUENCH_OUTLET_TEMP >= 210 F`).\n")
+	b.WriteString("2. **Check the trip reason:** Most trips are either a kinked supply line / clogged strainer (`QUENCH_WATER_LOSS < 0.25 GPM`) or temporary nozzle fouling (`200 F` hardwired snap-disc / `HIGH_QUENCH_OUTLET_TEMP >= 200 F`).\n")
 	b.WriteString("3. **Restore water & cooling first:** Confirm quench spray flow is back above `0.50 GPM` and outlet temp is `< 185 F` before resetting the hardwired safety relay and clicking **Reset Interlock**.\n\n")
 
 	// 4. Post-Firing Cooldown, Recirculation Reuse & Neutralized Drain Disposal.
@@ -505,36 +610,69 @@ func GenerateOperationsChecklist(eval StudioEvaluation) string {
 	b.WriteString("- [ ] **5-Minute Buffered / Fresh-Water Rinse:** Run clean tap water (or pH 8 buffered rinse in salt mode) through the pump, quench nozzles, and venturi manifold for 5 minutes so dried salt crystals do not seize the mag-drive impeller or clog orifices between firings.\n")
 	fmt.Fprintf(&b, "- [ ] **Log Maintenance:** Record firing hours and schedule next corrosion check (**%s**).\n", u.Corrosion.InspectionInterval)
 
-	if p.IsLocalCeramic() {
-		fr := eval.Frugal
-		if fr == nil {
-			fr = EvaluateFrugal(p, d)
-		}
-		b.WriteString("\n## 5. Local Ceramic & Zero-Electricity Field Operations Addendum\n\n")
-		fmt.Fprintf(&b, "- [ ] **Chimney Pre-Warming Before Salting:** Establish warm buoyancy draw (`%.1f m` chimney, target `>280 F` stack reheat -> `%.3f inWC` avail vs `%.3f inWC` req) before introducing the first salt charge.\n",
-			fr.ChimneyHeightM, fr.AvailableDraftInWC, fr.RequiredDraftInWC)
-		fmt.Fprintf(&b, "- [ ] **Overhead Gravity Tank & Stand Check:** Inspect all diagonal X-braces on the `3.5 m` stand (`~%.0f kg` filled load) and top up the `%.0f L` tank (`%.2f PSI` head) before high-fire.\n",
-			fr.GravityTankLiters*1.05+22.0, fr.GravityTankLiters, fr.GravityHeadPSI)
-		if fr.ZeroElectricity {
-			fmt.Fprintf(&b, "- [ ] **Manual Pumping Cadence (0 W Off-Grid):** Maintain `%.2f L/min` gravity spray via **`%.1f min/hr`** on the treadle/hand pump (or **`%d × 20L jerrycans/hr`**) during active salting.\n",
-				fr.SprayFlowLPM, fr.TreadleMinutesPerHr, fr.Jerrycans20LPerHr)
-		}
-		fmt.Fprintf(&b, "- [ ] **Local Alkali Dosing (`%s` / `%s`):** Stage **`%.2f kg` (`%.1f lbs`)** per firing and verify sump `pH 7.5 - 8.5` hourly with litmus strips.\n",
-			fr.AlkaliName, fr.AlkaliFormula, fr.AlkaliKgPerFiring, fr.AlkaliLbsPerFiring)
-		if fr.SteamEnabled {
-			if fr.DraftMode == LocalDraftSteamEjectorSubsonic {
-				fmt.Fprintf(&b, "- [ ] **Pre-Firing Subsonic Standpipe & PRV Safety Check (`6 psig` / `0.414 barg` / `%.1f L/hr`):** Confirm the `4.2 m` (`13.8 ft`) open vertical hydrostatic standpipe (`S2`) is unvalved, unobstructed, and primed (physically caps pressure at `6.0 psig`), pull the factory `10–15 psig` brass PRV test ring, confirm `1.5× MAWP` (`23 psig`) cold hydro-test record, check `0–15 psig` gauge zero & bronze check valve, verify open `0 psig` atmospheric feed tank level, and check insulated header `S1` scald guards.\n",
-					fr.SteamWaterLHr)
-				b.WriteString("- [ ] **Certified-Steamer-Only Rule (Zero Unvented DIY Welded Drum Boilers):** NEVER fabricate an unvented DIY welded drum or scrap-pipe boiler on a kiln flue — operate ONLY a factory-certified `12–15 psig` commercial catering stainless steamer/kettle fitted with BOTH the `4.2 m` open hydrostatic relief standpipe (`S2`) and a stamped `10–15 psig` brass PRV.\n")
-			} else {
-				fmt.Fprintf(&b, "- [ ] **Pre-Firing Certified Steam Safety Check (`%.0f psig` / `%.1f L/hr`):** Pull the certified PRV test ring to verify free snap action, confirm `1.5× MAWP` cold hydro-test record, check pressure gauge zero & bronze feedwater check valve, verify open `0 psig` atmospheric feed tank level, and check insulated header `S1` scald guards.\n",
-					fr.SteamPressurePSIG, fr.SteamWaterLHr)
-				b.WriteString("- [ ] **Certified-Boiler-Only Rule (Zero DIY Welded Drum Boilers):** NEVER fabricate an uncertified DIY welded drum or scrap-pipe boiler on a kiln flue — operate ONLY factory-certified non-IBR (`<=25 L`)/KEBS/ASME baby boilers or code-rated small-bore (`<2 L`) monotube coils with stamped PRV.\n")
-			}
+	return b.String()
+}
+
+func generateLocalCeramicOperationsChecklist(eval StudioEvaluation) string {
+	p := eval.Project.Normalize()
+	d := eval.Design
+	u := eval.Urban
+	r := eval.Recirculation
+	fr := eval.Frugal
+	if fr == nil {
+		fr = EvaluateFrugal(p, d)
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "# Local Ceramic Firing-Day Operations Checklist — %s\n\n", p.StudioName)
+	fmt.Fprintf(&b, "> **Target Firing:** %s (%.0f F, %.0f hrs; %.1f hr salting) | **Glaze Mode:** `%s` | **Draft Mode:** `%s` | **All-Ceramic Body (`>1,800 F` dry-run immune, zero CPVC meltdown risk)**\n\n",
+		p.FiringCone, d.Input.PeakExitTempF, p.FiringDurationHours, p.EffectiveSaltingHours(), p.VaporGlazeMode, fr.DraftMode)
+
+	b.WriteString("## 1. Pre-Firing Preparation (30 Minutes Before Lighting)\n\n")
+	fmt.Fprintf(&b, "- [ ] **Overhead Gravity Tank & Stand Check:** Inspect all diagonal X-braces on the `3.5 m` stand (`~%.0f kg` filled load) and fill the `%.0f L` overhead tank (`%.2f PSI` static head) before lighting.\n",
+		fr.GravityTankLiters*1.05+22.0, fr.GravityTankLiters, fr.GravityHeadPSI)
+	fmt.Fprintf(&b, "- [ ] **Stage Local Alkali (`%s` / `%s`):** Stage **`%.2f kg` (`%.1f lbs`)** per firing; pre-charge the 208 L brick baffled sump to `pH 8.0 - 8.5` (check with litmus strips) and verify specific gravity `< %.3f SG` with a brine hydrometer.\n",
+		fr.AlkaliName, fr.AlkaliFormula, fr.AlkaliKgPerFiring, fr.AlkaliLbsPerFiring, r.DumpSpecificGravity)
+	b.WriteString("- [ ] **Inspect Gravity Spray Rose & Foot Valve:** Clear wood-ash grit from the suction foot strainer and verify even gravity rain over the quench baffles and stoneware Raschig rings.\n")
+	if fr.SteamEnabled {
+		if fr.DraftMode == LocalDraftSteamEjectorSubsonic {
+			fmt.Fprintf(&b, "- [ ] **Pre-Firing Subsonic Standpipe & PRV Safety Check (`6 psig` / `0.414 barg` / `%.1f L/hr`):** Confirm the `4.2 m` (`4.4 m` hot water) open vertical hydrostatic standpipe (`S2`) is unvalved, unobstructed, and primed (physically caps pressure at `6.0 psig`), pull the factory `10–15 psig` brass PRV test ring, confirm `1.5× MAWP` (`23 psig`) cold hydro-test record, check `0–15 psig` gauge zero & bronze check valve, verify open `0 psig` atmospheric feed tank level, and check insulated header `S1` scald guards.\n",
+				fr.SteamWaterLHr)
 		} else {
-			b.WriteString("- [ ] **Zero-Steam-Boiler Rule:** NEVER attempt to build a DIY pressurized steam boiler or steam-jet ejector on the kiln flue (lethal boiler explosion hazard).\n")
+			fmt.Fprintf(&b, "- [ ] **Pre-Firing Certified Steam Safety Check (`%.0f psig` / `%.1f L/hr`):** Pull the certified PRV test ring to verify free snap action, confirm `1.5× MAWP` cold hydro-test record, check pressure gauge zero & bronze feedwater check valve, verify boiler feed pump & open `0 psig` feed tank level, and check insulated header `S1` scald guards.\n",
+				fr.SteamPressurePSIG, fr.SteamWaterLHr)
 		}
 	}
+	b.WriteString("\n## 2. During Firing (Draft, Gravity Spray & Alkali Dosing)\n\n")
+	if !fr.SteamEnabled && fr.ZeroElectricity {
+		fmt.Fprintf(&b, "- [ ] **Chimney Pre-Warming Before Salting:** Establish warm buoyancy draw (`%.1f m` chimney, target `>280 F` stack reheat -> `%.3f inWC` avail vs `%.3f inWC` req) before introducing the first salt charge.\n",
+			fr.ChimneyHeightM, fr.AvailableDraftInWC, fr.RequiredDraftInWC)
+	} else if fr.SteamEnabled {
+		fmt.Fprintf(&b, "- [ ] **Wet Spray First -> Gradual Steam Admission:** Keep gravity spray flowing across the stoneware bed BEFORE opening the steam header `S1` valve (`%.3f inWC` ejector draft on `%.1f m` stack); monitor condensing sump water temperature (`< 120 F` target for maximum steam-nucleation NaCl capture).\n",
+			fr.EjectorDraftInWC, fr.ChimneyHeightM)
+	} else {
+		fmt.Fprintf(&b, "- [ ] **Hybrid Local Fan & Gravity Spray:** Run the 230V 50Hz domestic pump and low-dP draft fan; if power drops out, gravity spray from the `%.0f L` overhead tank continues cooling safely.\n", fr.GravityTankLiters)
+	}
+	if fr.ZeroElectricity {
+		fmt.Fprintf(&b, "- [ ] **Manual Pumping Cadence (0 W Off-Grid):** Maintain `%.2f L/min` gravity spray via **`%.1f min/hr`** on the treadle/hand pump (or **`%d × 20L jerrycans/hr`**) during active salting.\n",
+			fr.SprayFlowLPM, fr.TreadleMinutesPerHr, fr.Jerrycans20LPerHr)
+	}
+	fmt.Fprintf(&b, "- [ ] **Hourly Sump pH & Alkali Checks:** Dip a litmus strip hourly (hold `pH 7.5 - 8.5` with `%s`); pace salt charges gently so outdoor chimney dispersion remains clean.\n\n", fr.AlkaliName)
+
+	b.WriteString("## 3. Safety & Post-Firing Disposal\n\n")
+	if fr.SteamEnabled {
+		if fr.DraftMode == LocalDraftSteamEjectorSubsonic {
+			b.WriteString("- [ ] **Certified-Steamer-Only Rule (Zero Unvented DIY Welded Drum Boilers):** NEVER fabricate an unvented DIY welded drum or scrap-pipe boiler on a kiln flue — operate ONLY a factory-certified `12–15 psig` commercial catering stainless steamer/kettle fitted with BOTH the `4.2 m` (`4.4 m` hot water) open hydrostatic relief standpipe (`S2`) and a stamped `10–15 psig` brass PRV.\n")
+		} else if fr.DraftMode == LocalDraftSteamEjectorHP {
+			b.WriteString("- [ ] **Certified-Baby-Boiler-Only Rule (`60 psig` — Zero DIY Welded Drum Boilers & NO Monotube Coils):** Operate ONLY a factory-certified non-IBR (`<=25 L`)/KEBS/ASME baby boiler with stamped PRV and fusible plug.\n")
+		} else {
+			b.WriteString("- [ ] **Certified-Boiler-Only Rule (Zero DIY Welded Drum Boilers):** NEVER fabricate an uncertified DIY welded drum or scrap-pipe boiler on a kiln flue — operate ONLY factory-certified non-IBR (`<=25 L`)/KEBS/ASME baby boilers or code-rated small-bore (`<2 L`) monotube coils with stamped PRV.\n")
+		}
+	} else {
+		b.WriteString("- [ ] **Zero-Steam-Boiler Rule:** NEVER attempt to build a DIY pressurized steam boiler or steam-jet ejector on the kiln flue (lethal boiler explosion hazard).\n")
+	}
+	b.WriteString("- [ ] **Cooldown, Settling & Neutralized Disposal (`<= 140 F` / `60 C`):** Allow brick sump liquor to cool to `<= 140 F (60 C)`, let wood-ash/lime sludge settle behind the weir baffle, check `pH 6.5 - 8.5` with litmus strips, and flush the gravity spray rose clean after firing.\n")
+	fmt.Fprintf(&b, "- [ ] **Log Maintenance:** Record firing hours and schedule next masonry check (**%s**).\n", u.Corrosion.InspectionInterval)
 
 	return b.String()
 }

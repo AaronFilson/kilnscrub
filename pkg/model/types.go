@@ -438,7 +438,8 @@ type HardwareHAL interface {
 // only (they do not open the hot-gas bypass damper).
 type SafetyLimits struct {
 	// MaxQuenchOutletTemp trips the fail-safe bypass damper to protect downstream CPVC/PP
-	// packing and blower. Default is 210 F (372.04 K).
+	// packing and blower. Default is 200 F (366.48 K), aligned with the ASTM F441 CPVC limit
+	// and the independent NFPA 86 hardwired 200 F manual-reset snap-disc.
 	MaxQuenchOutletTemp Kelvin `json:"max_quench_outlet_temp_k"`
 	// MinWaterFlow is the minimum quench spray water flow; dropping below triggers TripWaterLoss.
 	MinWaterFlow CubicMetersPerSec `json:"min_water_flow_m3_s"`
@@ -453,7 +454,7 @@ type SafetyLimits struct {
 // DefaultSafetyLimits returns conservative fail-safe limits for a 316L/CPVC kiln scrubber.
 func DefaultSafetyLimits() SafetyLimits {
 	return SafetyLimits{
-		MaxQuenchOutletTemp: FahrenheitToKelvin(210.0), // 372.04 K CPVC protection threshold
+		MaxQuenchOutletTemp: FahrenheitToKelvin(200.0), // 366.48 K ASTM F441 CPVC protection threshold (matches hardwired 200 F snap-disc)
 		MinWaterFlow:        GPMToCubicMetersPerSec(0.25),
 		MinSumpPH:           6.5,
 		MaxSumpPH:           9.5,
@@ -467,14 +468,14 @@ func (s SafetyLimits) Validate() error {
 	if !isFinite(float64(s.MaxQuenchOutletTemp)) || s.MaxQuenchOutletTemp <= 273.15 || s.MaxQuenchOutletTemp > 500.0 {
 		return fmt.Errorf("max_quench_outlet_temp_k must be finite and in (273.15, 500], got %v", s.MaxQuenchOutletTemp)
 	}
-	if !isFinite(float64(s.MinWaterFlow)) || s.MinWaterFlow < 0 {
-		return fmt.Errorf("min_water_flow_m3_s must be finite and >= 0, got %v", s.MinWaterFlow)
+	if !isFinite(float64(s.MinWaterFlow)) || s.MinWaterFlow <= 0 {
+		return fmt.Errorf("min_water_flow_m3_s must be finite and > 0, got %v", s.MinWaterFlow)
 	}
 	if !isFinite(s.MinSumpPH) || !isFinite(s.MaxSumpPH) || s.MinSumpPH < 0 || s.MaxSumpPH > 14.0 || s.MinSumpPH >= s.MaxSumpPH {
 		return fmt.Errorf("sump pH bounds must be finite with 0 <= min < max <= 14, got [%v, %v]", s.MinSumpPH, s.MaxSumpPH)
 	}
-	if s.SensorFaultTimeout <= 0 {
-		return fmt.Errorf("sensor_fault_timeout_ns must be > 0, got %v", s.SensorFaultTimeout)
+	if s.SensorFaultTimeout <= 0 || s.SensorFaultTimeout > 5*time.Minute {
+		return fmt.Errorf("sensor_fault_timeout_ns must be in (0, 5m], got %v", s.SensorFaultTimeout)
 	}
 	if !isFinite(float64(s.MaxDraftMagnitudePa)) || s.MaxDraftMagnitudePa <= 0 {
 		return fmt.Errorf("max_draft_magnitude_pa must be finite and > 0, got %v", s.MaxDraftMagnitudePa)
@@ -582,7 +583,7 @@ func DefaultControlConfig() ControlConfig {
 		},
 		DraftFilterCutoffHz:  cutoffHz,
 		DraftFilterTimeConst: CutoffHzToTimeConst(cutoffHz), // ~318.31 ms for 0.5 Hz
-		QuenchSetpoint:       FahrenheitToKelvin(188.0),     // ~359.82 K (above 183.9 F T_sat at 2400 F, below 210 F CPVC trip)
+		QuenchSetpoint:       FahrenheitToKelvin(188.0),     // ~359.82 K (above 183.9 F T_sat at 2400 F, safely below 200 F CPVC trip)
 		LoopInterval:         100 * time.Millisecond,
 		Safety:               DefaultSafetyLimits(),
 	}

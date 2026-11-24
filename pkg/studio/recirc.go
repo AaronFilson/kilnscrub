@@ -159,12 +159,19 @@ func BuildRecirculationPlan(project StudioProject, design model.ScrubberDesign, 
 		"MANDATORY DRAIN RULE (IPC 702.5 & 40 CFR 403.5): ALWAYS cool sump liquor to <= 140 F (60 C) and verify pH 6.5–8.5 (strictly >= 5.0) before draining to sanitary sewer",
 	}
 
+	var sackNote string
+	if bakingSodaLbs > 50.0 {
+		sackNote = fmt.Sprintf("needs %d × 50 lb sacks per firing", sacks50)
+	} else if bakingSodaLbs > 0 {
+		sackNote = fmt.Sprintf("1 × 50 lb sack covers ~%d firings", maxInt(1, int(math.Floor(50.0/bakingSodaLbs))))
+	}
+
 	var steps []string
 	if bakingSodaLbs > 0 {
 		steps = []string{
 			fmt.Sprintf("1. Pre-Firing Charge: Fill baffled sump to %.0f gal working level and dissolve %.1f lbs initial baking soda buffer (target pH 8.0–8.5).", sumpGal, initialChargeLbs),
-			fmt.Sprintf("2. Peak Salting Window (%.1f hrs): Dose remaining ~%.1f lbs baking soda gradually over the %.1f-hr salting window (%.1f lbs total -> %d × 15 lb bulk bag; 1 × 50 lb sack covers ~%d firings).",
-				saltingHrs, round1(math.Max(0.0, bakingSodaLbs-initialChargeLbs)), saltingHrs, bakingSodaLbs, bags15, maxInt(1, int(math.Floor(50.0/bakingSodaLbs)))),
+			fmt.Sprintf("2. Peak Salting Window (%.1f hrs): Dose remaining ~%.1f lbs baking soda gradually over the %.1f-hr salting window (%.1f lbs total -> %d × 15 lb bulk bag; %s).",
+				saltingHrs, round1(math.Max(0.0, bakingSodaLbs-initialChargeLbs)), saltingHrs, bakingSodaLbs, bags15, sackNote),
 			fmt.Sprintf("3. Evaporative Makeup: Potable water (via IPC 608 Air Gap / ASSE 1013 RPZ) automatically replaces ~%.0f gal evaporated steam over the %.0f-hr firing — saving %.1f%% water vs once-through (%.0f gal -> %.0f gal).",
 				evapMakeupGal, firingHrs, waterSavedPct, onceThroughGal, recircMakeupGal),
 			fmt.Sprintf("4. Between-Firing Reuse: Leave cooled neutral brine in sump for up to %d firing(s) (~%.1f g/L TDS added per firing); skim/strain ash basket and top up %.1f lbs baking soda before the next salt firing.",
@@ -186,9 +193,9 @@ func BuildRecirculationPlan(project StudioProject, design model.ScrubberDesign, 
 	var summary string
 	if bakingSodaLbs > 0 {
 		summary = fmt.Sprintf(
-			"Closed-loop %.0f-gal baffled sump saves %.1f%% water vs once-through (%.0f gal makeup vs %.0f gal once-through). Neutralizing %.2f lbs HCl over a %.1f-hr salting window uses %.1f lbs bulk baking soda (%d × 15 lb bag; 1 × 50 lb sack covers ~%d firings) and adds ~%.1f g/L TDS — reuse sump for up to %d firing(s) before full dump at SG >= %.3f (150 g/L).",
+			"Closed-loop %.0f-gal baffled sump saves %.1f%% water vs once-through (%.0f gal makeup vs %.0f gal once-through). Neutralizing %.2f lbs HCl over a %.1f-hr salting window uses %.1f lbs bulk baking soda (%d × 15 lb bag; %s) and adds ~%.1f g/L TDS — reuse sump for up to %d firing(s) before full dump at SG >= %.3f (150 g/L).",
 			sumpGal, waterSavedPct, recircMakeupGal, onceThroughGal, hclNeutralizedLbs, saltingHrs,
-			bakingSodaLbs, bags15, maxInt(1, int(math.Floor(50.0/bakingSodaLbs))), endTDSGL, firingsBeforeDump, dumpSpecificGravity,
+			bakingSodaLbs, bags15, sackNote, endTDSGL, firingsBeforeDump, dumpSpecificGravity,
 		)
 	} else {
 		summary = fmt.Sprintf(

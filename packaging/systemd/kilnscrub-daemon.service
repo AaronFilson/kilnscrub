@@ -11,8 +11,10 @@
 #        sudo install -d -m 0750 -o root -g kilnscrub /etc/kilnscrub
 #        sudo install -m 0640 -o root -g kilnscrub configs/kilnscrub.example.json /etc/kilnscrub/daemon.json
 #        sudo install -d -m 0750 -o kilnscrub -g kilnscrub /var/lib/kilnscrub
-#      (Edit /etc/kilnscrub/daemon.json to match your RS-485 serial device, slave ID,
-#       register map, draft setpoint, and safety limits.)
+#      (Edit /etc/kilnscrub/daemon.json before starting: set "hal_mode": "modbus",
+#       keep "bypass_coil_deenergize_to_trip": true for fail-safe spring-return PLC coils,
+#       and match your persistent /dev/serial/by-id/... RS-485 device, slave ID, register map,
+#       draft setpoint, and 200 F CPVC safety limit.)
 #   4. Install and enable this service unit:
 #        sudo install -m 0644 packaging/systemd/kilnscrub-daemon.service /etc/systemd/system/kilnscrub-daemon.service
 #        sudo systemctl daemon-reload
@@ -23,14 +25,13 @@
 #
 # Safety Note:
 #   Always back up software interlocks with an independent, hard-wired 24 VDC
-#   spring-return fail-open hot-gas bypass damper (<= 210 F CPVC protection,
+#   spring-return fail-open hot-gas bypass damper (200 F manual-reset CPVC snap-disc,
 #   quench water-flow switch, and power-loss relief).
 
 [Unit]
 Description=kilnscrub Closed-Loop Kiln Exhaust Scrubber Controller
 Documentation=https://github.com/AaronFilson/kilnscrub
-After=network-online.target
-Wants=network-online.target
+After=local-fs.target systemd-udevd.service
 
 [Service]
 Type=simple

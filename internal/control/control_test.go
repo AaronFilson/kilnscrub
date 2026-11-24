@@ -338,13 +338,13 @@ func TestDirectActingPIDSignNoRunaway(t *testing.T) {
 	}
 
 	// Quench cooling direct-acting check:
-	// Higher quench outlet temp (e.g. 202 F vs 188 F) -> MUST INCREASE QuenchSprayValve.
+	// Higher quench outlet temp (e.g. 196 F vs 188 F, below 200 F trip) -> MUST INCREASE QuenchSprayValve.
 	hotQuenchCtrl, _ := NewController(cfg)
 	rHot := nominalReadings(now)
-	rHot.QuenchOutletTemp = model.FahrenheitToKelvin(202.0)
+	rHot.QuenchOutletTemp = model.FahrenheitToKelvin(196.0)
 	cmdHot := hotQuenchCtrl.Step(rHot, nil, cfg.LoopInterval, now)
 	if cmdHot.QuenchSprayValve <= baseCmd.QuenchSprayValve {
-		t.Fatalf("quench PID sign inverted! hotter outlet (202 F vs 188 F) produced QuenchSprayValve=%.4f <= baseline %.4f",
+		t.Fatalf("quench PID sign inverted! hotter outlet (196 F vs 188 F) produced QuenchSprayValve=%.4f <= baseline %.4f",
 			cmdHot.QuenchSprayValve, baseCmd.QuenchSprayValve)
 	}
 
@@ -721,4 +721,87 @@ func waitFor(t *testing.T, timeout time.Duration, cond func() bool, msg string) 
 		time.Sleep(5 * time.Millisecond)
 	}
 	t.Fatal(msg)
+}
+
+type failWriteHAL struct {
+	readings       model.SensorReadings
+	failNextWrites int
+	applied        []model.ActuatorCommands
+}
+
+func (h *failWriteHAL) ReadSensors(_ context.Context) (model.SensorReadings, error) {
+	return h.readings, nil
+}
+
+func (h *failWriteHAL) ApplyCommands(_ context.Context, cmd model.ActuatorCommands) error {
+	h.applied = append(h.applied, cmd)
+	if h.failNextWrites > 0 {
+		h.failNextWrites--
+		return errors.New("simulated modbus write timeout")
+	}
+	return nil
+}
+
+func TestSprint1FailSafeHardening(t *testing.T) {
+	cfg := model.DefaultControlConfig()
+	if got := cfg.Safety.MaxQuenchOutletTemp.Fahrenheit(); math.Abs(got-200.0) > 0.05 {
+		t.Fatalf("default MaxQuenchOutletTemp = %.2f F, want aligned 200.0 F", got)
+	}
+
+	// 1. ApplyCommands failure must latch TripSensorFault and issue best-effort fail-safe write.
+	ctrl, err := NewController(cfg)
+	if err != nil {
+		t.Fatalf("NewController: %v", err)
+	}
+	hal := &failWriteHAL{
+		readings: model.SensorReadings{
+			Timestamp:        time.Now(),
+			DraftPa:          model.InWCToPascal(-0.05),
+			DraftInWC:        -0.05,
+			QuenchInletTemp:  model.FahrenheitToKelvin(2200),
+			QuenchOutletTemp: model.FahrenheitToKelvin(186),
+			WaterFlow:        model.GPMToCubicMetersPerSec(1.5),
+			WaterFlowGPM:     1.5,
+			SumpPH:           8.0,
+		},
+		failNextWrites: 1,
+	}
+	st, err := ctrl.Tick(context.Background(), hal, 100*time.Millisecond)
+	if err == nil {
+		t.Fatalf("expected ApplyCommands error to be returned")
+	}
+	if !st.InterlockActive || !st.Commands.BypassDamperOpen || st.Commands.TripReason != model.TripSensorFault {
+		t.Fatalf("ApplyCommands failure must latch fail-safe bypass: %+v", st)
+	}
+	if len(hal.applied) < 2 || !hal.applied[len(hal.applied)-1].BypassDamperOpen {
+		t.Fatalf("expected best-effort fail-safe ApplyCommands retry, got %+v", hal.applied)
+	}
+
+	// 2. Open-thermocouple / sub-freezing reading must trip TripSensorFault.
+	ctrl2, _ := NewController(cfg)
+	hal2 := &failWriteHAL{
+		readings: model.SensorReadings{
+			Timestamp:        time.Now(),
+			DraftPa:          model.InWCToPascal(-0.05),
+			DraftInWC:        -0.05,
+			QuenchInletTemp:  model.FahrenheitToKelvin(2200),
+			QuenchOutletTemp: 0, // open TC / 0 K
+			WaterFlow:        model.GPMToCubicMetersPerSec(1.5),
+			WaterFlowGPM:     1.5,
+			SumpPH:           8.0,
+		},
+	}
+	st2, err := ctrl2.Tick(context.Background(), hal2, 100*time.Millisecond)
+	if err != nil {
+		t.Fatalf("unexpected error on open-TC reading: %v", err)
+	}
+	if !st2.InterlockActive || st2.Commands.TripReason != model.TripSensorFault {
+		t.Fatalf("expected TripSensorFault on open-TC reading, got %+v", st2)
+	}
+
+	// 3. Unknown JSON keys in DaemonConfig must be rejected strictly.
+	badCfgJSON := `{"hal_mode":"sim","modbus":{"bypass_coil_deenergize_to_tirp":true}}`
+	if _, err := ParseDaemonConfig([]byte(badCfgJSON)); err == nil {
+		t.Fatalf("expected ParseDaemonConfig to reject typo/unknown JSON key")
+	}
 }

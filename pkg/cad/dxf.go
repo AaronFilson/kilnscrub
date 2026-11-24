@@ -304,11 +304,10 @@ func (b *dxfBuilder) build() []byte {
 		minX, minY, maxX, maxY = 0, 0, 0, 0
 	}
 
-	// HEADER section (AutoCAD R12 AC1009, millimeter units).
+	// HEADER section (strict AutoCAD R12 AC1009; millimeter units annotated in title block).
 	fmt.Fprintf(&out,
 		"  0\nSECTION\n  2\nHEADER\n"+
 			"  9\n$ACADVER\n  1\nAC1009\n"+
-			"  9\n$INSUNITS\n 70\n4\n"+
 			"  9\n$EXTMIN\n 10\n%.4f\n 20\n%.4f\n 30\n0.0000\n"+
 			"  9\n$EXTMAX\n 10\n%.4f\n 20\n%.4f\n 30\n0.0000\n"+
 			"  0\nENDSEC\n",
@@ -409,15 +408,24 @@ func (e *Exporter) ExportDXF(design model.ScrubberDesign) ([]byte, error) {
 	curX += vThCirc + gapX
 	rowMaxH = math.Max(rowMaxH, vThL)
 
-	// 1c. Packed-Bed Column Shell (with packing & demister zone reference lines)
+	// 1c. Packed-Bed Column Shell (with sump, packing support, packing top, and demister reference lines)
 	colCirc := math.Pi * g.colDia * toMM
 	colH := g.colH * toMM
+	packBotMM := (g.sumpH + 0.30) * toMM
+	packTopMM := (g.sumpH + 0.30 + g.packH) * toMM
+	demBotMM := (g.colH - 0.25 - g.demisterH) * toMM
+	var colZoneLines []float64
+	for _, zLine := range []float64{g.sumpH * toMM, packBotMM, packTopMM, demBotMM} {
+		if zLine > 10.0 && zLine < colH-10.0 {
+			colZoneLines = append(colZoneLines, zLine)
+		}
+	}
 	dxf.addRolledCylinder(
 		curX, rowY, colCirc, colH,
 		"STAGE 3: PACKED-BED COLUMN SHELL",
 		fmt.Sprintf("%s t=%.2fmm | D=%.1fmm CIRC=%.1fmm H=%.1fmm",
 			colMat, g.colWall*toMM, g.colDia*toMM, colCirc, colH),
-		[]float64{g.packH * toMM, (g.colH - g.demisterH) * toMM},
+		colZoneLines,
 	)
 	curX += colCirc + gapX
 	rowMaxH = math.Max(rowMaxH, colH)
@@ -468,6 +476,7 @@ func (e *Exporter) ExportDXF(design model.ScrubberDesign) ([]byte, error) {
 	// --- Row 3: Bolted Flange Rings ---
 	rowY += rowMaxH + gapY
 	curX = 0.0
+	rowMaxH = 0.0
 
 	flanges := []struct {
 		spec  flangeSpec
@@ -479,6 +488,7 @@ func (e *Exporter) ExportDXF(design model.ScrubberDesign) ([]byte, error) {
 		{g.flangeVentIn, "VENTURI INLET FLANGE", venturiMat, 2},
 		{g.flangeVentOut, "VENTURI OUTLET FLANGE", venturiMat, 2},
 		{g.flangeColumn, "PACKED-BED COLUMN FLANGE", colMat, 4},
+		{g.flangeStack, "EXHAUST STACK FLANGE", colMat, 2},
 		{g.flangeDuct, "INLET DUCT FLANGE", quenchMat, 2},
 	}
 

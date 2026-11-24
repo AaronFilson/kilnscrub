@@ -1,5 +1,5 @@
 {
-  "description": "Studio 24 cu.ft. Wood/Salt Kiln Scrubber Control Daemon Configuration (switch hal_mode to \"modbus\" and set bypass_coil_deenergize_to_trip: true for fail-safe spring-return PLC coils; NFPA 86 requires an independent hardwired 200 F manual-reset snap-disc + 24VDC latching safety relay ahead of the 210 F software backup)",
+  "description": "Studio 24 cu.ft. Wood/Salt Kiln Scrubber Control Daemon Configuration (switch hal_mode to \"modbus\" for physical RS-485 PLC/VFD hardware; bypass_coil_deenergize_to_trip defaults true for fail-safe spring-return PLC coils; NFPA 86 requires an independent hardwired 200 F manual-reset snap-disc + 24VDC latching safety relay aligned with the 200 F software limit)",
   "hal_mode": "sim",
   "control": {
     "target_draft_in_wc": -0.05,
@@ -27,7 +27,7 @@
     "quench_setpoint_k": 359.81666666666666,
     "loop_interval_ns": 100000000,
     "safety": {
-      "max_quench_outlet_temp_k": 372.0388888888889,
+      "max_quench_outlet_temp_k": 366.48333333333335,
       "min_water_flow_m3_s": 0.0000157725491,
       "min_sump_ph": 6.5,
       "max_sump_ph": 9.5,
@@ -37,11 +37,11 @@
   },
   "modbus": {
     "device": "/dev/ttyUSB0",
-    "baud_rate": 9600,
+    "baud_rate": 19200,
     "slave_id": 1,
     "timeout_ns": 500000000,
     "use_holding_registers": false,
-    "bypass_coil_deenergize_to_trip": false,
+    "bypass_coil_deenergize_to_trip": true,
     "registers": {
       "temp_unit": "F",
       "draft_pa": {

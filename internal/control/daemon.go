@@ -127,12 +127,24 @@ func (d *Daemon) Run(ctx context.Context) error {
 	}
 
 	// Execute an initial control tick immediately at startup.
-	lastTick := time.Now()
 	d.runTick(ctx, d.interval)
+	lastTick := time.Now()
 
 	ticker := time.NewTicker(d.interval)
 	defer ticker.Stop()
 
+	// On clean shutdown of a physical Modbus controller, drive fail-safe actuator outputs
+	// (blower stopped, quench spray open, bypass damper open) so the PLC never stays latched
+	// at its last running command without an active software supervisor.
+	defer func() {
+		if d.halMode == HALModeModbus {
+			shutCtx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+			defer cancel()
+			_ = d.hal.ApplyCommands(shutCtx, d.controller.FailSafeCommand(model.TripSensorFault))
+		}
+	}()
+
+	maxDT := d.interval * 5
 	for {
 		select {
 		case <-ctx.Done():
@@ -145,6 +157,8 @@ func (d *Daemon) Run(ctx context.Context) error {
 			lastTick = now
 			if dt <= 0 {
 				dt = d.interval
+			} else if dt > maxDT {
+				dt = maxDT
 			}
 			d.runTick(ctx, dt)
 		}

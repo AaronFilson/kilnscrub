@@ -377,8 +377,9 @@ func TestModbusHALReadSensorsAndApplyCommands(t *testing.T) {
 	if slave.holdingRegs[100] != 5500 || slave.holdingRegs[101] != 7250 {
 		t.Fatalf("analog outputs = [%d, %d], want [5500, 7250]", slave.holdingRegs[100], slave.holdingRegs[101])
 	}
-	if slave.coils[0] || slave.coils[1] {
-		t.Fatalf("expected fail-safe coils OFF in normal mode, got damper=%v alarm=%v", slave.coils[0], slave.coils[1])
+	// Default BypassCoilDeenergizeToTrip=true: healthy mode holds damper coil ON (true) and alarm OFF (false).
+	if !slave.coils[0] || slave.coils[1] {
+		t.Fatalf("expected fail-safe damper coil ON (hold-closed) and alarm OFF in normal mode, got damper=%v alarm=%v", slave.coils[0], slave.coils[1])
 	}
 
 	// Tripped ApplyCommands -> fail-safe coils MUST be written BEFORE analog outputs.
@@ -396,8 +397,8 @@ func TestModbusHALReadSensorsAndApplyCommands(t *testing.T) {
 	if err := hal.ApplyCommands(ctx, tripCmd); err != nil {
 		t.Fatalf("ApplyCommands(tripped): %v", err)
 	}
-	if !slave.coils[0] || !slave.coils[1] {
-		t.Fatalf("expected bypass damper and alarm latch coils ON when tripped")
+	if slave.coils[0] || !slave.coils[1] {
+		t.Fatalf("expected bypass damper coil OFF (de-energized fail-open) and alarm latch coil ON when tripped, got damper=%v alarm=%v", slave.coils[0], slave.coils[1])
 	}
 	if slave.holdingRegs[100] != 0 || slave.holdingRegs[101] != 10000 {
 		t.Fatalf("tripped analog outputs = [%d, %d], want [0, 10000]", slave.holdingRegs[100], slave.holdingRegs[101])
@@ -577,8 +578,10 @@ func TestModbusHALFaultsLatchTripSensorFault(t *testing.T) {
 				t.Fatalf("unexpected fail-safe outputs on %s: %+v", tc.name, status.Commands)
 			}
 			// Verify fail-safe commands were actually written to the Modbus coils & holding registers!
-			if !slave.coils[mbCfg.Registers.BypassDamperCoilAddr] || !slave.coils[mbCfg.Registers.AlarmLatchCoilAddr] {
-				t.Fatalf("expected PLC fail-safe coils energized after %s", tc.name)
+			// Default fail-safe de-energize-to-trip: bypass coil OFF (false = spring-open), alarm coil ON (true).
+			if slave.coils[mbCfg.Registers.BypassDamperCoilAddr] || !slave.coils[mbCfg.Registers.AlarmLatchCoilAddr] {
+				t.Fatalf("expected PLC bypass coil de-energized (false) and alarm coil ON (true) after %s, got damper=%v alarm=%v",
+					tc.name, slave.coils[mbCfg.Registers.BypassDamperCoilAddr], slave.coils[mbCfg.Registers.AlarmLatchCoilAddr])
 			}
 
 			// Clear bus fault, execute healthy tick, verify interlock stays latched until explicit ResetInterlock.

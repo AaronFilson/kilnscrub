@@ -76,9 +76,9 @@ Commands:
   export   Export fabrication .stl mesh, unfolded .dxf patterns, and BOM
   presets  List curated studio kiln presets (ID, profile, audience, badge)
   guide    Evaluate COTS hardware, urban readiness, and Build/Firing Guides
-  packet   Generate a complete 11-file Studio Build Packet (.zip)
+  packet   Generate a tailored Studio Build Packet (.zip)
   daemon   Run the closed-loop PID draft & quench safety controller
-  ui       Launch the interactive 4-tab web dashboard (default :8080)
+  ui       Launch the interactive 4-tab web dashboard (default 127.0.0.1:8080)
   version  Print the kilnscrub version`)
 }
 
@@ -116,6 +116,21 @@ func (f sizingFlags) applyExplicit(base model.DesignInput, setFlags map[string]b
 	}
 	if setFlags["salt-rate"] {
 		input.SaltRateLbsPerHr = *f.saltRate
+		if !setFlags["fuel"] {
+			if input.SaltRateLbsPerHr > 0 {
+				if input.FuelType == model.FuelGas {
+					input.FuelType = model.FuelGasSalt
+				} else if input.FuelType == model.FuelWood {
+					input.FuelType = model.FuelWoodSalt
+				}
+			} else if input.SaltRateLbsPerHr == 0 {
+				if input.FuelType == model.FuelGasSalt {
+					input.FuelType = model.FuelGas
+				} else if input.FuelType == model.FuelWoodSalt {
+					input.FuelType = model.FuelWood
+				}
+			}
+		}
 	}
 	if setFlags["fuel"] {
 		input.FuelType = *f.fuel
@@ -700,8 +715,14 @@ func runPacket(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("write %s: %w", targetPath, err)
 	}
 
-	fmt.Fprintf(stdout, "wrote %s (%d bytes, 11 files) | %s | Est. COTS $%.2f | Urban Readiness: %s\n",
-		targetPath, len(zipBytes), eval.Project.StudioName, eval.COTS.EstimatedTotalUSD, strings.ToUpper(eval.Urban.OverallStatus))
+	fileCount := 12
+	if eval.Project.IsLocalCeramic() {
+		fileCount = 8
+	} else if eval.Project.ControlTier == studio.ControlTierElectromechanicalOnly {
+		fileCount = 11
+	}
+	fmt.Fprintf(stdout, "wrote %s (%d bytes, %d files) | %s | Est. COTS $%.2f | Urban Readiness: %s\n",
+		targetPath, len(zipBytes), fileCount, eval.Project.StudioName, eval.COTS.EstimatedTotalUSD, strings.ToUpper(eval.Urban.OverallStatus))
 	return nil
 }
 
@@ -817,6 +838,7 @@ func runDaemon(ctx context.Context, args []string, stdout, stderr io.Writer) err
 	draft := fs.Float64("draft", defaults.TargetDraftInWC, "Target kiln draft (inWC, negative = suction)")
 	quenchTempF := fs.Float64("quench-temp-f", defaults.QuenchSetpoint.Fahrenheit(), "Target quench outlet temperature (F)")
 	interval := fs.Duration("interval", defaults.LoopInterval, "Closed-loop control tick interval")
+	logInterval := fs.Duration("log-interval", 0, "Optional telemetry stdout log throttle interval (0 = log every tick; always logs state/interlock transitions)")
 	duration := fs.Duration("duration", 0, "Optional bounded run duration (0 = run until SIGINT/SIGTERM)")
 
 	if err := fs.Parse(args); err != nil {
@@ -827,6 +849,9 @@ func runDaemon(ctx context.Context, args []string, stdout, stderr io.Writer) err
 	}
 	if *duration < 0 {
 		return fmt.Errorf("duration must be >= 0, got %v", *duration)
+	}
+	if *logInterval < 0 {
+		return fmt.Errorf("log-interval must be >= 0, got %v", *logInterval)
 	}
 
 	setFlags := make(map[string]bool)
@@ -861,12 +886,23 @@ func runDaemon(ctx context.Context, args []string, stdout, stderr io.Writer) err
 
 	cfg := dcfg.Control
 	var tickNum atomic.Uint64
+	var lastLog time.Time
+	var lastState string
+	var lastInterlock bool
 	daemon, err := control.NewDaemon(
 		cfg,
 		hal,
 		control.WithHALMode(dcfg.HALMode),
 		control.WithTelemetryCallback(func(st model.ControlStatus) {
 			n := tickNum.Add(1)
+			now := time.Now()
+			stateChanged := n == 1 || st.State != lastState || st.InterlockActive != lastInterlock
+			if *logInterval > 0 && !stateChanged && now.Sub(lastLog) < *logInterval {
+				return
+			}
+			lastLog = now
+			lastState = st.State
+			lastInterlock = st.InterlockActive
 			fmt.Fprintf(stdout, "tick=%d state=%s draft=%.4f inWC (%.2f Pa) quench_out=%.1f F water=%.2f GPM vfd=%.1f%% valve=%.1f%% bypass=%v\n",
 				n, st.State, st.FilteredDraftInWC, st.FilteredDraftPa,
 				st.Readings.QuenchOutletTemp.Fahrenheit(), st.Readings.WaterFlowGPM,
@@ -912,7 +948,7 @@ func runUI(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	fs := flag.NewFlagSet("ui", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 
-	addr := fs.String("addr", ":8080", "HTTP listen address")
+	addr := fs.String("addr", "127.0.0.1:8080", "HTTP listen address (default loopback 127.0.0.1:8080; pass 0.0.0.0:8080 for LAN)")
 	configPath := fs.String("config", "", "Path to JSON daemon configuration file for embedded live control")
 	halMode := fs.String("hal", control.HALModeSim, "Hardware abstraction layer backend for embedded control: sim or modbus")
 	noControl := fs.Bool("no-control", false, "Disable embedded live control daemon and telemetry backend")

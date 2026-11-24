@@ -1380,15 +1380,15 @@ func writeMarkdownReport(outPath string, r *RepoReport) error {
 	}
 
 	b.WriteString("## Per-Package Coverage Summary\n\n")
-	b.WriteString("| Package | Statements | Statement % | Exec Lines | Line % | AST Branches | Branch % | Status (≥85% Line / ≥80% Branch) |\n")
+	b.WriteString("| Package | Statements | Statement % | Exec Lines | Line % | AST Branches | Branch % | Status (≥85% Line / ≥72% Branch CI Gate) |\n")
 	b.WriteString("| :--- | ---: | ---: | ---: | ---: | ---: | ---: | :---: |\n")
 	for _, p := range r.Packages {
 		status := "PASS"
-		if p.LinePct < 85.0 && p.BranchPct < 80.0 {
+		if p.LinePct < 85.0 && p.BranchPct < 72.0 {
 			status = "Below Line & Branch"
 		} else if p.LinePct < 85.0 {
 			status = "Below Line"
-		} else if p.BranchPct < 80.0 {
+		} else if p.BranchPct < 72.0 {
 			status = "Below Branch"
 		}
 		b.WriteString(fmt.Sprintf("| `%s` | %d / %d | %.1f%% | %d / %d | %.1f%% | %d / %d | %.1f%% | %s |\n",
@@ -1506,7 +1506,7 @@ func writeMarkdownReport(outPath string, r *RepoReport) error {
 	b.WriteString("CGO_ENABLED=1 go test -race -covermode=atomic -coverprofile=coverage.out ./...\n")
 	b.WriteString("go run ./scripts/branch_coverage.go -profile coverage.out -markdown docs/TEST_COVERAGE.md\n\n")
 	b.WriteString("# Enforce CI minimum thresholds (exits 1 if below threshold):\n")
-	b.WriteString("go run ./scripts/branch_coverage.go -profile coverage.out -min-line 80 -min-branch 70\n")
+	b.WriteString("go run ./scripts/branch_coverage.go -profile coverage.out -min-line 85 -min-branch 72\n")
 	b.WriteString("```\n")
 
 	return os.WriteFile(outPath, []byte(b.String()), 0o644)

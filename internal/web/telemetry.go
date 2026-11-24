@@ -15,6 +15,7 @@ import (
 
 const (
 	defaultSSEKeepaliveInterval = 15 * time.Second
+	sseWriteTimeout             = 10 * time.Second
 
 	// Supported simulation fault-injection actions for POST /api/control/fault.
 	FaultActionHeatSpike        = "heat_spike"
@@ -71,7 +72,7 @@ func (s *Server) handleControlStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	b := s.getControlBackend()
 	if b == nil {
-		writeJSON(w, http.StatusOK, controlDisabledResponse{Enabled: false})
+		writeJSONResponse(w, r, http.StatusOK, controlDisabledResponse{Enabled: false})
 		return
 	}
 
@@ -82,7 +83,7 @@ func (s *Server) handleControlStatus(w http.ResponseWriter, r *http.Request) {
 		Status:                 b.Status(),
 		Config:                 b.Config(),
 	}
-	writeJSON(w, http.StatusOK, resp)
+	writeJSONResponse(w, r, http.StatusOK, resp)
 }
 
 func (s *Server) handleControlStream(w http.ResponseWriter, r *http.Request) {
@@ -104,7 +105,8 @@ func (s *Server) handleControlStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Clear the HTTP server's WriteTimeout for this long-lived SSE response.
+	// Clear the HTTP server's WriteTimeout for this long-lived SSE response, then apply a
+	// bounded per-write deadline on every event/ping so slow/stalled TCP clients never leak goroutines.
 	rc := http.NewResponseController(w)
 	_ = rc.SetWriteDeadline(time.Time{})
 
@@ -121,7 +123,7 @@ func (s *Server) handleControlStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusOK)
 
-	if err := writeSSEStatus(w, flusher, b.Status()); err != nil {
+	if err := writeSSEStatus(rc, w, flusher, b.Status()); err != nil {
 		return
 	}
 
@@ -138,22 +140,28 @@ func (s *Server) handleControlStream(w http.ResponseWriter, r *http.Request) {
 			if !open {
 				return
 			}
-			if err := writeSSEStatus(w, flusher, st); err != nil {
+			if err := writeSSEStatus(rc, w, flusher, st); err != nil {
 				return
 			}
 		case <-ticker.C:
+			_ = rc.SetWriteDeadline(time.Now().Add(sseWriteTimeout))
 			if _, err := io.WriteString(w, ": ping\n\n"); err != nil {
 				return
 			}
 			flusher.Flush()
+			_ = rc.SetWriteDeadline(time.Time{})
 		}
 	}
 }
 
-func writeSSEStatus(w http.ResponseWriter, flusher http.Flusher, st model.ControlStatus) error {
+func writeSSEStatus(rc *http.ResponseController, w http.ResponseWriter, flusher http.Flusher, st model.ControlStatus) error {
 	payload, err := json.Marshal(st)
 	if err != nil {
 		return err
+	}
+	if rc != nil {
+		_ = rc.SetWriteDeadline(time.Now().Add(sseWriteTimeout))
+		defer func() { _ = rc.SetWriteDeadline(time.Time{}) }()
 	}
 	if _, err := fmt.Fprintf(w, "data: %s\n\n", payload); err != nil {
 		return err
@@ -166,6 +174,9 @@ func (s *Server) handleControlReset(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", "POST")
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if !enforceSameOrigin(w, r) {
 		return
 	}
 
@@ -190,6 +201,9 @@ func (s *Server) handleControlSetpoint(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+	if !enforceSameOrigin(w, r) || !enforceJSONContentType(w, r) {
+		return
+	}
 
 	b := s.getControlBackend()
 	if b == nil {
@@ -199,7 +213,7 @@ func (s *Server) handleControlSetpoint(w http.ResponseWriter, r *http.Request) {
 
 	body, err := readLimitedBody(r)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeBodyReadError(w, err)
 		return
 	}
 	trimmed := bytes.TrimSpace(body)
@@ -231,7 +245,7 @@ func (s *Server) handleControlSetpoint(w http.ResponseWriter, r *http.Request) {
 		qF := *req.QuenchSetpointF
 		maxTempK := b.Config().Safety.MaxQuenchOutletTemp
 		if maxTempK <= 273.15 {
-			maxTempK = model.FahrenheitToKelvin(210.0)
+			maxTempK = model.FahrenheitToKelvin(200.0)
 		}
 		maxTempF := maxTempK.Fahrenheit()
 		if math.IsNaN(qF) || math.IsInf(qF, 0) || qF <= 32.0 || qF >= maxTempF {
@@ -256,6 +270,9 @@ func (s *Server) handleControlFault(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+	if !enforceSameOrigin(w, r) || !enforceJSONContentType(w, r) {
+		return
+	}
 
 	b := s.getControlBackend()
 	if b == nil {
@@ -270,7 +287,7 @@ func (s *Server) handleControlFault(w http.ResponseWriter, r *http.Request) {
 
 	body, err := readLimitedBody(r)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeBodyReadError(w, err)
 		return
 	}
 	trimmed := bytes.TrimSpace(body)

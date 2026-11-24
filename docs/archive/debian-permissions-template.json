@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "command(go)",
+      "command(gofmt)",
+      "command(git status)",
+      "command(git diff)",
+      "command(git log)",
+      "command(git show)",
+      "command(git branch)",
+      "command(git rev-parse)",
+      "command(git add)",
+      "command(git commit)",
+      "command(git merge)",
+      "command(git cherry-pick)",
+      "command(git worktree)",
+      "command(mkdir)",
+      "command(ls)",
+      "command(wc)",
+      "command(file)",
+      "command(regex:^(/tmp|\\.\\/)kilnscrub\\s+(design|export|ui|daemon|help).*$)",
+      "command(regex:^curl\\s+.*https?://(127\\.0\\.0\\.1|localhost):8080.*$)"
+    ],
+    "ask": [
+      "command(git push)",
+      "command(git reset)",
+      "command(git clean)",
+      "command(rm)",
+      "command(sudo)",
+      "command(apt)",
+      "command(apt-get)",
+      "read_url(*)",
+      "execute_url(*)"
+    ],
+    "deny": [
+      "command(rm -rf /)"
+    ]
+  }
+}

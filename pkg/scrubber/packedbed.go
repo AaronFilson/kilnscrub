@@ -140,7 +140,7 @@ func SizePackedBed(
 		return model.GasComposition{}, model.PackedBedResult{}, err
 	}
 	vFlood = float64(vfFinal)
-	for (qGas/(math.Pi*colDiam*colDiam/4.0))/vFlood*100.0 > packedBedMaxFloodPct {
+	for step := 0; step < 200 && (qGas/(math.Pi*colDiam*colDiam/4.0))/vFlood*100.0 > packedBedMaxFloodPct; step++ {
 		colDiam += 0.025
 		colArea = math.Pi * colDiam * colDiam / 4.0
 		qRecirc = math.Max(packedBedLGRatioVol*qGas, packedBedMinWettingFlux*colArea)
@@ -183,10 +183,14 @@ func SizePackedBed(
 	nahco3KgPerHr := nHClRemoved * nahco3ExcessFactor * nahco3MWKgPerMol * 3600.0
 
 	// Irrigated packing bed pressure drop using Sauter equivalent sphere diameter
-	// d_p,eq = 6*(1 - eps)/a_p (with specific surface area a_p scaled from 207 m^2/m^3
-	// for 1" PP Pall rings) multiplied by the Eckert GPDC irrigated liquid-holdup factor,
-	// plus 3-pass chevron demister pressure drop.
-	specificArea := packedBedRefSpecificAreaM2M3 * (packedBedRefNominalDiamM / float64(input.PackingDiameter))
+	// d_p,eq = 6*(1 - eps)/a_p (scaled from 207 m^2/m^3 for open PP Pall rings, or 185 m^2/m^3
+	// for denser ceramic Raschig rings when voidage <= 0.78) multiplied by the Eckert GPDC
+	// irrigated liquid-holdup factor, plus 3-pass chevron demister pressure drop.
+	refSpecArea := packedBedRefSpecificAreaM2M3
+	if input.PackingVoidage <= 0.78 {
+		refSpecArea = 185.0
+	}
+	specificArea := refSpecArea * (packedBedRefNominalDiamM / float64(input.PackingDiameter))
 	sauterDp := 6.0 * (1.0 - input.PackingVoidage) / specificArea
 	dryBedDP, err := ErgunPressureDrop(sauterDp, input.PackingVoidage, vSup, rhoG, muG, packingHeight)
 	if err != nil {

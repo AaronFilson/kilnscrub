@@ -274,9 +274,9 @@ func assessElectrical(project StudioProject, design model.ScrubberDesign) Electr
 		}
 		auxAmps = 3.0 // ~250W mag-drive recirc pump + ~50W instrumentation @ 120V
 	case hp <= 1.0:
-		if project.AvailableVoltage >= 240 {
+		if project.AvailableVoltage >= 230 {
 			reqV = 240
-			vfdRatedInputA = 9.7 // GS21-21P0 rated 1-ph VT input @ 240V
+			vfdRatedInputA = 9.7 // GS21-21P0 rated 1-ph VT input @ 230-240V
 			auxAmps = 1.5
 		} else {
 			reqV = 120
@@ -305,10 +305,9 @@ func assessElectrical(project StudioProject, design model.ScrubberDesign) Electr
 		auxAmps = 1.5
 	}
 
+	// Single-leg ampacity: a 120V plume diluter draws full diluterA120 on its 120V hot leg
+	// (never halve it onto a 240V 2-wire VFD branch circuit); feed via a dedicated 120V leg/breaker.
 	diluterCircuitA := diluterA120
-	if reqV == 240 {
-		diluterCircuitA = diluterA120 * 0.5 // equivalent 240V power draw (feed diluter via dedicated 120V leg)
-	}
 	reqAmps := round1(1.25*vfdRatedInputA + auxAmps + diluterCircuitA)
 
 	var circuitLabel string
@@ -344,15 +343,15 @@ func assessElectrical(project StudioProject, design model.ScrubberDesign) Electr
 		default:
 			circuitLabel = "240V 60A single-phase (or 3-phase) VFD circuit (NEC 430.122)"
 		}
-		fits = project.AvailableVoltage >= 240
+		fits = project.AvailableVoltage >= 230
 		if fits {
 			status = StatusOK
-			summary = fmt.Sprintf("%.2g HP %s VFD (%.1f A rated in x 125%%) + pump requires %.1f A min ampacity on 240V — ready for your %s.%s%s",
+			summary = fmt.Sprintf("%.2g HP %s VFD (%.1f A rated in x 125%%) + pump requires %.1f A min ampacity on 230-240V — ready for your %s.%s%s",
 				hp, blowerRole, vfdRatedInputA, reqAmps, circuitLabel, diluterNote, necNotes)
 		} else {
 			status = StatusActionNeeded
-			summary = fmt.Sprintf("%.2g HP %s requires a %s (%.1f A min ampacity per NEC 430.122(A)), but studio power is set to 120V. Add a 240V breaker/subpanel or downsize kiln/venturi throat velocity.%s%s",
-				hp, blowerRole, circuitLabel, reqAmps, diluterNote, necNotes)
+			summary = fmt.Sprintf("%.2g HP %s requires a %s (%.1f A min ampacity per NEC 430.122(A)), but studio power is set to %dV. Add a 240V breaker/subpanel or downsize kiln/venturi throat velocity.%s%s",
+				hp, blowerRole, circuitLabel, reqAmps, project.AvailableVoltage, diluterNote, necNotes)
 		}
 	}
 
@@ -481,15 +480,24 @@ func assessNoise(project StudioProject, design model.ScrubberDesign) NoiseAssess
 			src = silHybrid
 		}
 		propDBA := round1(math.Max(25.0, src-atten))
+		status := StatusOK
+		note := fmt.Sprintf("comfortably under %.0f dBA limit", urbanLimitDBA)
+		if propDBA > urbanLimitDBA {
+			status = StatusActionNeeded
+			note = fmt.Sprintf("EXCEEDS %.0f dBA property-line limit — add acoustic shroud or increase setback", urbanLimitDBA)
+		} else if propDBA > 55.0 {
+			status = StatusCaution
+			note = fmt.Sprintf("under %.0f dBA daytime limit, but may exceed 50-55 dBA overnight rules", urbanLimitDBA)
+		}
 		return NoiseAssessment{
-			Status:              StatusOK,
+			Status:              status,
 			BareDBA3Ft:          bareHybrid,
 			SilencedDBA3Ft:      silHybrid,
 			PropertyLineDBA:     propDBA,
 			PropertyLineFt:      d2,
 			UrbanLimitDBA:       urbanLimitDBA,
 			SilencerRecommended: bareHybrid-atten > 55.0,
-			Summary:             fmt.Sprintf("Low-noise local hybrid ceramic operation (0.5 HP domestic monoblock pump + low-dP fan): %.1f dBA at 3 ft -> %.1f dBA at %.0f ft property line (comfortably under %.0f dBA limit).", src, propDBA, d2, urbanLimitDBA),
+			Summary:             fmt.Sprintf("Local hybrid ceramic operation (0.5 HP domestic monoblock pump + low-dP fan): %.1f dBA at 3 ft -> %.1f dBA at %.0f ft property line (%s).", src, propDBA, d2, note),
 		}
 	}
 	shaftHP := math.Max(0.15, design.Blower.ShaftPowerHP)
@@ -679,27 +687,39 @@ func assessPlume(project StudioProject, design model.ScrubberDesign) PlumeAssess
 	// 4. Visible horizontal plume reach (5 mph Neutral Class D wind, calibrated to Briggs/Fischer).
 	bareLenFt := 0.0
 	dilutedLenFt := 0.0
+	isOffGrid := project.IsLocalCeramic() && project.ZeroElectricity
 	if !coldDilutionWorks && qAmbClearM3S > 0 {
 		bareLenFt = round1(10.3 * math.Sqrt(qAmbClearM3S))
-		if qAmbClearCFM > dilutionCFM {
+		if isOffGrid {
+			dilutedLenFt = bareLenFt
+		} else if qAmbClearCFM > dilutionCFM {
 			qRemRatio := (qAmbClearCFM - dilutionCFM) / qAmbClearCFM
 			exhShare := design.Blower.FlowACFM / math.Max(design.Blower.FlowACFM+dilutionCFM, 1.0)
 			dilutedLenFt = round1(math.Max(0.5, bareLenFt*0.42*math.Pow(qRemRatio, 1.35)*math.Pow(exhShare, 0.15)))
 		}
 	}
 
-	squirrelVerdict := fmt.Sprintf(
-		"A 120V squirrel-cage blower CANNOT replace the main Stage 4 radial ID blower (%.1f inWC static pressure exceeds the ~1.5-2.5 inWC squirrel-cage stall limit), "+
-			"but it DOES hold up downstream at ~0.7-1.2 inWC in a stack mixing tee + %.0f\" high-velocity exit cone (~3,400 FPM). "+
-			"Unheated cold air alone stays supersaturated at the stack exit (cold_dilution_works=false), yet a %.0f CFM 120V squirrel-cage HV jet cuts visible winter plume reach from ~%.0f ft bare down to ~%.0f ft (vs your %.0f ft property line). "+
-			"For 0 ft tangent-clear winter invisibility (%.1f kW equivalent), pull ~250 F waste heat from a kiln-jacket/flue shroud (~%.0f CFM, blower mounted on the cool intake side) — avoid electric duct heaters.",
-		design.Blower.TotalStaticPressureInWC, coneIn, dilutionCFM, bareLenFt, dilutedLenFt,
-		project.PropertyLineFt, qReheatKW, shroudCFM250,
-	)
+	var squirrelVerdict string
+	if isOffGrid {
+		dilutionCFM = 0
+		squirrelVerdict = fmt.Sprintf(
+			"Zero-electricity mode (0 W): electric 120V plume dilution fans are omitted. Rely on the elevated %.0f ft outdoor masonry/SWG chimney for passive buoyancy dispersion (~%.0f ft visible steam reach in %.0f F ambient air vs %.0f ft property line).",
+			minStackFt, bareLenFt, project.AmbientWinterF, project.PropertyLineFt,
+		)
+	} else {
+		squirrelVerdict = fmt.Sprintf(
+			"A 120V squirrel-cage blower CANNOT replace the main Stage 4 radial ID blower (%.1f inWC static pressure exceeds the ~1.5-2.5 inWC squirrel-cage stall limit), "+
+				"but it DOES hold up downstream at ~0.7-1.2 inWC in a stack mixing tee + %.0f\" high-velocity exit cone (~3,400 FPM). "+
+				"Unheated cold air alone stays supersaturated at the stack exit (cold_dilution_works=false), yet a %.0f CFM 120V squirrel-cage HV jet cuts visible winter plume reach from ~%.0f ft bare down to ~%.0f ft (vs your %.0f ft property line). "+
+				"For 0 ft tangent-clear winter invisibility (%.1f kW equivalent), pull ~250 F waste heat from a kiln-jacket/flue shroud (~%.0f CFM, blower mounted on the cool intake side) — avoid electric duct heaters.",
+			design.Blower.TotalStaticPressureInWC, coneIn, dilutionCFM, bareLenFt, dilutedLenFt,
+			project.PropertyLineFt, qReheatKW, shroudCFM250,
+		)
+	}
 
 	var risk, status, summary string
 	activeLenFt := bareLenFt
-	if project.IncludePlumeDiluter {
+	if project.IncludePlumeDiluter && !isOffGrid {
 		activeLenFt = dilutedLenFt
 	}
 
@@ -730,7 +750,11 @@ func assessPlume(project StudioProject, design model.ScrubberDesign) PlumeAssess
 	switch {
 	case project.AmbientWinterF <= 45.0:
 		risk = "high"
-		if project.IncludePlumeDiluter && dilutedLenFt <= 0.75*project.PropertyLineFt {
+		if isOffGrid {
+			status = StatusCaution
+			summary = fmt.Sprintf("In %.0f F winter air, zero-electricity outdoor chimney exhaust (%.0f ft stack) forms a ~%.0f ft visible white steam plume (vs %.0f ft property line); elevate stack above eaves for clean passive dispersion.%s",
+				project.AmbientWinterF, minStackFt, bareLenFt, project.PropertyLineFt, exhaustSafetyNote)
+		} else if project.IncludePlumeDiluter && dilutedLenFt <= 0.75*project.PropertyLineFt {
 			status = StatusOK
 			summary = fmt.Sprintf("Squirrel-cage HV plume diluter (%.0f CFM) shrinks winter steam reach from ~%.0f ft bare down to ~%.0f ft — dissipating cleanly before your %.0f ft property line.%s",
 				dilutionCFM, bareLenFt, dilutedLenFt, project.PropertyLineFt, exhaustSafetyNote)
@@ -741,18 +765,28 @@ func assessPlume(project StudioProject, design model.ScrubberDesign) PlumeAssess
 		}
 	case project.AmbientWinterF <= 65.0:
 		risk = "moderate"
-		if project.IncludePlumeDiluter || activeLenFt <= 0.50*project.PropertyLineFt {
+		if (!isOffGrid && project.IncludePlumeDiluter) || activeLenFt <= 0.50*project.PropertyLineFt {
 			status = StatusOK
 		} else {
 			status = StatusCaution
 		}
-		summary = fmt.Sprintf("Cool %.0f F air creates a ~%.0f ft bare white steam wisp (~%.0f ft with %.0f CFM squirrel-cage HV diluter).%s",
-			project.AmbientWinterF, bareLenFt, dilutedLenFt, dilutionCFM, exhaustSafetyNote)
+		if isOffGrid {
+			summary = fmt.Sprintf("Cool %.0f F air creates a ~%.0f ft passive chimney steam wisp from the %.0f ft outdoor stack.%s",
+				project.AmbientWinterF, bareLenFt, minStackFt, exhaustSafetyNote)
+		} else {
+			summary = fmt.Sprintf("Cool %.0f F air creates a ~%.0f ft bare white steam wisp (~%.0f ft with %.0f CFM squirrel-cage HV diluter).%s",
+				project.AmbientWinterF, bareLenFt, dilutedLenFt, dilutionCFM, exhaustSafetyNote)
+		}
 	default:
 		risk = "low"
 		status = StatusOK
-		summary = fmt.Sprintf("Mild %.0f F ambient air disperses %.0f F steam quickly (~%.0f ft bare, ~%.0f ft diluted).%s",
-			project.AmbientWinterF, exhaustF, bareLenFt, dilutedLenFt, exhaustSafetyNote)
+		if isOffGrid {
+			summary = fmt.Sprintf("Mild %.0f F ambient air disperses %.0f F steam quickly from the %.0f ft outdoor chimney (~%.0f ft reach).%s",
+				project.AmbientWinterF, exhaustF, minStackFt, bareLenFt, exhaustSafetyNote)
+		} else {
+			summary = fmt.Sprintf("Mild %.0f F ambient air disperses %.0f F steam quickly (~%.0f ft bare, ~%.0f ft diluted).%s",
+				project.AmbientWinterF, exhaustF, bareLenFt, dilutedLenFt, exhaustSafetyNote)
+		}
 	}
 	if setbackActionNeeded {
 		status = StatusActionNeeded
@@ -799,13 +833,35 @@ func assessDrain(project StudioProject, design model.ScrubberDesign) DrainAssess
 		}
 	}
 
-	firingsPerSack := maxInt(1, int(math.Floor(50.0/lbs)))
+	if project.IsLocalCeramic() {
+		fr := EvaluateFrugal(project, design)
+		bulkLabel := fmt.Sprintf("%.2f kg (%.1f lbs) %s (%s) per %.1f hr salting firing",
+			fr.AlkaliKgPerFiring, fr.AlkaliLbsPerFiring, fr.AlkaliName, fr.AlkaliFormula, saltingHrs)
+		return DrainAssessment{
+			Status:                 StatusCaution,
+			SaltingHours:           saltingHrs,
+			BakingSodaLbsPerFiring: lbs,
+			BakingSoda15LbBags:     bags15,
+			BakingSoda50LbSacks:    sacks50,
+			BulkPackagingLabel:     bulkLabel,
+			TargetDrainPH:          targetPH,
+			Summary:                fmt.Sprintf("Stock %s to hold brick sump pH 7.5-8.5. Cool sump liquor to <=140 F (60 C), let wood ash/lime sediment settle in the baffled basin, confirm neutralized pH %s with litmus strips before disposal.", bulkLabel, targetPH),
+		}
+	}
+
 	bagWord := "bag"
 	if bags15 > 1 {
 		bagWord = "bags"
 	}
-	bulkLabel := fmt.Sprintf("%d × 15 lb bulk %s (~%.1f lbs used over %.1f hr salting; 1 × 50 lb sack covers ~%d firings)",
-		bags15, bagWord, lbs, saltingHrs, firingsPerSack)
+	var sackNote string
+	if lbs > 50.0 {
+		sackNote = fmt.Sprintf("needs %d × 50 lb sacks per firing", sacks50)
+	} else {
+		firingsPerSack := maxInt(1, int(math.Floor(50.0/lbs)))
+		sackNote = fmt.Sprintf("1 × 50 lb sack covers ~%d firings", firingsPerSack)
+	}
+	bulkLabel := fmt.Sprintf("%d × 15 lb bulk %s (~%.1f lbs used over %.1f hr salting; %s)",
+		bags15, bagWord, lbs, saltingHrs, sackNote)
 
 	return DrainAssessment{
 		Status:                 StatusCaution,

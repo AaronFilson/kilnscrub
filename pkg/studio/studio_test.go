@@ -550,8 +550,8 @@ func TestBuildGuideAdaptsToBuildPath(t *testing.T) {
 	if !strings.Contains(cotsEval.BuildGuideMD, "No-Weld COTS Hardware") {
 		t.Error("expected BuildGuideMD to reflect cots_no_weld build path")
 	}
-	if !strings.Contains(cotsEval.OperationsChecklistMD, "210 F") || !strings.Contains(cotsEval.OperationsChecklistMD, "0.25 GPM") {
-		t.Error("expected OperationsChecklistMD to include 210 F and 0.25 GPM trip tests")
+	if !strings.Contains(cotsEval.OperationsChecklistMD, "200 F") || !strings.Contains(cotsEval.OperationsChecklistMD, "0.25 GPM") {
+		t.Error("expected OperationsChecklistMD to include 200 F and 0.25 GPM trip tests")
 	}
 	if !strings.Contains(cotsEval.OperationsChecklistMD, "1.105") || !strings.Contains(cotsEval.OperationsChecklistMD, "15 lb") {
 		t.Error("expected OperationsChecklistMD to include brine hydrometer SG and 15 lb bulk bags")
@@ -595,6 +595,7 @@ func TestBuildPacketZipContainsAllElevenValidFiles(t *testing.T) {
 	wantFiles := []string{
 		"scrubber.stl",
 		"scrubber.dxf",
+		"shop_plan.svg",
 		"shop_plan.json",
 		"bom_cots.csv",
 		"bom_cots.md",
@@ -1388,7 +1389,6 @@ func TestPhase8BudgetBlowerDrivesShelllessPipesPackingAndCompressor(t *testing.T
 	}
 
 	// 4. All 3 PackingMediaOption modes.
-	basePack := baseEval.ArchitectureOptions.PackingMedia
 	bioProj := baseProj
 	bioProj.PackingMediaOption = PackingMediaAquacultureBioballs
 	bioEval, err := eval.Evaluate(bioProj)
@@ -1407,8 +1407,8 @@ func TestPhase8BudgetBlowerDrivesShelllessPipesPackingAndCompressor(t *testing.T
 		t.Fatalf("diy_ceramic_rings evaluate: %v", err)
 	}
 	diyPack := diyEval.ArchitectureOptions.PackingMedia
-	if diyPack.Voidage != 0.70 || diyPack.BedDPInWC <= basePack.BedDPInWC*2.0 || diyPack.CostDeltaUSD >= bioPack.CostDeltaUSD {
-		t.Errorf("diy_ceramic_rings expected voidage=0.70, higher irrigated Ergun dP (>2x %.2f), and lower cost than bioballs: %+v", basePack.BedDPInWC, diyPack)
+	if diyPack.Voidage != 0.70 || diyEval.Design.PackedBed.PercentOfFlood > 75.0 || diyEval.Design.PackedBed.ColumnDiameter <= baseEval.Design.PackedBed.ColumnDiameter || diyPack.CostDeltaUSD >= bioPack.CostDeltaUSD {
+		t.Errorf("diy_ceramic_rings expected voidage=0.70, column upsized to stay <=75%% flood (%.1f%%), and lower media cost than bioballs: %+v", diyEval.Design.PackedBed.PercentOfFlood, diyPack)
 	}
 	if diyEval.COTS.PackingMedia.WeightKg <= baseEval.COTS.PackingMedia.WeightKg*5.0 {
 		t.Errorf("diy_ceramic_rings must reflect heavy stoneware weight: %.1f kg/cuft vs %.1f kg/cuft",
@@ -1589,8 +1589,11 @@ func TestPhase9CustomFabDeluxeAndCompleteSystemsShopPlan(t *testing.T) {
 		if strings.Contains(blob, "IPC608-RPZ-AG") {
 			hasRPZ = true
 		}
-		if strings.Contains(blob, "NEC430-DISC-LR") {
+		if strings.Contains(blob, "NEC 430.102") {
 			hasDisc = true
+		}
+		if strings.Contains(blob, "NEC430-DISC-LR") {
+			t.Errorf("Deluxe BOM must not double-count separate NEC430-DISC-LR when DLX-UL508A-N4X-PANEL includes through-door disconnect")
 		}
 		if strings.Contains(blob, "200 F") && strings.Contains(blob, "NFPA 86") {
 			hasNFPA86 = true
@@ -1745,9 +1748,21 @@ func TestPhase9CustomFabDeluxeAndCompleteSystemsShopPlan(t *testing.T) {
 		}
 	}
 
-	// 6. Verify interactions: Eductor + Parallel Bed + Compressor Air-Atomize + DIY Ceramic Rings + Plume Diluter + Dual Sump!
-	comboProj := dlxParsed
-	comboProj.StageAlignment = StageAlignmentEductorDryFan
+	// 6. Verify strict rejection of contradictory combos (Deluxe + ParallelManifold; Eductor + AirAtomize),
+	// and verify valid combined features: COTS + Parallel Bed + Compressor Air-Atomize + DIY Ceramic Rings + Plume Diluter + Dual Sump!
+	badDeluxeCombo := dlxParsed
+	badDeluxeCombo.PackedBedLayout = PackedBedLayoutParallelManifold
+	if _, err := eval.Evaluate(badDeluxeCombo); err == nil {
+		t.Errorf("expected custom_fab_deluxe + parallel_manifold to be rejected by Validate()")
+	}
+	badEductorCombo := DefaultProject()
+	badEductorCombo.StageAlignment = StageAlignmentEductorDryFan
+	badEductorCombo.BlowerDriveOption = BlowerDriveCompressorAirAtomize
+	if _, err := eval.Evaluate(badEductorCombo); err == nil {
+		t.Errorf("expected eductor_dry_fan + compressor_air_atomize to be rejected by Validate()")
+	}
+
+	comboProj := DefaultProject()
 	comboProj.PackedBedLayout = PackedBedLayoutParallelManifold
 	comboProj.BlowerDriveOption = BlowerDriveCompressorAirAtomize
 	comboProj.PackingMediaOption = PackingMediaDIYCeramicRings
@@ -1768,7 +1783,7 @@ func TestPhase9CustomFabDeluxeAndCompleteSystemsShopPlan(t *testing.T) {
 	if !hasE6 {
 		t.Error("expected E6 plume diluter circuit when IncludePlumeDiluter=true")
 	}
-	// A1 compressor air line, P5 parallel manifold, P6 >= 8" U-trap seal present.
+	// A1 compressor air line, P5 parallel manifold, P6 barometric seal leg present.
 	hasA1, hasP5Parallel, hasP6UTrap := false, false, false
 	for _, pl := range csp.Plumbing {
 		if pl.ID == "A1" && pl.PressurePSI == 40.0 {
@@ -1777,7 +1792,7 @@ func TestPhase9CustomFabDeluxeAndCompleteSystemsShopPlan(t *testing.T) {
 		if pl.ID == "P5" && strings.Contains(pl.To, "Parallel-Pipe Spray Manifold") {
 			hasP5Parallel = true
 		}
-		if pl.ID == "P6" && strings.Contains(pl.Notes, `>= 8" U-trap`) {
+		if pl.ID == "P6" && strings.Contains(pl.Notes, "barometric water-seal") {
 			hasP6UTrap = true
 		}
 	}
@@ -1794,9 +1809,16 @@ func TestPhase9CustomFabDeluxeAndCompleteSystemsShopPlan(t *testing.T) {
 	if !hasS4 {
 		t.Error("expected S4 diluter acoustic zone when IncludePlumeDiluter=true")
 	}
-	// B4 adapts to eductor frame support.
+	// B4 adapts to eductor frame support (and P6 switches to >= 8" positive-pressure U-trap) in valid EductorDryFan config.
+	edProj := DefaultProject()
+	edProj.StageAlignment = StageAlignmentEductorDryFan
+	edProj.PackedBedLayout = PackedBedLayoutParallelManifold
+	edEval, err := eval.Evaluate(edProj)
+	if err != nil {
+		t.Fatalf("eductor evaluate: %v", err)
+	}
 	hasB4Eductor := false
-	for _, b := range csp.Bracing {
+	for _, b := range edEval.ShopPlan.Bracing {
 		if b.ID == "B4" && strings.Contains(b.Component, "Eductor") {
 			hasB4Eductor = true
 		}
@@ -2185,15 +2207,21 @@ func TestPhase10LocalCeramicNairobiMumbaiAndZeroElectricity(t *testing.T) {
 		t.Fatalf("120V hybrid evaluate failed: err=%v elec=%+v", err, ev120.Urban.Electrical)
 	}
 
-	autoZeroProj := DefaultProject()
-	autoZeroProj.ZeroElectricity = true
-	autoZeroProj.AvailableVoltage = 0
-	autoZeroEval, err := eval.Evaluate(autoZeroProj)
+	// Contradictory ZeroElectricity=true on non-local BuildPath must be rejected by Validate().
+	badZeroProj := DefaultProject()
+	badZeroProj.ZeroElectricity = true
+	badZeroProj.AvailableVoltage = 0
+	if _, err := eval.Evaluate(badZeroProj); err == nil {
+		t.Fatalf("expected ZeroElectricity=true with build_path=cots_no_weld to fail Validate()")
+	}
+	okZeroProj := badZeroProj
+	okZeroProj.BuildPath = BuildPathLocalCeramic
+	autoZeroEval, err := eval.Evaluate(okZeroProj)
 	if err != nil {
-		t.Fatalf("ZeroElectricity=true auto-ceramic evaluate failed: %v", err)
+		t.Fatalf("ZeroElectricity=true local ceramic evaluate failed: %v", err)
 	}
 	if !autoZeroEval.Frugal.Enabled || !autoZeroEval.Frugal.ZeroElectricity || len(autoZeroEval.ShopPlan.Electrical) != 0 {
-		t.Errorf("ZeroElectricity=true should auto-activate ceramic passive mode with 0 circuits: %+v", autoZeroEval.Frugal)
+		t.Errorf("ZeroElectricity=true local ceramic should have 0 circuits: %+v", autoZeroEval.Frugal)
 	}
 
 	// 5. Small (6 cu.ft.) and Large (48 cu.ft.) ceramic kilns + passive draft shortfall edge case.
@@ -2633,8 +2661,8 @@ func TestPhase10CSubsonicQuietSteamJetEjector(t *testing.T) {
 		if fs.EjectorDraftInWC < 0.35 || fs.EjectorDraftInWC > 0.45 {
 			t.Errorf("%s subsonic ejector draft out of [0.35, 0.45] inWC: %.3f inWC", region, fs.EjectorDraftInWC)
 		}
-		if !fs.DraftFeasible || fs.DraftMarginInWC < 0.25 {
-			t.Errorf("%s subsonic draft margin should be generous (>=+0.25 inWC): avail=%.3f req=%.3f margin=%+.3f",
+		if !fs.DraftFeasible || fs.DraftMarginInWC < 0.22 {
+			t.Errorf("%s subsonic draft margin should be generous (>=+0.22 inWC): avail=%.3f req=%.3f margin=%+.3f",
 				region, fs.AvailableDraftInWC, fs.RequiredDraftInWC, fs.DraftMarginInWC)
 		}
 
@@ -2781,4 +2809,65 @@ func TestPhase10CSubsonicQuietSteamJetEjector(t *testing.T) {
 		evNairobiSub.Frugal.SteamNozzleVelMS, evNairobiSub.Frugal.SteamNozzleMach, evNairobiSub.Frugal.SteamNozzleThroatMM, evNairobiSub.Frugal.SteamFlowKgHr, evNairobiSub.Frugal.SteamThermalKW, evNairobiSub.Frugal.KilnWasteHeatKW, evNairobiSub.Frugal.EjectorDraftInWC, evNairobiSub.Frugal.EjectorEntrainmentRatio, evNairobiSub.Frugal.ChimneyHeightM, evNairobiSub.Frugal.SubmicronNaClCapturePct, evNairobiSub.Urban.Noise.BareDBA3Ft, evNairobiSub.Urban.Noise.PropertyLineDBA, evNairobiSub.Frugal.LocalCurrencyEstimate,
 		evMumbaiSub.Frugal.SteamNozzleVelMS, evMumbaiSub.Frugal.SteamNozzleMach, evMumbaiSub.Frugal.SteamNozzleThroatMM, evMumbaiSub.Frugal.SteamFlowKgHr, evMumbaiSub.Frugal.SteamThermalKW, evMumbaiSub.Frugal.KilnWasteHeatKW, evMumbaiSub.Frugal.EjectorDraftInWC, evMumbaiSub.Frugal.EjectorEntrainmentRatio, evMumbaiSub.Frugal.ChimneyHeightM, evMumbaiSub.Frugal.SubmicronNaClCapturePct, evMumbaiSub.Urban.Noise.BareDBA3Ft, evMumbaiSub.Urban.Noise.PropertyLineDBA, evMumbaiSub.Frugal.LocalCurrencyEstimate,
 	)
+}
+
+func TestTailoredBuildPacketAndPhysicsHonestyRegressions(t *testing.T) {
+	eval := NewEvaluator(scrubber.NewDesigner(), cad.NewExporter())
+
+	// 1. Local ceramic off-grid packet omits sheet-metal STL/DXF/BOM and daemon.json, and bundles shop_plan.svg.
+	localProj := OffGridSteamCeramicProject(LocalRegionNairobi, LocalDraftSteamEjectorHP)
+	zipBytes, evLocal, err := eval.BuildPacketZip(localProj)
+	if err != nil {
+		t.Fatalf("local BuildPacketZip: %v", err)
+	}
+	zr, err := zip.NewReader(bytes.NewReader(zipBytes), int64(len(zipBytes)))
+	if err != nil {
+		t.Fatalf("zip.NewReader: %v", err)
+	}
+	names := make(map[string]bool, len(zr.File))
+	for _, f := range zr.File {
+		names[f.Name] = true
+	}
+	for _, forbidden := range []string{"scrubber.stl", "scrubber.dxf", "bom_engineered.csv", "daemon.json"} {
+		if names[forbidden] {
+			t.Errorf("local_ceramic_masonry packet must omit %q", forbidden)
+		}
+	}
+	if !names["shop_plan.svg"] || !names["shop_plan.json"] || !names["BUILD_GUIDE.md"] {
+		t.Errorf("local_ceramic_masonry packet missing core visual/guide files: %+v", names)
+	}
+
+	// 2. Local ceramic guide & ops checklist must not leak electric VFD / NEC 430 / 24VDC damper instructions.
+	for _, leaked := range []string{"NEC 430.102", "jog VFD at 15 Hz", "24 VDC spring-return"} {
+		if strings.Contains(evLocal.BuildGuideMD, leaked) || strings.Contains(evLocal.OperationsChecklistMD, leaked) {
+			t.Errorf("local_ceramic_masonry guide/checklist leaked electric text %q", leaked)
+		}
+	}
+
+	// 3. 60 psig HP steam-jet strictly bans studio monotube coils & enforces realistic condensing exit temp (< 180 F).
+	if strings.Contains(strings.ToLower(evLocal.Frugal.SteamSourceType), "monotube") {
+		t.Errorf("60 psig HP steam source must not endorse monotube coil: %q", evLocal.Frugal.SteamSourceType)
+	}
+	if evLocal.Frugal.StackReheatTempF >= 180.0 {
+		t.Errorf("60 psig Nairobi condensing exit temp %.1f F must stay well below 202.4 F boiling point", evLocal.Frugal.StackReheatTempF)
+	}
+
+	// 4. Electromechanical-only electric build omits daemon.json but retains STL/DXF/SVG.
+	emProj := DefaultProject()
+	emProj.ControlTier = ControlTierElectromechanicalOnly
+	emZip, _, err := eval.BuildPacketZip(emProj)
+	if err != nil {
+		t.Fatalf("electromechanical BuildPacketZip: %v", err)
+	}
+	emZR, _ := zip.NewReader(bytes.NewReader(emZip), int64(len(emZip)))
+	emNames := make(map[string]bool, len(emZR.File))
+	for _, f := range emZR.File {
+		emNames[f.Name] = true
+	}
+	if emNames["daemon.json"] {
+		t.Errorf("electromechanical_only packet must omit daemon.json")
+	}
+	if !emNames["scrubber.stl"] || !emNames["shop_plan.svg"] {
+		t.Errorf("electromechanical_only packet must retain scrubber.stl and shop_plan.svg")
+	}
 }

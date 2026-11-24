@@ -33,14 +33,14 @@
 
 ## 4-Stage Scrubber Architecture
 
-Studio wood/salt firings combine extreme flue temperatures (up to `2400°F` / `1588.7 K`), submicron wood fly ash and condensed `NaCl` salt fume (`0.1–2.0 µm`), and corrosive hydrogen chloride (`HCl`) gas. `kilnscrub` models and controls a four-stage wet scrubber train protected by an independent hardwired `200°F` / `< 0.25 GPM` spring-return fail-safe hot-gas bypass damper (ahead of the `210°F` software backup):
+Studio wood/salt firings combine extreme flue temperatures (up to `2400°F` / `1588.7 K`), submicron wood fly ash and condensed `NaCl` salt fume (`0.1–2.0 µm`), and corrosive hydrogen chloride (`HCl`) gas. `kilnscrub` models and controls a four-stage wet scrubber train protected by an aligned `200°F` (`93.3°C`) / `< 0.25 GPM` independent hardwired + software spring-return fail-safe hot-gas bypass damper (`bypass_coil_deenergize_to_trip: true` by default):
 
 ![4-Stage Kiln Exhaust Scrubber Animated Flow Diagram](docs/assets/scrubber-4stage-flow.gif)
 
 ```mermaid
 flowchart LR
     K["Kiln Flue<br/>Up to 2400°F (1588 K)<br/>Ash + NaCl Fume + HCl"]
-    BYP["Fail-Safe Bypass Damper<br/>316L SS, Spring-Return Fail-Open<br/>Trips: >=210°F | <0.25 GPM | Sensor/Power Fault"]
+    BYP["Fail-Safe Bypass Damper<br/>316L SS, Spring-Return Fail-Open<br/>Trips: >=200°F | <0.25 GPM | Sensor/Power Fault"]
     S1["Stage 1: Adiabatic Spray Quench<br/>316L Stainless Steel<br/>Cools flue gas to Tsat (~184°F)"]
     S2["Stage 2: Wet Venturi Scrubber<br/>316L Stainless Steel<br/>50-90 m/s throat, Calvert d50 capture"]
     S3["Stage 3: Packed-Bed HCl Absorber + Demister<br/>CPVC / Polypropylene<br/>NaHCO3 pH 7.5-8.5, >=98% HCl removal"]
@@ -55,7 +55,7 @@ flowchart LR
 
 ```text
                         [Fail-Safe Spring-Return Bypass Damper]
-                         (Trips OPEN: >=210°F, <0.25 GPM, fault)
+                         (Trips OPEN: >=200°F, <0.25 GPM, fault)
                            +-------------------------------+
                            |                               |
                            | (bypass on trip/power loss)   v
@@ -70,7 +70,7 @@ flowchart LR
 
 | Stage | Equipment | Material of Construction | Engineering Model & Purpose |
 |---|---|---|---|
-| **Stage 1** | Adiabatic Spray Quench Tower | 316L Stainless Steel | NIST 7-coeff Shomate `Cp`/`H`, IAPWS-95 `Psat`, 1D Brent adiabatic saturation balance; cools `2400°F` flue gas below CPVC limits (`<= 210°F`) |
+| **Stage 1** | Adiabatic Spray Quench Tower | 316L Stainless Steel | NIST 7-coeff Shomate `Cp`/`H`, IAPWS-95 `Psat`, 1D Brent adiabatic saturation balance; cools `2400°F` flue gas safely below CPVC limits (`<= 200°F`) |
 | **Stage 2** | High-Velocity Wet Venturi | 316L Stainless Steel | Calvert (1970, 1972) cut diameter `d50` with Davies/Allen-Raabe Cunningham slip; captures submicron wood ash (`2400 kg/m³`) and condensed `NaCl` fume (`2160 kg/m³`) |
 | **Stage 3** | Counter-Current Packed-Bed Absorber & Chevron Demister | CPVC / Polypropylene (`1"` PP Pall Rings) | Souders-Brown / Eckert flooding (`<= 75%` of flood), Ergun bed `ΔP`, NTU-HTU `HCl` absorption (`>= 98%`) with recirculating `NaHCO3` (`pH 7.5–8.5`), chevron mist eliminator |
 | **Stage 4** | Induced-Draft (ID) Centrifugal Blower & VFD | FRP/PP Housing, 316L SS Wheel | Static pressure summation (`duct + quench + venturi + bed + demister + |draft|`), fan/system curves, shaft & motor HP sizing, PID draft regulation |
@@ -103,9 +103,17 @@ Not every studio kiln needs a full 4-stage `21.2 inWC` train: **89% of total sta
 ## Requirements & Build
 
 - **Go toolchain:** Go `1.24+` (module targets `go 1.24.13`).
-- **Pure-Go static binary:** `CGO_ENABLED=0` is fully supported across Linux, macOS, and Windows (including the pure-Go Modbus RTU serial HAL).
-- **Zero Python runtime dependencies:** Neither the `kilnscrub` binary nor `go test` invokes Python.
-- **C compiler (test-time only):** `gcc` / `build-essential` (or MinGW-w64 `gcc` on Windows) is only required when running the Go race detector (`CGO_ENABLED=1 go test -race`). Building, running, and pure-Go tests require zero C compiler and zero `make`.
+- **Single-Binary Encapsulated UI (`CGO_ENABLED=0`, Zero Runtime Dependencies):** `kilnscrub` always compiles into a **single self-contained static Go executable** across Linux, macOS, and Windows (including the pure-Go Modbus RTU serial HAL and the complete **Phase 11 Next.js static UI** encapsulated via `//go:embed all:static`, with **Three.js 0.170.0 + OrbitControls bundled offline — zero CDN and zero Node.js required at runtime!**).
+- **Pre-synced Static Bundle (Pure-Go Build Works Without Node.js):** Because the compiled Next.js static export is synced into `internal/web/static/`, anyone can build the full binary (`make build` or `CGO_ENABLED=0 go build ./cmd/kilnscrub`) using **only Go** with zero Node.js installed.
+- **Node.js `20+` (only when modifying `web/` UI source):** To edit TypeScript/React components under `web/`, run `make web-install && make web-build` (or `make build-full`) to run `tsc --noEmit`, compile Next.js (`output: 'export'`), sync hashed static chunks into `internal/web/static/`, and re-embed them into the Go binary.
+- **C compiler (test-time race detector only):** `gcc` / `build-essential` (or MinGW-w64 `gcc` on Windows) is only required when running the Go race detector (`CGO_ENABLED=1 go test -race`). Building, running, and pure-Go tests require zero C compiler and zero `make`.
+
+### Build Performance & Optimization Notes
+
+- **Standard pure-Go single-binary build (~3s):** `CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/kilnscrub ./cmd/kilnscrub` embeds `internal/web/static/` directly into one compact binary.
+- **Full rebuild including Phase 11 Next.js static export (~15s):** `make build-full` (or `npm --prefix web run typecheck && npm --prefix web run export:go && make build`).
+- **Profile-Guided Optimization (PGO) (optional):** Capture a CPU profile (`go test -cpuprofile=default.pgo ./pkg/scrubber ./pkg/cad ./pkg/studio`) and rebuild with `go build -pgo=auto` to trade extra build time for faster solver/CAD throughput.
+- **Verification before release:** Run `make check` (`gofmt`, `go vet`, and `-race` tests across all 8 packages) and `make coverage-branch` (`>= 85%` executable line / `>= 72%` AST branch coverage).
 
 ### Offline Scientific Oracle Fixtures
 
@@ -201,7 +209,10 @@ Remove-Item Env:GOOS, Env:GOARCH
 - **Bulk Baking Soda & Closed-Loop Sump Recirculation:** Sizes bulk **`15 lb` bags / `50 lb` sacks** of `NaHCO₃` strictly to the active peak salting window (`salting_hours`, default `3.0 hrs` on `wood_salt_24` → `~9.8 lbs` / `1 × 15 lb` bag, with a `50 lb` sack covering `~5` firings), models multi-firing TDS accumulation (`150 g/L` / **`SG >= 1.105`** brine hydrometer dump trigger for `5–6` firings per dump), and enforces IPC 702.5 `<= 140°F` drain cooldown and 40 CFR 403.5 `pH 6.5–8.5` (`>= 5.0` floor).
 - **Urban Neighbor & Backyard Readiness:** Evaluates 6 U.S. code-aligned site checks — NEC 430.122(A) 125% VFD single-phase electrical ampacity (`120V` vs `240V` + plume diluter amps), garden-hose water demand + mandatory IPC 608 backflow isolation, inverse-square property-line noise (`dBA` vs `60 dBA` daytime / `50–55 dBA` overnight + OSHA 29 CFR 1910.95 `85 dBA` near-field warning), bulk `NaHCO₃` & neutralized drain compliance, practical alloy care & buffered flush guidance for `Standard 316L SS (Light / Occasional)` vs. `Heavy Duty (Alloy C-276 / Vinyl-Ester FRP)`, and cold-weather steam plume visibility with IMC 510/501.3.1 & OSHA 29 CFR 1910.1000 HCl stack setbacks.
 - **Squirrel-Cage High-Velocity Plume Calculator:** Models psychrometric mixing lines using IAPWS-95 `WaterPsat` to report bare vs. diluted horizontal winter plume reach (`bare_plume_length_ft` -> `diluted_plume_length_ft`) against your property-line setback, sizes a downstream `120V` squirrel-cage dilution blower + high-velocity exit cone (`~3,400 FPM`), and computes tangent-clear kiln-jacket waste-heat recovery (`kW`).
-- **One-Click 11-File Build Packet (`.zip`):** Bundles `BUILD_GUIDE.md`, `OPERATIONS_CHECKLIST.md`, `bom_cots.md`, `bom_cots.csv`, `bom_engineered.csv`, `scrubber.stl`, `scrubber.dxf`, `shop_plan.json`, `project.json`, `daemon.json`, and `README_PACKET.txt`.
+- **One-Click Tailored Build Packet (`.zip`):** Automatically adapts packet contents to the selected build path and control tier:
+  - **Electric + RPi Modbus (12 files):** `BUILD_GUIDE.md`, `OPERATIONS_CHECKLIST.md`, `bom_cots.md`, `bom_cots.csv`, `bom_engineered.csv`, `scrubber.stl`, `scrubber.dxf`, `shop_plan.svg`, `shop_plan.json`, `project.json`, `daemon.json`, and `README_PACKET.txt`.
+  - **Electric + Electromechanical Only (11 files):** Omits `daemon.json` (hardwired safety relay panel only).
+  - **Local Ceramic / Off-Grid Masonry (8 files):** Omits inapplicable sheet-metal `.stl`/`.dxf`/`bom_engineered.csv` and electric `daemon.json`, bundling the tailored standalone architectural schematic `shop_plan.svg`, `shop_plan.json`, local `bom_cots.csv`/`.md`, masonry `BUILD_GUIDE.md`, `OPERATIONS_CHECKLIST.md`, `project.json`, and `README_PACKET.txt`.
 
 ---
 
@@ -218,9 +229,9 @@ Commands:
   export   Export fabrication .stl mesh, unfolded .dxf patterns, and BOM
   presets  List curated studio kiln presets (ID, profile, audience, badge)
   guide    Evaluate COTS hardware, urban readiness, and Build/Firing Guides
-  packet   Generate a complete 11-file Studio Build Packet (.zip)
+  packet   Generate a tailored Studio Build Packet (.zip)
   daemon   Run the closed-loop PID draft & quench safety controller
-  ui       Launch the interactive 4-tab web dashboard (default :8080)
+  ui       Launch the interactive 4-tab web dashboard (default 127.0.0.1:8080)
   version  Print the kilnscrub version
 ```
 
@@ -274,7 +285,7 @@ kilnscrub guide --project ./my-studio-project.json --out ./studio-guides
 
 ### `kilnscrub packet`
 
-Generates the complete 11-file Build Packet `.zip` archive (including `shop_plan.json` with full electrical, plumbing, bracing, acoustic, Deluxe, and Local Ceramic / Off-Grid specs) from a preset (`--preset`) or saved `project.json` (`--project`), accepting all optional Phase 7–10 build-path, stage, budget, and local/off-grid flags above.
+Generates a tailored Build Packet `.zip` archive (8–12 files depending on build path & control tier, always including `shop_plan.svg` and `shop_plan.json` with full electrical, plumbing, bracing, acoustic, Deluxe, and Local Ceramic / Off-Grid specs) from a preset (`--preset`) or saved `project.json` (`--project`), accepting all optional Phase 7–10 build-path, stage, budget, and local/off-grid flags above.
 
 ```bash
 kilnscrub packet --preset wood_salt_24 --out ./kilnscrub-wood_salt_24-packet.zip
@@ -337,11 +348,11 @@ Stage 3 - Packed-Bed HCl Absorber & Demister (CPVC / Polypropylene)
   Pressure Drop             : Bed 1.44 inWC + Demister 0.26 inWC = 1.70 inWC (425 Pa)
 
 Stage 4 - Induced-Draft Blower (FRP / Polypropylene Housing, 316L SS Wheel)
-  Duty Point                : 255.6 ACFM @ 21.21 inWC (5284 Pa) | Kiln draft setpoint -0.050 inWC
+  Duty Point                : 269.7 ACFM @ 21.21 inWC (5284 Pa) | Kiln draft setpoint -0.050 inWC
   dP Breakdown (inWC)       : Duct 0.17 | Quench 0.41 | Venturi 18.88 | Bed 1.44 | Demister 0.26 | Draft 0.05
-  Power & Wheel             : 1.38 shaft HP -> 2.00 HP motor (eta 62%) | Wheel 0.840 m (33.1 in) @ 3511 RPM
+  Power & Wheel             : 1.45 shaft HP -> 2.00 HP motor (eta 62%) | Wheel 0.640 m (25.2 in) @ 3510 RPM
 
-Skid Envelope               : L=3.94 m x W=1.66 m x H=3.25 m (12.9 x 5.4 x 10.7 ft) | Duct D=0.178 m (7.0 in) | Area=6.54 m2
+Skid Envelope               : L=3.62 m x W=1.36 m x H=3.25 m (11.9 x 4.5 x 10.7 ft) | Duct D=0.178 m (7.0 in) | Area=4.92 m2
 Warnings                    : none
 ```
 
@@ -379,11 +390,11 @@ kilnscrub export --kiln-volume 24 --peak-temp 2400 --salt-rate 2.0 --out ./out
 **Sample Output:**
 
 ```text
-wrote out/scrubber.stl (332384 bytes)
-wrote out/scrubber.dxf (13398 bytes)
-wrote out/bom.csv (3435 bytes)
-wrote out/bom.md (4464 bytes)
-BOM summary: 18 items | 325.8 kg total | $9457.10 est. USD
+wrote out/scrubber.stl (332484 bytes)
+wrote out/scrubber.dxf (14847 bytes)
+wrote out/bom.csv (3553 bytes)
+wrote out/bom.md (5066 bytes)
+BOM summary: 18 items | 306.2 kg total | $9142.60 est. USD
 ```
 
 ---
@@ -404,6 +415,7 @@ Runs the active closed-loop PID controller managing:
 | `--draft` | `-0.05` | Target kiln draft setpoint (`inWC`, negative = suction) |
 | `--quench-temp-f` | `188.0` | Target quench outlet temperature setpoint (`°F`, above `183.9°F` adiabatic saturation floor) |
 | `--interval` | `100ms` | Closed-loop control tick interval |
+| `--log-interval` | `0` | Optional stdout telemetry log throttle interval (`0` = log every tick; always logs state/interlock transitions immediately) |
 | `--duration` | `0` | Optional bounded run duration (`0` = run until `SIGINT`/`SIGTERM`) |
 
 **Examples:**
@@ -434,25 +446,25 @@ kilnscrub daemon stopped cleanly after 4 ticks (final state=NORMAL, interlock=fa
 | Condition | Default Threshold | Trip Code | Action |
 |---|---|---|---|
 | **Independent Hardwired CPVC High-Limit** *(NFPA 86)* | `>= 200.0°F` (`93.3°C`) manual-reset snap-disc | *(Hardwired `K_SAFE`)* | **Primary hardwired trip:** de-energizes 24VDC safety relay, springs bypass damper OPEN & cuts VFD STO/Run-Enable independently of software |
-| **High Quench Outlet Temp** *(Software Backup)* | `>= 210.0°F` (`372.04 K`) | `HIGH_QUENCH_OUTLET_TEMP` | **Hard latch:** opens hot-gas bypass damper & latches alarm |
+| **High Quench Outlet Temp** *(Aligned Software Cutoff)* | `>= 200.0°F` (`366.48 K`) | `HIGH_QUENCH_OUTLET_TEMP` | **Hard latch:** opens hot-gas bypass damper & latches alarm |
 | **Quench Water Loss** | `< 0.25 GPM` (`1.577e-5 m³/s`) | `QUENCH_WATER_LOSS` | **Hard latch:** opens hot-gas bypass damper & latches alarm |
-| **Sensor Fault / Stale Telemetry** | HAL read error, `NaN`/`Inf`, Modbus CRC/timeout/exception, or timestamp age `> 5s` | `SENSOR_FAULT` | **Hard latch:** opens hot-gas bypass damper & latches alarm |
+| **Sensor Fault / Stale Telemetry** | HAL read/write error, `NaN`/`Inf`, open-TC/under-range (`< 32°F`), Modbus CRC/timeout/exception, or timestamp age `> 5s` | `SENSOR_FAULT` | **Hard latch:** opens hot-gas bypass damper & latches alarm |
 | **Excessive Draft Magnitude** | `|draft| > 1.0 inWC` (`248.84 Pa`) | `EXCESSIVE_DRAFT` | **Hard latch:** opens hot-gas bypass damper & latches alarm |
 | **Sump pH Excursion** | `< 6.5` or `> 9.5` | *(Warning only)* | **Warning/alarm only:** alerts operator for `NaHCO3` dosing; does **not** open hot-gas bypass damper |
 
-Hard interlock trips latch `BypassDamperOpen = true` and `AlarmLatched = true` (set `bypass_coil_deenergize_to_trip: true` in `modbus` config for fail-safe active-low PLC relay coils). Clearing a latch requires **both** that all hard faults have cleared in the latest sensor evaluation **and** an explicit operator reset (`ResetInterlock()` / `POST /api/control/reset`). See [`docs/CONTROL_ALTERNATIVES_AND_RPI_BOM.md`](docs/CONTROL_ALTERNATIVES_AND_RPI_BOM.md) for full hardwired NFPA 86 safety relay wiring diagrams.
+Hard interlock trips latch `BypassDamperOpen = true` and `AlarmLatched = true` (`bypass_coil_deenergize_to_trip: true` is enabled by default for fail-safe active-low PLC relay coils, and `daemon` issues a best-effort fail-safe write on clean shutdown). Clearing a latch requires **both** that all hard faults have cleared in the latest sensor evaluation **and** an explicit operator reset (`ResetInterlock()` / `POST /api/control/reset`). See [`docs/CONTROL_ALTERNATIVES_AND_RPI_BOM.md`](docs/CONTROL_ALTERNATIVES_AND_RPI_BOM.md) for full hardwired NFPA 86 safety relay wiring diagrams.
 
 ---
 
 ### `kilnscrub ui`
 
-Launches the embedded single-binary HTTP dashboard on `http://localhost:8080` (with zero external build step or asset server). By default, an embedded `control.Daemon` starts in the background (using `SimHAL` unless `--config` / `--hal modbus` selects Modbus RTU) so the **Live Control & Telemetry** tab streams live SSE telemetry immediately.
+Launches the embedded single-binary HTTP dashboard on `http://127.0.0.1:8080` (loopback-only by default for local safety; pass `--addr 0.0.0.0:8080` when intentionally exposing on a trusted studio LAN, with same-origin CSRF guards and clickjacking headers enabled). By default, an embedded `control.Daemon` starts in the background (using `SimHAL` unless `--config` / `--hal modbus` selects Modbus RTU) so the **Live Control & Telemetry** tab streams live SSE telemetry immediately.
 
 **Flags:**
 
 | Flag | Default | Description |
 |---|---|---|
-| `--addr` | `:8080` | HTTP listen address (e.g., `127.0.0.1:8080` or `:8080`) |
+| `--addr` | `127.0.0.1:8080` | HTTP listen address (`127.0.0.1:8080` loopback default; pass `0.0.0.0:8080` for LAN) |
 | `--config` | *(none)* | Path to JSON daemon configuration file for embedded live control |
 | `--hal` | `sim` | Embedded control HAL backend: `sim` or `modbus` |
 | `--no-control` | `false` | Disable embedded live control daemon and telemetry backend |
@@ -491,7 +503,7 @@ Prints the build version embedded via `-ldflags "-X main.version=..."` (`kilnscr
 
 ## Web Dashboard & HTTP API
 
-The embedded web application (`internal/web/static/index.html`) provides four workspace tabs out of the box when running `kilnscrub ui`:
+The encapsulated Next.js 15 TypeScript web application (`web/` → statically exported to `internal/web/static/` and embedded directly into the single Go binary via `//go:embed all:static`, with **Three.js 0.170.0 + OrbitControls bundled offline**) provides four workspace tabs out of the box when running `kilnscrub ui`:
 
 1. **Design & 3D Studio**
    - One-click **5 Curated Studio Presets** (`electric_raku_6`, `gas_soda_14`, `wood_salt_24`, `coop_wood_48`, `foundry_glass_16`), pyrometric Cone selector (`Cone 06`–`Cone 11`), Active Salting Window (`salting_hours`), Vapor Glaze toggle (`None` / `Soda` / `Salt`), Build Path (`No-Weld COTS` vs `Welded DXF` vs `Custom Fab Deluxe` vs `Local Ceramic / Brick` with 1-click **Apply Custom Fab Deluxe** and **Nairobi / Mumbai Off-Grid** quick-apply buttons), **Zero Electricity on Site** toggle + **Local Region** (`Nairobi` / `Mumbai` / `General Local`), **Local Alkali** (`Magadi Soda Ash` / `Slaked Lime` / `Wood-Ash Lye` / `Baking Soda`) & **Zero-Electricity Draft / Steam-Jet Ejector Mode** (`Natural Chimney 0 psig` / `Subsonic Quiet 6 psig (~52 dBA)` / `LP Steam Ejector 20 psig` / `HP Hydro-Sonic Baby Boiler 60 psig`) selectors, Corrosion Tier (`Standard 316L SS (Light / Occasional)` vs `Heavy Duty (Alloy C-276 / Vinyl-Ester FRP)`), acoustic silencer & `120V` squirrel-cage plume diluter toggles, and `Save/Load project.json`.
@@ -523,7 +535,7 @@ The embedded web application (`internal/web/static/index.html`) provides four wo
 | `POST /api/export?format=...` | Export CAD/BOM attachment (`format` in `stl`, `dxf`, `bom_csv`, `bom_md`, `bom_json`) |
 | `GET /api/studio/presets` | List all 5 curated `StudioPreset` profiles (`{"presets":[...]}`) |
 | `POST /api/studio/evaluate` | Evaluate a `StudioProject` JSON payload into a full `StudioEvaluation` (design + COTS + urban readiness + architecture options + recirculation + shop plan + Markdown guides) |
-| `POST /api/studio/packet` | Generate and download the 11-file Studio Build Packet `.zip` (`application/zip`) |
+| `POST /api/studio/packet` | Generate and download the tailored Studio Build Packet `.zip` (`application/zip`, 8–12 files depending on build path & control tier) |
 | `GET /api/control/status` | Live controller snapshot, active `ControlConfig`, `hal_mode`, and `supports_fault_injection` (`{"enabled":false}` when no control backend is attached) |
 | `GET /api/control/stream` | Server-Sent Events (`text/event-stream`) live `ControlStatus` telemetry feed (`503` if control backend disabled) |
 | `POST /api/control/setpoint` | Update live `target_draft_in_wc` and/or `quench_setpoint_f` (`400` on out-of-range input) |
@@ -543,7 +555,7 @@ The embedded web application (`internal/web/static/index.html`) provides four wo
   - **Chloride corrosion warning:** Hot, wet `HCl`/`NaCl` environments can cause **chloride pitting and chloride stress-corrosion cracking (CSCC)** in 316L SS, especially at welds and wet/dry transition zones. Maintain continuous spray wetting during salt firing, flush thoroughly with fresh water after each firing, inspect welds regularly, and consider upgrading hot wet-acid zones to **Alloy C-276 (Hastelloy)** or refractory-lined quench vessels for frequent commercial salt production.
 - **CPVC & Polypropylene (Stage 3 — Packed-Bed Column, Pall Rings, Chevron Demister, Sump):**
   - Provides excellent corrosion resistance against dilute `HCl` and neutralized `NaCl`/`NaHCO3` brine at reasonable studio cost.
-  - **Strict thermal ceiling (`<= 210°F`):** CPVC loses structural rigidity near `212°F` (`100°C`) and polypropylene softens even lower. Stage 3 **must always** be protected by an independent, hardware-wired **24 VDC spring-return fail-open hot-gas bypass damper** driven by a physical high-temperature switch (`<= 210°F`), water-flow switch (`>= 0.25 GPM`), and power-loss fail-safe relay — never rely exclusively on software PID or Modbus polling for thermal protection.
+  - **Strict thermal ceiling (`<= 200°F`):** Schedule 80 CPVC (ASTM F441) is rated to `200°F` (`93.3°C`) max continuous and polypropylene softens lower. Stage 3 **must always** be protected by an independent, hardware-wired **24 VDC spring-return fail-open hot-gas bypass damper** driven by a physical high-temperature switch (`<= 200°F`), water-flow switch (`>= 0.25 GPM`), and power-loss fail-safe relay (aligned with the `200°F` software cutoff) — never rely exclusively on software PID or Modbus polling for thermal protection.
 - **Seals, Fasteners & Chemical Sump:**
   - Use acid- and temperature-rated **expanded PTFE or Viton** full-face flange gaskets and **316 stainless steel** fasteners.
   - Maintain sump neutralization (`NaHCO3` dosing to `pH 7.5–8.5`), provide a blowdown/drain strategy for dissolved `NaCl` buildup, and dispose of neutralized scrubber effluent in compliance with local municipal wastewater regulations.
@@ -583,7 +595,7 @@ $env:CGO_ENABLED = "0"; go test -count=1 ./...
 go vet ./...
 gofmt -l .
 
-# Quick CLI smoke check (presets & 11-file Studio Build Packet .zip)
+# Quick CLI smoke check (presets & tailored Studio Build Packet .zip)
 .\bin\kilnscrub.exe presets
 .\bin\kilnscrub.exe packet --preset wood_salt_24 --out .\kilnscrub-wood_salt_24-packet.zip
 ```
@@ -607,7 +619,10 @@ go run .\scripts\branch_coverage.go -profile coverage.out
 
 | Target | Description |
 |---|---|
-| `make build` | Compile static pure-Go binary (`CGO_ENABLED=0`) to `bin/kilnscrub` with `-X main.version=...` |
+| `make web-install` | Install Phase 11 Next.js / React / Three.js dependencies in `web/` |
+| `make web-build` | Run TypeScript typecheck + Next.js static export (`output: 'export'`) and sync into `internal/web/static/` |
+| `make build` | Compile single static pure-Go binary (`CGO_ENABLED=0`) to `bin/kilnscrub` using embedded `internal/web/static/` |
+| `make build-full` | Rebuild Next.js static export (`make web-build`) and compile the single Go binary (`make build`) |
 | `make test` | Run `CGO_ENABLED=1 go test -race -count=1 ./...` |
 | `make vet` | Run `go vet ./...` |
 | `make fmt` / `make fmt-check` | Format all Go source files with `gofmt -w .` / verify `gofmt` cleanliness |
@@ -655,7 +670,8 @@ kilnscrub/
 │   └── studio/                 # Studio presets, COTS catalog & snapping, urban & plume readiness, guides, Build Packet .zip
 ├── internal/
 │   ├── control/                # PID draft/quench loops, LPF filter, fail-safe interlock, Sim & Modbus RTU HALs
-│   └── web/                    # Embedded HTTP server, JSON/SSE/Studio APIs, 4-tab Three.js + Guide + Shop Plans + Telemetry UI
+│   └── web/                    # Embedded HTTP server, JSON/SSE/Studio APIs, //go:embed all:static Next.js export bundle
+├── web/                        # Phase 11 Next.js 15 + React 19 + TypeScript + Offline Three.js UI source (static export)
 ├── configs/                    # Example JSON daemon & Modbus RTU configuration
 ├── docs/                       # Engineering validation, trade study, RPi BOM, US code audit, coverage report & assets/*.gif
 ├── packaging/

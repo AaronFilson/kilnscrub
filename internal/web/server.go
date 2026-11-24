@@ -8,8 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"mime"
 	"net"
 	"net/http"
+	"net/url"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -17,13 +21,15 @@ import (
 	"github.com/AaronFilson/kilnscrub/pkg/model"
 )
 
-//go:embed static/index.html
+//go:embed all:static
 var staticFS embed.FS
 
 const (
 	maxRequestBodyBytes = 1 << 20 // 1 MiB
 	indexHTMLPath       = "static/index.html"
 )
+
+var errRequestBodyTooLarge = errors.New("request body exceeds maximum size")
 
 var faviconSVG = []byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f97316"/><stop offset="0.6" stop-color="#06b6d4"/><stop offset="1" stop-color="#10b981"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="url(#g)"/><text x="32" y="43" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="30" font-weight="800" letter-spacing="-1.5" fill="#081018">KS</text></svg>`)
 
@@ -34,6 +40,7 @@ type Server struct {
 	designer             model.Designer
 	exporter             model.CADExporter
 	indexHTML            []byte
+	staticSub            fs.FS
 	mux                  *http.ServeMux
 	ctrlMu               sync.RWMutex
 	control              ControlBackend
@@ -49,11 +56,16 @@ func NewServer(designer model.Designer, exporter model.CADExporter) *Server {
 		// Unreachable because static/index.html is embedded at compile time.
 		panic(fmt.Sprintf("web: failed to read embedded %s: %v", indexHTMLPath, err))
 	}
+	subFS, err := fs.Sub(staticFS, "static")
+	if err != nil {
+		panic(fmt.Sprintf("web: failed to open embedded static sub-fs: %v", err))
+	}
 
 	s := &Server{
 		designer:             designer,
 		exporter:             exporter,
 		indexHTML:            htmlBytes,
+		staticSub:            subFS,
 		mux:                  http.NewServeMux(),
 		sseKeepaliveInterval: defaultSSEKeepaliveInterval,
 	}
@@ -185,22 +197,57 @@ func (s *Server) ListenAndServe(ctx context.Context, addr string) error {
 }
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		w.Header().Set("Allow", "GET, HEAD")
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if r.URL.Path == "/" || r.URL.Path == "/index.html" {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Content-Security-Policy", "frame-ancestors 'none'")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.WriteHeader(http.StatusOK)
+		if r.Method == http.MethodGet {
+			_, _ = w.Write(s.indexHTML)
+		}
+		return
+	}
+
+	// Serve encapsulated Next.js static export assets (/_next/static/..., CSS, JS, fonts, SVG, etc.).
+	cleanRel := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
+	if cleanRel == "" || cleanRel == "." || strings.HasPrefix(cleanRel, "..") {
+		http.NotFound(w, r)
+		return
+	}
+	info, err := fs.Stat(s.staticSub, cleanRel)
+	if err != nil || info.IsDir() {
+		http.NotFound(w, r)
+		return
+	}
+	data, err := fs.ReadFile(s.staticSub, cleanRel)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	ct := mime.TypeByExtension(path.Ext(cleanRel))
+	if ct == "" {
+		ct = http.DetectContentType(data)
+	}
+	w.Header().Set("Content-Type", ct)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("X-Frame-Options", "DENY")
+	if strings.HasPrefix(cleanRel, "_next/static/") {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	} else {
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+	}
 	w.WriteHeader(http.StatusOK)
 	if r.Method == http.MethodGet {
-		_, _ = w.Write(s.indexHTML)
+		_, _ = w.Write(data)
 	}
 }
 
@@ -226,7 +273,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	writeJSONResponse(w, r, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (s *Server) handleDefaults(w http.ResponseWriter, r *http.Request) {
@@ -235,13 +282,16 @@ func (s *Server) handleDefaults(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	writeJSON(w, http.StatusOK, model.DefaultSaltKilnInput())
+	writeJSONResponse(w, r, http.StatusOK, model.DefaultSaltKilnInput())
 }
 
 func (s *Server) handleSize(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", "POST")
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if !enforceSameOrigin(w, r) || !enforceJSONContentType(w, r) {
 		return
 	}
 	if s.designer == nil {
@@ -251,7 +301,7 @@ func (s *Server) handleSize(w http.ResponseWriter, r *http.Request) {
 
 	body, err := readLimitedBody(r)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeBodyReadError(w, err)
 		return
 	}
 
@@ -281,6 +331,9 @@ func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+	if !enforceSameOrigin(w, r) || !enforceJSONContentType(w, r) {
+		return
+	}
 	if s.designer == nil || s.exporter == nil {
 		writeJSONError(w, http.StatusInternalServerError, "designer or exporter service not configured")
 		return
@@ -288,7 +341,7 @@ func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
 
 	body, err := readLimitedBody(r)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeBodyReadError(w, err)
 		return
 	}
 
@@ -383,9 +436,53 @@ func readLimitedBody(r *http.Request) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read request body: %w", err)
 	}
 	if len(data) > maxRequestBodyBytes {
-		return nil, fmt.Errorf("request body exceeds maximum size of %d bytes", maxRequestBodyBytes)
+		return nil, fmt.Errorf("%w (%d bytes)", errRequestBodyTooLarge, maxRequestBodyBytes)
 	}
 	return data, nil
+}
+
+func writeBodyReadError(w http.ResponseWriter, err error) {
+	if errors.Is(err, errRequestBodyTooLarge) {
+		writeJSONError(w, http.StatusRequestEntityTooLarge, err.Error())
+		return
+	}
+	writeJSONError(w, http.StatusBadRequest, err.Error())
+}
+
+// enforceSameOrigin blocks cross-site browser CSRF requests on state-changing POST endpoints
+// (especially live kiln control routes) while permitting same-origin browsers and CLI/curl clients.
+func enforceSameOrigin(w http.ResponseWriter, r *http.Request) bool {
+	if sfs := strings.ToLower(strings.TrimSpace(r.Header.Get("Sec-Fetch-Site"))); sfs == "cross-site" {
+		writeJSONError(w, http.StatusForbidden, "cross-site POST request rejected")
+		return false
+	}
+	origin := strings.TrimSpace(r.Header.Get("Origin"))
+	if origin != "" {
+		u, err := url.Parse(origin)
+		if err != nil || u.Host == "" || !strings.EqualFold(u.Host, r.Host) {
+			writeJSONError(w, http.StatusForbidden, "cross-origin POST request rejected")
+			return false
+		}
+	}
+	return true
+}
+
+// enforceJSONContentType rejects CORS-simple browser form/text payloads (text/plain,
+// application/x-www-form-urlencoded, multipart/form-data) on JSON POST endpoints to prevent
+// preflightless cross-site requests, while allowing application/json and empty Content-Type.
+func enforceJSONContentType(w http.ResponseWriter, r *http.Request) bool {
+	ct := strings.ToLower(strings.TrimSpace(r.Header.Get("Content-Type")))
+	if ct == "" {
+		return true
+	}
+	if semi := strings.IndexByte(ct, ';'); semi >= 0 {
+		ct = strings.TrimSpace(ct[:semi])
+	}
+	if ct != "application/json" {
+		writeJSONError(w, http.StatusUnsupportedMediaType, fmt.Sprintf("unsupported Content-Type %q; expected application/json", ct))
+		return false
+	}
+	return true
 }
 
 // decodePartialDesignInput initializes model.DefaultSaltKilnInput() BEFORE unmarshaling JSON
@@ -415,15 +512,30 @@ func decodePartialDesignInput(body []byte, allowEmpty bool) (model.DesignInput, 
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
+	writeJSONBody(w, status, v, true)
+}
+
+func writeJSONResponse(w http.ResponseWriter, r *http.Request, status int, v any) {
+	writeJSONBody(w, status, v, r == nil || r.Method != http.MethodHead)
+}
+
+func writeJSONBody(w http.ResponseWriter, status int, v any, includeBody bool) {
 	data, err := json.Marshal(v)
 	if err != nil {
-		http.Error(w, `{"error":"failed to marshal JSON response"}`, http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.WriteHeader(http.StatusInternalServerError)
+		if includeBody {
+			_, _ = w.Write([]byte(`{"error":"failed to marshal JSON response"}`))
+		}
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(status)
-	_, _ = w.Write(data)
+	if includeBody {
+		_, _ = w.Write(data)
+	}
 }
 
 func writeJSONError(w http.ResponseWriter, status int, msg string) {

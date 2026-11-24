@@ -30,6 +30,21 @@ jobs:
           go-version: '1.24.x'
           cache: true
 
+      - name: Set up Node.js 22.x (Phase 11 Next.js static export check)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Typecheck and build Next.js static export
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: |
+          npm --prefix web ci
+          npm --prefix web run typecheck
+          npm --prefix web run export:go
+
       - name: Check gofmt formatting
         run: |
           unformatted="$(gofmt -l .)"

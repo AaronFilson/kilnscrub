@@ -260,6 +260,32 @@ func ansi150FlangeNote(nomIn float64) string {
 	}
 }
 
+// ansi150FlangeOD returns the ASME B16.5 Class 150 flange outside diameter in inches.
+func ansi150FlangeOD(nomIn float64) float64 {
+	switch {
+	case nomIn <= 6.5:
+		return 11.0
+	case nomIn <= 8.5:
+		return 13.5
+	case nomIn <= 10.5:
+		return 16.0
+	case nomIn <= 12.5:
+		return 19.0
+	case nomIn <= 14.5:
+		return 21.0
+	case nomIn <= 16.5:
+		return 23.5
+	case nomIn <= 18.5:
+		return 25.0
+	case nomIn <= 20.5:
+		return 27.5
+	case nomIn <= 24.5:
+		return 32.0
+	default:
+		return round1(nomIn + 7.5)
+	}
+}
+
 func breakerAndGaugeForAmps(amps float64) (breaker int, gauge string) {
 	switch {
 	case amps <= 20.0:
@@ -497,11 +523,26 @@ func buildPlumbingSchedule(
 			recircGPM, recircGPM/float64(maxInt(arch.ParallelBed.PipeCount, 1)), arch.ParallelBed.PipeCount, arch.ParallelBed.PipeNominalIn)
 	}
 
-	p6Valves := `2" Cleanout Tee, Swing Check / Gravity Slope (>= 1/4" per ft)`
-	p6Notes := "Gravity return from Stage 1 quench bottom, Stage 3 absorber base, and stack 1/2\" condensate loop into baffled ash-settling chamber."
+	totalPumpGPM := round2(recircGPM + quenchGPM + venturiGPM)
+	evapGPM := round2(design.Quench.EvaporatedWaterGPM)
+	gravityReturnGPM := round2(math.Max(recircGPM, totalPumpGPM-evapGPM))
+
+	p6Valves := `2" Cleanout Tee, >=26"-30" Vertical Barometric Water-Seal Leg + Gravity Slope (>= 1/4" per ft)`
+	p6Notes := fmt.Sprintf("NEGATIVE-PRESSURE BAROMETRIC SEAL: Stage 3 operates under -%.1f inWC ID blower suction — install a >=%.0f\" vertical barometric water-seal leg (submerged into sump liquid below) so blower vacuum cannot pull brine up into the column or suck air backward through the drain.",
+		design.Blower.TotalStaticPressureInWC, math.Max(26.0, math.Ceil(design.Blower.TotalStaticPressureInWC+6.0)))
 	if arch.Eductor.Enabled {
-		p6Valves = `2" Deep U-Trap Liquid Seal (>= 8" Seal Leg) + Cleanout Plug`
-		p6Notes = fmt.Sprintf("EDUCTOR POSITIVE-PRESSURE SEAL: >= 8\" U-trap water leg exceeds +%.2f inWC Stage 3 positive pressure so wet exhaust/acid mist never blows back into the vented sump.", arch.Eductor.PositivePressureInWC)
+		sealIn := math.Max(8.0, math.Ceil(arch.Eductor.PositivePressureInWC+4.0))
+		p6Valves = fmt.Sprintf(`2" Deep U-Trap Liquid Seal (>= %.0f" Seal Leg) + Cleanout Plug`, sealIn)
+		p6Notes = fmt.Sprintf("EDUCTOR POSITIVE-PRESSURE SEAL: >= %.0f\" U-trap water leg exceeds +%.2f inWC Stage 3 positive pressure so wet exhaust/acid mist never blows back into the vented sump.", sealIn, arch.Eductor.PositivePressureInWC)
+	}
+
+	p2Strainer := "50-Mesh Y-Strainer"
+	if isDeluxe {
+		p2Strainer = "20-40 Mesh True-Union Y-Strainer (prevents hot 184 F suction cavitation)"
+	}
+	pumpHeadPSI := 15.2
+	if isDeluxe {
+		pumpHeadPSI = 19.5
 	}
 
 	lines := []PlumbingLine{
@@ -526,23 +567,23 @@ func buildPlumbingSchedule(
 			To:             "Recirculation Pump Suction Port",
 			SizeIn:         suctionSizeIn,
 			Material:       `Sch 80 CPVC / Wire-Reinforced EPDM Chemical Suction Hose`,
-			FlowGPM:        recircGPM,
+			FlowGPM:        totalPumpGPM,
 			PressurePSI:    2.0,
-			ValvesFittings: "Bulkhead Fitting, True-Union Isolation Ball Valve, 50-Mesh Y-Strainer",
-			Notes:          "Mount pump below sump minimum liquid level for positive flooded suction (mag-drive pumps must NEVER run dry).",
+			ValvesFittings: "Bulkhead Fitting, True-Union Isolation Ball Valve, " + p2Strainer,
+			Notes:          fmt.Sprintf("Total shared suction = %.2f GPM (Stage 1 %.2f + Stage 2 %.2f + Stage 3 %.2f GPM). Mount pump below sump minimum liquid level for positive flooded suction (mag-drive pumps must NEVER run dry).", totalPumpGPM, quenchGPM, venturiGPM, recircGPM),
 		},
 		{
 			ID:             "P3",
-			Label:          "Pump Discharge -> Flow Switch -> Stage 1 Quench Manifold",
+			Label:          "Pump Discharge (or Dedicated Booster) -> Flow Switch -> Stage 1 Quench Manifold",
 			Fluid:          "Pressurized Quench Spray Liquor",
-			From:           "Recirculation Pump Discharge Manifold",
+			From:           "Recirculation Pump Discharge Manifold (or 60-100 PSI Fine-Mist Booster)",
 			To:             fmt.Sprintf("Stage 1 Quench Spray Nozzles (%d×)", maxInt(design.Quench.NozzleCount, 2)),
 			SizeIn:         0.75,
 			Material:       quenchHoseMat,
 			FlowGPM:        quenchGPM,
-			PressurePSI:    65.0,
+			PressurePSI:    pumpHeadPSI,
 			ValvesFittings: "Check Valve, 0.25 GPM Safety Flow Switch, Pressure Gauge, Throttle Valve",
-			Notes:          "60-100 psig fine-atomizing header (<=200 um droplets); 0.25 GPM flow switch wired directly into E3 hardwired NFPA 86 safety loop.",
+			Notes:          fmt.Sprintf("Standard recirc header runs %.1f PSI (add dedicated 60-100 psig booster or twin-fluid air-atomize nozzle for <=200 um droplets in short towers); 0.25 GPM flow switch wired directly into E3 hardwired NFPA 86 safety loop.", pumpHeadPSI),
 		},
 		{
 			ID:             "P4",
@@ -553,9 +594,9 @@ func buildPlumbingSchedule(
 			SizeIn:         0.5,
 			Material:       `1/2" Sch 80 CPVC / 316L SS Manifold + Braided Hose`,
 			FlowGPM:        venturiGPM,
-			PressurePSI:    40.0,
+			PressurePSI:    pumpHeadPSI,
 			ValvesFittings: "Needle/Ball Throttle Valve, 316L/C-276 Injection Nozzles, Union",
-			Notes:          fmt.Sprintf("Delivers %.2f GPM to Stage 2 throat at L/G=%.4f for submicron fume capture.", venturiGPM, design.Venturi.LGRatio),
+			Notes:          fmt.Sprintf("Delivers %.2f GPM to Stage 2 throat at L/G=%.4f (%.1f PSI manifold feed; gas-stream shear atomizes droplets at throat).", venturiGPM, design.Venturi.LGRatio, pumpHeadPSI),
 		},
 	}
 
@@ -597,7 +638,7 @@ func buildPlumbingSchedule(
 			To:             "Baffled Sump Settling Chamber",
 			SizeIn:         2.0,
 			Material:       `2" Sch 80 CPVC Gravity Drain Pipe (200 F Rated)`,
-			FlowGPM:        round2(recircGPM + quenchGPM),
+			FlowGPM:        gravityReturnGPM,
 			PressurePSI:    1.0,
 			ValvesFittings: p6Valves,
 			Notes:          p6Notes,
@@ -642,7 +683,7 @@ func buildPlumbingSchedule(
 	pumpStation := PumpStationSpec{
 		Location:          location,
 		PumpType:          pumpType,
-		FlowGPM:           recircGPM,
+		FlowGPM:           totalPumpGPM,
 		HeadFt:            headFt,
 		HP:                pumpHP,
 		Voltage:           120,
@@ -873,8 +914,10 @@ func buildDeluxeSpec(
 ) *DeluxeFabSpec {
 	isDeluxe := p.IsDeluxe()
 
-	// Compute exact cost delta comparing custom_fab_deluxe vs equivalent cots_no_weld configuration.
+	// Compute exact cost delta & acoustic result comparing custom_fab_deluxe vs equivalent cots_no_weld configuration.
 	var deluxeTotal, cotsTotal float64
+	deluxePropDBA := urban.Noise.PropertyLineDBA
+	deluxePropFt := urban.Noise.PropertyLineFt
 	if isDeluxe {
 		deluxeTotal = cots.EstimatedTotalUSD
 		cotsProj := p
@@ -893,7 +936,14 @@ func buildDeluxeSpec(
 		dlxProj := p
 		dlxProj.BuildPath = BuildPathCustomFabDeluxe
 		dlxProj.ZeroElectricity = false
-		deluxeTotal = BuildCOTSSummary(dlxProj, design).EstimatedTotalUSD
+		if dlxProj.PackedBedLayout == PackedBedLayoutParallelManifold {
+			dlxProj.PackedBedLayout = PackedBedLayoutSingleColumn
+		}
+		dlxCOTS := BuildCOTSSummary(dlxProj, design)
+		deluxeTotal = dlxCOTS.EstimatedTotalUSD
+		dlxNoise := assessNoise(dlxProj, design)
+		deluxePropDBA = dlxNoise.PropertyLineDBA
+		deluxePropFt = dlxNoise.PropertyLineFt
 	}
 	costDelta := round2(deluxeTotal - cotsTotal)
 
@@ -904,7 +954,7 @@ func buildDeluxeSpec(
 
 	summary := fmt.Sprintf(
 		"Turnkey shop-fabricated Deluxe package (+$%.2f vs No-Weld COTS): TIG-welded heavy-gauge hot stages with ANSI/ASME B16.5 Class 150 lap-joint flanges, Derakane FRP column with bolted manway & removable demister cassette, welded 2\"×2\"×3/16\" steel forklift skid, UL 508A NEMA 4X panel, and 2\" Rockwool acoustic baffle box + tuned stack silencer (-22 dBA -> %.1f dBA @ %.0f ft).",
-		costDelta, urban.Noise.PropertyLineDBA, urban.Noise.PropertyLineFt,
+		costDelta, deluxePropDBA, deluxePropFt,
 	)
 
 	return &DeluxeFabSpec{
@@ -972,6 +1022,9 @@ func BuildShopPlan(
 	}
 	if arch.Eductor.Enabled {
 		ventCostUSD = round2(285.0 + 24.0*arch.Eductor.CyclonicSweepElbowIn)
+		if p.CorrosionTier == CorrosionTierHeavyC276FRP {
+			ventCostUSD = round2(ventCostUSD * 2.2)
+		}
 	}
 
 	// Build numbered Parts Legend [1]..[9].
@@ -1250,7 +1303,8 @@ func BuildShopPlan(
 
 	if arch.ParallelBed.Enabled {
 		riserHIn := round1(math.Max(42.0, design.PackedBed.PackingHeight.Inches()+12.0))
-		plateSideIn := round1(math.Max(16.0, math.Ceil(math.Sqrt(float64(arch.ParallelBed.PipeCount)))*(arch.ParallelBed.PipeNominalIn+1.25)+4.0))
+		// Uniseals require >= +2.0" pitch over nominal pipe size (e.g., 6.0" pitch for 4" Uniseals w/ 5.75" rubber flange OD).
+		plateSideIn := round1(math.Max(16.0, math.Ceil(math.Sqrt(float64(arch.ParallelBed.PipeCount)))*(arch.ParallelBed.PipeNominalIn+2.0)+4.0))
 		cutList = append(cutList,
 			CutSheetItem{
 				PartNum:      4,
@@ -1311,9 +1365,10 @@ func BuildShopPlan(
 	// Expand CutList in Deluxe mode with ANSI flange rings, structural steel skid frame cuts,
 	// column K-bracing struts, and acoustic blower baffle box panels.
 	if isDeluxe {
-		flangeOD := round1(quenchDiaIn + 6.0)
+		flangeOD := ansi150FlangeOD(quenchDiaIn)
 		boxSide := round1(math.Max(26.0, cots.BlowerVFD.NominalIn+14.0))
 		kBraceLen := round1(math.Hypot(colDiaIn+8.0, colHIn*0.45))
+		kBraceAngleDeg := round1(math.Atan2(colHIn*0.45, colDiaIn+8.0) * 180.0 / math.Pi)
 		cutList = append(cutList,
 			CutSheetItem{
 				PartNum:      2,
@@ -1343,7 +1398,7 @@ func BuildShopPlan(
 				FlatWidthIn:  kBraceLen,
 				FlatHeightIn: colHIn,
 				Qty:          4,
-				Notes:        fmt.Sprintf(`Cut 4× vertical posts @ %.1f" H + 8× diagonal K-braces @ %.1f" L (45° mitered ends) around Stage 3 column.`, colHIn, kBraceLen),
+				Notes:        fmt.Sprintf(`Cut 4× vertical posts @ %.1f" H + 8× diagonal K-braces @ %.1f" L (%.1f° mitered ends) around Stage 3 column.`, colHIn, kBraceLen, kBraceAngleDeg),
 			},
 			CutSheetItem{
 				PartNum:      6,
@@ -1424,12 +1479,7 @@ func buildLocalCeramicShopPlan(
 	prof := resolveLocalRegionProfile(p.EffectiveLocalRegion())
 
 	bedDiaIn := fr.BedDiameterIn
-	bedDepthIn := round1(1.20 / model.MetersPerInch)
-	if design.Input.KilnVolumeCuFt <= 16.0 {
-		bedDepthIn = round1(1.10 / model.MetersPerInch)
-	} else if design.Input.KilnVolumeCuFt >= 40.0 {
-		bedDepthIn = round1(1.35 / model.MetersPerInch)
-	}
+	bedDepthIn := round1(localCeramicBedDepthM(design.Input.KilnVolumeCuFt) / model.MetersPerInch)
 	towerHIn := round1(bedDepthIn + 34.0) // lower plenum + stoneware bed + spray clearance + terracotta chevron baffles
 	chimneyHIn := round1(fr.ChimneyHeightFt * 12.0)
 	quenchDiaIn := round1(cots.QuenchVessel.NominalIn)
@@ -1448,19 +1498,35 @@ func buildLocalCeramicShopPlan(
 	quenchLbs := round1(cots.QuenchVessel.WeightKg / model.KgPerLb)
 	totalPadLbs := round1(quenchLbs + towerWetLbs + tankWetLbs + chimneyLbs + 350.0)
 
+	flueLabel := "Refractory Brick Kiln Flue & Concentric Flue-Wall Thermal Recuperator"
+	flueDimIn := fmt.Sprintf(`%.0f" masonry flue × 48" L (concentric brick reheat wall)`, ductIn)
+	flueNotes := fmt.Sprintf("Transfers waste heat from %.0f F kiln flue across a split-firebrick wall to warm scrubbed exhaust back to %.0f F without mixing raw gas.", design.Input.PeakExitTempF, fr.StackReheatTempF)
+	chimneyPartLabel := fmt.Sprintf("Stage 4: Tall Brick / Terracotta Thermal-Reheat Chimney (%.1f m / %.0f ft)", fr.ChimneyHeightM, fr.ChimneyHeightFt)
+	if fr.SteamEnabled {
+		flueLabel = "Refractory Brick Kiln Inlet Flue (Direct to Quench, No Reheat Hearth)"
+		flueDimIn = fmt.Sprintf(`%.0f" masonry flue × 48" L (refractory brick inlet)`, ductIn)
+		flueNotes = fmt.Sprintf("Conveys %.0f F kiln flue gas into the brick quench chamber (steam-jet ejector replaces the tall thermal-reheat recuperator).", design.Input.PeakExitTempF)
+		chimneyPartLabel = fmt.Sprintf("Stage 4: Compact Brick / SWG Exhaust Chimney (%.1f m / %.0f ft, Steam-Jet Driven)", fr.ChimneyHeightM, fr.ChimneyHeightFt)
+	} else if !p.ZeroElectricity {
+		flueLabel = "Refractory Brick Kiln Inlet Flue (Hybrid Fan-Assisted Mode)"
+		flueDimIn = fmt.Sprintf(`%.0f" masonry flue × 48" L (refractory brick inlet)`, ductIn)
+		flueNotes = fmt.Sprintf("Conveys %.0f F kiln flue gas into the brick quench chamber (local low-dP draft fan replaces tall thermal-reheat chimney).", design.Input.PeakExitTempF)
+		chimneyPartLabel = fmt.Sprintf("Stage 4: Compact Brick / SWG Exhaust Chimney (%.1f m / %.0f ft, Fan-Assisted)", fr.ChimneyHeightM, fr.ChimneyHeightFt)
+	}
+
 	parts := []PlanPart{
 		{
 			Num:          1,
 			ID:           "brick_flue_recuperator",
-			Label:        "Refractory Brick Kiln Flue & Concentric Flue-Wall Thermal Recuperator",
+			Label:        flueLabel,
 			Stage:        "Inlet",
 			Material:     prof.pipeLocalSpec,
-			DimensionsIn: fmt.Sprintf(`%.0f" masonry flue × 48" L (concentric brick reheat wall)`, ductIn),
+			DimensionsIn: flueDimIn,
 			DimensionsMM: fmt.Sprintf("%.0f mm masonry flue × 1220 mm L", ductIn*25.4),
 			SKU:          "LOCAL-BRICK-FLUE",
 			Qty:          1,
 			CostUSD:      round2(cots.QuenchVessel.UnitCostUSD * 0.40),
-			Notes:        fmt.Sprintf("Transfers waste heat from %.0f F kiln flue across a split-firebrick wall to warm scrubbed exhaust back to %.0f F without mixing raw gas.", design.Input.PeakExitTempF, fr.StackReheatTempF),
+			Notes:        flueNotes,
 		},
 		{
 			Num:          2,
@@ -1542,13 +1608,16 @@ func buildLocalCeramicShopPlan(
 				if p.ZeroElectricity {
 					return fmt.Sprintf("Zero-electricity manual closed-loop refill: %.1f min/hr on treadle/hand pump (or %d × 20L jerrycans/hr).", fr.TreadleMinutesPerHr, fr.Jerrycans20LPerHr)
 				}
+				if fr.SteamEnabled {
+					return fmt.Sprintf("Local 230V 50Hz domestic monoblock pump (%.0f W, zero electric draft fan — steam ejector drives draft) automates closed-loop tank refill; overhead gravity tank provides blackout ride-through.", fr.PowerWatts)
+				}
 				return fmt.Sprintf("Local 230V 50Hz domestic monoblock pump (%.0f W w/ low-dP fan) automates closed-loop tank refill; overhead gravity tank provides blackout ride-through.", fr.PowerWatts)
 			}(),
 		},
 		{
 			Num:          8,
 			ID:           "reheat_brick_chimney",
-			Label:        fmt.Sprintf("Stage 4: Tall Brick / Terracotta Thermal-Reheat Chimney (%.1f m / %.0f ft)", fr.ChimneyHeightM, fr.ChimneyHeightFt),
+			Label:        chimneyPartLabel,
 			Stage:        "Exhaust",
 			Material:     cots.BlowerVFD.Material,
 			DimensionsIn: fmt.Sprintf(`12" flue × %.0f" H (%.1f ft / %.1f m)`, chimneyHIn, fr.ChimneyHeightFt, fr.ChimneyHeightM),
@@ -1706,13 +1775,13 @@ func buildLocalCeramicShopPlan(
 		if fr.DraftMode == LocalDraftSteamEjectorSubsonic {
 			cutList = append(cutList, CutSheetItem{
 				PartNum:      11,
-				Name:         fmt.Sprintf("Insulated Low-Pressure Steam Header (S1), 4.2 m Open Hydrostatic Standpipe (S2) & Drilled Brass Converging Orifice (%.2f mm)", fr.SteamNozzleThroatMM),
+				Name:         fmt.Sprintf("Insulated Low-Pressure Steam Header (S1), 4.2-4.4 m Open Hydrostatic Standpipe (S2) & Drilled Brass Converging Orifice (%.2f mm)", fr.SteamNozzleThroatMM),
 				Shape:        "pipe",
-				Material:     `1/2" Copper/Brass Steam Header (S1) + 3/4" × 4.2 m Open Vertical Standpipe (S2) + Hand-Drilled 1/2" Brass Pipe-Cap Orifice (No CNC Bell)`,
-				FlatWidthIn:  round2(math.Pi * 4.0),
+				Material:     `1/2" Copper/Brass Steam Header (S1) + 3/4" × 4.2-4.4 m Open Vertical Standpipe (S2) + Hand-Drilled 1/2" Brass Pipe-Cap Orifice (No CNC Bell)`,
+				FlatWidthIn:  round2(math.Pi * 0.75),
 				FlatHeightIn: 165.4, // 4.2 m vertical open hydrostatic standpipe
 				Qty:          1,
-				Notes:        fmt.Sprintf(`Drill %.2f mm center bore in standard 1/2" brass pipe cap (no CNC de Laval bell needed); plumb unvalved 4.2 m (13.8 ft) vertical open water-column standpipe S2 directly to steamer liquid space (physically caps pressure at 6.0 psig), insulate header S1, and hydro-test to 1.5x MAWP (23 psig).`, fr.SteamNozzleThroatMM),
+				Notes:        fmt.Sprintf(`Drill %.2f mm center bore in standard 1/2" brass pipe cap (no CNC de Laval bell needed); plumb unvalved 4.2-4.4 m (13.8-14.4 ft) vertical open water-column standpipe S2 directly to steamer liquid space (physically caps pressure at ~6.0 psig), insulate header S1, and hydro-test to 1.5x MAWP (23 psig).`, fr.SteamNozzleThroatMM),
 			})
 		} else {
 			cutList = append(cutList, CutSheetItem{
@@ -1720,7 +1789,7 @@ func buildLocalCeramicShopPlan(
 				Name:         fmt.Sprintf("Insulated Steam Header (S1) & Machined 316L de Laval Ejector Mixing Throat (%.2f mm Nozzle)", fr.SteamNozzleThroatMM),
 				Shape:        "pipe",
 				Material:     `1/2" Sch 40 Seamless 316L/Steel Steam Pipe + Mineral-Wool Scald Guard + 316L Mixing Diffuser`,
-				FlatWidthIn:  round2(math.Pi * 4.0),
+				FlatWidthIn:  round2(math.Pi * 0.5),
 				FlatHeightIn: 36.0,
 				Qty:          1,
 				Notes:        fmt.Sprintf(`Machine %.2f mm choked 316L de Laval nozzle centered coaxially in the mixing throat; insulate S1 steam header with scald guards and hydro-test to 1.5x MAWP before firing.`, fr.SteamNozzleThroatMM),
@@ -1867,38 +1936,42 @@ func buildLocalCeramicShopPlan(
 				},
 				PlumbingLine{
 					ID:             "S2",
-					Label:          "4.2 m (13.8 ft) Open Vertical Hydrostatic Water-Column Relief Standpipe (S2 — 6.0 psig Physical Cap)",
+					Label:          "4.2 m (13.8 ft cold / 4.4 m hot water) Open Vertical Hydrostatic Water-Column Relief Standpipe (S2 — 6.0 psig Physical Cap)",
 					Fluid:          "Open Atmospheric Water Column / Automatic Over-Pressure Steam Vent (Zero Moving Parts)",
 					From:           "Certified Catering Steamer Lower Liquid Manifold (Unvalved Direct Connection)",
-					To:             "Open-Top Atmospheric Overflow Elbow @ +4.2 m (+13.8 ft) Elevation -> Outdoor Splash Drain",
+					To:             "Open-Top Atmospheric Overflow Elbow @ +4.2-4.4 m Elevation -> Outdoor Splash Drain",
 					SizeIn:         0.75,
 					Material:       `3/4" Rigid Copper / Galvanized Steel Vertical Standpipe w/ Unobstructed Open Overflow Bend`,
-					FlowGPM:        round2(fr.SteamWaterLHr / 60.0 / 3.785411784),
+					FlowGPM:        0.0,
 					PressurePSI:    fr.SteamPressurePSIG,
 					ValvesFittings: "ZERO Shutoff Valves Permitted — Open Top Atmospheric Overflow Cup & Downward Splash Deflector",
-					Notes:          "Hydrostatic water-column relief: P_max = rho*g*h = 998 * 9.81 * 4.2 m = 41.1 kPa (6.0 psig). Physically caps steamer pressure at 6.0 psig with zero springs or moving parts, backing up the factory 10-15 psig brass PRV.",
+					Notes:          "Static hydrostatic water-column safety relief (0 GPM normal flow): P_max = rho*g*h (~5.96 psig cold @ 4.2 m; 4.35-4.4 m prevents hot-water density burping at 6.0 psig). Physically caps steamer pressure with zero moving parts, backing up the factory 10-15 psig brass PRV.",
 				},
 				PlumbingLine{
 					ID:             "P6",
-					Label:          fmt.Sprintf("Open Atmospheric 0 psig Feedwater Supply -> Bronze Check Valve -> Catering Steamer (+%.1f L/hr)", fr.SteamWaterLHr),
-					Fluid:          "Clean Soft/Filtered Boiler Feedwater (0 psig Open Tank)",
-					From:           "Open Atmospheric 0 psig Overhead Feed Tank / Hand Feed Pump",
+					Label:          fmt.Sprintf("Open 0 psig Clean Feed Tank -> Hand-Piston / Boiler Feed Pump -> Check Valve -> Catering Steamer (+%.1f L/hr)", fr.SteamWaterLHr),
+					Fluid:          "Clean Soft/Filtered Boiler Feedwater (Separate from Alkaline Sump!)",
+					From:           "Open Atmospheric 0 psig Clean Feedwater Tank + Hand-Piston Feed Pump (or 0 psig Batch Refill)",
 					To:             "Certified Commercial Catering Steamer Feed Inlet",
 					SizeIn:         0.5,
 					Material:       `1/2" Copper / 316L Seamless Feed Tubing + Bronze Spring Check Valve`,
 					FlowGPM:        round2(fr.SteamWaterLHr / 60.0 / 3.785411784),
-					PressurePSI:    fr.GravityHeadPSI,
-					ValvesFittings: "Fine Mesh Strainer, Bronze Spring Check Valve, Isolation Valve, Water-Level Sight Glass",
-					Notes:          "Bronze check valve prevents hot steam from ever backing into plastic atmospheric feed tank; never pressurize plastic tanks.",
+					PressurePSI:    round1(fr.SteamPressurePSIG + 5.0),
+					ValvesFittings: "Fine Mesh Strainer, Manual Piston Feed Pump (or Depressurized Batch Fill), Bronze Spring Check Valve, Water-Level Sight Glass",
+					Notes:          "Requires feed pressure > 6 psig (a 3.5 m / 5 PSI gravity tank cannot push water into a 6 psig steamer); bronze check valve prevents steam backflow into the 0 psig clean feed tank.",
 				},
 			)
 		} else {
+			feedSource := "Certified Non-IBR Baby Boiler (60 psig — NO Monotube Coils)"
+			if fr.DraftMode == LocalDraftSteamEjectorLP {
+				feedSource = "Certified Monotube Coil (<2 L) or Non-IBR Baby Boiler (20 psig)"
+			}
 			plumbing = append(plumbing,
 				PlumbingLine{
 					ID:             "S1",
 					Label:          fmt.Sprintf("Insulated Live Steam Header (S1) -> PRV & Gauge -> de Laval Ejector (%.0f psig / %.1f kg/hr)", fr.SteamPressurePSIG, fr.SteamFlowKgHr),
 					Fluid:          fmt.Sprintf("Saturated / Dry Motive Steam (%.0f psig / %.2f barg, %.0f m/s @ %.2f mm nozzle)", fr.SteamPressurePSIG, fr.SteamPressureBar, fr.SteamNozzleVelMS, fr.SteamNozzleThroatMM),
-					From:           "Certified Steam Source (Monotube Coil / Non-IBR Baby Boiler)",
+					From:           feedSource,
 					To:             "Stage 2B 316L de Laval Steam-Jet Ejector Mixing Throat",
 					SizeIn:         0.5,
 					Material:       `1/2" Sch 40 Seamless 316L/Steel Pipe + Mineral-Wool Insulation & Metal Scald Guard`,
@@ -1909,16 +1982,16 @@ func buildLocalCeramicShopPlan(
 				},
 				PlumbingLine{
 					ID:             "P6",
-					Label:          fmt.Sprintf("Open Atmospheric 0 psig Feedwater Supply -> Check Valve -> Steam Source (+%.1f L/hr)", fr.SteamWaterLHr),
-					Fluid:          "Clean Soft/Filtered Boiler Feedwater (0 psig Open Tank)",
-					From:           "Open Atmospheric 0 psig Overhead Feed Tank / Hand Feed Pump",
-					To:             "Certified Monotube Coil / Non-IBR Baby Boiler Feed Inlet",
+					Label:          fmt.Sprintf("Open 0 psig Clean Feed Tank -> Boiler Feed Pump -> Check Valve -> Steam Source (+%.1f L/hr)", fr.SteamWaterLHr),
+					Fluid:          "Clean Soft/Filtered Boiler Feedwater (Separate from Alkaline Sump!)",
+					From:           "Open Atmospheric 0 psig Clean Feed Tank + Manual Piston / Boiler Feed Pump",
+					To:             feedSource + " Feed Inlet",
 					SizeIn:         0.5,
-					Material:       `1/2" Copper / 316L Seamless Feed Tubing + Bronze Spring Check Valve`,
+					Material:       `1/2" Copper / 316L Seamless Feed Tubing + Bronze/316L Spring Check Valve`,
 					FlowGPM:        round2(fr.SteamWaterLHr / 60.0 / 3.785411784),
-					PressurePSI:    fr.GravityHeadPSI,
-					ValvesFittings: "Fine Mesh Strainer, Bronze/316L Spring Check Valve, Isolation Valve, Sight Glass",
-					Notes:          "Check valve prevents hot steam from ever backing into plastic atmospheric feed tank; never pressurize plastic tanks.",
+					PressurePSI:    round1(fr.SteamPressurePSIG + 10.0),
+					ValvesFittings: "Fine Mesh Strainer, High-Head Hand-Piston or Boiler Feed Pump, Bronze/316L Spring Check Valve, Isolation Valve, Sight Glass",
+					Notes:          fmt.Sprintf("Boiler feed pump MUST exceed %.0f psig operating pressure (a 3.5 m / 5 PSI gravity tank cannot inject into a pressurized boiler!); check valve isolates the 0 psig atmospheric clean tank.", fr.SteamPressurePSIG),
 				},
 			)
 		}

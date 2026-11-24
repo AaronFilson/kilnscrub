@@ -256,33 +256,65 @@ func TestIndexAndEmbeddedHTMLSanity(t *testing.T) {
 	}
 
 	body := rec.Body.String()
-	requiredSnippets := []string{
+	for _, needle := range []string{
 		"<!DOCTYPE html>",
-		"three@0.170.0",
-		"OrbitControls",
-		"/api/defaults",
-		"/api/size",
+		"kilnscrub",
+		"/_next/static/",
+		"/favicon.ico",
+		"Design &amp; 3D Studio",
+		"Build &amp; Firing Guide",
+		"Live Control &amp; Telemetry",
+		"Shop Plans &amp; Cut Sheets",
+	} {
+		if !strings.Contains(body, needle) {
+			t.Errorf("embedded index.html missing expected marker %q", needle)
+		}
+	}
+
+	// Verify HEAD / returns 200 with empty body.
+	recHead := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(recHead, httptest.NewRequest(http.MethodHead, "/", nil))
+	if recHead.Code != http.StatusOK || recHead.Body.Len() != 0 {
+		t.Fatalf("HEAD / status=%d bodyLen=%d, want 200 and empty body", recHead.Code, recHead.Body.Len())
+	}
+
+	// Verify embedded Next.js static chunks are served directly from the Go binary with immutable caching.
+	assetPaths := extractNextStaticPaths(body)
+	if len(assetPaths) == 0 {
+		t.Fatalf("expected /_next/static/ asset links in Next.js exported index.html")
+	}
+	var allAssets strings.Builder
+	allAssets.WriteString(body)
+	for _, assetPath := range assetPaths {
+		aRec := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(aRec, httptest.NewRequest(http.MethodGet, assetPath, nil))
+		if aRec.Code != http.StatusOK {
+			t.Errorf("GET %s status = %d, want 200", assetPath, aRec.Code)
+			continue
+		}
+		if cc := aRec.Header().Get("Cache-Control"); !strings.Contains(cc, "immutable") {
+			t.Errorf("GET %s Cache-Control = %q, want immutable", assetPath, cc)
+		}
+		allAssets.WriteString("\n")
+		allAssets.WriteString(aRec.Body.String())
+	}
+
+	bundle := strings.ReplaceAll(strings.ReplaceAll(allAssets.String(), `\xb0`, "°"), `\u00b0`, "°")
+	for _, needle := range []string{
+		"/api/studio/presets",
+		"/api/studio/evaluate",
+		"/api/studio/packet",
 		"/api/export",
-		"Cutaway",
-		"Flow Particles",
 		"viewport-3d",
 		"viewport-2d",
 		"chart-efficiency",
 		"chart-fan",
 		"chart-dp",
-		"percent_of_flood",
-		"hcl_removal_efficiency",
-		"target_kiln_draft_in_wc",
-		`rel="icon"`,
-		`data:image/svg+xml,`,
-		`<span class="unit-literal">µm</span>`,
-		`<span class="unit-literal">HCl</span>`,
-		`<span class="unit-literal">NaCl</span>`,
-		`<span class="unit-literal">d₅₀</span>`,
-	}
-	for _, needle := range requiredSnippets {
-		if !strings.Contains(body, needle) {
-			t.Errorf("embedded index.html missing expected marker %q", needle)
+		"CPVC 200°F Cutoff",
+		"OrbitControls",
+	} {
+		if !strings.Contains(bundle, needle) {
+			t.Errorf("encapsulated Next.js bundle missing expected marker %q", needle)
 		}
 	}
 
@@ -299,6 +331,30 @@ func TestIndexAndEmbeddedHTMLSanity(t *testing.T) {
 	if rec405.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("POST / status = %d, want 405", rec405.Code)
 	}
+}
+
+func extractNextStaticPaths(html string) []string {
+	seen := make(map[string]bool)
+	var out []string
+	rest := html
+	for {
+		idx := strings.Index(rest, "/_next/static/")
+		if idx < 0 {
+			break
+		}
+		rest = rest[idx:]
+		end := strings.IndexAny(rest, "\"'\\ \t\r\n<>)")
+		if end < 0 {
+			end = len(rest)
+		}
+		p := rest[:end]
+		if len(p) > len("/_next/static/") && !seen[p] {
+			seen[p] = true
+			out = append(out, p)
+		}
+		rest = rest[end:]
+	}
+	return out
 }
 
 func TestFaviconEndpoint(t *testing.T) {

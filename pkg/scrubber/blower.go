@@ -9,9 +9,9 @@ import (
 
 // Stage 4 Induced-Draft (ID) centrifugal blower engineering constants.
 const (
-	blowerStaticEfficiency = 0.62 // Industrial corrosion-resistant backward-inclined centrifugal fan efficiency on (0, 1]
+	blowerStaticEfficiency = 0.62 // Industrial corrosion-resistant centrifugal fan efficiency on (0, 1]
 	blowerMotorSafetyFac   = 1.20 // 20% service factor margin for standard NEMA motor selection
-	blowerPressureCoeffPsi = 0.55 // Typical centrifugal impeller static pressure coefficient
+	blowerPressureCoeffPsi = 1.00 // Narrow radial-blade pressure-blower static pressure coefficient (low-Ns high-head duty)
 	blowerFlowCoeffPhi     = 0.14 // Typical centrifugal impeller flow coefficient
 	blowerMinWheelDiamM    = 0.20 // Minimum wheel diameter [m] (~8 inches)
 	blowerMaxRPM           = 3550.0
@@ -122,8 +122,17 @@ func SizeBlower(
 	}
 
 	totalSP := breakdown.TotalPa()
-	qOp := outletGas.VolumetricFlow
-	rhoOp := float64(outletGas.Density)
+	// Account for suction vacuum density expansion at the Stage 4 ID blower inlet
+	// (P_in = P_amb - dP_stages_1_3) so blower ACFM and shaft power reflect real inlet density.
+	pAmb := float64(outletGas.Pressure)
+	if pAmb <= 0 {
+		pAmb = 101325.0
+	}
+	suctionDrop := float64(ductDP + quench.PressureDrop + venturi.PressureDrop + packedBed.TotalPressureDrop + kilnDraftDrawPa)
+	pIn := math.Max(pAmb-suctionDrop, 0.5*pAmb)
+	densityRatio := pIn / pAmb
+	rhoOp := float64(outletGas.Density) * densityRatio
+	qOp := model.CubicMetersPerSec(float64(outletGas.VolumetricFlow) / densityRatio)
 
 	eta := blowerStaticEfficiency
 	shaftPowerW := model.Watts((float64(qOp) * float64(totalSP)) / eta)

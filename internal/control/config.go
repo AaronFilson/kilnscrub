@@ -1,8 +1,10 @@
 package control
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -36,12 +38,18 @@ func DefaultDaemonConfig() DaemonConfig {
 }
 
 // ParseDaemonConfig decodes JSON configuration seeded from DefaultDaemonConfig so partial
-// JSON files inherit valid defaults, reconciles derived control fields via Control.Sync(),
-// and validates the resulting DaemonConfig.
+// JSON files inherit valid defaults, rejects unknown JSON keys so typos in safety parameters
+// fail fast, reconciles derived control fields via Control.Sync(), and validates DaemonConfig.
 func ParseDaemonConfig(data []byte) (DaemonConfig, error) {
 	cfg := DefaultDaemonConfig()
-	if err := json.Unmarshal(data, &cfg); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&cfg); err != nil {
 		return DaemonConfig{}, fmt.Errorf("parse daemon config JSON: %w", err)
+	}
+	var trailing any
+	if err := dec.Decode(&trailing); err != io.EOF {
+		return DaemonConfig{}, fmt.Errorf("parse daemon config JSON: unexpected trailing tokens")
 	}
 	cfg.HALMode = strings.ToLower(strings.TrimSpace(cfg.HALMode))
 	if cfg.HALMode == "" {

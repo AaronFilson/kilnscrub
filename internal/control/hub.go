@@ -7,18 +7,22 @@ import (
 	"github.com/AaronFilson/kilnscrub/pkg/model"
 )
 
-const defaultHubBufferSize = 16
+const (
+	defaultHubBufferSize  = 16
+	defaultMaxSubscribers = 64
+)
 
 // TelemetryHub is a thread-safe fan-out broadcaster for live model.ControlStatus snapshots.
 // Slow subscribers never stall the real-time PID control loop: when a subscriber's buffer is
 // full, the oldest queued snapshot is dropped so the subscriber receives the freshest state.
 type TelemetryHub struct {
-	mu         sync.RWMutex
-	bufferSize int
-	nextID     uint64
-	subs       map[uint64]chan model.ControlStatus
-	closed     bool
-	dropped    atomic.Uint64
+	mu             sync.RWMutex
+	bufferSize     int
+	maxSubscribers int
+	nextID         uint64
+	subs           map[uint64]chan model.ControlStatus
+	closed         bool
+	dropped        atomic.Uint64
 }
 
 // NewTelemetryHub constructs a TelemetryHub with per-subscriber channel capacity bufferSize.
@@ -28,8 +32,9 @@ func NewTelemetryHub(bufferSize int) *TelemetryHub {
 		bufferSize = defaultHubBufferSize
 	}
 	return &TelemetryHub{
-		bufferSize: bufferSize,
-		subs:       make(map[uint64]chan model.ControlStatus),
+		bufferSize:     bufferSize,
+		maxSubscribers: defaultMaxSubscribers,
+		subs:           make(map[uint64]chan model.ControlStatus),
 	}
 }
 
@@ -41,7 +46,7 @@ func (h *TelemetryHub) Subscribe() (<-chan model.ControlStatus, func()) {
 	defer h.mu.Unlock()
 
 	ch := make(chan model.ControlStatus, h.bufferSize)
-	if h.closed {
+	if h.closed || (h.maxSubscribers > 0 && len(h.subs) >= h.maxSubscribers) {
 		close(ch)
 		return ch, func() {}
 	}
@@ -65,10 +70,11 @@ func (h *TelemetryHub) Subscribe() (<-chan model.ControlStatus, func()) {
 }
 
 // Publish fans out status to all active subscribers without ever blocking.
-// If a subscriber channel is full, the oldest queued item is evicted to make room for status.
+// Serialized with a write lock so concurrent publishers (e.g. control ticks and ResetInterlock)
+// never reorder or race on eviction across subscribers.
 func (h *TelemetryHub) Publish(status model.ControlStatus) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	if h.closed {
 		return

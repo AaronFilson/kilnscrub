@@ -1,0 +1,337 @@
+"use client";
+
+import React, { useState } from "react";
+import type { StudioEvaluation } from "@/types/kilnscrub";
+import { fmt, fmtUSD, kToF, mToIn } from "@/lib/api";
+import { Viewport3D } from "./Viewport3D";
+import { Schematic2D } from "./Schematic2D";
+import { EngineeringCharts } from "./EngineeringCharts";
+
+interface DesignTabProps {
+  evaluation: StudioEvaluation;
+  units: "in" | "mm";
+  active: boolean;
+}
+
+export function DesignTab({ evaluation, units, active }: DesignTabProps) {
+  const [viewMode, setViewMode] = useState<"3d" | "2d">("3d");
+  const [cutaway, setCutaway] = useState(true);
+  const [particles, setParticles] = useState(true);
+  const [showSystems3D, setShowSystems3D] = useState(false);
+  const [focusStage, setFocusStage] = useState<string | null>("overview");
+
+  const { project, design, cots, urban, frugal, shop_plan: plan } = evaluation;
+  const isLocal = project.build_path === "local_ceramic_masonry";
+  const isDeluxe = project.build_path === "custom_fab_deluxe";
+  const quenchOutF = kToF(design.quench.outlet_temp_k);
+
+  const dim = (inches: number) =>
+    units === "in" ? `${inches.toFixed(1)}"` : `${Math.round(inches * 25.4)} mm`;
+
+  return (
+    <div className="main-stage">
+      {/* 1. Urban Neighbor Readiness Bar */}
+      <div className="readiness-bar" aria-label="Urban Neighbor Readiness">
+        <span className={`pill ${urban.overall_status}`}>
+          READINESS: {urban.overall_status.toUpperCase()}
+        </span>
+        <span className={`pill ${urban.electrical.status}`} title={urban.electrical.summary}>
+          Elec: {urban.electrical.circuit_label}
+        </span>
+        <span className={`pill ${urban.water.status}`} title={urban.water.summary}>
+          Water: {fmt(urban.water.required_gpm, 2)} GPM
+        </span>
+        <span className={`pill ${urban.noise.status}`} title={urban.noise.summary}>
+          Noise: {fmt(urban.noise.property_line_dba, 1)} dBA @ {urban.noise.property_line_ft}ft
+        </span>
+        <span className={`pill ${urban.plume.status}`} title={urban.plume.summary}>
+          Plume: ~{fmt(urban.plume.bare_plume_length_ft, 0)}ft
+          {project.include_plume_diluter && !project.zero_electricity
+            ? ` → ${fmt(urban.plume.diluted_plume_length_ft, 0)}ft`
+            : ""}
+        </span>
+        <span className={`pill ${urban.drain.status}`} title={urban.drain.summary}>
+          Alkali: {urban.drain.bulk_packaging_label.slice(0, 34)}
+        </span>
+        <span className={`pill ${urban.corrosion.status}`} title={urban.corrosion.material_summary}>
+          {urban.corrosion.tier_label.slice(0, 26)}
+        </span>
+      </div>
+
+      {/* 2. Conditional Deluxe or Local Ceramic / Off-Grid Banner */}
+      {isDeluxe && plan.deluxe_spec && (
+        <div id="deluxe-spec-banner" className="banner banner-deluxe">
+          <div className="card-header" style={{ marginBottom: 4 }}>
+            <strong>Custom Fabrication Deluxe Package Active</strong>
+            <span className="pill info">
+              +{fmtUSD(plan.deluxe_spec.cost_delta_usd)} vs No-Weld COTS
+            </span>
+          </div>
+          <div style={{ fontSize: 12.5, color: "#e2e8f0" }}>
+            {plan.deluxe_spec.summary}
+          </div>
+        </div>
+      )}
+
+      {isLocal && frugal && (
+        <div id="frugal-spec-banner" className="banner banner-frugal">
+          <div className="card-header" style={{ marginBottom: 6 }}>
+            <strong>
+              Local Ceramic &amp; Off-Grid Mode ({frugal.region_label} · {frugal.draft_mode_label})
+            </strong>
+            <span className="pill ok">
+              {frugal.local_currency_estimate} · {fmt(frugal.power_watts, 0)} W
+            </span>
+          </div>
+          <div style={{ fontSize: 12.5, color: "#fef3c7", marginBottom: 8 }}>
+            {frugal.summary}
+          </div>
+          <div className="grid-3">
+            <div className="card" style={{ padding: 8 }}>
+              <div className="kpi-label">HCl Acid Gas Capture</div>
+              <div className="kpi-value" style={{ fontSize: 16 }}>
+                {fmt(frugal.hcl_removal_pct, 1)}%
+              </div>
+            </div>
+            <div className="card" style={{ padding: 8 }}>
+              <div className="kpi-label">Coarse Wood Fly Ash</div>
+              <div className="kpi-value" style={{ fontSize: 16 }}>
+                {fmt(frugal.coarse_ash_capture_pct, 1)}%
+              </div>
+            </div>
+            <div className="card" style={{ padding: 8 }}>
+              <div className="kpi-label">Submicron NaCl Fume</div>
+              <div className="kpi-value" style={{ fontSize: 16 }}>
+                {fmt(frugal.submicron_nacl_capture_pct, 0)}%
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. KPI Strip */}
+      <section className="kpi-grid" aria-label="Key Engineering KPIs">
+        <div className="kpi-card" style={{ ["--kpi-accent" as string]: "var(--accent-quench)" }}>
+          <div className="kpi-label">
+            Quench Outlet Temp
+            <span
+              title="CPVC 200°F Cutoff: Schedule 80 CPVC is rated to 200°F max continuous. Stage 1 spray cools exhaust below 190°F, and both the hardwired snap-disc and software interlock trip at 200°F."
+              style={{ cursor: "help" }}
+            >
+              ⓘ
+            </span>
+          </div>
+          <div className="kpi-value">{fmt(quenchOutF, 1)} °F</div>
+          <div className="kpi-sub">
+            Spray: {fmt(design.quench.total_spray_water_gpm, 2)} <span className="unit-literal">GPM</span> · Evap{" "}
+            {fmt(design.quench.evaporated_water_gpm, 2)}
+          </div>
+          <span className={`pill ${quenchOutF < 200 ? "ok" : "danger"}`}>
+            {isLocal ? "All-Ceramic >1800°F" : "CPVC 200°F Cutoff"}
+          </span>
+        </div>
+
+        <div className="kpi-card" style={{ ["--kpi-accent" as string]: "var(--accent-venturi)" }}>
+          <div className="kpi-label">
+            Venturi Cut <span className="unit-literal">d₅₀</span> (<span className="unit-literal">NaCl</span>)
+          </div>
+          <div className="kpi-value">
+            {fmt(design.venturi.cut_diameter_d50_um, 2)} <span className="unit-literal">µm</span>
+          </div>
+          <div className="kpi-sub">
+            <span className="unit-literal">NaCl</span>{" "}
+            {fmt(design.venturi.overall_nacl_fume_efficiency * 100, 1)}% · Ash{" "}
+            {fmt(design.venturi.overall_wood_ash_efficiency * 100, 1)}%
+          </div>
+          <span className="pill info">
+            ΔP {fmt(design.venturi.pressure_drop_in_wc, 1)} <span className="unit-literal">inWC</span>
+          </span>
+        </div>
+
+        <div className="kpi-card" style={{ ["--kpi-accent" as string]: "var(--accent-packed)" }}>
+          <div className="kpi-label">
+            <span className="unit-literal">HCl</span> Removal
+          </div>
+          <div className="kpi-value">
+            {fmt(
+              isLocal && frugal
+                ? frugal.hcl_removal_pct
+                : design.packed_bed.hcl_removal_efficiency * 100,
+              1
+            )}
+            %
+          </div>
+          <div className="kpi-sub">
+            Flood: {fmt(cots.actual_percent_of_flood, 1)}% (≤75%) ·{" "}
+            {fmt(design.packed_bed.hcl_outlet_ppm, 1)} ppm out
+          </div>
+          <span className={`pill ${cots.actual_percent_of_flood <= 75 ? "ok" : "danger"}`}>
+            Sump <span className="unit-literal">pH</span> 7.5–8.5
+          </span>
+        </div>
+
+        <div className="kpi-card" style={{ ["--kpi-accent" as string]: "var(--accent-blower)" }}>
+          <div className="kpi-label">
+            {isLocal ? "Chimney / Ejector Draft" : "Stage 4 Blower Duty"}
+          </div>
+          <div className="kpi-value">
+            {isLocal && frugal
+              ? `${fmt(frugal.available_draft_inwc, 3)}"`
+              : `${fmt(design.blower.total_static_pressure_in_wc, 1)} inWC`}
+          </div>
+          <div className="kpi-sub">
+            {isLocal && frugal
+              ? `Req ${fmt(frugal.required_draft_inwc, 3)}" · Chimney ${fmt(frugal.chimney_height_m, 1)} m`
+              : `${fmt(design.blower.flow_acfm, 0)} ACFM · ${design.blower.recommended_motor_hp} HP · ${dim(mToIn(design.blower.wheel_diameter_m))} wheel`}
+          </div>
+          <span className="pill info">
+            Draft {fmt(design.input.target_kiln_draft_in_wc, 3)} <span className="unit-literal">inWC</span>
+          </span>
+        </div>
+
+        <div className="kpi-card" style={{ ["--kpi-accent" as string]: "#a855f7" }}>
+          <div className="kpi-label">Estimated Hardware Total</div>
+          <div className="kpi-value">{fmtUSD(cots.estimated_total_usd)}</div>
+          <div className="kpi-sub">
+            {isLocal && frugal
+              ? frugal.local_currency_estimate
+              : `Delta ${evaluation.architecture_options.cost_delta_usd >= 0 ? "+" : ""}${fmtUSD(evaluation.architecture_options.cost_delta_usd)} vs baseline`}
+          </div>
+          <span className="pill ok">
+            {fmt(evaluation.recirculation.water_saved_pct, 0)}% Water Saved
+          </span>
+        </div>
+      </section>
+
+      {/* 4. Interactive 3D WebGL (Offline-Bundled Three.js) / 2D Cutaway Viewport */}
+      <section className="card">
+        <div className="card-header">
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            <button
+              type="button"
+              className={`btn btn-sm ${viewMode === "3d" ? "btn-primary" : ""}`}
+              onClick={() => setViewMode("3d")}
+            >
+              3D Studio (Offline Three.js)
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm ${viewMode === "2d" ? "btn-primary" : ""}`}
+              onClick={() => setViewMode("2d")}
+            >
+              2D Cutaway
+            </button>
+            {viewMode === "3d" && (
+              <>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${cutaway ? "btn-accent" : ""}`}
+                  onClick={() => setCutaway((v) => !v)}
+                >
+                  Cutaway: {cutaway ? "ON" : "OFF"}
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${particles ? "btn-accent" : ""}`}
+                  onClick={() => setParticles((v) => !v)}
+                >
+                  Flow Particles: {particles ? "ON" : "OFF"}
+                </button>
+                {!isLocal && (
+                  <button
+                    id="btn-systems-3d"
+                    type="button"
+                    className={`btn btn-sm ${showSystems3D || isDeluxe ? "btn-accent" : ""}`}
+                    onClick={() => setShowSystems3D((v) => !v)}
+                  >
+                    Skid, Pump &amp; Baffling: {showSystems3D || isDeluxe ? "ON" : "OFF"}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            {(
+              [
+                ["overview", "All Stages"],
+                ["inlet", "Inlet"],
+                ["quench", "1: Quench"],
+                ["venturi", isLocal ? "2: Steam/Baffle" : "2: Venturi"],
+                ["packed", "3: Absorber"],
+                ["blower", isLocal ? "4: Chimney" : "4: Blower"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                className={`btn btn-sm ${focusStage === key ? "btn-primary" : ""}`}
+                onClick={() => setFocusStage(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="viewport-shell">
+          <div className="viewport-hud">
+            <span className="hud-chip" id="hud-renderer">
+              {viewMode === "3d"
+                ? "Renderer: Three.js 0.170.0 WebGL (Bundled Offline)"
+                : "Renderer: 2D Parametric Cutaway SVG"}
+            </span>
+            <span className="hud-chip" id="hud-controls">
+              {viewMode === "3d"
+                ? "Drag to orbit · Scroll to zoom · Right-drag to pan"
+                : "Click stage pills above to highlight components"}
+            </span>
+          </div>
+
+          {viewMode === "3d" ? (
+            <Viewport3D
+              evaluation={evaluation}
+              cutaway={cutaway}
+              particles={particles}
+              showSystemsOverlay={showSystems3D}
+              focusStage={focusStage}
+              active={active && viewMode === "3d"}
+              onWebGLUnavailable={() => setViewMode("2d")}
+            />
+          ) : (
+            <Schematic2D
+              evaluation={evaluation}
+              units={units}
+              highlightStage={focusStage}
+            />
+          )}
+        </div>
+      </section>
+
+      {/* 5. Engineering Charts */}
+      <EngineeringCharts design={design} />
+
+      {/* 6. Warnings (if any) */}
+      {(design.warnings?.length > 0 ||
+        evaluation.architecture_options.warnings?.length > 0 ||
+        (frugal?.warnings?.length ?? 0) > 0) && (
+        <section className="card">
+          <h3 className="card-title" style={{ marginBottom: 8, color: "#fcd34d" }}>
+            Engineering &amp; Safety Notices
+          </h3>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: "#fde68a" }}>
+            {[
+              ...(design.warnings || []),
+              ...(evaluation.architecture_options.warnings || []),
+              ...(frugal?.warnings || []),
+            ].map((w, i) => (
+              <li key={i} style={{ marginBottom: 4 }}>
+                {w}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}

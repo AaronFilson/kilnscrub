@@ -29,6 +29,7 @@ const (
 // ReferenceSignal = actual (PV) and ActualSignal = setpoint (SP) so positive gains in
 // model.DefaultControlConfig() produce negative feedback rather than runaway.
 type Controller struct {
+	tickMu       sync.Mutex
 	mu           sync.RWMutex
 	cfg          model.ControlConfig
 	draftFilter  *DraftFilter
@@ -134,9 +135,9 @@ func (c *Controller) Step(readings model.SensorReadings, readErr error, dt time.
 		}
 		c.status = model.ControlStatus{
 			State:             StateTripped,
-			FilteredDraftPa:   filteredDraft,
-			FilteredDraftInWC: filteredDraft.InWC(),
-			Readings:          readings,
+			FilteredDraftPa:   sanitizePascal(filteredDraft),
+			FilteredDraftInWC: sanitizeFloat(filteredDraft.InWC()),
+			Readings:          sanitizeReadings(readings),
 			Commands:          cmd,
 			InterlockActive:   true,
 			UpdatedAt:         now,
@@ -186,21 +187,68 @@ func (c *Controller) Step(readings model.SensorReadings, readErr error, dt time.
 	return cmd
 }
 
+// FailSafeCommand returns the fail-safe actuator command (blower stopped, full quench spray,
+// bypass damper open, alarm latched) for emergency trip or daemon shutdown.
+func (c *Controller) FailSafeCommand(reason string) model.ActuatorCommands {
+	c.mu.RLock()
+	maxSpray := c.cfg.QuenchPID.MaxOutput
+	c.mu.RUnlock()
+	if reason == "" {
+		reason = model.TripSensorFault
+	}
+	return model.ActuatorCommands{
+		BlowerVFD:        0.0,
+		QuenchSprayValve: maxSpray,
+		BypassDamperOpen: true,
+		AlarmLatched:     true,
+		TripReason:       reason,
+	}
+}
+
 // Tick reads sensors from hal, runs Step, and applies the resulting ActuatorCommands to hal.
-// Even when ReadSensors fails, Tick latches TripSensorFault and still drives fail-safe commands
-// to hal before returning the status and any HAL error.
+// Even when ReadSensors or ApplyCommands fails, Tick latches TripSensorFault and attempts
+// to drive fail-safe commands to hal before returning the status and any HAL error.
 func (c *Controller) Tick(ctx context.Context, hal model.HardwareHAL, dt time.Duration) (model.ControlStatus, error) {
 	if hal == nil {
 		return model.ControlStatus{}, fmt.Errorf("hardware HAL is nil")
 	}
+
+	c.tickMu.Lock()
+	defer c.tickMu.Unlock()
 
 	readings, readErr := hal.ReadSensors(ctx)
 	if readErr != nil && ctx != nil && ctx.Err() != nil &&
 		(errors.Is(readErr, context.Canceled) || errors.Is(readErr, context.DeadlineExceeded)) {
 		return c.Status(), readErr
 	}
-	cmd := c.Step(readings, readErr, dt, time.Now())
+	now := time.Now()
+	cmd := c.Step(readings, readErr, dt, now)
 	applyErr := hal.ApplyCommands(ctx, cmd)
+
+	// If writing normal commands to hardware failed (e.g. RS-485 bus/VFD write failure),
+	// latch the interlock immediately and attempt a best-effort fail-safe coil/actuator write
+	// so the controller never stays NORMAL while actuators are frozen.
+	if applyErr != nil && !cmd.BypassDamperOpen &&
+		!(ctx != nil && ctx.Err() != nil && (errors.Is(applyErr, context.Canceled) || errors.Is(applyErr, context.DeadlineExceeded))) {
+		c.mu.Lock()
+		ilState := c.interlock.Trip(model.TripSensorFault)
+		c.draftPID.Reset()
+		c.quenchPID.Reset()
+		failCmd := model.ActuatorCommands{
+			BlowerVFD:        0.0,
+			QuenchSprayValve: c.cfg.QuenchPID.MaxOutput,
+			BypassDamperOpen: true,
+			AlarmLatched:     true,
+			TripReason:       ilState.TripReason,
+		}
+		c.status.State = StateTripped
+		c.status.Commands = failCmd
+		c.status.InterlockActive = true
+		c.status.UpdatedAt = now
+		c.mu.Unlock()
+
+		_ = hal.ApplyCommands(ctx, failCmd)
+	}
 
 	status := c.Status()
 	if readErr != nil {
@@ -219,6 +267,9 @@ func (c *Controller) Tick(ctx context.Context, hal model.HardwareHAL, dt time.Du
 // is still active. Upon successful reset, PID integrators and the draft filter are reset so
 // closed-loop control resumes cleanly without windup or stale filter transients.
 func (c *Controller) ResetInterlock() error {
+	c.tickMu.Lock()
+	defer c.tickMu.Unlock()
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -316,4 +367,29 @@ func clampOutput(val, minOut, maxOut, fallback float64) float64 {
 		return maxOut
 	}
 	return val
+}
+
+func sanitizeFloat(v float64) float64 {
+	if !isFinite(v) {
+		return 0
+	}
+	return v
+}
+
+func sanitizePascal(v model.Pascal) model.Pascal {
+	return model.Pascal(sanitizeFloat(float64(v)))
+}
+
+// sanitizeReadings replaces any NaN/Inf sensor values with 0 before storing in ControlStatus
+// so JSON marshaling and live SSE telemetry streams never break during a sensor fault.
+func sanitizeReadings(r model.SensorReadings) model.SensorReadings {
+	r.DraftPa = model.Pascal(sanitizeFloat(float64(r.DraftPa)))
+	r.DraftInWC = sanitizeFloat(r.DraftInWC)
+	r.QuenchInletTemp = model.Kelvin(sanitizeFloat(float64(r.QuenchInletTemp)))
+	r.QuenchOutletTemp = model.Kelvin(sanitizeFloat(float64(r.QuenchOutletTemp)))
+	r.WaterFlow = model.CubicMetersPerSec(sanitizeFloat(float64(r.WaterFlow)))
+	r.WaterFlowGPM = sanitizeFloat(r.WaterFlowGPM)
+	r.SumpPH = sanitizeFloat(r.SumpPH)
+	r.BlowerSpeedFraction = sanitizeFloat(r.BlowerSpeedFraction)
+	return r
 }

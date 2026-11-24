@@ -65,6 +65,9 @@ func (s *Server) handleStudioEvaluate(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+	if !enforceSameOrigin(w, r) || !enforceJSONContentType(w, r) {
+		return
+	}
 
 	b := s.getStudioBackend()
 	if b == nil {
@@ -74,7 +77,7 @@ func (s *Server) handleStudioEvaluate(w http.ResponseWriter, r *http.Request) {
 
 	body, err := readLimitedBody(r)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeBodyReadError(w, err)
 		return
 	}
 	trimmed := bytes.TrimSpace(body)
@@ -106,6 +109,9 @@ func (s *Server) handleStudioPacket(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+	if !enforceSameOrigin(w, r) || !enforceJSONContentType(w, r) {
+		return
+	}
 
 	b := s.getStudioBackend()
 	if b == nil {
@@ -115,7 +121,7 @@ func (s *Server) handleStudioPacket(w http.ResponseWriter, r *http.Request) {
 
 	body, err := readLimitedBody(r)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeBodyReadError(w, err)
 		return
 	}
 	trimmed := bytes.TrimSpace(body)
@@ -146,6 +152,9 @@ func sanitizeDownloadFilename(name, fallback string) string {
 			continue
 		}
 		b.WriteRune(r)
+		if b.Len() >= 120 {
+			break
+		}
 	}
 	cleaned := strings.TrimLeft(strings.TrimSpace(b.String()), ".")
 	if cleaned == "" {

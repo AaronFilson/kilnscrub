@@ -80,9 +80,7 @@ create_zip() {
   local archive_path="$3"
 
   rm -f "${archive_path}"
-  if command -v zip >/dev/null 2>&1; then
-    (cd "${stage_parent}" && zip -r -q -X "${archive_path}" "${dir_name}")
-  elif command -v python3 >/dev/null 2>&1; then
+  if command -v python3 >/dev/null 2>&1; then
     python3 - "${stage_parent}" "${dir_name}" "${archive_path}" "${SOURCE_DATE_EPOCH}" <<'PY'
 import datetime
 import os
@@ -112,8 +110,10 @@ with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         with open(full_path, "rb") as src:
             zf.writestr(zi, src.read(), compress_type=zipfile.ZIP_DEFLATED)
 PY
+  elif command -v zip >/dev/null 2>&1; then
+    (cd "${stage_parent}" && zip -r -q -X "${archive_path}" "${dir_name}")
   else
-    echo "ERROR: neither 'zip' nor 'python3' is available to create ${archive_path}" >&2
+    echo "ERROR: neither 'python3' nor 'zip' is available to create ${archive_path}" >&2
     exit 1
   fi
 }
@@ -173,7 +173,10 @@ for target in "${TARGETS[@]}"; do
   ARCHIVES+=("${archive_name}")
 done
 
-mapfile -t SORTED_ARCHIVES < <(printf '%s\n' "${ARCHIVES[@]}" | LC_ALL=C sort)
+SORTED_ARCHIVES=()
+while IFS= read -r archive_line; do
+  [ -n "${archive_line}" ] && SORTED_ARCHIVES+=("${archive_line}")
+done < <(printf '%s\n' "${ARCHIVES[@]}" | LC_ALL=C sort)
 compute_sha256sums "${OUT_DIR}" "${SORTED_ARCHIVES[@]}"
 
 echo "Release archives created in ${OUT_DIR}:"

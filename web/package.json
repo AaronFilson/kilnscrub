@@ -1,0 +1,25 @@
+{
+  "name": "kilnscrub-web",
+  "version": "1.1.0",
+  "private": true,
+  "description": "KilnScrub Next.js static-export engineering dashboard (embedded into single Go binary via //go:embed)",
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "typecheck": "tsc --noEmit",
+    "export:go": "next build && node scripts/sync-to-go.mjs"
+  },
+  "dependencies": {
+    "next": "^15.5.29",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "three": "0.170.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.13.10",
+    "@types/react": "19.0.10",
+    "@types/react-dom": "19.0.4",
+    "@types/three": "0.170.0",
+    "typescript": "5.8.2"
+  }
+}
