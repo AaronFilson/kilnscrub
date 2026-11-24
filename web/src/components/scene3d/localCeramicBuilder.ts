@@ -167,13 +167,30 @@ export function buildLocalCeramicAssembly(
     assemblyGroup.add(qFront);
   }
 
-  // Internal hanging terracotta baffle curtain + brass gravity spray rose (OR submerged S-baffle in sump-pool mode!)
-  const qBaffle = new THREE.Mesh(
-    new THREE.BoxGeometry(0.055, isSumpPoolOnly ? qH * 0.72 : qH * 0.46, qD - wallT * 2.1),
-    mats.terracotta
-  );
-  qBaffle.position.set(qX + 0.12, plinthY + (isSumpPoolOnly ? qH * 0.46 : qH * 0.72), qZ);
-  assemblyGroup.add(qBaffle);
+  // Internal hanging terracotta baffle curtain + brass gravity spray rose (OR 2x barometric surge plenum + 0.5" sloped S-vane skimmer in sump-pool mode!)
+  if (isSumpPoolOnly) {
+    // Wide 2x barometric surge plenum lintel + sloped 0.5" S-vane skimmer dipping just into Pool #1
+    const surgePlenum = new THREE.Mesh(
+      new THREE.BoxGeometry(qW * 0.42, 0.24, qD - wallT * 2.1),
+      mats.mortar
+    );
+    surgePlenum.position.set(qX - 0.14, plinthY + qH - 0.18, qZ);
+    assemblyGroup.add(surgePlenum);
+    const sVane = new THREE.Mesh(
+      new THREE.BoxGeometry(0.055, qH * 0.68, qD - wallT * 2.1),
+      mats.terracotta
+    );
+    sVane.position.set(qX + 0.10, plinthY + qH * 0.50, qZ);
+    sVane.rotation.z = 0.12; // sloped S-vane skimmer lip
+    assemblyGroup.add(sVane);
+  } else {
+    const qBaffle = new THREE.Mesh(
+      new THREE.BoxGeometry(0.055, qH * 0.46, qD - wallT * 2.1),
+      mats.terracotta
+    );
+    qBaffle.position.set(qX + 0.12, plinthY + qH * 0.72, qZ);
+    assemblyGroup.add(qBaffle);
+  }
 
   if (hasOverheadTank) {
     const qRose = new THREE.Mesh(
@@ -191,7 +208,7 @@ export function buildLocalCeramicAssembly(
     assemblyGroup.add(qSpray);
   }
 
-  const qPoolH = isSumpPoolOnly ? 0.38 : 0.20;
+  const qPoolH = isSumpPoolOnly ? 0.36 : 0.20;
   const qPool = new THREE.Mesh(
     new THREE.BoxGeometry(qW - wallT * 2, qPoolH, qD - wallT * 2),
     mats.sumpWater
@@ -199,21 +216,72 @@ export function buildLocalCeramicAssembly(
   qPool.position.set(qX, plinthY + qPoolH * 0.5, qZ);
   assemblyGroup.add(qPool);
 
-  // Phase 13: Optional Stage 1 Water-Jacket Collar OR Kiln Exhaust Steam Coil (SiC Muffled)
-  if (steamEnabled && boilerSource === "stage1_water_jacket") {
-    const jH = 0.56;
-    const jacket = new THREE.Mesh(
-      new THREE.BoxGeometry(qW + 0.14, jH, qD + 0.14),
-      mats.steamerSS
+  // Phase 14: Stage 1 Heat-Recovery Hardware (3 distinct physically accurate options):
+  //  - stage1_feedwater_preheater: 0 psig vented atmospheric economizer coil on Stage 1 feeding certified boiler
+  //  - stage1_water_jacket: ASME/IBR <=25 L shop-fabricated pressurized jacket (open front in cutaway) + UG-28 stiffener rings + steam dome (replaces standalone boiler!)
+  //  - kiln_exhaust_coil (20 psig LP): SiC-muffled <2 L flue coil + separator drum (replaces standalone firebox!)
+  const usesIntegratedBoiler =
+    steamEnabled &&
+    (boilerSource === "stage1_water_jacket" || boilerSource === "kiln_exhaust_coil");
+  let integratedSteamOut: THREE.Vector3 | null = null;
+
+  if (steamEnabled && boilerSource === "stage1_feedwater_preheater") {
+    // 0 psig vented atmospheric copper/SS feedwater preheater coil wrapped on Stage 1 upper dry walls
+    const prePts: THREE.Vector3[] = [];
+    for (let ci = 0; ci <= 56; ci++) {
+      const u = ci / 56;
+      const a = u * 3.5 * Math.PI * 2;
+      prePts.push(
+        new THREE.Vector3(
+          qX + Math.cos(a) * (qW * 0.54),
+          plinthY + qH * 0.52 + u * 0.48,
+          qZ + Math.sin(a) * (qD * 0.54)
+        )
+      );
+    }
+    assemblyGroup.add(
+      new THREE.Mesh(
+        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(prePts), 72, 0.015, 8, false),
+        mats.steamHeader
+      )
     );
-    jacket.position.set(qX, plinthY + qH - jH * 0.48, qZ);
-    assemblyGroup.add(jacket);
-    const jBand = new THREE.Mesh(
-      new THREE.BoxGeometry(qW + 0.17, 0.04, qD + 0.17),
-      mats.steamHeader
-    );
-    jBand.position.set(qX, plinthY + qH - 0.04, qZ);
-    assemblyGroup.add(jBand);
+  } else if (steamEnabled && boilerSource === "stage1_water_jacket") {
+    const jH = 0.58;
+    const jY = plinthY + qH - jH * 0.48;
+    const jWall = 0.07;
+    // Open front face when cutaway=true so internal Stage 1 baffle & spray remain clearly visible!
+    const jBack = new THREE.Mesh(new THREE.BoxGeometry(qW + 0.14, jH, jWall), mats.steamerSS);
+    jBack.position.set(qX, jY, qZ - qD * 0.5 - jWall * 0.4);
+    assemblyGroup.add(jBack);
+    const jLeft = new THREE.Mesh(new THREE.BoxGeometry(jWall, jH, qD + 0.14), mats.steamerSS);
+    jLeft.position.set(qX - qW * 0.5 - jWall * 0.4, jY, qZ);
+    assemblyGroup.add(jLeft);
+    const jRight = new THREE.Mesh(new THREE.BoxGeometry(jWall, jH, qD + 0.14), mats.steamerSS);
+    jRight.position.set(qX + qW * 0.5 + jWall * 0.4, jY, qZ);
+    assemblyGroup.add(jRight);
+    if (!cut) {
+      const jFront = new THREE.Mesh(new THREE.BoxGeometry(qW + 0.14, jH, jWall), mats.steamerSS);
+      jFront.position.set(qX, jY, qZ + qD * 0.5 + jWall * 0.4);
+      assemblyGroup.add(jFront);
+    }
+    // ASME Section VIII UG-28 external-pressure stiffener rings + compact steam separator dome & PRV
+    for (const sf of [-0.22, 0.22]) {
+      const stiff = new THREE.Mesh(
+        new THREE.BoxGeometry(qW + 0.20, 0.035, qD + 0.20),
+        mats.steelTrim
+      );
+      stiff.position.set(qX, jY + sf, qZ);
+      assemblyGroup.add(stiff);
+    }
+    const domeY = plinthY + qH + 0.26;
+    const sepDome = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.34, 22), mats.boilerSteel);
+    sepDome.position.set(qX + 0.18, domeY, qZ - 0.16);
+    assemblyGroup.add(sepDome);
+    const prvCap = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.08, 12), mats.safetyRed);
+    prvCap.position.set(qX + 0.28, domeY + 0.21, qZ - 0.16);
+    assemblyGroup.add(prvCap);
+    addPressureGauge(assemblyGroup, qX + 0.18, domeY + 0.04, qZ + 0.03, -0.55, mats.brass, mats.dialWhite, mats.safetyRed);
+    integratedSteamOut = new THREE.Vector3(qX + 0.18, domeY + 0.18, qZ - 0.16);
   } else if (steamEnabled && boilerSource === "kiln_exhaust_coil") {
     const muffleX = qX - qW * 0.5 - flueLen * 0.52;
     const muffleBox = new THREE.Mesh(
@@ -240,16 +308,26 @@ export function buildLocalCeramicAssembly(
         mats.steamerSS
       )
     );
+    // Compact steam separator drum + stamped 25 psig PRV above the SiC muffle
+    const sepY = qInY + 0.52;
+    const sepDrum = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.30, 20), mats.steamerSS);
+    sepDrum.position.set(muffleX, sepY, qZ);
+    assemblyGroup.add(sepDrum);
+    const prvCap = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.07, 12), mats.safetyRed);
+    prvCap.position.set(muffleX - 0.08, sepY + 0.18, qZ);
+    assemblyGroup.add(prvCap);
+    integratedSteamOut = new THREE.Vector3(muffleX, sepY + 0.16, qZ);
   }
 
   // =========================================================================
   // 2. STAGE 2: STEAM-JET EJECTOR (SUBSONIC / LP MONOTUBE / HP BOILER) OR BRICK BAFFLE FLUE
   // =========================================================================
-  const pX = steamEnabled ? -0.05 : -0.22;
+  const pX = isSumpPoolOnly ? 0.42 : steamEnabled ? -0.05 : -0.22;
   const pZ = 0;
   const pR = clamp(bedDiamM * 0.5, 0.32, 0.52);
   const pH = 2.42;
-  const ejY = 0.60;
+  // In sump-pool mode, mount the 60 psig ejector right at Pool #2 waterline (0" suction lift!)
+  const ejY = isSumpPoolOnly ? plinthY + 0.34 : 0.60;
   const ejStart = qX + qW * 0.5 - 0.02;
   const ejEnd = pX - pR + 0.06;
   const ejLen = Math.max(0.62, ejEnd - ejStart);
@@ -265,275 +343,304 @@ export function buildLocalCeramicAssembly(
     const boZ = -0.94;
     const boR = isSubsonic ? 0.30 : isHP ? 0.28 : 0.25;
     const boH = isSubsonic ? 0.66 : isHP ? 1.18 : 0.96;
-
-    // Refractory firebox plinth + waste-heat tap from kiln flue
-    const boBase = new THREE.Mesh(
-      new THREE.CylinderGeometry(boR * 1.16, boR * 1.24, 0.18, 24),
-      mats.brickSolid
-    );
-    boBase.position.set(boX, plinthY + 0.09, boZ);
-    assemblyGroup.add(boBase);
-
-    const wasteTap = new THREE.Mesh(
-      new THREE.BoxGeometry(0.24, 0.26, Math.abs(boZ - qZ) - 0.10),
-      mats.brickSolid
-    );
-    wasteTap.position.set(qX - qW * 0.5 - 0.12, 0.72, (boZ + qZ) * 0.5);
-    assemblyGroup.add(wasteTap);
-
     const vesselBaseY = plinthY + 0.18;
 
-    if (isSubsonic) {
-      // 6 psig Commercial Brushed Stainless Catering Steamer / Kettle
-      const stCyl = new THREE.Mesh(
-        new THREE.CylinderGeometry(boR, boR, boH, 28),
-        mats.steamerSS
+    // Only render the standalone firebox / commercial baby boiler / catering steamer when NOT using
+    // an integrated Stage 1 jacket or kiln exhaust coil (eliminates Phase 14 duplicate-boiler bug!)
+    if (!usesIntegratedBoiler) {
+      // Refractory firebox plinth + waste-heat tap from kiln flue
+      const boBase = new THREE.Mesh(
+        new THREE.CylinderGeometry(boR * 1.16, boR * 1.24, 0.18, 24),
+        mats.brickSolid
       );
-      stCyl.position.set(boX, vesselBaseY + boH * 0.5, boZ);
-      assemblyGroup.add(stCyl);
+      boBase.position.set(boX, plinthY + 0.09, boZ);
+      assemblyGroup.add(boBase);
 
-      const lidRim = new THREE.Mesh(
-        new THREE.TorusGeometry(boR + 0.015, 0.018, 10, 28),
-        mats.steelTrim
+      const wasteTap = new THREE.Mesh(
+        new THREE.BoxGeometry(0.24, 0.26, Math.abs(boZ - qZ) - 0.10),
+        mats.brickSolid
       );
-      lidRim.rotation.x = Math.PI / 2;
-      lidRim.position.set(boX, vesselBaseY + boH, boZ);
-      assemblyGroup.add(lidRim);
+      wasteTap.position.set(qX - qW * 0.5 - 0.12, 0.72, (boZ + qZ) * 0.5);
+      assemblyGroup.add(wasteTap);
 
-      const lidCap = new THREE.Mesh(
-        new THREE.CylinderGeometry(boR * 0.84, boR * 1.02, 0.11, 24),
-        mats.steamerSS
-      );
-      lidCap.position.set(boX, vesselBaseY + boH + 0.055, boZ);
-      assemblyGroup.add(lidCap);
+      if (isSubsonic) {
+        // 6 psig Commercial Brushed Stainless Catering Steamer / Kettle
+        const stCyl = new THREE.Mesh(
+          new THREE.CylinderGeometry(boR, boR, boH, 28),
+          mats.steamerSS
+        );
+        stCyl.position.set(boX, vesselBaseY + boH * 0.5, boZ);
+        assemblyGroup.add(stCyl);
 
-      for (let li = 0; li < 6; li++) {
-        const ang = (li / 6) * Math.PI * 2;
-        const latch = new THREE.Mesh(
-          new THREE.BoxGeometry(0.028, 0.075, 0.024),
+        const lidRim = new THREE.Mesh(
+          new THREE.TorusGeometry(boR + 0.015, 0.018, 10, 28),
+          mats.steelTrim
+        );
+        lidRim.rotation.x = Math.PI / 2;
+        lidRim.position.set(boX, vesselBaseY + boH, boZ);
+        assemblyGroup.add(lidRim);
+
+        const lidCap = new THREE.Mesh(
+          new THREE.CylinderGeometry(boR * 0.84, boR * 1.02, 0.11, 24),
+          mats.steamerSS
+        );
+        lidCap.position.set(boX, vesselBaseY + boH + 0.055, boZ);
+        assemblyGroup.add(lidCap);
+
+        for (let li = 0; li < 6; li++) {
+          const ang = (li / 6) * Math.PI * 2;
+          const latch = new THREE.Mesh(
+            new THREE.BoxGeometry(0.028, 0.075, 0.024),
+            mats.iron
+          );
+          latch.position.set(
+            boX + Math.cos(ang) * (boR + 0.018),
+            vesselBaseY + boH - 0.01,
+            boZ + Math.sin(ang) * (boR + 0.018)
+          );
+          latch.rotation.y = -ang;
+          assemblyGroup.add(latch);
+        }
+
+        // Tall 4.2 m Open-Top Hydrostatic Water-Column Relief Standpipe (S2)
+        const spX = boX - boR - 0.20;
+        const spZ = boZ + 0.04;
+        const spBaseY = vesselBaseY + 0.10;
+        const spVisualH = 2.95;
+        const spCopperH = 0.84;
+        const spPvcH = spVisualH - spCopperH;
+        standpipeBasePt = new THREE.Vector3(spX, spBaseY, spZ);
+        standpipeTopPt = new THREE.Vector3(spX, spBaseY + spVisualH + 0.16, spZ);
+
+        const spTee = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.025, 0.025, 0.24, 12),
+          mats.steamHeader
+        );
+        spTee.rotation.z = Math.PI / 2;
+        spTee.position.set((boX - boR + spX) * 0.5, spBaseY, spZ);
+        assemblyGroup.add(spTee);
+        addPipeUnion(assemblyGroup, spX + 0.07, spBaseY, spZ, "x", 0.025, mats.brass, mats.iron);
+
+        const spCopper = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.030, 0.030, spCopperH, 16),
+          mats.steamHeader
+        );
+        spCopper.position.set(spX, spBaseY + spCopperH * 0.5, spZ);
+        assemblyGroup.add(spCopper);
+        addPipeUnion(assemblyGroup, spX, spBaseY + spCopperH, spZ, "y", 0.033, mats.brass, mats.iron);
+
+        const spPvc = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.036, 0.036, spPvcH, 18, 1, true),
+          mats.standpipePVC
+        );
+        spPvc.position.set(spX, spBaseY + spCopperH + spPvcH * 0.5, spZ);
+        assemblyGroup.add(spPvc);
+
+        const spWater = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.025, 0.025, spPvcH * 0.88, 14),
+          mats.sumpWater
+        );
+        spWater.position.set(spX, spBaseY + spCopperH + spPvcH * 0.44, spZ);
+        assemblyGroup.add(spWater);
+
+        const spFunnel = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.11, 0.038, 0.16, 20, 1, true),
+          mats.steamHeader
+        );
+        spFunnel.position.set(spX, spBaseY + spVisualH + 0.08, spZ);
+        assemblyGroup.add(spFunnel);
+
+        const spLip = new THREE.Mesh(
+          new THREE.TorusGeometry(0.11, 0.010, 8, 20),
+          mats.brass
+        );
+        spLip.rotation.x = Math.PI / 2;
+        spLip.position.set(spX, spBaseY + spVisualH + 0.16, spZ);
+        assemblyGroup.add(spLip);
+
+        const bPrv = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.020, 0.024, 0.10, 12),
+          mats.brass
+        );
+        bPrv.position.set(boX + 0.12, vesselBaseY + boH + 0.14, boZ + 0.05);
+        assemblyGroup.add(bPrv);
+
+        for (const bh of [0.95, 2.05]) {
+          const brk = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.035, 0.035), mats.iron);
+          brk.position.set(spX + 0.10, spBaseY + bh, spZ);
+          assemblyGroup.add(brk);
+        }
+      } else if (isLP) {
+        // 20 psig Code-Rated Seamless 316L Helical Monotube Flash Coil (< 2 L stored water)
+        const firebox = new THREE.Mesh(
+          new THREE.CylinderGeometry(boR, boR, boH, 24, 1, cut, thetaStart, thetaLen),
+          mats.brick
+        );
+        firebox.position.set(boX, vesselBaseY + boH * 0.5, boZ);
+        assemblyGroup.add(firebox);
+
+        const coilPts: THREE.Vector3[] = [];
+        const turns = 6.5;
+        const coilR = boR * 0.64;
+        for (let i = 0; i <= 90; i++) {
+          const u = i / 90;
+          const a = u * turns * Math.PI * 2;
+          coilPts.push(
+            new THREE.Vector3(
+              boX + Math.cos(a) * coilR,
+              vesselBaseY + 0.10 + u * (boH - 0.18),
+              boZ + Math.sin(a) * coilR
+            )
+          );
+        }
+        const coilCurve = new THREE.CatmullRomCurve3(coilPts);
+        assemblyGroup.add(
+          new THREE.Mesh(new THREE.TubeGeometry(coilCurve, 120, 0.017, 10, false), mats.steamerSS)
+        );
+
+        const fbCap = new THREE.Mesh(
+          new THREE.CylinderGeometry(boR * 1.06, boR * 1.06, 0.06, 24),
+          mats.mortar
+        );
+        fbCap.position.set(boX, vesselBaseY + boH + 0.03, boZ);
+        assemblyGroup.add(fbCap);
+      } else {
+        // 60 psig Certified Non-IBR / KEBS / ASME Commercial Baby Steam Boiler (<= 25 L)
+        const boCyl = new THREE.Mesh(
+          new THREE.CylinderGeometry(boR, boR, boH, 28),
+          mats.boilerSteel
+        );
+        boCyl.position.set(boX, vesselBaseY + boH * 0.5, boZ);
+        assemblyGroup.add(boCyl);
+
+        const boDome = new THREE.Mesh(
+          new THREE.SphereGeometry(boR, 24, 14, 0, Math.PI * 2, 0, Math.PI * 0.5),
+          mats.boilerSteel
+        );
+        boDome.position.set(boX, vesselBaseY + boH, boZ);
+        assemblyGroup.add(boDome);
+
+        for (const bf of [0.22, 0.52, 0.82]) {
+          const strap = new THREE.Mesh(
+            new THREE.TorusGeometry(boR + 0.008, 0.010, 8, 28),
+            mats.steelTrim
+          );
+          strap.rotation.x = Math.PI / 2;
+          strap.position.set(boX, vesselBaseY + boH * bf, boZ);
+          assemblyGroup.add(strap);
+        }
+
+        const boStack = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.062, 0.070, 0.38, 16),
           mats.iron
         );
-        latch.position.set(
-          boX + Math.cos(ang) * (boR + 0.018),
-          vesselBaseY + boH - 0.01,
-          boZ + Math.sin(ang) * (boR + 0.018)
+        boStack.position.set(boX - 0.10, vesselBaseY + boH + boR * 0.72 + 0.16, boZ - 0.06);
+        assemblyGroup.add(boStack);
+      }
+
+      // Bourdon pressure gauge facing viewer
+      addPressureGauge(
+        assemblyGroup,
+        boX + 0.09,
+        vesselBaseY + boH * (isSubsonic ? 0.72 : 0.80),
+        boZ + boR + 0.05,
+        isHP ? -0.68 : isSubsonic ? 0.36 : -0.22,
+        mats.brass,
+        mats.dialWhite,
+        isSubsonic ? mats.valveGreen : mats.safetyRed
+      );
+
+      if (!isSubsonic) {
+        const prvX = boX + 0.10;
+        const prvY = vesselBaseY + boH + (isHP ? boR * 0.78 : 0.06);
+        const prvZ = boZ + 0.06;
+        const prvBody = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.025, 0.030, 0.11, 12),
+          mats.brass
         );
-        latch.rotation.y = -ang;
-        assemblyGroup.add(latch);
+        prvBody.position.set(prvX, prvY + 0.055, prvZ);
+        assemblyGroup.add(prvBody);
+        const prvCap = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.032, 0.032, 0.055, 14),
+          mats.safetyRed
+        );
+        prvCap.position.set(prvX, prvY + 0.13, prvZ);
+        assemblyGroup.add(prvCap);
+        const prvVent = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.016, 0.016, 0.52, 12),
+          mats.safetyRed
+        );
+        prvVent.position.set(prvX + 0.045, prvY + 0.30, prvZ);
+        assemblyGroup.add(prvVent);
       }
 
-      // Tall 4.2 m Open-Top Hydrostatic Water-Column Relief Standpipe (S2)
-      const spX = boX - boR - 0.20;
-      const spZ = boZ + 0.04;
-      const spBaseY = vesselBaseY + 0.10;
-      const spVisualH = 2.95; // scaled cleanly alongside 5.3m chimney; exact 4.2 m shown in callout
-      const spCopperH = 0.84;
-      const spPvcH = spVisualH - spCopperH;
-      standpipeBasePt = new THREE.Vector3(spX, spBaseY, spZ);
-      standpipeTopPt = new THREE.Vector3(spX, spBaseY + spVisualH + 0.16, spZ);
-
-      const spTee = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.025, 0.025, 0.24, 12),
-        mats.steamHeader
-      );
-      spTee.rotation.z = Math.PI / 2;
-      spTee.position.set((boX - boR + spX) * 0.5, spBaseY, spZ);
-      assemblyGroup.add(spTee);
-      addPipeUnion(assemblyGroup, spX + 0.07, spBaseY, spZ, "x", 0.025, mats.brass, mats.iron);
-
-      const spCopper = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.030, 0.030, spCopperH, 16),
-        mats.steamHeader
-      );
-      spCopper.position.set(spX, spBaseY + spCopperH * 0.5, spZ);
-      assemblyGroup.add(spCopper);
-      addPipeUnion(assemblyGroup, spX, spBaseY + spCopperH, spZ, "y", 0.033, mats.brass, mats.iron);
-
-      const spPvc = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.036, 0.036, spPvcH, 18, 1, true),
-        mats.standpipePVC
-      );
-      spPvc.position.set(spX, spBaseY + spCopperH + spPvcH * 0.5, spZ);
-      assemblyGroup.add(spPvc);
-
-      const spWater = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.025, 0.025, spPvcH * 0.88, 14),
-        mats.sumpWater
-      );
-      spWater.position.set(spX, spBaseY + spCopperH + spPvcH * 0.44, spZ);
-      assemblyGroup.add(spWater);
-
-      const spFunnel = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.11, 0.038, 0.16, 20, 1, true),
-        mats.steamHeader
-      );
-      spFunnel.position.set(spX, spBaseY + spVisualH + 0.08, spZ);
-      assemblyGroup.add(spFunnel);
-
-      const spLip = new THREE.Mesh(
-        new THREE.TorusGeometry(0.11, 0.010, 8, 20),
-        mats.brass
-      );
-      spLip.rotation.x = Math.PI / 2;
-      spLip.position.set(spX, spBaseY + spVisualH + 0.16, spZ);
-      assemblyGroup.add(spLip);
-
-      // Backup brass 10-15 psig PRV on steamer lid
-      const bPrv = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.020, 0.024, 0.10, 12),
-        mats.brass
-      );
-      bPrv.position.set(boX + 0.12, vesselBaseY + boH + 0.14, boZ + 0.05);
-      assemblyGroup.add(bPrv);
-
-      for (const bh of [0.95, 2.05]) {
-        const brk = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.035, 0.035), mats.iron);
-        brk.position.set(spX + 0.10, spBaseY + bh, spZ);
-        assemblyGroup.add(brk);
+      if (!isLP) {
+        const sgX = boX - 0.12;
+        const sgZ = boZ + boR + 0.036;
+        const sgH = isSubsonic ? 0.30 : 0.44;
+        const sgTube = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.014, 0.014, sgH, 12),
+          mats.sightGlass
+        );
+        sgTube.position.set(sgX, vesselBaseY + boH * 0.50, sgZ);
+        assemblyGroup.add(sgTube);
+        for (const sy of [vesselBaseY + boH * 0.28, vesselBaseY + boH * 0.72]) {
+          const cock = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.017, 0.017, 0.06, 10),
+            mats.brass
+          );
+          cock.rotation.x = Math.PI / 2;
+          cock.position.set(sgX, sy, boZ + boR + 0.015);
+          assemblyGroup.add(cock);
+        }
       }
-    } else if (isLP) {
-      // 20 psig Code-Rated Seamless 316L Helical Monotube Flash Coil (< 2 L stored water)
-      const firebox = new THREE.Mesh(
-        new THREE.CylinderGeometry(boR, boR, boH, 24, 1, cut, thetaStart, thetaLen),
-        mats.brick
-      );
-      firebox.position.set(boX, vesselBaseY + boH * 0.5, boZ);
-      assemblyGroup.add(firebox);
 
-      // Visible helical 316L seamless monotube coil inside the firebox
-      const coilPts: THREE.Vector3[] = [];
-      const turns = 6.5;
-      const coilR = boR * 0.64;
-      for (let i = 0; i <= 90; i++) {
-        const u = i / 90;
-        const a = u * turns * Math.PI * 2;
-        coilPts.push(
-          new THREE.Vector3(
-            boX + Math.cos(a) * coilR,
-            vesselBaseY + 0.10 + u * (boH - 0.18),
-            boZ + Math.sin(a) * coilR
+      // If Stage 1 0 psig feedwater preheater is active, show warm feed line into the certified steamer/boiler!
+      if (boilerSource === "stage1_feedwater_preheater") {
+        assemblyGroup.add(
+          new THREE.Mesh(
+            new THREE.TubeGeometry(
+              new THREE.CatmullRomCurve3([
+                new THREE.Vector3(qX, plinthY + qH * 0.78, qZ - qD * 0.54),
+                new THREE.Vector3(boX + 0.15, vesselBaseY + boH * 0.45, boZ + 0.12),
+                new THREE.Vector3(boX, vesselBaseY + boH * 0.35, boZ),
+              ]),
+              24,
+              0.016,
+              8,
+              false
+            ),
+            mats.pipeCyan
           )
         );
       }
-      const coilCurve = new THREE.CatmullRomCurve3(coilPts);
-      assemblyGroup.add(
-        new THREE.Mesh(new THREE.TubeGeometry(coilCurve, 120, 0.017, 10, false), mats.steamerSS)
-      );
-
-      const fbCap = new THREE.Mesh(
-        new THREE.CylinderGeometry(boR * 1.06, boR * 1.06, 0.06, 24),
-        mats.mortar
-      );
-      fbCap.position.set(boX, vesselBaseY + boH + 0.03, boZ);
-      assemblyGroup.add(fbCap);
-    } else {
-      // 60 psig Certified Non-IBR / KEBS / ASME Commercial Baby Steam Boiler (<= 25 L)
-      const boCyl = new THREE.Mesh(
-        new THREE.CylinderGeometry(boR, boR, boH, 28),
-        mats.boilerSteel
-      );
-      boCyl.position.set(boX, vesselBaseY + boH * 0.5, boZ);
-      assemblyGroup.add(boCyl);
-
-      const boDome = new THREE.Mesh(
-        new THREE.SphereGeometry(boR, 24, 14, 0, Math.PI * 2, 0, Math.PI * 0.5),
-        mats.boilerSteel
-      );
-      boDome.position.set(boX, vesselBaseY + boH, boZ);
-      assemblyGroup.add(boDome);
-
-      for (const bf of [0.22, 0.52, 0.82]) {
-        const strap = new THREE.Mesh(
-          new THREE.TorusGeometry(boR + 0.008, 0.010, 8, 28),
-          mats.steelTrim
-        );
-        strap.rotation.x = Math.PI / 2;
-        strap.position.set(boX, vesselBaseY + boH * bf, boZ);
-        assemblyGroup.add(strap);
-      }
-
-      const boStack = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.062, 0.070, 0.38, 16),
-        mats.iron
-      );
-      boStack.position.set(boX - 0.10, vesselBaseY + boH + boR * 0.72 + 0.16, boZ - 0.06);
-      assemblyGroup.add(boStack);
     }
 
-    // Bourdon pressure gauge facing viewer
-    addPressureGauge(
-      assemblyGroup,
-      boX + 0.09,
-      vesselBaseY + boH * (isSubsonic ? 0.72 : 0.80),
-      boZ + boR + 0.05,
-      isHP ? -0.68 : isSubsonic ? 0.36 : -0.22,
-      mats.brass,
-      mats.dialWhite,
-      isSubsonic ? mats.valveGreen : mats.safetyRed
-    );
-
-    if (!isSubsonic) {
-      // Stamped ASME/IBR spring-loaded PRV + outdoor vertical vent discharge pipe
-      const prvX = boX + 0.10;
-      const prvY = vesselBaseY + boH + (isHP ? boR * 0.78 : 0.06);
-      const prvZ = boZ + 0.06;
-      const prvBody = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.025, 0.030, 0.11, 12),
-        mats.brass
-      );
-      prvBody.position.set(prvX, prvY + 0.055, prvZ);
-      assemblyGroup.add(prvBody);
-      const prvCap = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.032, 0.032, 0.055, 14),
-        mats.safetyRed
-      );
-      prvCap.position.set(prvX, prvY + 0.13, prvZ);
-      assemblyGroup.add(prvCap);
-      const prvVent = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.016, 0.016, 0.52, 12),
-        mats.safetyRed
-      );
-      prvVent.position.set(prvX + 0.045, prvY + 0.30, prvZ);
-      assemblyGroup.add(prvVent);
-    }
-
-    // Water-level Sight Glass column on boiler/steamer
-    if (!isLP) {
-      const sgX = boX - 0.12;
-      const sgZ = boZ + boR + 0.036;
-      const sgH = isSubsonic ? 0.30 : 0.44;
-      const sgTube = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.014, 0.014, sgH, 12),
-        mats.sightGlass
-      );
-      sgTube.position.set(sgX, vesselBaseY + boH * 0.50, sgZ);
-      assemblyGroup.add(sgTube);
-      for (const sy of [vesselBaseY + boH * 0.28, vesselBaseY + boH * 0.72]) {
-        const cock = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.017, 0.017, 0.06, 10),
-          mats.brass
-        );
-        cock.rotation.x = Math.PI / 2;
-        cock.position.set(sgX, sy, boZ + boR + 0.015);
-        assemblyGroup.add(cock);
-      }
-    }
-
-    // Insulated Copper Steam Header (S1) with Brass Isolation Handwheel + Unions -> Ejector Axis
-    const hdrStartY = isSubsonic
-      ? vesselBaseY + boH + 0.10
-      : isHP
-        ? vesselBaseY + boH + boR * 0.92
-        : vesselBaseY + boH + 0.05;
-    const hdrPeakY = vesselBaseY + boH + 0.56;
+    // Insulated Copper Steam Header (S1) routed cleanly from whichever boiler source is active -> Ejector Axis
     const steamDropX = ejStart + 0.08;
-    const steamPts = [
-      new THREE.Vector3(boX + 0.02, hdrStartY, boZ),
-      new THREE.Vector3(boX + 0.02, hdrPeakY, boZ),
-      new THREE.Vector3(steamDropX, hdrPeakY, boZ * 0.45),
-      new THREE.Vector3(steamDropX, ejY + 0.26, qZ),
-      new THREE.Vector3(steamDropX + 0.08, ejY, qZ),
-    ];
+    const steamPts = integratedSteamOut
+      ? [
+          integratedSteamOut,
+          new THREE.Vector3(integratedSteamOut.x, integratedSteamOut.y + 0.28, integratedSteamOut.z),
+          new THREE.Vector3(steamDropX, integratedSteamOut.y + 0.22, qZ),
+          new THREE.Vector3(steamDropX, ejY + 0.26, qZ),
+          new THREE.Vector3(steamDropX + 0.08, ejY, qZ),
+        ]
+      : [
+          new THREE.Vector3(
+            boX + 0.02,
+            isSubsonic
+              ? vesselBaseY + boH + 0.10
+              : isHP
+                ? vesselBaseY + boH + boR * 0.92
+                : vesselBaseY + boH + 0.05,
+            boZ
+          ),
+          new THREE.Vector3(boX + 0.02, vesselBaseY + boH + 0.56, boZ),
+          new THREE.Vector3(steamDropX, vesselBaseY + boH + 0.56, boZ * 0.45),
+          new THREE.Vector3(steamDropX, ejY + 0.26, qZ),
+          new THREE.Vector3(steamDropX + 0.08, ejY, qZ),
+        ];
     steamHdrCurve = new THREE.CatmullRomCurve3(steamPts);
     assemblyGroup.add(
       new THREE.Mesh(
@@ -554,10 +661,13 @@ export function buildLocalCeramicAssembly(
     isoWheel.position.set(steamDropX, ejY + 0.44, qZ + 0.08);
     assemblyGroup.add(isoWheel);
 
-    // Venturi Ejector Mixing Tube (Terracotta Converging -> Steel Throat -> Terracotta Diffuser)
-    const convL = ejLen * 0.34;
-    const thL = ejLen * 0.24;
-    const divL = ejLen * 0.42;
+    // Stage 2 Mixing Tube:
+    //  - In Sump-Pool mode: compact flooded sump-level 60 psig ejector feeding a 1.4 m horizontal
+    //    co-current drenched stoneware Raschig-ring trough!
+    //  - Standard steam modes: converging -> steel throat -> diverging diffuser
+    const convL = isSumpPoolOnly ? 0.24 : ejLen * 0.34;
+    const thL = isSumpPoolOnly ? 0.18 : ejLen * 0.24;
+    const divL = isSumpPoolOnly ? Math.max(0.45, ejLen - convL - thL) : ejLen * 0.42;
 
     addBellSpigotCollar(assemblyGroup, ejStart + 0.02, ejY, qZ, "x", 0.19, mats.terracotta, mats.mortar);
     const convMesh = new THREE.Mesh(
@@ -576,13 +686,41 @@ export function buildLocalCeramicAssembly(
     throatMesh.position.set(ejStart + convL + thL * 0.5, ejY, qZ);
     assemblyGroup.add(throatMesh);
 
-    const divMesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.205, 0.105, divL, 22, 1, cut, thetaStart, thetaLen),
-      mats.terracotta
-    );
-    divMesh.rotation.z = -Math.PI / 2;
-    divMesh.position.set(ejStart + convL + thL + divL * 0.5, ejY, qZ);
-    assemblyGroup.add(divMesh);
+    if (isSumpPoolOnly) {
+      // 1.4 m Co-Current Drenched Horizontal Stoneware Raschig-Ring Trough (open front in cutaway!)
+      const trX = ejStart + convL + thL + divL * 0.5;
+      const trH = 0.46;
+      const trD = 0.50;
+      const trBack = new THREE.Mesh(new THREE.BoxGeometry(divL, trH, 0.06), mats.brickSolid);
+      trBack.position.set(trX, ejY, qZ - trD * 0.5);
+      assemblyGroup.add(trBack);
+      const trBot = new THREE.Mesh(new THREE.BoxGeometry(divL, 0.06, trD), mats.mortar);
+      trBot.position.set(trX, ejY - trH * 0.5, qZ);
+      assemblyGroup.add(trBot);
+      const trTop = new THREE.Mesh(new THREE.BoxGeometry(divL, 0.06, trD), mats.mortar);
+      trTop.position.set(trX, ejY + trH * 0.5, qZ);
+      assemblyGroup.add(trTop);
+      if (!cut) {
+        const trFront = new THREE.Mesh(new THREE.BoxGeometry(divL, trH, 0.06), mats.brickSolid);
+        trFront.position.set(trX, ejY, qZ + trD * 0.5);
+        assemblyGroup.add(trFront);
+      }
+      // Drenched stoneware ring fill inside horizontal trough
+      const trFill = new THREE.Mesh(
+        new THREE.BoxGeometry(divL * 0.86, trH * 0.72, trD * 0.76),
+        mats.packingCeramic
+      );
+      trFill.position.set(trX, ejY, qZ);
+      assemblyGroup.add(trFill);
+    } else {
+      const divMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.205, 0.105, divL, 22, 1, cut, thetaStart, thetaLen),
+        mats.terracotta
+      );
+      divMesh.rotation.z = -Math.PI / 2;
+      divMesh.position.set(ejStart + convL + thL + divL * 0.5, ejY, qZ);
+      assemblyGroup.add(divMesh);
+    }
     addBellSpigotCollar(assemblyGroup, ejEnd - 0.04, ejY, qZ, "x", 0.20, mats.terracotta, mats.mortar);
 
     nozzleTipX = ejStart + convL * 0.65;
@@ -674,47 +812,67 @@ export function buildLocalCeramicAssembly(
   pGrate.position.set(pX, 0.92, pZ);
   assemblyGroup.add(pGrate);
 
-  // Textured stoneware clay Raschig ring bed + visible individual rings in cutaway
+  // Textured stoneware clay Raschig ring bed (OR 2-stage perforated ceramic sieve trays in sump-pool mode!)
   const bedBaseY = 0.95;
   const bedH = 1.05;
-  const bedCore = new THREE.Mesh(
-    new THREE.CylinderGeometry(pR * 0.87, pR * 0.87, bedH, 26),
-    mats.packingCeramic
-  );
-  bedCore.position.set(pX, bedBaseY + bedH * 0.5, pZ);
-  assemblyGroup.add(bedCore);
-
-  if (cut) {
-    const ringGeo = new THREE.TorusGeometry(0.034, 0.011, 6, 12);
-    for (let ri = 0; ri < 42; ri++) {
-      const row = Math.floor(ri / 7);
-      const col = ri % 7;
-      const ang = -0.40 + (col / 6) * 0.80;
-      const ry = bedBaseY + 0.08 + row * 0.16 + (col % 2) * 0.05;
-      const rr = pR * 0.88;
-      const ringMesh = new THREE.Mesh(ringGeo, mats.stoneware);
-      ringMesh.position.set(pX + Math.sin(ang) * rr, ry, pZ + Math.cos(ang) * rr);
-      ringMesh.rotation.set(ri * 0.7, ri * 1.1, ri * 0.4);
-      assemblyGroup.add(ringMesh);
-    }
-  }
-
-  // Brass gravity trickle distribution ring + spray cone
   const trickleY = bedBaseY + bedH + 0.09;
-  const trickleRing = new THREE.Mesh(
-    new THREE.TorusGeometry(pR * 0.62, 0.016, 8, 24),
-    mats.brass
-  );
-  trickleRing.rotation.x = Math.PI / 2;
-  trickleRing.position.set(pX, trickleY, pZ);
-  assemblyGroup.add(trickleRing);
 
-  const trickleCone = new THREE.Mesh(
-    new THREE.CylinderGeometry(pR * 0.65, pR * 0.84, 0.18, 20, 1, true),
-    mats.sprayMist
-  );
-  trickleCone.position.set(pX, bedBaseY + bedH + 0.01, pZ);
-  assemblyGroup.add(trickleCone);
+  if (isSumpPoolOnly) {
+    // 2-Stage Shallow (0.5"+0.5") Perforated Fired Ceramic Sieve / Bubble Trays with Froth Layers
+    for (let si = 0; si < 2; si++) {
+      const sy = bedBaseY + 0.12 + si * 0.42;
+      const trayPlate = new THREE.Mesh(
+        new THREE.CylinderGeometry(pR * 0.91, pR * 0.91, 0.035, 24),
+        mats.terracotta
+      );
+      trayPlate.position.set(pX, sy, pZ);
+      assemblyGroup.add(trayPlate);
+      const frothLayer = new THREE.Mesh(
+        new THREE.CylinderGeometry(pR * 0.89, pR * 0.89, 0.085, 24),
+        mats.sumpWater
+      );
+      frothLayer.position.set(pX, sy + 0.055, pZ);
+      assemblyGroup.add(frothLayer);
+    }
+  } else {
+    const bedCore = new THREE.Mesh(
+      new THREE.CylinderGeometry(pR * 0.87, pR * 0.87, bedH, 26),
+      mats.packingCeramic
+    );
+    bedCore.position.set(pX, bedBaseY + bedH * 0.5, pZ);
+    assemblyGroup.add(bedCore);
+
+    if (cut) {
+      const ringGeo = new THREE.TorusGeometry(0.034, 0.011, 6, 12);
+      for (let ri = 0; ri < 42; ri++) {
+        const row = Math.floor(ri / 7);
+        const col = ri % 7;
+        const ang = -0.40 + (col / 6) * 0.80;
+        const ry = bedBaseY + 0.08 + row * 0.16 + (col % 2) * 0.05;
+        const rr = pR * 0.88;
+        const ringMesh = new THREE.Mesh(ringGeo, mats.stoneware);
+        ringMesh.position.set(pX + Math.sin(ang) * rr, ry, pZ + Math.cos(ang) * rr);
+        ringMesh.rotation.set(ri * 0.7, ri * 1.1, ri * 0.4);
+        assemblyGroup.add(ringMesh);
+      }
+    }
+
+    // Brass gravity trickle distribution ring + spray cone (only when overhead gravity tank exists!)
+    const trickleRing = new THREE.Mesh(
+      new THREE.TorusGeometry(pR * 0.62, 0.016, 8, 24),
+      mats.brass
+    );
+    trickleRing.rotation.x = Math.PI / 2;
+    trickleRing.position.set(pX, trickleY, pZ);
+    assemblyGroup.add(trickleRing);
+
+    const trickleCone = new THREE.Mesh(
+      new THREE.CylinderGeometry(pR * 0.65, pR * 0.84, 0.18, 20, 1, true),
+      mats.sprayMist
+    );
+    trickleCone.position.set(pX, bedBaseY + bedH + 0.01, pZ);
+    assemblyGroup.add(trickleCone);
+  }
 
   // Stacked Terracotta Chevron Mist-Eliminator Baffles
   for (let ci = 0; ci < 3; ci++) {
@@ -951,18 +1109,17 @@ export function buildLocalCeramicAssembly(
   const pumpX = 0.36;
   const pumpZ = 0.94;
   if (isSumpPoolOnly) {
-    // ZERO PUMP & ZERO WATER TOWER: 1/2" Brass/316L Carburetor Aspiration Dip-Tube rising from Sump Pool #2 into Steam-Jet Ejector Throat!
+    // ZERO PUMP & ZERO WATER TOWER: Gravity-Flooded Side Weir (0" Suction Lift!) feeding Pool #2 directly into the sump-level 60 psig ejector!
     addCPipe(
       [
-        new THREE.Vector3(sumpX + 0.22, plinthY + 0.14, sumpZ),
-        new THREE.Vector3(sumpX + 0.22, plinthY + 0.56, sumpZ - 0.22),
-        new THREE.Vector3(ejMidX, ejY - 0.16, qZ + 0.22),
-        new THREE.Vector3(ejMidX, ejY - 0.06, qZ),
+        new THREE.Vector3(sumpX + 0.30, plinthY + 0.34, sumpZ - 0.24),
+        new THREE.Vector3(ejStart + 0.30, plinthY + 0.34, qZ + 0.26),
+        new THREE.Vector3(ejStart + 0.30, ejY, qZ),
       ],
-      0.018,
+      0.022,
       mats.brass
     );
-    addBallValve(assemblyGroup, ejMidX, ejY - 0.18, qZ + 0.22, "y", 0.020, mats.brass, mats.valveGreen);
+    addBallValve(assemblyGroup, ejStart + 0.30, plinthY + 0.34, qZ + 0.26, "z", 0.022, mats.brass, mats.valveGreen);
   } else {
     if (isSteamPPCP) {
       // Forbes Marshall / Spirax Sarco Mechanical Pressure-Powered Condensate Pump (PPCP, 0 W!)
@@ -978,7 +1135,6 @@ export function buildLocalCeramicAssembly(
       );
       ppcpCap.position.set(pumpX, plinthY + 0.50, pumpZ);
       assemblyGroup.add(ppcpCap);
-      // Copper motive steam supply tap from header S1 -> PPCP top head
       addCPipe(
         [
           new THREE.Vector3(ejStart + 0.08, ejY + 0.44, qZ),
@@ -989,7 +1145,15 @@ export function buildLocalCeramicAssembly(
         mats.steamHeader
       );
     } else if (isSteamSyphon) {
-      // Gunmetal/Brass Steam-Jet Cold Makeup Syphon + Bronze Boiler Feed Injector
+      // Dedicated COLD (<120 F) Fresh Makeup Drum feeding Gunmetal Steam-Jet Syphon (never plumbed to hot sump!)
+      const coldDrumX = pumpX + 0.42;
+      const coldDrumZ = pumpZ + 0.26;
+      const coldDrum = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.19, 0.19, 0.56, 20),
+        mats.kentank
+      );
+      coldDrum.position.set(coldDrumX, plinthY + 0.28, coldDrumZ);
+      assemblyGroup.add(coldDrum);
       const syphBody = new THREE.Mesh(
         new THREE.CylinderGeometry(0.055, 0.075, 0.28, 16),
         mats.brass
@@ -997,7 +1161,14 @@ export function buildLocalCeramicAssembly(
       syphBody.rotation.z = Math.PI / 2;
       syphBody.position.set(pumpX, plinthY + 0.28, pumpZ);
       assemblyGroup.add(syphBody);
-      // Steam motive branch to syphon
+      addCPipe(
+        [
+          new THREE.Vector3(coldDrumX - 0.16, plinthY + 0.18, coldDrumZ),
+          new THREE.Vector3(pumpX, plinthY + 0.22, pumpZ),
+        ],
+        0.018,
+        mats.pipeCyan
+      );
       addCPipe(
         [
           new THREE.Vector3(ejStart + 0.08, ejY + 0.36, qZ),
@@ -1040,39 +1211,42 @@ export function buildLocalCeramicAssembly(
       assemblyGroup.add(monoblock);
     }
 
-    // Gravity downcomer piping + brass shutoff ball valves + pump refill riser
+    // Gravity downcomer piping routed cleanly OUTSIDE Stage 3 masonry wall (pZ + pR + 0.16 — zero wall clip!)
     const headerY = tkBaseY - 0.28;
+    const clearZ = pZ + pR + 0.16;
     addCPipe(
       [
         new THREE.Vector3(tkX - 0.16, tkBaseY, tkZ),
-        new THREE.Vector3(tkX - 0.16, headerY, tkZ + 0.36),
-        new THREE.Vector3(pX, headerY, pZ + 0.36),
-        new THREE.Vector3(qX - 0.08, plinthY + qH + 0.24, qZ),
+        new THREE.Vector3(tkX - 0.16, headerY, clearZ),
+        new THREE.Vector3(pX, headerY, clearZ),
+        new THREE.Vector3(qX - 0.08, plinthY + qH + 0.24, clearZ * 0.45),
         new THREE.Vector3(qX - 0.08, plinthY + qH - 0.06, qZ),
       ],
       0.022,
       mats.pipeCyan
     );
-    addBallValve(assemblyGroup, tkX - 0.16, tkBaseY - 0.14, tkZ + 0.12, "y", 0.024, mats.brass, mats.safetyRed);
+    addBallValve(assemblyGroup, tkX - 0.16, tkBaseY - 0.14, clearZ * 0.4, "y", 0.024, mats.brass, mats.safetyRed);
     addCPipe(
       [
-        new THREE.Vector3(pX, headerY, pZ + 0.36),
+        new THREE.Vector3(pX, headerY, clearZ),
         new THREE.Vector3(pX, trickleY + 0.10, pZ),
       ],
       0.020,
       mats.pipeCyan
     );
-    addBallValve(assemblyGroup, pX, headerY - 0.16, pZ + 0.22, "y", 0.021, mats.brass, mats.valveGreen);
+    addBallValve(assemblyGroup, pX, headerY - 0.16, clearZ * 0.72, "y", 0.021, mats.brass, mats.valveGreen);
 
-    // Sump suction -> Pump -> Refill riser to top of Kentank
-    addCPipe(
-      [
-        new THREE.Vector3(sumpX + 0.58, plinthY + 0.18, sumpZ),
-        new THREE.Vector3(pumpX - 0.10, plinthY + 0.18, pumpZ),
-      ],
-      0.024,
-      mats.pipeCyan
-    );
+    // Sump suction -> Pump (omitted for cold-water syphon, which draws from its dedicated cold drum!)
+    if (!isSteamSyphon) {
+      addCPipe(
+        [
+          new THREE.Vector3(sumpX + 0.58, plinthY + 0.18, sumpZ),
+          new THREE.Vector3(pumpX - 0.10, plinthY + 0.18, pumpZ),
+        ],
+        0.024,
+        mats.pipeCyan
+      );
+    }
     addCPipe(
       [
         new THREE.Vector3(pumpX + 0.10, plinthY + 0.28, pumpZ),
@@ -1237,7 +1411,7 @@ export function buildLocalCeramicAssembly(
     ...samplePathWithMeta(
       new THREE.LineCurve3(
         new THREE.Vector3(qX - 0.04, qInY - 0.16, qZ),
-        new THREE.Vector3(qX - 0.04, ejY + 0.12, qZ)
+        new THREE.Vector3(qX - 0.04, isSumpPoolOnly ? plinthY + 0.28 : ejY + 0.12, qZ)
       ),
       20,
       0.09,
@@ -1248,8 +1422,8 @@ export function buildLocalCeramicAssembly(
     ),
     ...samplePathWithMeta(
       new THREE.QuadraticBezierCurve3(
-        new THREE.Vector3(qX - 0.04, ejY + 0.12, qZ),
-        new THREE.Vector3(qX - 0.04, ejY, qZ),
+        new THREE.Vector3(qX - 0.04, isSumpPoolOnly ? plinthY + 0.28 : ejY + 0.12, qZ),
+        new THREE.Vector3(qX + (isSumpPoolOnly ? 0.10 : -0.04), isSumpPoolOnly ? plinthY + 0.22 : ejY, qZ),
         new THREE.Vector3(ejStart, ejY, qZ)
       ),
       8,

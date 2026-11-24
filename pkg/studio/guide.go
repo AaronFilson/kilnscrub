@@ -363,6 +363,19 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 		b.WriteString("### 7.6 UL 508A NEMA 4X Panel Wiring & NEC 110.26 Clearance Verification\n")
 		b.WriteString("- Mount the **UL 508A-style NEMA 4X pre-wired panel** with **through-door NEC 430.102 lockable disconnect**, `3%` input line reactor, `HF-GFCI` breaker, GS21 VFD, **FM/UL 1/16-DIN `200 F` independent high-limit controller + hardwired 24VDC latching safety relay**, dual Type-K thermowells, inline flow transmitter, flow-through pH probe, and pilot stack light/alarm horn.\n")
 		b.WriteString("- **Segregation & NEC 110.26 Sign-Off:** Route shielded VFD motor cable in dedicated LFMC **`>= 12\"`** away from `24VDC` NFPA 86 safety loop & RS-485 instrumentation conduit, and verify unobstructed **`36\"` depth × `30\"` width × `78\"` height** electrical working clearance (**NEC 110.26(A)**) plus **`24\"`** pump & cleanout door service swing.\n")
+		if sp.DeluxeSpec != nil && sp.DeluxeSpec.EcoCostDeltaUSD > 0 {
+			b.WriteString("\n### 7.7 Deluxe Eco Energy & Water Recovery Upgrades\n")
+			fmt.Fprintf(&b, "- **Eco Summary:** %s\n", sp.DeluxeSpec.EcoSummary)
+			for _, h := range sp.DeluxeSpec.EcoHighlights {
+				fmt.Fprintf(&b, "- %s\n", h)
+			}
+			if p.DeluxeCondensingReclaimer {
+				b.WriteString("- **Ceramic-Coated / SiC Condenser Corrosion & Condensate Rule:** Never substitute bare 316L SS tubes in warm `pH 2.5–3.5` chloride-bearing HCl condensate — use vitreous ceramic-enamel coated steel or sintered SiC tubes in a ceramic-lined/FRP shell, reject heat to the outdoor closed-loop dry-cooler (`150 F` exit), and drain acidic condensate strictly via **Sch 80 CPVC** directly into the alkaline sump for neutralization.\n")
+			}
+			if p.DeluxeStage1HeatRecovery {
+				b.WriteString("- **Stage 1 Hydronic Dry-Out Interlock:** Wire the Stage 1 water-jacket hydronic flow switch directly into the **E3 NFPA 86 safety loop** (alongside the ASME 30 psig relief valve and expansion tank) so pump failure immediately opens the fail-safe bypass damper before stagnant jacket water can boil.\n")
+			}
+		}
 	}
 
 	return b.String()
@@ -393,12 +406,19 @@ func generateLocalCeramicBuildGuide(eval StudioEvaluation) string {
 		math.Max(10.0, d.Envelope.DuctDiameter.Inches()+2.0), math.Max(10.0, d.Envelope.DuctDiameter.Inches()+2.0)*25.4)
 	fmt.Fprintf(&b, "| Stage 1: Masonry Quench Chamber | %.1f\" bore | %.0f mm | All-ceramic firebrick (>1,800 F dry-run immune) |\n",
 		c.QuenchVessel.NominalIn, c.QuenchVessel.NominalIn*25.4)
-	fmt.Fprintf(&b, "| Stage 2: Terracotta Baffles & Gravity Rose | %.2f GPM @ %.2f PSI | %.2f L/min | Gravity-fed from 3.5 m overhead tank |\n",
-		fr.SprayFlowGPM, fr.GravityHeadPSI, fr.SprayFlowLPM)
-	fmt.Fprintf(&b, "| Stage 3: Wide Stoneware Packed Tower | %.1f\" bore | %.0f mm | v_s=%.2f m/s, %.3f inWC Ergun dP, %.1f%% HCl |\n",
-		fr.BedDiameterIn, fr.BedDiameterIn*25.4, fr.BedSuperficialVelMS, fr.BedDPInWC, fr.HClRemovalPct)
-	fmt.Fprintf(&b, "| Overhead Gravity Tank | %.0f gal @ %.1f ft | %.0f L @ 3.5 m | Diagonally X-braced stand (~%.0f kg wet load) |\n",
-		fr.GravityTankGal, fr.TankElevationFt, fr.GravityTankLiters, fr.GravityTankLiters*1.05+22.0)
+	if fr.HasOverheadTank {
+		fmt.Fprintf(&b, "| Stage 2: Terracotta Baffles & Gravity Rose | %.2f GPM @ %.2f PSI | %.2f L/min | Gravity-fed from 3.5 m overhead tank |\n",
+			fr.SprayFlowGPM, fr.GravityHeadPSI, fr.SprayFlowLPM)
+		fmt.Fprintf(&b, "| Stage 3: Wide Stoneware Packed Tower | %.1f\" bore | %.0f mm | v_s=%.2f m/s, %.3f inWC Ergun dP, %.1f%% HCl |\n",
+			fr.BedDiameterIn, fr.BedDiameterIn*25.4, fr.BedSuperficialVelMS, fr.BedDPInWC, fr.HClRemovalPct)
+		fmt.Fprintf(&b, "| Overhead Gravity Tank | %.0f gal @ %.1f ft | %.0f L @ 3.5 m | Diagonally X-braced stand (~%.0f kg wet load) |\n",
+			fr.GravityTankGal, fr.TankElevationFt, fr.GravityTankLiters, fr.GravityTankLiters*1.05+22.0)
+	} else {
+		fmt.Fprintf(&b, "| Stage 2: Surge-Damped 0.5\" S-Vane & Flooded Ejector | 0.50\" submergence | 0 mm suction lift | 2x surge plenum + flooded Pool #2 weir (0.65 inWC) |\n")
+		fmt.Fprintf(&b, "| Stage 3: 1.4 m Co-Current Trough + 2-Stage Sieve | 55\" L trough + 2× 0.5\" trays | 1400 mm trough | %.1f%% HCl / %.0f%% NaCl (0 pumps, 0 tower) |\n",
+			fr.HClRemovalPct, fr.SubmicronNaClCapturePct)
+		fmt.Fprintf(&b, "| Ground Sump Pools (Zero Water Tower) | ~95 gal dual brick pools | ~360 L @ grade | Eliminates 3.5 m overhead tank & pumps completely |\n")
+	}
 	fmt.Fprintf(&b, "| Stage 4: Exhaust Stack / Draft | %.1f ft chimney | %.1f m | Avail %.3f inWC vs %.3f inWC req (feasible=%v) |\n\n",
 		fr.ChimneyHeightFt, fr.ChimneyHeightM, fr.AvailableDraftInWC, fr.RequiredDraftInWC, fr.DraftFeasible)
 
@@ -454,11 +474,17 @@ func generateLocalCeramicBuildGuide(eval StudioEvaluation) string {
 			d.Input.PeakExitTempF, fr.StackReheatTempF, fr.AvailableDraftInWC, fr.RequiredDraftInWC, fr.DraftMarginInWC, fr.DraftFeasible)
 	}
 
-	b.WriteString("### 7.3 Elevated Overhead Gravity Tank Stand Bracing (200–500 kg Load)\n")
-	fmt.Fprintf(&b, "- Mount the **`%.0f L` (`%.0f gal`)** overhead HDPE gravity tank at **`%.1f ft` (`3.5 m`)** elevation (`%.2f PSI` static gravity head, `%.2f L/min` / `%.2f GPM` downcomer flow).\n",
-		fr.GravityTankLiters, fr.GravityTankGal, fr.TankElevationFt, fr.GravityHeadPSI, fr.SprayFlowLPM, fr.SprayFlowGPM)
-	fmt.Fprintf(&b, "- **CRITICAL STRUCTURAL BRACING:** Full of water, the tank weighs **`~%.0f kg` (`%.0f lbs`)** — build a 4-post treated hardwood or mild-steel stand on concrete pier footings with **full diagonal X-bracing on all 4 sides** and M12 through-bolts. Never stack loose dry bricks under an overhead water tank!\n\n",
-		fr.GravityTankLiters*1.05+22.0, (fr.GravityTankLiters*1.05+22.0)/0.45359237)
+	if fr.HasOverheadTank {
+		b.WriteString("### 7.3 Elevated Overhead Gravity Tank Stand Bracing (200–500 kg Load)\n")
+		fmt.Fprintf(&b, "- Mount the **`%.0f L` (`%.0f gal`)** overhead HDPE gravity tank at **`%.1f ft` (`3.5 m`)** elevation (`%.2f PSI` static gravity head, `%.2f L/min` / `%.2f GPM` downcomer flow).\n",
+			fr.GravityTankLiters, fr.GravityTankGal, fr.TankElevationFt, fr.GravityHeadPSI, fr.SprayFlowLPM, fr.SprayFlowGPM)
+		fmt.Fprintf(&b, "- **CRITICAL STRUCTURAL BRACING:** Full of water, the tank weighs **`~%.0f kg` (`%.0f lbs`)** — build a 4-post treated hardwood or mild-steel stand on concrete pier footings with **full diagonal X-bracing on all 4 sides** and M12 through-bolts. Never stack loose dry bricks under an overhead water tank!\n\n",
+			fr.GravityTankLiters*1.05+22.0, (fr.GravityTankLiters*1.05+22.0)/0.45359237)
+	} else {
+		b.WriteString("### 7.3 Ground-Level Dual Sump Pools, Surge-Damped S-Vane & 1.4 m Co-Current Drenched Trough (Zero Water Tower)\n")
+		fmt.Fprintf(&b, "- **High-Capture Zero-Pump Architecture:** %s\n", fr.PumpEngineeringNote)
+		b.WriteString("- **Barometric Surge-Plenum Check:** Build Pool #1 with a `2×` wide upstream surge plenum and lock the sloped S-vane submergence strictly at `0.50\"` so kiln spyhole pressure stays rock-steady with zero sloshing pulses.\n\n")
+	}
 
 	b.WriteString("### 7.4 Chimney Pre-Warming, Manual Pumping Cadence & Local Alkali Dosing\n")
 	fmt.Fprintf(&b, "- **Draft & Pumping Mechanism:** %s | **Pump:** %s\n", fr.DraftMechanism, fr.ManualPumpType)
@@ -629,8 +655,12 @@ func generateLocalCeramicOperationsChecklist(eval StudioEvaluation) string {
 		p.FiringCone, d.Input.PeakExitTempF, p.FiringDurationHours, p.EffectiveSaltingHours(), p.VaporGlazeMode, fr.DraftMode)
 
 	b.WriteString("## 1. Pre-Firing Preparation (30 Minutes Before Lighting)\n\n")
-	fmt.Fprintf(&b, "- [ ] **Overhead Gravity Tank & Stand Check:** Inspect all diagonal X-braces on the `3.5 m` stand (`~%.0f kg` filled load) and fill the `%.0f L` overhead tank (`%.2f PSI` static head) before lighting.\n",
-		fr.GravityTankLiters*1.05+22.0, fr.GravityTankLiters, fr.GravityHeadPSI)
+	if fr.HasOverheadTank {
+		fmt.Fprintf(&b, "- [ ] **Overhead Gravity Tank & Stand Check:** Inspect all diagonal X-braces on the `3.5 m` stand (`~%.0f kg` filled load) and fill the `%.0f L` overhead tank (`%.2f PSI` static head) before lighting.\n",
+			fr.GravityTankLiters*1.05+22.0, fr.GravityTankLiters, fr.GravityHeadPSI)
+	} else {
+		b.WriteString("- [ ] **Dual Ground-Level Sump Pools & 0.5\" S-Vane Check (0 Tower):** Fill Pool #1 to the exact `0.50\"` S-vane skimmer waterline and Pool #2 to the flooded ejector side weir (~360 L combined); verify the `2×` surge plenum & 2-stage ceramic sieve trays are clear.\n")
+	}
 	fmt.Fprintf(&b, "- [ ] **Stage Local Alkali (`%s` / `%s`):** Stage **`%.2f kg` (`%.1f lbs`)** per firing; pre-charge the 208 L brick baffled sump to `pH 8.0 - 8.5` (check with litmus strips) and verify specific gravity `< %.3f SG` with a brine hydrometer.\n",
 		fr.AlkaliName, fr.AlkaliFormula, fr.AlkaliKgPerFiring, fr.AlkaliLbsPerFiring, r.DumpSpecificGravity)
 	b.WriteString("- [ ] **Inspect Gravity Spray Rose & Foot Valve:** Clear wood-ash grit from the suction foot strainer and verify even gravity rain over the quench baffles and stoneware Raschig rings.\n")

@@ -102,7 +102,7 @@ export function buildIndustrialAssembly(
   const isCompact = !!project.compact_footprint;
   const hasDiluter = !!project.include_plume_diluter;
   const isDeluxe = project.build_path === "custom_fab_deluxe";
-  const showSystems = showSystemsOverlay || isDeluxe;
+  const showSystems = showSystemsOverlay;
   const blowerDrive = String(project.blower_drive_option || "industrial_radial_vfd").toLowerCase();
 
   const thetaStart = cut ? Math.PI * 0.5 : 0;
@@ -959,25 +959,32 @@ export function buildIndustrialAssembly(
       flueJacket.position.set(sqX - cfg.qR - 0.22, sInletY, sqZ);
       sysG.add(flueJacket);
 
-      // Phase 13 Deluxe Eco Upgrade 3D Hardware
+      // Phase 14 Deluxe Eco Upgrade 3D Hardware (zero geometry collisions!)
       if (project.deluxe_stage1_heat_recovery) {
-        const s1JktH = cfg.qH * 0.34;
+        // Mount Stage 1 water-jacket collar strictly BELOW hot inlet flue nozzle (sInletY - cfg.ductR - 0.06)
+        const maxTopY = Math.max(0.55, sInletY - cfg.ductR - 0.06);
+        const s1JktH = clamp(cfg.qH * 0.30, 0.34, Math.max(0.36, maxTopY - 0.24));
+        const s1CenterY = maxTopY - s1JktH * 0.5;
         const s1Jkt = new THREE.Mesh(
-          new THREE.CylinderGeometry(cfg.qR * 1.18, cfg.qR * 1.18, s1JktH, 32, 1, cut, thetaStart, thetaLen),
+          new THREE.CylinderGeometry(cfg.qR * 1.16, cfg.qR * 1.16, s1JktH, 32, 1, cut, thetaStart, thetaLen),
           mats.steamerSS
         );
-        s1Jkt.position.set(sqX, cfg.qH - s1JktH * 0.54, sqZ);
+        s1Jkt.position.set(sqX, s1CenterY, sqZ);
         sysG.add(s1Jkt);
         const s1Band = new THREE.Mesh(
-          new THREE.TorusGeometry(cfg.qR * 1.20, 0.016, 8, 28),
+          new THREE.TorusGeometry(cfg.qR * 1.18, 0.015, 8, 28),
           mats.steamHeader
         );
         s1Band.rotation.x = Math.PI / 2;
-        s1Band.position.set(sqX, cfg.qH - s1JktH * 0.25, sqZ);
+        s1Band.position.set(sqX, s1CenterY + s1JktH * 0.42, sqZ);
         sysG.add(s1Band);
+        // Hydronic ASME PRV & E3 flow-switch boss on side of jacket
+        const jPrv = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.08, 10), mats.safetyRed);
+        jPrv.position.set(sqX + cfg.qR * 1.18, s1CenterY + s1JktH * 0.46, sqZ);
+        sysG.add(jPrv);
       }
-      if (project.deluxe_variable_throat_vfd) {
-        // Motorized 24VDC variable-throat venturi actuator & linkage on Stage 2 throat
+      if (project.deluxe_variable_throat_vfd && !isEductor && !isParallelVent) {
+        // Motorized 24VDC variable-throat venturi actuator & linkage strictly on single-throat inline venturi
         const act = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.16, 0.14), mats.conduit);
         act.position.set(svX, svY + 0.24, svZ);
         sysG.add(act);
@@ -986,17 +993,25 @@ export function buildIndustrialAssembly(
         sysG.add(stem);
       }
       if (project.deluxe_condensing_reclaimer) {
-        // Indirect finned condensing plume-abater & water-reclaimer heat exchanger on exhaust stack
+        // Ceramic-Coated / Sintered-SiC Condensing Plume Abater stacked cleanly ABOVE stack silencer (no collision!)
+        const condY = silY + silLen * 0.5 + 0.34;
         const condBox = new THREE.Mesh(
-          new THREE.BoxGeometry(sstR * 3.4, 0.56, sstR * 3.2),
-          mats.diluter
+          new THREE.BoxGeometry(sstR * 3.2, 0.48, sstR * 3.0),
+          mats.cpvcSolid // ceramic-lined Derakane FRP shell
         );
-        condBox.position.set(sstX, sstBaseY + sstH * 0.72, sstZ);
+        condBox.position.set(sstX, condY, sstZ);
         sysG.add(condBox);
-        // Distilled condensate recovery drain back to sump
+        const ceramicTrim = new THREE.Mesh(
+          new THREE.BoxGeometry(sstR * 3.32, 0.08, sstR * 3.12),
+          mats.terracotta // vitreous ceramic-enamel / SiC core indicator collar
+        );
+        ceramicTrim.position.set(sstX, condY, sstZ);
+        sysG.add(ceramicTrim);
+        // Acidic condensate Sch 80 CPVC drain routed cleanly around exterior skid (zero vessel clipping!)
         addHose(
           [
-            new THREE.Vector3(sstX - sstR * 1.4, sstBaseY + sstH * 0.56, sstZ + sstR),
+            new THREE.Vector3(sstX, condY - 0.24, sstZ + sstR * 1.55),
+            new THREE.Vector3(sstX, beamH + sumpTankH + 0.18, skidMaxZ - 0.14),
             new THREE.Vector3(sumpPosX + sumpTankW * 0.35, beamH + sumpTankH + 0.14, sumpPosZ),
             new THREE.Vector3(sumpPosX + sumpTankW * 0.35, beamH + sumpTankH * 0.85, sumpPosZ),
           ],
@@ -1717,7 +1732,7 @@ export function buildIndustrialAssembly(
   // Stage 3: Packed Bed Absorber
   const { bundleR, topNeckY, distRingY, sprayBedH } = buildPackedBedAt(pX, pZ, vY);
 
-  // Stage 4: Centrifugal Scroll (Volute) Blower + Rear Motor + Stack
+  // Stage 4: Blower / Motive Drive Geometry (adapts to Phase 8 blower_drive_option!)
   const gapS3S4 = Math.max(ductR * 3.5, 0.42);
   const bDir = isCompact ? -1 : 1;
   const dropX = pX + bDir * (bundleR + gapS3S4 * 0.5);
@@ -1728,183 +1743,246 @@ export function buildIndustrialAssembly(
   const blowerGroup = new THREE.Group();
   blowerGroup.position.set(bX, bY, pZ);
 
-  // Hollow extruded spiral volute wrapper
-  const wrapperShape = new THREE.Shape();
-  wrapperShape.moveTo(vol.outerPts[0].x, vol.outerPts[0].y);
-  for (let i = 1; i < vol.outerPts.length; i++) wrapperShape.lineTo(vol.outerPts[i].x, vol.outerPts[i].y);
-  for (let i = vol.innerPts.length - 1; i >= 0; i--) wrapperShape.lineTo(vol.innerPts[i].x, vol.innerPts[i].y);
-  wrapperShape.closePath();
-  const wrapperGeo = new THREE.ExtrudeGeometry(wrapperShape, { depth: scrollW, bevelEnabled: false });
-  wrapperGeo.translate(0, 0, -scrollW * 0.5);
-  blowerGroup.add(new THREE.Mesh(wrapperGeo, mats.blower));
+  const isRegenRing = blowerDrive === "regen_side_channel";
+  const isDualBypass = blowerDrive === "dual_bypass_blowers";
+  const isCompEductor = blowerDrive === "compressor_eductor_only";
 
-  // Solid backplate & cut/full front wall
-  const plateShape = new THREE.Shape();
-  plateShape.moveTo(vol.outerPts[0].x, vol.outerPts[0].y);
-  for (let i = 1; i < vol.outerPts.length; i++) plateShape.lineTo(vol.outerPts[i].x, vol.outerPts[i].y);
-  plateShape.closePath();
-  const backPlateGeo = new THREE.ExtrudeGeometry(plateShape, { depth: wallT, bevelEnabled: false });
-  backPlateGeo.translate(0, 0, -scrollW * 0.5 - wallT);
-  blowerGroup.add(new THREE.Mesh(backPlateGeo, mats.blower));
-
-  const frontShape = new THREE.Shape();
-  frontShape.moveTo(vol.outerPts[0].x, vol.outerPts[0].y);
-  for (let i = 1; i < vol.outerPts.length; i++) frontShape.lineTo(vol.outerPts[i].x, vol.outerPts[i].y);
-  frontShape.closePath();
-  const frontHoleR = cut ? wheelR * 1.02 : ductR * 1.02;
-  const frontHole = new THREE.Path();
-  frontHole.absarc(0, 0, frontHoleR, 0, Math.PI * 2, true);
-  frontShape.holes.push(frontHole);
-  const frontPlateGeo = new THREE.ExtrudeGeometry(frontShape, { depth: wallT, bevelEnabled: false, curveSegments: 36 });
-  frontPlateGeo.translate(0, 0, scrollW * 0.5);
-  blowerGroup.add(new THREE.Mesh(frontPlateGeo, mats.blower));
-
-  if (cut) {
-    const bezel = new THREE.Mesh(
-      new THREE.TorusGeometry(frontHoleR, 0.010, 10, 40),
-      mats.blowerFlange
-    );
-    bezel.position.z = scrollW * 0.5 + wallT;
-    blowerGroup.add(bezel);
-  }
-
-  // Suction bell flange centered on impeller eye (+Z)
-  addBoltedFlange(blowerGroup, 0, 0, eyeZ, "z", ductR, mats.cpvcFlange, mats.bolt, mats.gasket, 8);
-  const bellLen = wallT + 0.032;
-  const suctionBell = new THREE.Mesh(
-    new THREE.CylinderGeometry(ductR, ductR * 1.16, bellLen, 28, 1, true),
-    cut ? mats.cutGlass : mats.cpvcSolid
-  );
-  suctionBell.rotation.x = Math.PI / 2;
-  suctionBell.position.z = scrollW * 0.5 + bellLen * 0.5 - 0.005;
-  blowerGroup.add(suctionBell);
-
-  // Backward-curved 9-blade impeller wheel
-  const impGroup = buildImpellerGroup(wheelR, scrollW, mats.blowerDark, mats.blade, mats.blowerDark, mats.shroud);
-  blowerGroup.add(impGroup);
-  impellerMesh = impGroup;
-
-  // Rear shaft, pillow block, finned TEFC motor, pedestal cradle
   const motorLen = wheelR * 1.12;
   const motorR = wheelR * 0.44;
   const shaftGap = wheelR * 0.42;
   const motorCenterZ = -scrollW * 0.5 - wallT - shaftGap - motorLen * 0.5;
-  const shaftLen = scrollW * 0.5 + wallT + shaftGap + 0.08;
-  const shaft = new THREE.Mesh(
-    new THREE.CylinderGeometry(wheelR * 0.085, wheelR * 0.085, shaftLen, 16),
-    mats.blade
-  );
-  shaft.rotation.x = Math.PI / 2;
-  shaft.position.z = -shaftLen * 0.5;
-  blowerGroup.add(shaft);
-
-  const sealCollar = new THREE.Mesh(
-    new THREE.CylinderGeometry(wheelR * 0.18, wheelR * 0.18, 0.04, 20),
-    mats.darkSteel
-  );
-  sealCollar.rotation.x = Math.PI / 2;
-  sealCollar.position.z = -scrollW * 0.5 - wallT - 0.02;
-  blowerGroup.add(sealCollar);
-
-  const bearingZ = -scrollW * 0.5 - wallT - shaftGap * 0.52;
-  const pillowBlock = new THREE.Mesh(
-    new THREE.BoxGeometry(wheelR * 0.44, wheelR * 0.42, wheelR * 0.24),
-    mats.darkSteel
-  );
-  pillowBlock.position.set(0, -wheelR * 0.06, bearingZ);
-  blowerGroup.add(pillowBlock);
-
-  const motorBody = new THREE.Mesh(
-    new THREE.CylinderGeometry(motorR, motorR, motorLen, 24),
-    mats.motor
-  );
-  motorBody.rotation.x = Math.PI / 2;
-  motorBody.position.z = motorCenterZ;
-  blowerGroup.add(motorBody);
-  const motorCap = new THREE.Mesh(
-    new THREE.CylinderGeometry(motorR * 0.92, motorR * 0.98, motorLen * 0.20, 24),
-    mats.motorFin
-  );
-  motorCap.rotation.x = Math.PI / 2;
-  motorCap.position.z = motorCenterZ - motorLen * 0.55;
-  blowerGroup.add(motorCap);
-  for (let rIdx = -2; rIdx <= 2; rIdx++) {
-    const fin = new THREE.Mesh(
-      new THREE.TorusGeometry(motorR * 1.01, 0.009, 6, 24),
-      mats.motorFin
-    );
-    fin.position.z = motorCenterZ + rIdx * (motorLen * 0.14);
-    blowerGroup.add(fin);
-  }
-  const jBox = new THREE.Mesh(
-    new THREE.BoxGeometry(motorR * 0.52, motorR * 0.36, motorR * 0.52),
-    mats.motorFin
-  );
-  jBox.position.set(0, motorR + motorR * 0.14, motorCenterZ + motorLen * 0.08);
-  blowerGroup.add(jBox);
-
-  const basePlateY = -bY + 0.025;
-  const skidDepth = scrollW + shaftGap + motorLen + 0.18;
-  const skidCenterZ = (scrollW * 0.5 + (motorCenterZ - motorLen * 0.5)) * 0.5;
-  const baseSkid = new THREE.Mesh(
-    new THREE.BoxGeometry(wheelR * 2.15, 0.05, skidDepth),
-    mats.darkSteel
-  );
-  baseSkid.position.set(wheelR * 0.15, basePlateY, skidCenterZ);
-  blowerGroup.add(baseSkid);
-
-  const cradleH = Math.max(0.08, bY - vol.rBottom - 0.03);
-  const scrollCradle = new THREE.Mesh(
-    new THREE.BoxGeometry(wheelR * 1.10, cradleH, scrollW + 0.04),
-    mats.blowerDark
-  );
-  scrollCradle.position.set(0, -bY + 0.05 + cradleH * 0.5, 0);
-  blowerGroup.add(scrollCradle);
-
-  const riserTopY = -motorR + 0.02;
-  const riserH = Math.max(0.08, bY + riserTopY - 0.05);
-  const motorRiser = new THREE.Mesh(
-    new THREE.BoxGeometry(motorR * 1.65, riserH, shaftGap + motorLen * 0.92),
-    mats.blowerDark
-  );
-  motorRiser.position.set(0, -bY + 0.05 + riserH * 0.5, (bearingZ + motorCenterZ) * 0.5 - 0.04);
-  blowerGroup.add(motorRiser);
-
-  // Tangential Discharge Flange -> Lofted Square-to-Round -> Vertical Exhaust Stack
-  const stackLocalX = (vol.xIn + vol.rMax) * 0.5;
+  const skidDepth = isCompEductor ? scrollW + 0.24 : scrollW + shaftGap + motorLen + 0.18;
+  const stackLocalX = isCompEductor ? 0 : (vol.xIn + vol.rMax) * 0.5;
   const stackX = bX + stackLocalX;
   const stackR = ductR * 0.96;
   const transH = 0.22;
+  const stackBaseLocalY = isCompEductor ? 0.32 : vol.yDis + 0.012 + transH;
 
-  const rectFlange = new THREE.Mesh(
-    new THREE.BoxGeometry(vol.disW + 0.075, 0.026, scrollW + 0.075),
-    mats.blowerFlange
-  );
-  rectFlange.position.set(stackLocalX, vol.yDis, 0);
-  blowerGroup.add(rectFlange);
-
-  const rectBoltGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.042, 6);
-  const rbx = (vol.disW + 0.042) * 0.5;
-  const rbz = (scrollW + 0.042) * 0.5;
-  for (const sx of [-1, 0, 1]) {
-    for (const sz of [-1, 1]) {
-      const bt = new THREE.Mesh(rectBoltGeo, mats.bolt);
-      bt.position.set(stackLocalX + sx * rbx, vol.yDis, sz * rbz);
-      blowerGroup.add(bt);
+  if (isCompEductor) {
+    // Compact Inline 316L Stainless Compressed-Air Amplifier / Eductor + FRL Regulator (NO scroll or electric motor!)
+    const ampCollar = new THREE.Mesh(
+      new THREE.CylinderGeometry(stackR * 1.48, stackR * 1.48, 0.22, 24),
+      mats.steamerSS
+    );
+    ampCollar.position.set(0, 0.18, 0);
+    blowerGroup.add(ampCollar);
+    addBoltedFlange(blowerGroup, 0, 0.06, 0, "y", stackR, mats.flange, mats.bolt, mats.gasket, 8);
+    addBoltedFlange(blowerGroup, 0, stackBaseLocalY, 0, "y", stackR, mats.flange, mats.bolt, mats.gasket, 8);
+    const frlBox = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.16, 14), mats.conduit);
+    frlBox.position.set(stackR * 1.9, 0.18, 0.12);
+    blowerGroup.add(frlBox);
+    const airPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, stackR * 0.9, 10), mats.brass);
+    airPipe.rotation.z = Math.PI / 2;
+    airPipe.position.set(stackR * 1.45, 0.18, 0.06);
+    blowerGroup.add(airPipe);
+    const ped = new THREE.Mesh(new THREE.BoxGeometry(0.32, Math.max(0.08, bY - 0.04), 0.32), mats.darkSteel);
+    ped.position.set(0, -bY * 0.5, 0);
+    blowerGroup.add(ped);
+  } else if (isDualBypass) {
+    // 2× Parallel Vertical 3-Stage Tangential Bypass Blowers (Ametek Lamb) on Y-Manifold
+    const mani = new THREE.Mesh(new THREE.BoxGeometry(wheelR * 2.1, 0.18, scrollW * 1.15), mats.cpvcSolid);
+    mani.position.set(stackLocalX * 0.5, 0.02, 0);
+    blowerGroup.add(mani);
+    for (const dx of [-wheelR * 0.52, wheelR * 0.52]) {
+      const fanCan = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.20, 20), mats.steamerSS);
+      fanCan.position.set(stackLocalX * 0.5 + dx, 0.22, 0);
+      blowerGroup.add(fanCan);
+      const motorCan = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.082, 0.18, 18), mats.motor);
+      motorCan.position.set(stackLocalX * 0.5 + dx, 0.41, 0);
+      blowerGroup.add(motorCan);
     }
+    const yMerge = new THREE.Mesh(new THREE.CylinderGeometry(stackR, stackR * 1.35, 0.24, 24), mats.blower);
+    yMerge.position.set(stackLocalX, stackBaseLocalY - 0.12, 0);
+    blowerGroup.add(yMerge);
+    addBoltedFlange(blowerGroup, stackLocalX, stackBaseLocalY, 0, "y", stackR, mats.blowerFlange, mats.bolt, mats.gasket, 8);
+    const ped = new THREE.Mesh(new THREE.BoxGeometry(wheelR * 2.2, Math.max(0.08, bY - 0.08), scrollW * 1.2), mats.darkSteel);
+    ped.position.set(stackLocalX * 0.5, -bY * 0.5 - 0.04, 0);
+    blowerGroup.add(ped);
+  } else if (isRegenRing) {
+    // Die-Cast Aluminum Side-Channel Regenerative Ring Blower (Toroidal Finned Ring + Rear TEFC Motor)
+    const torusShell = new THREE.Mesh(new THREE.TorusGeometry(wheelR * 0.72, wheelR * 0.28, 18, 32), mats.steamerSS);
+    blowerGroup.add(torusShell);
+    const hubDisk = new THREE.Mesh(new THREE.CylinderGeometry(wheelR * 0.52, wheelR * 0.52, wheelR * 0.36, 24), mats.blowerDark);
+    hubDisk.rotation.x = Math.PI / 2;
+    blowerGroup.add(hubDisk);
+    const impGroup = buildImpellerGroup(wheelR * 0.65, wheelR * 0.32, mats.blowerDark, mats.blade, mats.blowerDark, mats.shroud);
+    blowerGroup.add(impGroup);
+    impellerMesh = impGroup;
+    const motorBody = new THREE.Mesh(new THREE.CylinderGeometry(motorR, motorR, motorLen, 24), mats.motor);
+    motorBody.rotation.x = Math.PI / 2;
+    motorBody.position.z = motorCenterZ * 0.78;
+    blowerGroup.add(motorBody);
+    const silOut = new THREE.Mesh(new THREE.CylinderGeometry(stackR, stackR * 1.12, stackBaseLocalY, 20), mats.steamerSS);
+    silOut.position.set(stackLocalX, stackBaseLocalY * 0.5, 0);
+    blowerGroup.add(silOut);
+    addBoltedFlange(blowerGroup, stackLocalX, stackBaseLocalY, 0, "y", stackR, mats.blowerFlange, mats.bolt, mats.gasket, 8);
+    const ped = new THREE.Mesh(new THREE.BoxGeometry(wheelR * 1.9, Math.max(0.08, bY - wheelR * 0.9), skidDepth * 0.8), mats.darkSteel);
+    ped.position.set(0, -bY + Math.max(0.08, bY - wheelR * 0.9) * 0.5, -wheelR * 0.35);
+    blowerGroup.add(ped);
+  } else {
+    // Standard Industrial Radial Scroll (Volute) Blower + 9-Blade Impeller + Rear TEFC Motor
+    const wrapperShape = new THREE.Shape();
+    wrapperShape.moveTo(vol.outerPts[0].x, vol.outerPts[0].y);
+    for (let i = 1; i < vol.outerPts.length; i++) wrapperShape.lineTo(vol.outerPts[i].x, vol.outerPts[i].y);
+    for (let i = vol.innerPts.length - 1; i >= 0; i--) wrapperShape.lineTo(vol.innerPts[i].x, vol.innerPts[i].y);
+    wrapperShape.closePath();
+    const wrapperGeo = new THREE.ExtrudeGeometry(wrapperShape, { depth: scrollW, bevelEnabled: false });
+    wrapperGeo.translate(0, 0, -scrollW * 0.5);
+    blowerGroup.add(new THREE.Mesh(wrapperGeo, mats.blower));
+
+    const plateShape = new THREE.Shape();
+    plateShape.moveTo(vol.outerPts[0].x, vol.outerPts[0].y);
+    for (let i = 1; i < vol.outerPts.length; i++) plateShape.lineTo(vol.outerPts[i].x, vol.outerPts[i].y);
+    plateShape.closePath();
+    const backPlateGeo = new THREE.ExtrudeGeometry(plateShape, { depth: wallT, bevelEnabled: false });
+    backPlateGeo.translate(0, 0, -scrollW * 0.5 - wallT);
+    blowerGroup.add(new THREE.Mesh(backPlateGeo, mats.blower));
+
+    const frontShape = new THREE.Shape();
+    frontShape.moveTo(vol.outerPts[0].x, vol.outerPts[0].y);
+    for (let i = 1; i < vol.outerPts.length; i++) frontShape.lineTo(vol.outerPts[i].x, vol.outerPts[i].y);
+    frontShape.closePath();
+    const frontHoleR = cut ? wheelR * 1.02 : ductR * 1.02;
+    const frontHole = new THREE.Path();
+    frontHole.absarc(0, 0, frontHoleR, 0, Math.PI * 2, true);
+    frontShape.holes.push(frontHole);
+    const frontPlateGeo = new THREE.ExtrudeGeometry(frontShape, { depth: wallT, bevelEnabled: false, curveSegments: 36 });
+    frontPlateGeo.translate(0, 0, scrollW * 0.5);
+    blowerGroup.add(new THREE.Mesh(frontPlateGeo, mats.blower));
+
+    if (cut) {
+      const bezel = new THREE.Mesh(
+        new THREE.TorusGeometry(frontHoleR, 0.010, 10, 40),
+        mats.blowerFlange
+      );
+      bezel.position.z = scrollW * 0.5 + wallT;
+      blowerGroup.add(bezel);
+    }
+
+    addBoltedFlange(blowerGroup, 0, 0, eyeZ, "z", ductR, mats.cpvcFlange, mats.bolt, mats.gasket, 8);
+    const bellLen = wallT + 0.032;
+    const suctionBell = new THREE.Mesh(
+      new THREE.CylinderGeometry(ductR, ductR * 1.16, bellLen, 28, 1, true),
+      cut ? mats.cutGlass : mats.cpvcSolid
+    );
+    suctionBell.rotation.x = Math.PI / 2;
+    suctionBell.position.z = scrollW * 0.5 + bellLen * 0.5 - 0.005;
+    blowerGroup.add(suctionBell);
+
+    const impGroup = buildImpellerGroup(wheelR, scrollW, mats.blowerDark, mats.blade, mats.blowerDark, mats.shroud);
+    blowerGroup.add(impGroup);
+    impellerMesh = impGroup;
+
+    const shaftLen = scrollW * 0.5 + wallT + shaftGap + 0.08;
+    const shaft = new THREE.Mesh(
+      new THREE.CylinderGeometry(wheelR * 0.085, wheelR * 0.085, shaftLen, 16),
+      mats.blade
+    );
+    shaft.rotation.x = Math.PI / 2;
+    shaft.position.z = -shaftLen * 0.5;
+    blowerGroup.add(shaft);
+
+    const sealCollar = new THREE.Mesh(
+      new THREE.CylinderGeometry(wheelR * 0.18, wheelR * 0.18, 0.04, 20),
+      mats.darkSteel
+    );
+    sealCollar.rotation.x = Math.PI / 2;
+    sealCollar.position.z = -scrollW * 0.5 - wallT - 0.02;
+    blowerGroup.add(sealCollar);
+
+    const bearingZ = -scrollW * 0.5 - wallT - shaftGap * 0.52;
+    const pillowBlock = new THREE.Mesh(
+      new THREE.BoxGeometry(wheelR * 0.44, wheelR * 0.42, wheelR * 0.24),
+      mats.darkSteel
+    );
+    pillowBlock.position.set(0, -wheelR * 0.06, bearingZ);
+    blowerGroup.add(pillowBlock);
+
+    const motorBody = new THREE.Mesh(
+      new THREE.CylinderGeometry(motorR, motorR, motorLen, 24),
+      mats.motor
+    );
+    motorBody.rotation.x = Math.PI / 2;
+    motorBody.position.z = motorCenterZ;
+    blowerGroup.add(motorBody);
+    const motorCap = new THREE.Mesh(
+      new THREE.CylinderGeometry(motorR * 0.92, motorR * 0.98, motorLen * 0.20, 24),
+      mats.motorFin
+    );
+    motorCap.rotation.x = Math.PI / 2;
+    motorCap.position.z = motorCenterZ - motorLen * 0.55;
+    blowerGroup.add(motorCap);
+    for (let rIdx = -2; rIdx <= 2; rIdx++) {
+      const fin = new THREE.Mesh(
+        new THREE.TorusGeometry(motorR * 1.01, 0.009, 6, 24),
+        mats.motorFin
+      );
+      fin.position.z = motorCenterZ + rIdx * (motorLen * 0.14);
+      blowerGroup.add(fin);
+    }
+    const jBox = new THREE.Mesh(
+      new THREE.BoxGeometry(motorR * 0.52, motorR * 0.36, motorR * 0.52),
+      mats.motorFin
+    );
+    jBox.position.set(0, motorR + motorR * 0.14, motorCenterZ + motorLen * 0.08);
+    blowerGroup.add(jBox);
+
+    const basePlateY = -bY + 0.025;
+    const skidCenterZ = (scrollW * 0.5 + (motorCenterZ - motorLen * 0.5)) * 0.5;
+    const baseSkid = new THREE.Mesh(
+      new THREE.BoxGeometry(wheelR * 2.15, 0.05, skidDepth),
+      mats.darkSteel
+    );
+    baseSkid.position.set(wheelR * 0.15, basePlateY, skidCenterZ);
+    blowerGroup.add(baseSkid);
+
+    const cradleH = Math.max(0.08, bY - vol.rBottom - 0.03);
+    const scrollCradle = new THREE.Mesh(
+      new THREE.BoxGeometry(wheelR * 1.10, cradleH, scrollW + 0.04),
+      mats.blowerDark
+    );
+    scrollCradle.position.set(0, -bY + 0.05 + cradleH * 0.5, 0);
+    blowerGroup.add(scrollCradle);
+
+    const riserTopY = -motorR + 0.02;
+    const riserH = Math.max(0.08, bY + riserTopY - 0.05);
+    const motorRiser = new THREE.Mesh(
+      new THREE.BoxGeometry(motorR * 1.65, riserH, shaftGap + motorLen * 0.92),
+      mats.blowerDark
+    );
+    motorRiser.position.set(0, -bY + 0.05 + riserH * 0.5, (bearingZ + motorCenterZ) * 0.5 - 0.04);
+    blowerGroup.add(motorRiser);
+
+    const rectFlange = new THREE.Mesh(
+      new THREE.BoxGeometry(vol.disW + 0.075, 0.026, scrollW + 0.075),
+      mats.blowerFlange
+    );
+    rectFlange.position.set(stackLocalX, vol.yDis, 0);
+    blowerGroup.add(rectFlange);
+
+    const rectBoltGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.042, 6);
+    const rbx = (vol.disW + 0.042) * 0.5;
+    const rbz = (scrollW + 0.042) * 0.5;
+    for (const sx of [-1, 0, 1]) {
+      for (const sz of [-1, 1]) {
+        const bt = new THREE.Mesh(rectBoltGeo, mats.bolt);
+        bt.position.set(stackLocalX + sx * rbx, vol.yDis, sz * rbz);
+        blowerGroup.add(bt);
+      }
+    }
+
+    const sqToRound = new THREE.Mesh(
+      buildRectToRoundGeometry(vol.disW, scrollW, stackR, transH, 36),
+      mats.blower
+    );
+    sqToRound.position.set(stackLocalX, vol.yDis + 0.012, 0);
+    blowerGroup.add(sqToRound);
+
+    addBoltedFlange(blowerGroup, stackLocalX, stackBaseLocalY, 0, "y", stackR, mats.blowerFlange, mats.bolt, mats.gasket, 8);
   }
 
-  const sqToRound = new THREE.Mesh(
-    buildRectToRoundGeometry(vol.disW, scrollW, stackR, transH, 36),
-    mats.blower
-  );
-  sqToRound.position.set(stackLocalX, vol.yDis + 0.012, 0);
-  blowerGroup.add(sqToRound);
-
-  const stackBaseLocalY = vol.yDis + 0.012 + transH;
-  addBoltedFlange(blowerGroup, stackLocalX, stackBaseLocalY, 0, "y", stackR, mats.blowerFlange, mats.bolt, mats.gasket, 8);
-
-  const stackH = clamp(pH - (bY + stackBaseLocalY) + 0.14, 0.85, 1.38);
+  const extraCondH = isDeluxe && project.deluxe_condensing_reclaimer ? 0.56 : 0;
+  const stackH = clamp(pH - (bY + stackBaseLocalY) + 0.14, 0.85, 1.38) + extraCondH;
   const { exitY: stackExitLocalY, extraRight: diluterRightExtra, diluterEntry, diluterTeeY } =
     addStackAndDiluter(blowerGroup, stackLocalX, stackBaseLocalY, 0, stackR, stackH);
   const stackExitWorldY = bY + stackExitLocalY;
@@ -2353,7 +2431,7 @@ export function buildIndustrialAssembly(
     impellerMesh,
     impellerDir: 1,
     diluterImpellerMesh,
-    architectureSignature: `inline|${isParallelBed ? "par" : "col"}|${isParallelVent ? "pv" : "sv"}|${isCompact ? "u" : "lin"}|${showSystems ? "sys" : "std"}|${hasDiluter ? "dil" : "nodil"}`,
+    architectureSignature: `inline|${isParallelBed ? "par" : "col"}|${isParallelVent ? "pv" : "sv"}|${blowerDrive}|${isCompact ? "u" : "lin"}|${showSystems ? "sys" : "std"}|${hasDiluter ? "dil" : "nodil"}|${project.deluxe_condensing_reclaimer ? "cond" : "nocond"}|${project.deluxe_stage1_heat_recovery ? "s1h" : "nos1h"}|${project.deluxe_variable_throat_vfd ? "vt" : "novt"}`,
     scaleSummary: `Scale 1:1 m · ${fmtDimMeters(env.length_m, units)} L × ${fmtDimMeters(env.width_m, units)} W × ${fmtDimMeters(env.height_m, units)} H`,
     disposableTextures,
   };

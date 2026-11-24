@@ -119,7 +119,10 @@ export default function KilnScrubDashboard() {
     if (!project) return;
     setBusy(true);
     try {
-      const fname = await downloadExportArtifact(format, project.input);
+      const fname = await downloadExportArtifact(
+        format,
+        evaluation?.design.input || project.input
+      );
       showToast(`Downloaded ${fname}`);
     } catch (err) {
       showToast(`Export failed: ${err instanceof Error ? err.message : String(err)}`);

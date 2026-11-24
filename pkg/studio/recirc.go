@@ -49,6 +49,8 @@ func workingSumpVolumeGal(cots COTSSummary, design model.ScrubberDesign) float64
 		return 90.0 // 110-gal Deluxe sloped-bottom baffled sump working fill
 	case "LOCAL-BRICK-SUMP":
 		return 55.0 // brick baffled settling sump (~208 L) working fill
+	case "LOCAL-DUAL-SUMP-POOL":
+		return 95.0 // dual ground-level brick sump pools (~360 L) working fill for zero-pump co-current scrubber
 	default:
 		gal := float64(design.PackedBed.SumpVolume) / model.CubicMetersPerUSGallon
 		return round1(math.Max(25.0, gal))
@@ -143,6 +145,10 @@ func BuildRecirculationPlan(project StudioProject, design model.ScrubberDesign, 
 	}
 	onceThroughGal := round1(onceThroughGPM * 60.0 * firingHrs)
 	evapMakeupGal := evapGPM * 60.0 * firingHrs
+	if p.IsDeluxe() && (p.DeluxeStage1HeatRecovery || p.DeluxeCondensingReclaimer) {
+		eco := computeDeluxeEcoPhysics(p, design)
+		evapMakeupGal = evapMakeupGal * (1.0 - eco.waterSavedFrac)
+	}
 	amortizedDumpGal := sumpGal / float64(firingsBeforeDump)
 	recircMakeupGal := round1(evapMakeupGal + amortizedDumpGal)
 

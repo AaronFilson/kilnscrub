@@ -1193,41 +1193,42 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 				WeightKg:    round2(88.0 + 6.5*skidLenFt),
 			},
 		)
-		// Phase 13: Optional Deluxe Energy & Water Saving Upgrades
+		// Phase 13/14: Optional Deluxe Energy & Water Saving Upgrades (duty-scaled via shared physics)
+		eco := computeDeluxeEcoPhysics(p, design)
 		if p.DeluxeCondensingReclaimer {
 			items = append(items, model.BOMItem{
 				Category:    "Deluxe Energy & Water Recovery",
-				Name:        "Closed-Loop Condensing Plume Abater & Distilled Water Reclaimer (Indirect Finned Coil)",
-				Material:    "316L SS / Grade 2 Titanium Condensing Finned Tube Bundle + Condensate Return Trap",
+				Name:        "Ceramic-Coated / Sintered-SiC Condensing Plume Abater & Acid-Condensate Reclaimer + Outdoor Dry-Cooler",
+				Material:    "Vitreous Ceramic-Enamel Coated Steel / Sintered SiC Condensing Tubes + Ceramic-Lined Derakane FRP Shell + Outdoor Closed-Loop Dry-Cooler + CPVC Condensate Trap",
 				Quantity:    1,
 				Unit:        "assy",
-				Spec:        "[DLX-COND-RECLAIM] Cools saturated 184 F Stage 3 exhaust down to ~120 F, condensing ~70% of Stage 1 evaporated water cleanly back into the sump, slashing visible winter plume >75%, and reclaiming low-grade studio hydronic heat",
-				UnitCostUSD: 1850.0,
-				WeightKg:    42.0,
+				Spec:        fmt.Sprintf("[DLX-COND-RECLAIM] Ceramic-lined / SiC condensing heat exchanger (NO bare 316L SS in warm pH 2.5-3.5 chloride condensate!) cools saturated exhaust to %.0f F rejecting ~%.1f kW to outdoor dry-cooler/hydronic loop, reclaiming acidic condensate via CPVC directly into the alkaline sump & slashing winter steam plume", eco.condExitF, eco.condKW),
+				UnitCostUSD: eco.condCostUSD,
+				WeightKg:    eco.condWeightKg,
 			})
 		}
 		if p.DeluxeVariableThroatVFD {
 			items = append(items, model.BOMItem{
 				Category:    "Deluxe Energy & Water Recovery",
 				Name:        "Auto-Actuated Variable-Throat Venturi Plug & VFD Turndown Interlock",
-				Material:    "Alloy C-276 / 316L SS Flooded-Disc Damper Plug + 24VDC Modulating Actuator",
+				Material:    "Alloy C-276 / Ceramic-Coated Flooded-Disc Damper Plug + 24VDC Modulating Actuator",
 				Quantity:    1,
 				Unit:        "assy",
-				Spec:        "[DLX-VAR-THROAT] Opens venturi throat during non-salting ramp/cooldown (dP ~19 -> ~3.8 inWC), throttling VFD to ~48% RPM for ~55-68% blower kWh savings and -10 dBA off-peak noise while locking 70 m/s during salting",
-				UnitCostUSD: 1450.0,
-				WeightKg:    16.0,
+				Spec:        fmt.Sprintf("[DLX-VAR-THROAT] Opens single-throat venturi during %.1f non-salting ramp/cooldown hrs (dP ~19 -> ~3.8 inWC), throttling VFD to ~48%% RPM for ~%.0f%% firing blower kWh savings and -10 dBA off-peak noise while locking 70 m/s during salting", eco.nonSaltHrs, eco.vfdSaveFrac*100.0),
+				UnitCostUSD: eco.vtCostUSD,
+				WeightKg:    eco.vtWeightKg,
 			})
 		}
 		if p.DeluxeStage1HeatRecovery {
 			items = append(items, model.BOMItem{
 				Category:    "Deluxe Energy & Water Recovery",
-				Name:        "Stage 1 Water-Jacketed Quench Pre-Cooler & Studio Heat Reclaimer",
-				Material:    "Double-Walled Alloy C-276 / 316L SS Pressurized Jacket Collar + Hydronic Relief Trim",
+				Name:        "Stage 1 Water-Jacketed Quench Pre-Cooler & Hydronic Heat Reclaimer (ASME PRV + E3 Flow Interlock)",
+				Material:    "Double-Walled Alloy C-276 / 316L SS Pressurized Jacket Collar + ASME PRV, Expansion Tank & Hydronic Flow Switch",
 				Quantity:    1,
 				Unit:        "assy",
-				Spec:        "[DLX-S1-WATER-JACKET] Harvests ~38-45% of Stage 1 kiln exhaust sensible heat BEFORE spray nozzles into studio hot water / hydronic heating, cutting Stage 1 evaporative water loss by ~40% and lowering blower power ~7%",
-				UnitCostUSD: 1650.0,
-				WeightKg:    34.0,
+				Spec:        fmt.Sprintf("[DLX-S1-WATER-JACKET] Mounted strictly below inlet flue nozzle; harvests ~%.1f kW sensible heat BEFORE spray nozzles into studio hot water / hydronic loop, cutting evap water loss ~30-40%% and blower load ~6%% (hydronic flow switch wired to E3 NFPA 86 bypass to prevent dry-out boiling!)", eco.s1KW),
+				UnitCostUSD: eco.s1CostUSD,
+				WeightKg:    eco.s1WeightKg,
 			})
 		}
 	}

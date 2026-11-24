@@ -464,9 +464,9 @@ func bindStudioOptionFlags(fs *flag.FlagSet) studioOptionFlags {
 		localRegion:               fs.String("local-region", "", "Local sourcing region: nairobi, mumbai, or general_local"),
 		localAlkali:               fs.String("local-alkali", "", "Local neutralizing alkali: soda_ash, slaked_lime, wood_ash_lye, or baking_soda"),
 		localDraftMode:            fs.String("local-draft-mode", "", "Passive velocity/draft driver for local_ceramic_masonry (natural_chimney|steam_ejector_subsonic|steam_ejector_lp|steam_ejector_hp)"),
-		localBoilerSource:         fs.String("local-boiler-source", "", "Steam boiler heat source (dedicated_hearth|kiln_exhaust_coil|stage1_water_jacket)"),
+		localBoilerSource:         fs.String("local-boiler-source", "", "Steam boiler heat source (dedicated_hearth|kiln_exhaust_coil|stage1_feedwater_preheater|stage1_water_jacket)"),
 		localPumpMode:             fs.String("local-pump-mode", "", "Off-grid water pump / sump mode (manual_treadle|steam_ppcp|steam_jet_syphon|sump_pool_no_pump)"),
-		deluxeCondensingReclaimer: fs.Bool("deluxe-condensing-reclaimer", false, "Deluxe upgrade: closed-loop condensing plume abater & water reclaimer"),
+		deluxeCondensingReclaimer: fs.Bool("deluxe-condensing-reclaimer", false, "Deluxe upgrade: ceramic-lined condensing plume abater & acid-condensate reclaimer"),
 		deluxeVariableThroatVFD:   fs.Bool("deluxe-variable-throat-vfd", false, "Deluxe upgrade: auto variable-throat venturi + VFD turndown"),
 		deluxeStage1HeatRecovery:  fs.Bool("deluxe-stage1-heat-recovery", false, "Deluxe upgrade: Stage 1 water-jacketed quench pre-cooler & heat reclaimer"),
 	}

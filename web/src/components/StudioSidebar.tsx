@@ -428,7 +428,7 @@ export function StudioSidebar({
               <>
                 <div className="control">
                   <label htmlFor="in-local-boiler-source">
-                    Steam Boiler Heat Source (Phase 13)
+                    Steam Boiler Heat Source (Phase 14)
                   </label>
                   <select
                     id="in-local-boiler-source"
@@ -438,18 +438,27 @@ export function StudioSidebar({
                     <option value="dedicated_hearth">
                       Dedicated Firebox / Separate Burner (Zero Flue Corrosion)
                     </option>
-                    <option value="stage1_water_jacket">
-                      Stage 1 Water-Jacket Collar (-42% Evap Water · 0 Extra Fuel)
+                    <option value="stage1_feedwater_preheater">
+                      0 psig Vented Stage 1 Feedwater Preheater (-13% Fuel · Safe on 6/20/60 psig)
                     </option>
-                    <option value="kiln_exhaust_coil">
-                      Kiln Exhaust Steam Coil (SiC Muffle / Alloy 625 · -32% Water)
+                    <option
+                      value="stage1_water_jacket"
+                      disabled={project.local_draft_mode === "steam_ejector_subsonic"}
+                    >
+                      ASME/IBR ≤25 L Pressurized Stage 1 Water Jacket (UG-28 · 20/60 psig)
+                    </option>
+                    <option
+                      value="kiln_exhaust_coil"
+                      disabled={project.local_draft_mode !== "steam_ejector_lp"}
+                    >
+                      Kiln Exhaust Monotube Coil (&lt;2 L, SiC Muffle · 20 psig LP Only)
                     </option>
                   </select>
                 </div>
 
                 <div className="control">
                   <label htmlFor="in-local-pump-mode">
-                    Off-Grid Water Pump / Sump Mode (Phase 13)
+                    Off-Grid Water Pump / Sump Mode (Phase 14)
                   </label>
                   <select
                     id="in-local-pump-mode"
@@ -460,19 +469,27 @@ export function StudioSidebar({
                     <option value="manual_treadle">
                       Manual Treadle / Hand Pump + 3.5 m Gravity Tank ($75)
                     </option>
-                    <option value="sump_pool_no_pump">
-                      No Pump / No Water Tower — Sump Pools Only! (Saves ~$180, 0 W)
+                    <option
+                      value="sump_pool_no_pump"
+                      disabled={project.local_draft_mode !== "steam_ejector_hp"}
+                    >
+                      No Pump / No Tower — Co-Current Flooded Sump Pools + 2-Stage Sieve (60 psig · ~97% HCl)
                     </option>
                     <option value="steam_ppcp">
                       Steam PPCP Auto-Recirc (Forbes Marshall / Spirax, 0 W Hot Sump)
                     </option>
                     <option value="steam_jet_syphon">
-                      Steam-Jet Cold Syphon + Boiler Feed Injector (&lt;120°F Cold Only)
+                      Steam-Jet Cold Syphon + Boiler Feed Injector (&lt;120°F Cold Drum Only)
                     </option>
                   </select>
                   {project.local_draft_mode === "steam_ejector_subsonic" && (
                     <span className="control-hint">
-                      6 psig subsonic cannot lift 3.5 m head or pull submerged sump slots — switch to 20 or 60 psig for steam pumps or sump-pool mode.
+                      6 psig subsonic uses manual/treadle lift — switch to 20 psig for steam pumps, or 60 psig for high-capture zero-pump sump-pool mode.
+                    </span>
+                  )}
+                  {project.local_draft_mode === "steam_ejector_lp" && (
+                    <span className="control-hint">
+                      Zero-pump co-current sump-pool mode requires 60 psig HP (~4.3 inWC draft); 20 psig LP supports Steam PPCP &amp; Cold Syphon.
                     </span>
                   )}
                 </div>
@@ -481,51 +498,62 @@ export function StudioSidebar({
           </div>
         ) : (
           <>
-            {isDeluxe && (
-              <div
-                id="panel-deluxe-eco-settings"
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 6,
-                  padding: 8,
-                  borderRadius: 6,
-                  background: "rgba(16, 185, 129, 0.08)",
-                  border: "1px solid rgba(16, 185, 129, 0.35)",
-                }}
-              >
-                <strong style={{ fontSize: 11.5, color: "#6ee7b7", textTransform: "uppercase" }}>
-                  Deluxe Energy &amp; Water Savers (Phase 13)
-                </strong>
-                <label className="checkbox-row">
-                  <input
-                    id="in-deluxe-condensing"
-                    type="checkbox"
-                    checked={!!project.deluxe_condensing_reclaimer}
-                    onChange={(e) => patch({ deluxe_condensing_reclaimer: e.target.checked })}
-                  />
-                  <span>Condensing Plume &amp; Water Reclaimer (+$1,850 · -70% evap water)</span>
-                </label>
-                <label className="checkbox-row">
-                  <input
-                    id="in-deluxe-var-throat"
-                    type="checkbox"
-                    checked={!!project.deluxe_variable_throat_vfd}
-                    onChange={(e) => patch({ deluxe_variable_throat_vfd: e.target.checked })}
-                  />
-                  <span>Auto Variable-Throat Venturi + VFD (+$1,450 · -60% kWh)</span>
-                </label>
-                <label className="checkbox-row">
-                  <input
-                    id="in-deluxe-s1-heat"
-                    type="checkbox"
-                    checked={!!project.deluxe_stage1_heat_recovery}
-                    onChange={(e) => patch({ deluxe_stage1_heat_recovery: e.target.checked })}
-                  />
-                  <span>Stage 1 Water-Jacket Pre-Cooler (+$1,650 · -40% water + heat)</span>
-                </label>
-              </div>
-            )}
+            {isDeluxe && (() => {
+              const vfdCompatible =
+                project.stage_alignment === "inline_id_blower" &&
+                project.venturi_layout === "single_throat" &&
+                (!project.blower_drive_option ||
+                  project.blower_drive_option === "industrial_radial_vfd" ||
+                  project.blower_drive_option === "compressor_air_atomize");
+              return (
+                <div
+                  id="panel-deluxe-eco-settings"
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                    padding: 8,
+                    borderRadius: 6,
+                    background: "rgba(16, 185, 129, 0.08)",
+                    border: "1px solid rgba(16, 185, 129, 0.35)",
+                  }}
+                >
+                  <strong style={{ fontSize: 11.5, color: "#6ee7b7", textTransform: "uppercase" }}>
+                    Deluxe Energy &amp; Water Savers (Phase 14)
+                  </strong>
+                  <label className="checkbox-row">
+                    <input
+                      id="in-deluxe-condensing"
+                      type="checkbox"
+                      checked={!!project.deluxe_condensing_reclaimer}
+                      onChange={(e) => patch({ deluxe_condensing_reclaimer: e.target.checked })}
+                    />
+                    <span>Ceramic-Coated / SiC Condensing Plume &amp; Acid-Condensate Reclaimer (150°F + Dry-Cooler)</span>
+                  </label>
+                  <label className="checkbox-row" title={!vfdCompatible ? "Requires Inline ID Blower + Single Throat Venturi + VFD drive" : ""}>
+                    <input
+                      id="in-deluxe-var-throat"
+                      type="checkbox"
+                      disabled={!vfdCompatible}
+                      checked={!!project.deluxe_variable_throat_vfd}
+                      onChange={(e) => patch({ deluxe_variable_throat_vfd: e.target.checked })}
+                    />
+                    <span style={!vfdCompatible ? { opacity: 0.55 } : undefined}>
+                      Auto Variable-Throat Venturi + VFD Turndown (-55–65% kWh)
+                    </span>
+                  </label>
+                  <label className="checkbox-row">
+                    <input
+                      id="in-deluxe-s1-heat"
+                      type="checkbox"
+                      checked={!!project.deluxe_stage1_heat_recovery}
+                      onChange={(e) => patch({ deluxe_stage1_heat_recovery: e.target.checked })}
+                    />
+                    <span>Stage 1 Water-Jacket Pre-Cooler (ASME PRV + E3 Flow Interlock · -30–40% water)</span>
+                  </label>
+                </div>
+              );
+            })()}
             <div className="control">
               <label>Corrosion Tier</label>
               <div className="seg-group">

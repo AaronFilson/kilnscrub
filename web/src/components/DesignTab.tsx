@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { StudioEvaluation } from "@/types/kilnscrub";
 import { fmt, fmtUSD, kToF, mToIn } from "@/lib/api";
 import { Viewport3D } from "./Viewport3D";
@@ -27,6 +27,14 @@ export function DesignTab({ evaluation, units, active }: DesignTabProps) {
   const { project, design, cots, urban, frugal, shop_plan: plan } = evaluation;
   const isLocal = project.build_path === "local_ceramic_masonry";
   const isDeluxe = project.build_path === "custom_fab_deluxe";
+  const prevDeluxeRef = useRef(isDeluxe);
+  useEffect(() => {
+    // Auto-enable systems overlay when first entering Deluxe mode, while allowing users to toggle it OFF!
+    if (isDeluxe && !prevDeluxeRef.current) {
+      setShowSystems3D(true);
+    }
+    prevDeluxeRef.current = isDeluxe;
+  }, [isDeluxe]);
   const quenchOutF = kToF(design.quench.outlet_temp_k);
 
   const dim = (inches: number) =>
@@ -165,8 +173,22 @@ export function DesignTab({ evaluation, units, active }: DesignTabProps) {
           </div>
           <div className="kpi-value">{fmt(quenchOutF, 1)} °F</div>
           <div className="kpi-sub">
-            Spray: {fmt(design.quench.total_spray_water_gpm, 2)} <span className="unit-literal">GPM</span> · Evap{" "}
-            {fmt(design.quench.evaporated_water_gpm, 2)}
+            {isLocal && frugal ? (
+              frugal.has_overhead_tank === false ? (
+                <>Co-Current Flooded Ejector · 0 Tower</>
+              ) : (
+                <>
+                  Gravity Rose: {fmt(frugal.spray_flow_gpm, 2)}{" "}
+                  <span className="unit-literal">GPM</span> ({fmt(frugal.spray_flow_lpm, 1)} L/min)
+                </>
+              )
+            ) : (
+              <>
+                Spray: {fmt(design.quench.total_spray_water_gpm, 2)}{" "}
+                <span className="unit-literal">GPM</span> · Evap{" "}
+                {fmt(design.quench.evaporated_water_gpm, 2)}
+              </>
+            )}
           </div>
           <span className={`pill ${quenchOutF < 200 ? "ok" : "danger"}`}>
             {isLocal ? "All-Ceramic >1800°F" : "CPVC 200°F Cutoff"}
@@ -174,20 +196,44 @@ export function DesignTab({ evaluation, units, active }: DesignTabProps) {
         </div>
 
         <div className="kpi-card" style={{ ["--kpi-accent" as string]: "var(--accent-venturi)" }}>
-          <div className="kpi-label">
-            Venturi Cut <span className="unit-literal">d₅₀</span> (<span className="unit-literal">NaCl</span>)
-          </div>
-          <div className="kpi-value">
-            {fmt(design.venturi.cut_diameter_d50_um, 2)} <span className="unit-literal">µm</span>
-          </div>
-          <div className="kpi-sub">
-            <span className="unit-literal">NaCl</span>{" "}
-            {fmt(design.venturi.overall_nacl_fume_efficiency * 100, 1)}% · Ash{" "}
-            {fmt(design.venturi.overall_wood_ash_efficiency * 100, 1)}%
-          </div>
-          <span className="pill info">
-            ΔP {fmt(design.venturi.pressure_drop_in_wc, 1)} <span className="unit-literal">inWC</span>
-          </span>
+          {isLocal && frugal ? (
+            <>
+              <div className="kpi-label">
+                Submicron <span className="unit-literal">NaCl</span> Capture
+              </div>
+              <div className="kpi-value">
+                {fmt(frugal.submicron_nacl_capture_pct, 0)}%
+              </div>
+              <div className="kpi-sub">
+                Ash {fmt(frugal.coarse_ash_capture_pct, 1)}% · Margin{" "}
+                {frugal.draft_margin_inwc >= 0 ? "+" : ""}
+                {fmt(frugal.draft_margin_inwc, 2)}{" "}
+                <span className="unit-literal">inWC</span>
+              </div>
+              <span className={`pill ${frugal.draft_feasible ? "ok" : "danger"}`}>
+                {frugal.steam_enabled
+                  ? `${fmt(frugal.steam_pressure_psig, 0)} psig Steam-Jet`
+                  : "Passive Buoyancy"}
+              </span>
+            </>
+          ) : (
+            <>
+              <div className="kpi-label">
+                Venturi Cut <span className="unit-literal">d₅₀</span> (<span className="unit-literal">NaCl</span>)
+              </div>
+              <div className="kpi-value">
+                {fmt(design.venturi.cut_diameter_d50_um, 2)} <span className="unit-literal">µm</span>
+              </div>
+              <div className="kpi-sub">
+                <span className="unit-literal">NaCl</span>{" "}
+                {fmt(design.venturi.overall_nacl_fume_efficiency * 100, 1)}% · Ash{" "}
+                {fmt(design.venturi.overall_wood_ash_efficiency * 100, 1)}%
+              </div>
+              <span className="pill info">
+                ΔP {fmt(design.venturi.pressure_drop_in_wc, 1)} <span className="unit-literal">inWC</span>
+              </span>
+            </>
+          )}
         </div>
 
         <div className="kpi-card" style={{ ["--kpi-accent" as string]: "var(--accent-packed)" }}>
@@ -290,10 +336,10 @@ export function DesignTab({ evaluation, units, active }: DesignTabProps) {
                   <button
                     id="btn-systems-3d"
                     type="button"
-                    className={`btn btn-sm ${showSystems3D || isDeluxe ? "btn-accent" : ""}`}
+                    className={`btn btn-sm ${showSystems3D ? "btn-accent" : ""}`}
                     onClick={() => setShowSystems3D((v) => !v)}
                   >
-                    Skid, Pump &amp; Baffling: {showSystems3D || isDeluxe ? "ON" : "OFF"}
+                    Skid, Pump &amp; Baffling: {showSystems3D ? "ON" : "OFF"}
                   </button>
                 )}
                 <button

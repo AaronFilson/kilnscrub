@@ -188,6 +188,23 @@ func assessElectrical(project StudioProject, design model.ScrubberDesign) Electr
 		}
 	}
 	if project.BuildPath == BuildPathLocalCeramic {
+		// Phase 14: Steam-driven pumps (PPCP / Syphon) and zero-pump sump-pool mode draw 0 W electric
+		// even when ZeroElectricity is not explicitly checked!
+		if project.IsSteamEjector() && project.EffectiveLocalPumpMode() != LocalPumpManualTreadle {
+			return ElectricalAssessment{
+				Status:          StatusOK,
+				RequiredVoltage: 0,
+				RequiredAmps:    0,
+				CircuitLabel:    "0V / 0W — Steam-Driven Off-Grid Ceramic Mode (Zero Electricity)",
+				Summary: fmt.Sprintf("100%% steam-driven off-grid operation (0 V, 0 A, 0 W): certified %.0f psig steam-jet ejector + %s eliminate both electric blowers and electric water pumps.", func() float64 {
+					if project.LocalDraftMode == LocalDraftSteamEjectorHP {
+						return 60
+					}
+					return 20
+				}(), project.EffectiveLocalPumpMode()),
+				FitsAvailableVoltage: true,
+			}
+		}
 		reqV := 230
 		if project.AvailableVoltage == 120 {
 			reqV = 120
@@ -376,12 +393,23 @@ func assessWater(project StudioProject, design model.ScrubberDesign) WaterAssess
 	steamNote := ""
 	if project.IsLocalCeramic() && project.IsSteamEjector() {
 		fr := EvaluateFrugal(project, design)
+		if fr.BoilerWaterSavedPct > 0 {
+			evapGPM *= (1.0 - fr.BoilerWaterSavedPct/100.0)
+			steamNote += fmt.Sprintf(" Stage 1/flue heat recovery cuts Stage 1 evaporative water loss by %.0f%%.", fr.BoilerWaterSavedPct)
+		}
 		if fr.SteamEnabled && fr.SteamWaterLHr > 0 {
 			steamGPM := fr.SteamWaterLHr / 60.0 / 3.785411784
 			reqGPM = round2(reqGPM + steamGPM)
 			steamTotalGal := round1(steamGPM * 60.0 * project.FiringDurationHours)
 			sumpFillGal += steamTotalGal
-			steamNote = fmt.Sprintf(" Includes +%.1f L/hr (+%.1f gal/firing) clean boiler/coil makeup water for the %.0f psig steam-jet ejector.", fr.SteamWaterLHr, steamTotalGal, fr.SteamPressurePSIG)
+			steamNote += fmt.Sprintf(" Includes +%.1f L/hr (+%.1f gal/firing) clean boiler/coil makeup water for the %.0f psig steam-jet ejector.", fr.SteamWaterLHr, steamTotalGal, fr.SteamPressurePSIG)
+		}
+	}
+	if project.IsDeluxe() && (project.DeluxeStage1HeatRecovery || project.DeluxeCondensingReclaimer) {
+		eco := computeDeluxeEcoPhysics(project, design)
+		if eco.waterSavedFrac > 0 {
+			evapGPM *= (1.0 - eco.waterSavedFrac)
+			steamNote += fmt.Sprintf(" Deluxe Eco water-recovery upgrades cut evaporative makeup demand by %.0f%%.", eco.waterSavedFrac*100.0)
 		}
 	}
 	totalGal := round1(sumpFillGal + (evapGPM+blowdownGPM)*60.0*project.FiringDurationHours)
@@ -635,6 +663,21 @@ func assessPlume(project StudioProject, design model.ScrubberDesign) PlumeAssess
 	}
 	mDry := math.Max(1e-6, mTotal-mH2O)
 	wExh := mH2O / mDry
+
+	// Phase 14: If Deluxe Ceramic-Coated / SiC Condensing Plume Abater is active,
+	// lower exhaust state to saturated 150 F (65.6 C) so visible winter plume reach
+	// and reheat demand accurately reflect moisture knocked out by the condenser.
+	if project.IsDeluxe() && project.DeluxeCondensingReclaimer {
+		eco := computeDeluxeEcoPhysics(project, design)
+		exhaustF = eco.condExitF
+		dewF = eco.condExitF
+		tExhK = model.FahrenheitToKelvin(exhaustF)
+		if tExhK <= tAmbK+1.0 {
+			tExhK = tAmbK + 1.0
+		}
+		wExh = humidityRatioSat(tExhK, pAmb)
+		mH2O = mDry * wExh
+	}
 
 	// 1. Check whether unheated cold dilution stays below saturation along the mixing line.
 	coldDilutionWorks := true

@@ -37,10 +37,11 @@ const (
 	LocalDraftSteamEjectorLP       = "steam_ejector_lp"
 	LocalDraftSteamEjectorHP       = "steam_ejector_hp"
 
-	// Phase 13 local ceramic boiler heat source & off-grid steam water pump / sump-pool constants.
-	LocalBoilerDedicatedHearth   = "dedicated_hearth"
-	LocalBoilerKilnExhaustCoil   = "kiln_exhaust_coil"
-	LocalBoilerStage1WaterJacket = "stage1_water_jacket"
+	// Phase 13/14 local ceramic boiler heat source & off-grid steam water pump / sump-pool constants.
+	LocalBoilerDedicatedHearth          = "dedicated_hearth"
+	LocalBoilerKilnExhaustCoil          = "kiln_exhaust_coil"
+	LocalBoilerStage1FeedwaterPreheater = "stage1_feedwater_preheater"
+	LocalBoilerStage1WaterJacket        = "stage1_water_jacket"
 
 	LocalPumpManualTreadle  = "manual_treadle"
 	LocalPumpSteamPPCP      = "steam_ppcp"
@@ -471,10 +472,10 @@ func (p StudioProject) HasPressurizedSteam20Plus() bool {
 		p.LocalDraftMode == LocalDraftSteamEjectorHP
 }
 
-// EffectiveLocalBoilerSource returns the canonical Phase 13 boiler heat source.
+// EffectiveLocalBoilerSource returns the canonical Phase 13/14 boiler heat source.
 func (p StudioProject) EffectiveLocalBoilerSource() string {
 	switch p.LocalBoilerSource {
-	case LocalBoilerKilnExhaustCoil, LocalBoilerStage1WaterJacket, LocalBoilerDedicatedHearth:
+	case LocalBoilerKilnExhaustCoil, LocalBoilerStage1FeedwaterPreheater, LocalBoilerStage1WaterJacket, LocalBoilerDedicatedHearth:
 		return p.LocalBoilerSource
 	default:
 		return LocalBoilerDedicatedHearth
@@ -718,10 +719,10 @@ func (p StudioProject) Validate() error {
 			LocalDraftNaturalChimney, LocalDraftSteamEjectorSubsonic, LocalDraftSteamEjectorLP, LocalDraftSteamEjectorHP, p.LocalDraftMode)
 	}
 	switch p.LocalBoilerSource {
-	case "", LocalBoilerDedicatedHearth, LocalBoilerKilnExhaustCoil, LocalBoilerStage1WaterJacket:
+	case "", LocalBoilerDedicatedHearth, LocalBoilerKilnExhaustCoil, LocalBoilerStage1FeedwaterPreheater, LocalBoilerStage1WaterJacket:
 	default:
-		return fmt.Errorf("local_boiler_source must be %q, %q, or %q, got %q",
-			LocalBoilerDedicatedHearth, LocalBoilerKilnExhaustCoil, LocalBoilerStage1WaterJacket, p.LocalBoilerSource)
+		return fmt.Errorf("local_boiler_source must be %q, %q, %q, or %q, got %q",
+			LocalBoilerDedicatedHearth, LocalBoilerKilnExhaustCoil, LocalBoilerStage1FeedwaterPreheater, LocalBoilerStage1WaterJacket, p.LocalBoilerSource)
 	}
 	if p.LocalBoilerSource != "" && p.LocalBoilerSource != LocalBoilerDedicatedHearth {
 		if p.BuildPath != "" && p.BuildPath != BuildPathLocalCeramic {
@@ -729,6 +730,14 @@ func (p StudioProject) Validate() error {
 		}
 		if !p.IsSteamEjector() {
 			return fmt.Errorf("local_boiler_source=%q requires a steam-jet local_draft_mode (steam_ejector_subsonic, steam_ejector_lp, or steam_ejector_hp)", p.LocalBoilerSource)
+		}
+		if p.LocalBoilerSource == LocalBoilerKilnExhaustCoil && p.LocalDraftMode != LocalDraftSteamEjectorLP {
+			return fmt.Errorf("local_boiler_source=%q (<2 L seamless monotube coil) is restricted strictly to 20 psig local_draft_mode=%q (banned at 60 psig per certified baby-boiler rule; use %q for 6 psig/60 psig)",
+				LocalBoilerKilnExhaustCoil, LocalDraftSteamEjectorLP, LocalBoilerStage1FeedwaterPreheater)
+		}
+		if p.LocalBoilerSource == LocalBoilerStage1WaterJacket && !p.HasPressurizedSteam20Plus() {
+			return fmt.Errorf("local_boiler_source=%q (ASME/IBR-certified <=25 L shop pressurized jacket) requires >=20 psig steam (steam_ejector_lp or steam_ejector_hp); use %q (0 psig vented economizer) for 6 psig subsonic mode",
+				LocalBoilerStage1WaterJacket, LocalBoilerStage1FeedwaterPreheater)
 		}
 	}
 	switch p.LocalPumpMode {
@@ -741,12 +750,29 @@ func (p StudioProject) Validate() error {
 		if p.BuildPath != "" && p.BuildPath != BuildPathLocalCeramic {
 			return fmt.Errorf("local_pump_mode=%q requires build_path=%q (got %q)", p.LocalPumpMode, BuildPathLocalCeramic, p.BuildPath)
 		}
-		if !p.HasPressurizedSteam20Plus() {
-			return fmt.Errorf("local_pump_mode=%q requires >=20 psig steam (local_draft_mode=steam_ejector_lp or steam_ejector_hp; 0/6 psig cannot overcome 3.5 m head or submerged sump-pool suction)", p.LocalPumpMode)
+		if p.LocalPumpMode == LocalPumpSumpPoolNoPump {
+			if p.LocalDraftMode != LocalDraftSteamEjectorHP {
+				return fmt.Errorf("local_pump_mode=%q (co-current drenched trough + 2-stage ceramic sieve tray) requires 60 psig local_draft_mode=%q (~4.3 inWC draft; 20 psig LP only yields ~1.0 inWC)",
+					LocalPumpSumpPoolNoPump, LocalDraftSteamEjectorHP)
+			}
+		} else if !p.HasPressurizedSteam20Plus() {
+			return fmt.Errorf("local_pump_mode=%q requires >=20 psig steam (local_draft_mode=steam_ejector_lp or steam_ejector_hp; 0/6 psig cannot overcome 3.5 m head)", p.LocalPumpMode)
 		}
 	}
 	if (p.DeluxeCondensingReclaimer || p.DeluxeVariableThroatVFD || p.DeluxeStage1HeatRecovery) && p.BuildPath != BuildPathCustomFabDeluxe {
 		return fmt.Errorf("deluxe energy/water-saving upgrades require build_path=%q (got %q)", BuildPathCustomFabDeluxe, p.BuildPath)
+	}
+	if p.DeluxeVariableThroatVFD {
+		if p.StageAlignment == StageAlignmentEductorDryFan {
+			return fmt.Errorf("deluxe_variable_throat_vfd requires stage_alignment=%q (incompatible with %q)", StageAlignmentInlineIDBlower, StageAlignmentEductorDryFan)
+		}
+		if p.VenturiLayout == VenturiLayoutParallelMiniVenturis {
+			return fmt.Errorf("deluxe_variable_throat_vfd requires venturi_layout=%q (incompatible with %q)", VenturiLayoutSingleThroat, VenturiLayoutParallelMiniVenturis)
+		}
+		if p.BlowerDriveOption != "" && p.BlowerDriveOption != BlowerDriveIndustrialRadialVFD && p.BlowerDriveOption != BlowerDriveCompressorAirAtomize {
+			return fmt.Errorf("deluxe_variable_throat_vfd requires a VFD blower drive (%q or %q, got %q)",
+				BlowerDriveIndustrialRadialVFD, BlowerDriveCompressorAirAtomize, p.BlowerDriveOption)
+		}
 	}
 	switch p.CorrosionTier {
 	case CorrosionTierStandard316L, CorrosionTierHobby316L, CorrosionTierHeavyC276FRP:

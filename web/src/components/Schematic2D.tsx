@@ -19,8 +19,10 @@ export function Schematic2D({
   const isLocal = project.build_path === "local_ceramic_masonry";
   const isSteam = isLocal && !!frugal?.steam_enabled;
   const isSubsonic = isSteam && frugal?.draft_mode === "steam_ejector_subsonic";
+  const isSumpPoolOnly = isSteam && frugal?.has_overhead_tank === false;
   const isEductor = !isLocal && project.stage_alignment === "eductor_dry_fan";
   const isParallel = !isLocal && project.packed_bed_layout === "parallel_manifold";
+  const isDeluxe = project.build_path === "custom_fab_deluxe";
 
   const dim = (inches: number) =>
     units === "in" ? `${inches.toFixed(1)}"` : `${Math.round(inches * 25.4)} mm`;
@@ -242,22 +244,32 @@ export function Schematic2D({
         </>
       )}
       <text x="641" y="96" textAnchor="middle" fill="#34d399" fontSize="11" fontWeight="700">
-        {isLocal
-          ? "STAGE 3: STONEWARE TOWER"
-          : isParallel
-            ? "STAGE 3: UNISEAL BUNDLE"
-            : "STAGE 3: PACKED COLUMN"}
+        {isSumpPoolOnly
+          ? "STAGE 3: TROUGH + SIEVE"
+          : isLocal
+            ? "STAGE 3: STONEWARE TOWER"
+            : isParallel
+              ? "STAGE 3: UNISEAL BUNDLE"
+              : "STAGE 3: PACKED COLUMN"}
       </text>
       <text x="641" y="114" textAnchor="middle" fill="#cbd5e1" fontSize="9.5" fontFamily="monospace">
-        {isLocal
-          ? `${dim(frugal?.bed_diameter_in || 24)} wide · ${fmt(frugal?.hcl_removal_pct, 1)}% HCl`
-          : `${dim(evaluation.cots.packed_column.nominal_in)} · ${fmt(evaluation.cots.actual_percent_of_flood, 1)}% flood`}
+        {isSumpPoolOnly
+          ? `1.4m Drenched · ${fmt(frugal?.hcl_removal_pct, 1)}% HCl`
+          : isLocal
+            ? `${dim(frugal?.bed_diameter_in || 24)} wide · ${fmt(frugal?.hcl_removal_pct, 1)}% HCl`
+            : `${dim(evaluation.cots.packed_column.nominal_in)} · ${fmt(evaluation.cots.actual_percent_of_flood, 1)}% flood`}
       </text>
       <text x="641" y="212" textAnchor="middle" fill="#a7f3d0" fontSize="9.5" fontFamily="monospace">
-        {isLocal ? "1\" Stoneware Rings" : evaluation.architecture_options.packing_media.label.slice(0, 22)}
+        {isSumpPoolOnly
+          ? "2-Stage 0.5\" Ceramic Sieve"
+          : isLocal
+            ? "1\" Stoneware Rings"
+            : evaluation.architecture_options.packing_media.label.slice(0, 22)}
       </text>
       <text x="641" y="334" textAnchor="middle" fill="#7dd3fc" fontSize="9.5" fontFamily="monospace">
-        SUMP pH 7.5–8.5 ({fmt(evaluation.recirculation.sump_volume_gal, 0)} gal)
+        {isSumpPoolOnly
+          ? `DUAL SUMP POOLS (${fmt(evaluation.recirculation.sump_volume_gal, 0)} gal)`
+          : `SUMP pH 7.5–8.5 (${fmt(evaluation.recirculation.sump_volume_gal, 0)} gal)`}
       </text>
 
       <line
@@ -270,7 +282,7 @@ export function Schematic2D({
         markerEnd="url(#arr2d)"
       />
 
-      {/* Stage 4: Blower / Chimney + Stack */}
+      {/* Stage 4: Blower / Eductor Stack / Chimney */}
       <rect
         x="784"
         y="46"
@@ -282,17 +294,21 @@ export function Schematic2D({
         strokeWidth="2.2"
       />
       <text x="852" y="70" textAnchor="middle" fill="#7dd3fc" fontSize="11" fontWeight="700">
-        {isLocal ? "STAGE 4: CHIMNEY" : "STAGE 4: BLOWER"}
+        {isLocal ? "STAGE 4: CHIMNEY" : isEductor ? "EXHAUST STACK" : "STAGE 4: BLOWER"}
       </text>
       <text x="852" y="90" textAnchor="middle" fill="#e2e8f0" fontSize="9.5" fontFamily="monospace">
         {isLocal
           ? `${fmt(frugal?.chimney_height_m, 1)} m (${fmt(frugal?.chimney_height_ft, 0)} ft)`
-          : `${fmt(design.blower.flow_acfm, 0)} ACFM`}
+          : isEductor
+            ? `No Wet Fan (+${fmt(evaluation.architecture_options.eductor.positive_pressure_inwc, 2)}")`
+            : `${fmt(design.blower.flow_acfm, 0)} ACFM`}
       </text>
       <text x="852" y="108" textAnchor="middle" fill="#93c5fd" fontSize="9.5" fontFamily="monospace">
         {isLocal
           ? `Avail ${fmt(frugal?.available_draft_inwc, 3)}"`
-          : `${fmt(design.blower.total_static_pressure_in_wc, 1)} inWC · ${design.blower.recommended_motor_hp} HP`}
+          : isEductor
+            ? `Dry Motive @ Stage 2`
+            : `${fmt(design.blower.total_static_pressure_in_wc, 1)} inWC · ${design.blower.recommended_motor_hp} HP`}
       </text>
       <text x="852" y="128" textAnchor="middle" fill="#6ee7b7" fontSize="9.5" fontFamily="monospace">
         {fmt(evaluation.urban.noise.property_line_dba, 1)} dBA @ {evaluation.urban.noise.property_line_ft}ft
@@ -300,19 +316,33 @@ export function Schematic2D({
       {isLocal && (
         <g>
           <rect
-            x="802"
-            y="168"
-            width="100"
-            height="66"
+            x="798"
+            y="164"
+            width="108"
+            height="72"
             rx="4"
             fill="#13344d"
-            stroke="#38bdf8"
+            stroke={isSumpPoolOnly ? "#34d399" : "#38bdf8"}
           />
-          <text x="852" y="196" textAnchor="middle" fill="#bae6fd" fontSize="9.5" fontWeight="700">
-            {fmt(frugal?.gravity_tank_liters, 0)} L TANK
+          <text x="852" y="192" textAnchor="middle" fill="#bae6fd" fontSize="9.3" fontWeight="700">
+            {isSumpPoolOnly ? "0-PUMP POOLS" : `${fmt(frugal?.gravity_tank_liters, 0)} L TANK`}
           </text>
-          <text x="852" y="213" textAnchor="middle" fill="#93c5fd" fontSize="8.8" fontFamily="monospace">
-            3.5m Braced Stand
+          <text x="852" y="209" textAnchor="middle" fill="#93c5fd" fontSize="8.6" fontFamily="monospace">
+            {isSumpPoolOnly ? "0 Tower · 0 Pumps" : "3.5m Braced Stand"}
+          </text>
+          <text x="852" y="225" textAnchor="middle" fill="#86efac" fontSize="8.2" fontFamily="monospace">
+            {isSteam ? (frugal?.boiler_source || "dedicated_hearth").slice(0, 16) : "Passive Reheat"}
+          </text>
+        </g>
+      )}
+      {isDeluxe && project.deluxe_condensing_reclaimer && (
+        <g>
+          <rect x="798" y="164" width="108" height="60" rx="4" fill="#10332b" stroke="#34d399" />
+          <text x="852" y="188" textAnchor="middle" fill="#6ee7b7" fontSize="9" fontWeight="700">
+            CERAMIC/SiC HX
+          </text>
+          <text x="852" y="206" textAnchor="middle" fill="#a7f3d0" fontSize="8.5" fontFamily="monospace">
+            150°F + Dry-Cooler
           </text>
         </g>
       )}

@@ -80,13 +80,21 @@ export function reconcileProject(proj: StudioProject): StudioProject {
       next.local_draft_mode === "steam_ejector_subsonic" ||
       next.local_draft_mode === "steam_ejector_lp" ||
       next.local_draft_mode === "steam_ejector_hp";
-    const has20Plus =
-      next.local_draft_mode === "steam_ejector_lp" ||
-      next.local_draft_mode === "steam_ejector_hp";
+    const isLP = next.local_draft_mode === "steam_ejector_lp";
+    const isHP = next.local_draft_mode === "steam_ejector_hp";
+    const has20Plus = isLP || isHP;
     if (!isSteam) {
       next.local_boiler_source = "dedicated_hearth";
+    } else if (next.local_boiler_source === "kiln_exhaust_coil" && !isLP) {
+      // Phase 14 No-Monotube-at-60-psig rule: kiln_exhaust_coil is strictly 20 psig LP (<2 L)
+      next.local_boiler_source = isHP ? "stage1_water_jacket" : "stage1_feedwater_preheater";
+    } else if (next.local_boiler_source === "stage1_water_jacket" && !has20Plus) {
+      next.local_boiler_source = "stage1_feedwater_preheater";
     }
     if (!has20Plus) {
+      next.local_pump_mode = "manual_treadle";
+    } else if (next.local_pump_mode === "sump_pool_no_pump" && !isHP) {
+      // High-capture co-current sump-pool mode strictly requires 60 psig HP draft
       next.local_pump_mode = "manual_treadle";
     }
   }
@@ -108,6 +116,20 @@ export function reconcileProject(proj: StudioProject): StudioProject {
     ) {
       next.blower_drive_option = "industrial_radial_vfd";
     }
+  }
+
+  // Phase 14: Variable-throat VFD strictly requires inline_id_blower + single_throat + VFD drive
+  const hasVFDDrive =
+    !next.blower_drive_option ||
+    next.blower_drive_option === "industrial_radial_vfd" ||
+    next.blower_drive_option === "compressor_air_atomize";
+  if (
+    next.deluxe_variable_throat_vfd &&
+    (next.stage_alignment !== "inline_id_blower" ||
+      next.venturi_layout !== "single_throat" ||
+      !hasVFDDrive)
+  ) {
+    next.deluxe_variable_throat_vfd = false;
   }
 
   if (next.vapor_glaze_mode === "salt") {

@@ -78,11 +78,24 @@ func RenderShopPlanSVG(plan ShopPlan) []byte {
 		if plan.SteamEjectorEnabled {
 			stage4Title = "Steam-Jet & Stack"
 		}
+		hasTower := true
+		for _, pt := range plan.Parts {
+			if pt.SKU == "LOCAL-DUAL-SUMP-POOL" {
+				hasTower = false
+				break
+			}
+		}
+		stage3Box := stageBox{452, 138, 210, 140, "[4] STAGE 3", "Wide Stoneware Bed", "1\" Ceramic Rings + Mist", "#22c55e"}
+		waterBox := stageBox{702, 146, 175, 124, "[6-7] GRAVITY", "3.5m Overhead Tank", "Closed-Loop Sump & Pump", "#38bdf8"}
+		if !hasTower {
+			stage3Box = stageBox{452, 138, 210, 140, "[4] STAGE 3", "Co-Current Trough", "Drenched Rings + 2x Sieve", "#22c55e"}
+			waterBox = stageBox{702, 146, 175, 124, "[5-6] SUMP POOLS", "Zero-Pump Basins", "Flooded Ejector (0 Tower)", "#38bdf8"}
+		}
 		boxes = []stageBox{
 			{52, 162, 150, 96, "[1] INLET", "Refractory Flue", "Firebrick (>=36\" clr)", "#f97316"},
-			{238, 148, 175, 118, "[2-3] STAGE 1-2", "Masonry Quench", "Gravity Spray & Baffles", "#f59e0b"},
-			{452, 138, 210, 140, "[4] STAGE 3", "Wide Stoneware Bed", "1\" Ceramic Rings + Mist", "#22c55e"},
-			{702, 146, 175, 124, "[6-7] GRAVITY", "3.5m Overhead Tank", "Closed-Loop Sump & Pump", "#38bdf8"},
+			{238, 148, 175, 118, "[2-3] STAGE 1-2", "Masonry Quench", "Spray / Damped S-Vane", "#f59e0b"},
+			stage3Box,
+			waterBox,
 			{912, 134, 152, 144, "[8] EXHAUST", stage4Title, "Outdoor Dispersion", "#a78bfa"},
 		}
 	} else {

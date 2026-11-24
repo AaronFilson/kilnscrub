@@ -42,6 +42,7 @@ export function ShopPlansTab({ evaluation, units }: ShopPlansTabProps) {
 
   const isLocal = plan.build_path === "local_ceramic_masonry";
   const isSteam = !!plan.steam_ejector_enabled;
+  const isSumpPoolOnly = isLocal && evaluation.frugal?.has_overhead_tank === false;
 
   return (
     <div className="page-container">
@@ -140,9 +141,9 @@ export function ShopPlansTab({ evaluation, units }: ShopPlansTabProps) {
           {[
             { num: 1, x: 42, y: 155, w: 150, h: 120, color: "#f97316", tag: isLocal ? "REFRACTORY FLUE" : "INLET + 200°F BYPASS" },
             { num: 2, x: 226, y: 135, w: 165, h: 155, color: "#fb923c", tag: isLocal ? "MASONRY QUENCH" : "STAGE 1 QUENCH" },
-            { num: 3, x: 424, y: 155, w: 165, h: 120, color: "#eab308", tag: isSteam ? "STEAM-JET EJECTOR" : "STAGE 2 VENTURI" },
-            { num: 4, x: 622, y: 125, w: 185, h: 175, color: "#10b981", tag: isLocal ? "WIDE STONEWARE BED" : "STAGE 3 ABSORBER" },
-            { num: 6, x: 842, y: 130, w: 215, h: 165, color: "#38bdf8", tag: isLocal ? "GRAVITY TANK + CHIMNEY" : "STAGE 4 BLOWER + STACK" },
+            { num: 3, x: 424, y: 155, w: 165, h: 120, color: "#eab308", tag: isSumpPoolOnly ? "0.5\" S-VANE + WEIR" : isSteam ? "STEAM-JET EJECTOR" : "STAGE 2 VENTURI" },
+            { num: 4, x: 622, y: 125, w: 185, h: 175, color: "#10b981", tag: isSumpPoolOnly ? "TROUGH + 2-STG SIEVE" : isLocal ? "WIDE STONEWARE BED" : "STAGE 3 ABSORBER" },
+            { num: 6, x: 842, y: 130, w: 215, h: 165, color: "#38bdf8", tag: isSumpPoolOnly ? "SUMP POOLS + CHIMNEY" : isLocal ? "GRAVITY TANK + CHIMNEY" : "STAGE 4 BLOWER + STACK" },
           ].map((bx) => {
             const pt = plan.parts.find((p) => p.num === bx.num);
             const active = selectedPart === bx.num;
