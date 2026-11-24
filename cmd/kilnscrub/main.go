@@ -425,40 +425,50 @@ func runPresets(args []string, stdout, stderr io.Writer) error {
 }
 
 type studioOptionFlags struct {
-	buildPath       *string
-	saltingHours    *float64
-	alignment       *string
-	bedLayout       *string
-	parallelPipeIn  *float64
-	venturiLayout   *string
-	compact         *bool
-	controls        *string
-	blowerDrive     *string
-	packingMedia    *string
-	compressorSCFM  *float64
-	zeroElectricity *bool
-	localRegion     *string
-	localAlkali     *string
-	localDraftMode  *string
+	buildPath                 *string
+	saltingHours              *float64
+	alignment                 *string
+	bedLayout                 *string
+	parallelPipeIn            *float64
+	venturiLayout             *string
+	compact                   *bool
+	controls                  *string
+	blowerDrive               *string
+	packingMedia              *string
+	compressorSCFM            *float64
+	zeroElectricity           *bool
+	localRegion               *string
+	localAlkali               *string
+	localDraftMode            *string
+	localBoilerSource         *string
+	localPumpMode             *string
+	deluxeCondensingReclaimer *bool
+	deluxeVariableThroatVFD   *bool
+	deluxeStage1HeatRecovery  *bool
 }
 
 func bindStudioOptionFlags(fs *flag.FlagSet) studioOptionFlags {
 	return studioOptionFlags{
-		buildPath:       fs.String("build-path", "", "Fabrication build path: cots_no_weld, welded_dxf, custom_fab_deluxe, or local_ceramic_masonry"),
-		saltingHours:    fs.Float64("salting-hours", 0, "Active peak salting window in hours (e.g. 2-4 hrs for salt mode)"),
-		alignment:       fs.String("alignment", "", "Stage alignment: inline_id_blower or eductor_dry_fan"),
-		bedLayout:       fs.String("bed-layout", "", "Stage 3 packed-bed layout: single_column or parallel_manifold"),
-		parallelPipeIn:  fs.Float64("parallel-pipe-in", 0, "Shell-less parallel manifold pipe size in inches: 2, 3, or 4"),
-		venturiLayout:   fs.String("venturi-layout", "", "Stage 2 venturi layout: single_throat or parallel_mini_venturis"),
-		compact:         fs.Bool("compact", false, "Use compact U-turn folded skid footprint"),
-		controls:        fs.String("controls", "", "Control tier: rpi_modbus or electromechanical_only"),
-		blowerDrive:     fs.String("blower-drive", "", "Stage 4 blower drive: industrial_radial_vfd, regen_side_channel, dual_bypass_blowers, compressor_air_atomize, or compressor_eductor_only"),
-		packingMedia:    fs.String("packing-media", "", "Stage 3 packing media: pp_pall_rings, aquaculture_bioballs, or diy_ceramic_rings"),
-		compressorSCFM:  fs.Float64("compressor-scfm", 0, "Existing studio shop air compressor capacity (SCFM @ 90 PSI, default 15)"),
-		zeroElectricity: fs.Bool("zero-electricity", false, "Zero electricity on site (passive thermal-reheat chimney draft + manual gravity tank; implies local_ceramic_masonry)"),
-		localRegion:     fs.String("local-region", "", "Local sourcing region: nairobi, mumbai, or general_local"),
-		localAlkali:     fs.String("local-alkali", "", "Local neutralizing alkali: soda_ash, slaked_lime, wood_ash_lye, or baking_soda"),
-		localDraftMode:  fs.String("local-draft-mode", "", "Passive velocity/draft driver for local_ceramic_masonry (natural_chimney|steam_ejector_subsonic|steam_ejector_lp|steam_ejector_hp)"),
+		buildPath:                 fs.String("build-path", "", "Fabrication build path: cots_no_weld, welded_dxf, custom_fab_deluxe, or local_ceramic_masonry"),
+		saltingHours:              fs.Float64("salting-hours", 0, "Active peak salting window in hours (e.g. 2-4 hrs for salt mode)"),
+		alignment:                 fs.String("alignment", "", "Stage alignment: inline_id_blower or eductor_dry_fan"),
+		bedLayout:                 fs.String("bed-layout", "", "Stage 3 packed-bed layout: single_column or parallel_manifold"),
+		parallelPipeIn:            fs.Float64("parallel-pipe-in", 0, "Shell-less parallel manifold pipe size in inches: 2, 3, or 4"),
+		venturiLayout:             fs.String("venturi-layout", "", "Stage 2 venturi layout: single_throat or parallel_mini_venturis"),
+		compact:                   fs.Bool("compact", false, "Use compact U-turn folded skid footprint"),
+		controls:                  fs.String("controls", "", "Control tier: rpi_modbus or electromechanical_only"),
+		blowerDrive:               fs.String("blower-drive", "", "Stage 4 blower drive: industrial_radial_vfd, regen_side_channel, dual_bypass_blowers, compressor_air_atomize, or compressor_eductor_only"),
+		packingMedia:              fs.String("packing-media", "", "Stage 3 packing media: pp_pall_rings, aquaculture_bioballs, or diy_ceramic_rings"),
+		compressorSCFM:            fs.Float64("compressor-scfm", 0, "Existing studio shop air compressor capacity (SCFM @ 90 PSI, default 15)"),
+		zeroElectricity:           fs.Bool("zero-electricity", false, "Zero electricity on site (passive thermal-reheat chimney draft + manual gravity tank; implies local_ceramic_masonry)"),
+		localRegion:               fs.String("local-region", "", "Local sourcing region: nairobi, mumbai, or general_local"),
+		localAlkali:               fs.String("local-alkali", "", "Local neutralizing alkali: soda_ash, slaked_lime, wood_ash_lye, or baking_soda"),
+		localDraftMode:            fs.String("local-draft-mode", "", "Passive velocity/draft driver for local_ceramic_masonry (natural_chimney|steam_ejector_subsonic|steam_ejector_lp|steam_ejector_hp)"),
+		localBoilerSource:         fs.String("local-boiler-source", "", "Steam boiler heat source (dedicated_hearth|kiln_exhaust_coil|stage1_water_jacket)"),
+		localPumpMode:             fs.String("local-pump-mode", "", "Off-grid water pump / sump mode (manual_treadle|steam_ppcp|steam_jet_syphon|sump_pool_no_pump)"),
+		deluxeCondensingReclaimer: fs.Bool("deluxe-condensing-reclaimer", false, "Deluxe upgrade: closed-loop condensing plume abater & water reclaimer"),
+		deluxeVariableThroatVFD:   fs.Bool("deluxe-variable-throat-vfd", false, "Deluxe upgrade: auto variable-throat venturi + VFD turndown"),
+		deluxeStage1HeatRecovery:  fs.Bool("deluxe-stage1-heat-recovery", false, "Deluxe upgrade: Stage 1 water-jacketed quench pre-cooler & heat reclaimer"),
 	}
 }
 
@@ -516,6 +526,21 @@ func (f studioOptionFlags) applyExplicit(base studio.StudioProject, setFlags map
 			proj.LocalDraftMode == studio.LocalDraftSteamEjectorHP) && !setFlags["build-path"] {
 			proj.BuildPath = studio.BuildPathLocalCeramic
 		}
+	}
+	if setFlags["local-boiler-source"] {
+		proj.LocalBoilerSource = strings.ToLower(strings.TrimSpace(*f.localBoilerSource))
+	}
+	if setFlags["local-pump-mode"] {
+		proj.LocalPumpMode = strings.ToLower(strings.TrimSpace(*f.localPumpMode))
+	}
+	if setFlags["deluxe-condensing-reclaimer"] {
+		proj.DeluxeCondensingReclaimer = *f.deluxeCondensingReclaimer
+	}
+	if setFlags["deluxe-variable-throat-vfd"] {
+		proj.DeluxeVariableThroatVFD = *f.deluxeVariableThroatVFD
+	}
+	if setFlags["deluxe-stage1-heat-recovery"] {
+		proj.DeluxeStage1HeatRecovery = *f.deluxeStage1HeatRecovery
 	}
 	return proj
 }

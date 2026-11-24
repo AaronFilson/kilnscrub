@@ -134,7 +134,8 @@ type AcousticSummary struct {
 	TotalReductionDBA float64 `json:"total_reduction_dba"`
 }
 
-// DeluxeFabSpec summarizes the Custom Fabrication Deluxe hardware specification and cost delta.
+// DeluxeFabSpec summarizes the Custom Fabrication Deluxe hardware specification,
+// cost delta, and Phase 13 optional energy/water-saving upgrades.
 type DeluxeFabSpec struct {
 	Enabled         bool     `json:"enabled"`
 	VesselMaterial  string   `json:"vessel_material"`
@@ -147,6 +148,19 @@ type DeluxeFabSpec struct {
 	CostDeltaUSD    float64  `json:"cost_delta_usd"`
 	Summary         string   `json:"summary"`
 	Highlights      []string `json:"highlights"`
+
+	// Phase 13 optional Deluxe Energy & Water Saving Upgrades
+	CondensingReclaimer     bool     `json:"condensing_reclaimer,omitempty"`
+	VariableThroatVFD       bool     `json:"variable_throat_vfd,omitempty"`
+	Stage1HeatRecovery      bool     `json:"stage1_heat_recovery,omitempty"`
+	EcoCostDeltaUSD         float64  `json:"eco_cost_delta_usd,omitempty"`
+	WaterSavedPct           float64  `json:"water_saved_pct,omitempty"`
+	WaterSavedGalPerFiring  float64  `json:"water_saved_gal_per_firing,omitempty"`
+	EnergySavedPct          float64  `json:"energy_saved_pct,omitempty"`
+	EnergySavedKWhPerFiring float64  `json:"energy_saved_kwh_per_firing,omitempty"`
+	RecoveredHeatKW         float64  `json:"recovered_heat_kw,omitempty"`
+	EcoSummary              string   `json:"eco_summary,omitempty"`
+	EcoHighlights           []string `json:"eco_highlights,omitempty"`
 }
 
 // ShopPlan provides complete, self-contained in-browser assembly plans, numbered
@@ -923,11 +937,17 @@ func buildDeluxeSpec(
 		cotsProj := p
 		cotsProj.BuildPath = BuildPathCOTSNoWeld
 		cotsProj.ZeroElectricity = false
+		cotsProj.DeluxeCondensingReclaimer = false
+		cotsProj.DeluxeVariableThroatVFD = false
+		cotsProj.DeluxeStage1HeatRecovery = false
 		cotsTotal = BuildCOTSSummary(cotsProj, design).EstimatedTotalUSD
 	} else {
 		cotsProj := p
 		cotsProj.BuildPath = BuildPathCOTSNoWeld
 		cotsProj.ZeroElectricity = false
+		cotsProj.DeluxeCondensingReclaimer = false
+		cotsProj.DeluxeVariableThroatVFD = false
+		cotsProj.DeluxeStage1HeatRecovery = false
 		if p.BuildPath == BuildPathCOTSNoWeld && !p.ZeroElectricity {
 			cotsTotal = cots.EstimatedTotalUSD
 		} else {
@@ -947,6 +967,64 @@ func buildDeluxeSpec(
 	}
 	costDelta := round2(deluxeTotal - cotsTotal)
 
+	// Phase 13: Quantify optional Deluxe Energy & Water Saving Upgrades
+	ecoCost := 0.0
+	waterSavedFrac := 0.0
+	energySavedFrac := 0.0
+	recoveredKW := 0.0
+	var ecoHighlights []string
+
+	evapGalPerFiring := design.Quench.EvaporatedWaterGPM * 60.0 * p.FiringDurationHours
+	if evapGalPerFiring <= 0 {
+		evapGalPerFiring = 240.0
+	}
+	motorKW := (design.Blower.ShaftPowerHP * 0.7457) / 0.88 // ~88% motor+VFD efficiency
+	if motorKW <= 0 {
+		motorKW = 1.25
+	}
+	baselineKWh := motorKW * p.FiringDurationHours
+	nonSaltFrac := 0.75
+	if p.FiringDurationHours > 0 {
+		nonSaltFrac = math.Max(0.25, math.Min(0.95, (p.FiringDurationHours-p.EffectiveSaltingHours())/p.FiringDurationHours))
+	}
+	sensibleKW := math.Max(18.0, 58.0*(design.Input.KilnVolumeCuFt/24.0))
+
+	if isDeluxe && p.DeluxeStage1HeatRecovery {
+		ecoCost += 1650.0
+		waterSavedFrac += 0.40 * (1.0 - waterSavedFrac)
+		energySavedFrac += 0.07 * (1.0 - energySavedFrac)
+		s1KW := round1(sensibleKW * 0.40)
+		recoveredKW += s1KW
+		ecoHighlights = append(ecoHighlights, fmt.Sprintf("Stage 1 Water-Jacket Pre-Cooler (+$1,650): harvests ~%.1f kW sensible heat before spray nozzles, cutting evaporative water loss ~40%% and blower load ~7%%", s1KW))
+	}
+	if isDeluxe && p.DeluxeCondensingReclaimer {
+		ecoCost += 1850.0
+		waterSavedFrac += 0.70 * (1.0 - waterSavedFrac)
+		condKW := round1(sensibleKW * 0.55)
+		recoveredKW += condKW
+		ecoHighlights = append(ecoHighlights, fmt.Sprintf("Closed-Loop Condensing Plume Abater & Water Reclaimer (+$1,850): cools saturated exhaust 184 F -> ~120 F, reclaiming ~70%% of evaporated water back to sump, slashing winter plume >75%% & capturing ~%.1f kW low-grade hydronic heat", condKW))
+	}
+	if isDeluxe && p.DeluxeVariableThroatVFD {
+		ecoCost += 1450.0
+		// Affinity law P ~ N^3: widening throat during non-salting hours drops VFD speed ~48% (~82% power drop during off-peak hours).
+		vfdSave := nonSaltFrac * 0.78
+		energySavedFrac += vfdSave * (1.0 - energySavedFrac)
+		ecoHighlights = append(ecoHighlights, fmt.Sprintf("Auto Variable-Throat Venturi + VFD Turndown (+$1,450): widens throat during %.1f non-salting hrs (dP ~19 -> ~3.8 inWC), cutting firing blower electricity ~%.0f%% and off-peak noise -10 dBA", p.FiringDurationHours-p.EffectiveSaltingHours(), vfdSave*100.0))
+	}
+
+	waterSavedPct := round1(waterSavedFrac * 100.0)
+	waterSavedGal := round1(evapGalPerFiring * waterSavedFrac)
+	energySavedPct := round1(energySavedFrac * 100.0)
+	energySavedKWh := round1(baselineKWh * energySavedFrac)
+	recoveredKW = round1(recoveredKW)
+	ecoSummary := ""
+	if ecoCost > 0 {
+		ecoSummary = fmt.Sprintf(
+			"Deluxe Eco Upgrades (+$%.0f): saves ~%.0f gal/firing (%.0f%% evap water reclaimed), ~%.1f kWh/firing (%.0f%% blower electricity saved), and recovers ~%.1f kW usable studio waste heat.",
+			ecoCost, waterSavedGal, waterSavedPct, energySavedKWh, energySavedPct, recoveredKW,
+		)
+	}
+
 	vesselMat := `TIG-Welded Heavy-Gauge 316L SS (11 ga / Sch 10S) Quench & Venturi + Filament-Wound Derakane Vinyl-Ester FRP Packed Column w/ Structural Gusset Rings`
 	if p.CorrosionTier == CorrosionTierHeavyC276FRP {
 		vesselMat = `TIG-Welded Heavy-Gauge Alloy C-276 (11 ga / Sch 10S) Quench & Venturi + Filament-Wound Derakane Vinyl-Ester FRP Packed Column w/ Structural Gusset Rings`
@@ -956,6 +1034,9 @@ func buildDeluxeSpec(
 		"Turnkey shop-fabricated Deluxe package (+$%.2f vs No-Weld COTS): TIG-welded heavy-gauge hot stages with ANSI/ASME B16.5 Class 150 lap-joint flanges, Derakane FRP column with bolted manway & removable demister cassette, welded 2\"×2\"×3/16\" steel forklift skid, UL 508A NEMA 4X panel, and 2\" Rockwool acoustic baffle box + tuned stack silencer (-22 dBA -> %.1f dBA @ %.0f ft).",
 		costDelta, deluxePropDBA, deluxePropFt,
 	)
+	if ecoSummary != "" {
+		summary += " " + ecoSummary
+	}
 
 	return &DeluxeFabSpec{
 		Enabled:         isDeluxe,
@@ -968,7 +1049,7 @@ func buildDeluxeSpec(
 		PumpUpgrade:     `Sloped-Bottom Baffled Chemical Settling Sump w/ 2" Drain Ball Valve + Heavy-Duty Sealless PVDF Mag-Drive Recirculation Pump Station`,
 		CostDeltaUSD:    costDelta,
 		Summary:         summary,
-		Highlights: []string{
+		Highlights: append([]string{
 			"Back-purged TIG heavy-gauge 316L SS (or Alloy C-276) quench & venturi with ANSI B16.5 Class 150 lap-joint flanges",
 			"2× borosilicate sight-glass ports + 2× bolted NFPA 91 quick-release cleanout doors + 1\" ceramic-fiber/SS hot-flue jacket",
 			"Filament-wound Derakane vinyl-ester FRP column with structural gusset rings, bolted 12\" packing manway & removable demister cassette",
@@ -976,7 +1057,18 @@ func buildDeluxeSpec(
 			"Welded 2\"×2\"×3/16\" structural steel forklift skid + diagonal K-bracing + concrete wedge anchors + flexible PTFE/EPDM vibration boots",
 			"2\" Rockwool acoustic blower baffle enclosure w/ cooling-air labyrinth + tuned absorptive stack silencer (-22 dBA combined attenuation)",
 			"UL 508A-style NEMA 4X pre-wired panel with through-door NEC 430.102 disconnect, 3% line reactor, HF-GFCI & FM/UL 200 F high-limit safety relay",
-		},
+		}, ecoHighlights...),
+		CondensingReclaimer:     isDeluxe && p.DeluxeCondensingReclaimer,
+		VariableThroatVFD:       isDeluxe && p.DeluxeVariableThroatVFD,
+		Stage1HeatRecovery:      isDeluxe && p.DeluxeStage1HeatRecovery,
+		EcoCostDeltaUSD:         round2(ecoCost),
+		WaterSavedPct:           waterSavedPct,
+		WaterSavedGalPerFiring:  waterSavedGal,
+		EnergySavedPct:          energySavedPct,
+		EnergySavedKWhPerFiring: energySavedKWh,
+		RecoveredHeatKW:         recoveredKW,
+		EcoSummary:              ecoSummary,
+		EcoHighlights:           ecoHighlights,
 	}
 }
 

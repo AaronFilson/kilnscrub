@@ -958,6 +958,52 @@ export function buildIndustrialAssembly(
       flueJacket.rotation.z = Math.PI / 2;
       flueJacket.position.set(sqX - cfg.qR - 0.22, sInletY, sqZ);
       sysG.add(flueJacket);
+
+      // Phase 13 Deluxe Eco Upgrade 3D Hardware
+      if (project.deluxe_stage1_heat_recovery) {
+        const s1JktH = cfg.qH * 0.34;
+        const s1Jkt = new THREE.Mesh(
+          new THREE.CylinderGeometry(cfg.qR * 1.18, cfg.qR * 1.18, s1JktH, 32, 1, cut, thetaStart, thetaLen),
+          mats.steamerSS
+        );
+        s1Jkt.position.set(sqX, cfg.qH - s1JktH * 0.54, sqZ);
+        sysG.add(s1Jkt);
+        const s1Band = new THREE.Mesh(
+          new THREE.TorusGeometry(cfg.qR * 1.20, 0.016, 8, 28),
+          mats.steamHeader
+        );
+        s1Band.rotation.x = Math.PI / 2;
+        s1Band.position.set(sqX, cfg.qH - s1JktH * 0.25, sqZ);
+        sysG.add(s1Band);
+      }
+      if (project.deluxe_variable_throat_vfd) {
+        // Motorized 24VDC variable-throat venturi actuator & linkage on Stage 2 throat
+        const act = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.16, 0.14), mats.conduit);
+        act.position.set(svX, svY + 0.24, svZ);
+        sysG.add(act);
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.18, 10), mats.bolt);
+        stem.position.set(svX, svY + 0.12, svZ);
+        sysG.add(stem);
+      }
+      if (project.deluxe_condensing_reclaimer) {
+        // Indirect finned condensing plume-abater & water-reclaimer heat exchanger on exhaust stack
+        const condBox = new THREE.Mesh(
+          new THREE.BoxGeometry(sstR * 3.4, 0.56, sstR * 3.2),
+          mats.diluter
+        );
+        condBox.position.set(sstX, sstBaseY + sstH * 0.72, sstZ);
+        sysG.add(condBox);
+        // Distilled condensate recovery drain back to sump
+        addHose(
+          [
+            new THREE.Vector3(sstX - sstR * 1.4, sstBaseY + sstH * 0.56, sstZ + sstR),
+            new THREE.Vector3(sumpPosX + sumpTankW * 0.35, beamH + sumpTankH + 0.14, sumpPosZ),
+            new THREE.Vector3(sumpPosX + sumpTankW * 0.35, beamH + sumpTankH * 0.85, sumpPosZ),
+          ],
+          0.016,
+          mats.pipeCyan
+        );
+      }
     }
 
     assemblyGroup.add(sysG);

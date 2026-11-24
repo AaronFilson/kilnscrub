@@ -82,6 +82,20 @@ type FrugalAssessment struct {
 	CondensationGrowthNote  string   `json:"condensation_growth_note"`
 	SteamSourceType         string   `json:"steam_source_type"`
 	SteamSafetyRequirements []string `json:"steam_safety_requirements"`
+
+	// Phase 13 boiler waste-heat source & steam-driven water pump / zero-pump sump-pool fields.
+	BoilerSource          string  `json:"boiler_source"`
+	BoilerSourceLabel     string  `json:"boiler_source_label"`
+	BoilerWaterSavedPct   float64 `json:"boiler_water_saved_pct"`
+	BoilerFuelSavedNote   string  `json:"boiler_fuel_saved_note,omitempty"`
+	BoilerCorrosionNote   string  `json:"boiler_corrosion_note,omitempty"`
+	PumpMode              string  `json:"pump_mode"`
+	PumpModeLabel         string  `json:"pump_mode_label"`
+	PumpSteamKgHr         float64 `json:"pump_steam_kg_hr"`
+	HasOverheadTank       bool    `json:"has_overhead_tank"`
+	SumpPoolSubmergenceIn float64 `json:"sump_pool_submergence_in,omitempty"`
+	SumpPoolDPInWC        float64 `json:"sump_pool_dp_inwc,omitempty"`
+	PumpEngineeringNote   string  `json:"pump_engineering_note,omitempty"`
 }
 
 func round3(v float64) float64 {
@@ -649,6 +663,8 @@ func computeLocalCeramicCosts(
 	plumbing := round2(40.0 * s)
 
 	draftMode := p.EffectiveLocalDraftMode()
+	boilerSource := p.EffectiveLocalBoilerSource()
+	pumpMode := p.EffectiveLocalPumpMode()
 	steamEnabled := draftMode == LocalDraftSteamEjectorSubsonic || draftMode == LocalDraftSteamEjectorLP || draftMode == LocalDraftSteamEjectorHP
 
 	var pumpUSD, fanUSD, steamSystemUSD, chimneyUSD float64
@@ -664,10 +680,39 @@ func computeLocalCeramicCosts(
 			// Code-rated seamless 316L monotube flash coil + certified PRV/gauge/check valve + 316L de Laval nozzle ($280-$360).
 			steamSystemUSD = round2(330.0 * math.Max(0.86, math.Min(1.09, s)))
 		}
-		if p.ZeroElectricity {
-			pumpUSD = round2(75.0 * s) // MoneyMaker treadle / cast-iron semi-rotary hand pump
-		} else {
-			pumpUSD = round2(76.0 * s) // Local 0.5 HP 230V 50Hz domestic monoblock water pump
+		// Phase 13: Boiler waste-heat recovery hardware adders
+		switch boilerSource {
+		case LocalBoilerKilnExhaustCoil:
+			// SiC / split-firebrick radiation muffle + Alloy 625 / seamless 316L flue steam coil
+			steamSystemUSD = round2(steamSystemUSD + 165.0*s)
+		case LocalBoilerStage1WaterJacket:
+			// Double-walled pressurized Stage 1 upper quench water-jacket collar + steam dome
+			steamSystemUSD = round2(steamSystemUSD + 220.0*s)
+		}
+
+		// Phase 13: Off-grid steam water pump & zero-pump sump-pool cost deltas
+		switch pumpMode {
+		case LocalPumpSteamPPCP:
+			// Mechanical Pressure-Powered Condensate Pump (Forbes Marshall / Spirax Sarco MFP standalone)
+			pumpUSD = round2(680.0 * s)
+		case LocalPumpSteamJetSyphon:
+			// Gunmetal/316L steam-jet cold-makeup syphon + low-pressure bronze boiler feed injector + manual backup
+			pumpUSD = round2(295.0 * s)
+		case LocalPumpSumpPoolNoPump:
+			// Eliminates overhead Kentank/Sintex + 3.5 m braced timber stand + pump!
+			// Adds second ground-level brick baffle sump pool + refractory S-baffle curtain + carburetor dip-tube.
+			gravityTank = 0.0
+			standBracing = 0.0
+			pumpUSD = 0.0
+			brickSump = round2(96.0 * volScale * s)
+			baffleZone = round2(baffleZone + 68.0*s)
+			plumbing = round2(22.0 * s)
+		default:
+			if p.ZeroElectricity {
+				pumpUSD = round2(75.0 * s) // MoneyMaker treadle / cast-iron semi-rotary hand pump
+			} else {
+				pumpUSD = round2(76.0 * s) // Local 0.5 HP 230V 50Hz domestic monoblock water pump
+			}
 		}
 		fanUSD = 0.0                                   // Steam-jet ejector provides draft (zero electric fan!)
 		chimneyUSD = round2((22.0 + 9.2*chimneyM) * s) // Shorter 4.5-5.0 m ceramic/SWG chimney (saves masonry vs 8.5-9.5 m!)
@@ -920,10 +965,44 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 	}
 
 	chimneyFt := round1(chimneyM * 3.28084)
-	draftMarginInWC := round3(availDraftInWC - reqDraftInWC)
-	draftFeasible := draftMarginInWC >= 0.0
 
-	// 4. Gravity overhead tank (Kentank/Sintex 210-490 L on 3.5 m / 11.5 ft braced stand) & manual pumping budget.
+	// Phase 13: Boiler Heat Source & Steam Pump / Zero-Pump Sump-Pool physics
+	boilerSource := p.EffectiveLocalBoilerSource()
+	pumpMode := p.EffectiveLocalPumpMode()
+	if !steam.steamEnabled {
+		boilerSource = LocalBoilerDedicatedHearth
+		pumpMode = LocalPumpManualTreadle
+	} else if draftMode == LocalDraftSteamEjectorSubsonic {
+		pumpMode = LocalPumpManualTreadle
+	}
+
+	boilerSourceLabel := "Dedicated Firebox / Separate Wood or LPG Burner"
+	boilerWaterSavedPct := 0.0
+	boilerFuelSavedNote := ""
+	boilerCorrosionNote := ""
+	if steam.steamEnabled {
+		switch boilerSource {
+		case LocalBoilerKilnExhaustCoil:
+			boilerSourceLabel = "Kiln Exhaust Flue Steam Coil (SiC / Firebrick Muffle Shielded)"
+			boilerWaterSavedPct = 32.0
+			boilerFuelSavedNote = fmt.Sprintf("Recovers up to %.1f kW directly from the %.0f F kiln flue, cutting separate boiler fuel to near-zero during high fire and dropping Stage 1 evaporative quench water loss by ~%.0f%%.", math.Min(steam.steamThermalKW, steam.kilnWasteHeatKW*0.72), design.Input.PeakExitTempF, boilerWaterSavedPct)
+			if p.VaporGlazeMode == VaporGlazeSalt {
+				boilerCorrosionNote = "HOT NaCl/HCl CORROSION GUARD: Bare 316L stainless fails rapidly >350-400 C in molten NaCl/HCl vapor (mp 801 C). Keep the coil ALWAYS water-flooded (wall <215 C), shield behind a thin SiC / split-firebrick radiation muffle wall (survives 1000-1250 C) or clad with Inconel 625 (<650 C), and never dry-fire!"
+			} else {
+				boilerCorrosionNote = "Zero-salt wood/soda flue: Keep the 316L/seamless steam coil continuously water-flooded with an open atmospheric feed check valve so tube skin stays <220 C; brush fly ash between firings."
+			}
+		case LocalBoilerStage1WaterJacket:
+			boilerSourceLabel = "Stage 1 Water-Jacketed Dry-Wall Quench Collar (Pre-Spray Heat Recovery)"
+			boilerWaterSavedPct = 42.0
+			boilerFuelSavedNote = fmt.Sprintf("Pressurized double-walled collar around the upper dry entry of Stage 1 (above spray nozzles) harvests %.1f kW of sensible heat BEFORE water sprays, cutting Stage 1 evaporative water loss by ~%.0f%% while generating ejector steam.", math.Min(steam.steamThermalKW, steam.kilnWasteHeatKW*0.80), boilerWaterSavedPct)
+			boilerCorrosionNote = "DEW-POINT & CHLORIDE SWEET SPOT: Boiling water inside the Stage 1 jacket locks inner wall temperature at ~120-160 C (safely ABOVE the ~84 C HCl dew point to prevent wet acid pitting, yet well BELOW 400 C hot chloride corrosion!), and the smooth vertical cylindrical wall sheds fly ash/salt crust cleanly."
+		default:
+			boilerFuelSavedNote = fmt.Sprintf("External certified firebox/burner isolated from corrosive kiln flue gases (requires %.1f kW fuel or indirect masonry waste-heat tap).", steam.steamThermalKW)
+		}
+	}
+
+	// 4. Gravity overhead tank (Kentank/Sintex 210-490 L on 3.5 m / 11.5 ft braced stand) & pumping budget.
+	hasOverheadTank := pumpMode != LocalPumpSumpPoolNoPump
 	tankLiters := 300.0
 	if design.Input.KilnVolumeCuFt <= 16.0 {
 		tankLiters = 210.0
@@ -931,11 +1010,11 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 		tankLiters = 490.0
 	}
 	tankGal := round1(tankLiters / 3.785411784)
-	const tankElevFt = 11.5 // 3.5 m braced brick/timber stand
+	tankElevFt := 11.5 // 3.5 m braced brick/timber stand
 	gravityHeadPSI := round2(tankElevFt * 0.4335)
 
 	// Closed-loop gravity quench + stoneware bed trickle (~2.3x evaporative demand -> ~4-6 L/min on 24 cu.ft. studio kiln).
-	evapGPM := design.Quench.EvaporatedWaterGPM
+	evapGPM := design.Quench.EvaporatedWaterGPM * (1.0 - boilerWaterSavedPct/100.0)
 	if evapGPM <= 0 {
 		evapGPM = design.Quench.TotalSprayWaterGPM / 3.0
 	}
@@ -945,16 +1024,65 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 	var manualPumpType string
 	var jerrycansPerHr int
 	var treadleMinPerHr float64
+	var pumpSteamKgHr float64
+	var sumpPoolSubIn, sumpPoolDPInWC float64
+	pumpModeLabel := "Manual Treadle / Hand Wing Pump + 3.5 m Gravity Tank"
+	pumpEngNote := ""
+
 	totalHourlyLiters := sprayFlowLPM*60.0 + steam.steamWaterLHr
-	if zeroElec {
+	if steam.steamEnabled && pumpMode == LocalPumpSteamPPCP {
+		pumpModeLabel = "Mechanical Steam PPCP Recirc Pump (Forbes Marshall / Spirax Sarco MFP, 0 W)"
+		manualPumpType = pumpModeLabel
+		pumpSteamKgHr = round2(math.Max(0.45, 0.75*(sprayFlowLPM/5.0)))
+		steam.steamFlowKgHr = round1(steam.steamFlowKgHr + pumpSteamKgHr)
+		steam.steamWaterLHr = round1(steam.steamFlowKgHr)
+		jerrycansPerHr = 0
+		treadleMinPerHr = 0.0
+		pumpEngNote = fmt.Sprintf("Zero-electricity float-actuated steam displacement pump (Forbes Marshall / Spirax Sarco MFP, available in Mumbai/Pune & Nairobi Industrial Area) lifts hot alkaline sump liquor (up to 212 F) to the 3.5 m tank using only ~%.2f kg/hr steam (<2%% of ejector load) with zero steam-water mixing. Surplus tea/laundry units ~$350 vs ~$%.0f new.", pumpSteamKgHr, 680.0*prof.costScale)
+	} else if steam.steamEnabled && pumpMode == LocalPumpSteamJetSyphon {
+		pumpModeLabel = "Steam-Jet Cold Makeup Syphon + Penberthy Boiler Feed Injector (<120 F Cold Water)"
+		manualPumpType = pumpModeLabel
+		pumpSteamKgHr = round2(math.Max(3.5, 5.5*(sprayFlowLPM/5.0)))
+		steam.steamFlowKgHr = round1(steam.steamFlowKgHr + pumpSteamKgHr)
+		steam.steamWaterLHr = round1(steam.steamFlowKgHr)
+		evapMakeupLitersHr := evapGPM*3.78541*60.0 + steam.steamWaterLHr
+		jerrycansPerHr = int(math.Ceil(math.Max(0.0, totalHourlyLiters-evapMakeupLitersHr) / 20.0))
+		treadleMinPerHr = round1(math.Max(0.0, totalHourlyLiters-evapMakeupLitersHr) / 35.0)
+		pumpEngNote = fmt.Sprintf("Low-cost gunmetal/316L steam-jet liquid syphon + bronze boiler feed injector lifts COLD fresh makeup water (<120 F / 49 C) to the 3.5 m tank and feeds the pressurized boiler automatically (~%.1f kg/hr intermittent steam). NEVER feed hot recirculating sump liquor (>120 F) into a condensing steam syphon — keep manual/PPCP return for hot sump.", pumpSteamKgHr)
+	} else if steam.steamEnabled && pumpMode == LocalPumpSumpPoolNoPump {
+		pumpModeLabel = "Zero-Pump, Zero-Water-Tower Sump-Pool Self-Induced Scrubber (Submerged S-Baffle + Carburetor Ejector)"
+		manualPumpType = "None — Steam-Driven Sump-Pool Self-Induced Spray & Carburetor Ejector (0 Pumps, 0 Tower)"
+		hasOverheadTank = false
+		tankLiters = 0.0
+		tankGal = 0.0
+		tankElevFt = 0.0
+		gravityHeadPSI = 0.0
+		if draftMode == LocalDraftSteamEjectorHP {
+			sumpPoolSubIn = 1.50
+			sumpPoolDPInWC = 1.85 // 1.5" submerged S-baffle curtain + carburetor slot drag (well inside 4.3 inWC HP draft)
+		} else {
+			sumpPoolSubIn = 0.75
+			sumpPoolDPInWC = 0.95 // shallow 0.75" submerged S-baffle curtain (within ~1.5-2.0 inWC LP draft)
+		}
+		reqDraftInWC = round3(reqDraftInWC + sumpPoolDPInWC)
+		// Only ground-level makeup water for evaporation + steam boil-off (poured directly into floor sump pool!)
+		evapMakeupLitersHr := evapGPM*3.78541*60.0 + steam.steamWaterLHr
+		jerrycansPerHr = int(math.Ceil(evapMakeupLitersHr / 20.0))
+		treadleMinPerHr = 0.0
+		pumpEngNote = fmt.Sprintf("NO WATER PUMP & NO 3.5 m WATER TOWER: %.0f psig steam-jet suction pulls hot kiln gas %.2f\" beneath the surface of ground-level Brick Sump Pool #1 (%.2f inWC self-induced S-baffle droplet curtain, zero clogging nozzles!) while Bernoulli throat vacuum (~15-35 inWC) passively aspirates cool alkaline liquor up a 1/2\" dip-tube from Sump Pool #2 directly into the ejector throat (carburetor atomization -> gravity drain straight back into the floor sump pools!). Only ~%d x 20L ground-level top-off buckets/hr.", steam.pressurePSIG, sumpPoolSubIn, sumpPoolDPInWC, jerrycansPerHr)
+	} else if zeroElec {
 		manualPumpType = "Treadle / Semi-Rotary Cast-Iron Hand Pump"
 		jerrycansPerHr = int(math.Ceil(totalHourlyLiters / 20.0))
 		treadleMinPerHr = round1(totalHourlyLiters / 35.0) // ~35 L/min MoneyMaker treadle / wing pump
 	} else {
 		manualPumpType = fmt.Sprintf("Local 0.5 HP 230V 50Hz Monoblock Pump (%s)", prof.pumpBrand)
+		pumpModeLabel = manualPumpType
 		jerrycansPerHr = 0
 		treadleMinPerHr = 0.0
 	}
+
+	draftMarginInWC := round3(availDraftInWC - reqDraftInWC)
+	draftFeasible := draftMarginInWC >= 0.0
 
 	// 5. Local alkali stoichiometry.
 	alkali := computeLocalAlkali(p, design, prof)
@@ -1146,6 +1274,26 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 		hclPct, alkali.kgPerFiring, alkali.name, alkali.formula, submicronPct, localCurrency, powerWatts,
 	)
 
+	if pumpMode == LocalPumpSumpPoolNoPump && steam.steamEnabled {
+		// Sump-pool mode has slightly lower top-of-bed liquid wetting than a 3.5m spray ring (~1-6% trade-off),
+		// honestly reflected in HCl & submicron capture while removing pump & tower completely.
+		hclPct = round1(math.Max(95.0, hclPct-1.2))
+		submicronPct = round1(math.Max(50.0, submicronPct-6.0))
+		submicronNote = fmt.Sprintf(
+			"ZERO-PUMP SUMP-POOL CAPTURE CHECK (%.0f psig Steam-Jet + %.2f\" Submerged S-Baffle): Self-induced sump curtain + Bernoulli carburetor aspiration (no pump, no overhead tower!) delivers ~%.1f%% HCl, ~%.1f%% coarse ash, and ~%.0f%% submicron NaCl capture at 0 W electric (vs ~%.0f%% with an elevated overhead tank top-wetting spray ring).",
+			steam.pressurePSIG, sumpPoolSubIn, hclPct, coarseAshPct, submicronPct, submicronPct+6.0,
+		)
+	}
+	if boilerCorrosionNote != "" {
+		warnings = append(warnings, boilerCorrosionNote)
+	}
+	if pumpMode == LocalPumpSteamJetSyphon {
+		warnings = append(warnings, "STEAM-JET SYPHON COLD-WATER LIMIT (<120 F / 49 C): Condensing steam syphons & Penberthy injectors stall/break if fed hot scrubber sump liquor >120 F and heat discharge water by +30-45 F — plumb strictly to COLD fresh makeup water / boiler feed!")
+	}
+	if pumpMode == LocalPumpSumpPoolNoPump && !draftFeasible {
+		warnings = append(warnings, fmt.Sprintf("SUMP-POOL SUBMERGENCE DRAFT SHORTFALL: Submerged S-baffle (%.2f inWC) pushes required draft (%.3f inWC) above %.0f psig ejector draft (%.3f inWC) — step up to 60 psig HP Steam-Jet or reduce S-baffle submergence to <=0.5\".", sumpPoolDPInWC, reqDraftInWC, steam.pressurePSIG, availDraftInWC))
+	}
+
 	return &FrugalAssessment{
 		Enabled:                 enabled,
 		ZeroElectricity:         zeroElec,
@@ -1210,12 +1358,24 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 		CondensationGrowthNote:  steam.condensationGrowthNote,
 		SteamSourceType:         steam.steamSourceType,
 		SteamSafetyRequirements: steam.safetyRequirements,
+		BoilerSource:            boilerSource,
+		BoilerSourceLabel:       boilerSourceLabel,
+		BoilerWaterSavedPct:     boilerWaterSavedPct,
+		BoilerFuelSavedNote:     boilerFuelSavedNote,
+		BoilerCorrosionNote:     boilerCorrosionNote,
+		PumpMode:                pumpMode,
+		PumpModeLabel:           pumpModeLabel,
+		PumpSteamKgHr:           pumpSteamKgHr,
+		HasOverheadTank:         hasOverheadTank,
+		SumpPoolSubmergenceIn:   sumpPoolSubIn,
+		SumpPoolDPInWC:          sumpPoolDPInWC,
+		PumpEngineeringNote:     pumpEngNote,
 	}
 }
 
 func localCeramicBedDepthM(kilnVolCuFt float64) float64 {
 	if kilnVolCuFt <= 16.0 {
-		return 0.85
+		return 0.90
 	}
 	if kilnVolCuFt >= 40.0 {
 		return 1.10
@@ -1277,6 +1437,24 @@ func buildLocalCeramicCOTSSummary(project StudioProject, design model.ScrubberDe
 		UnitCostUSD: round2(costs.brickSumpUSD + costs.gravityTankUSD + costs.standBracingUSD),
 		WeightKg:    round2(145.0 + 0.08*frugal.GravityTankLiters),
 		Notes:       fmt.Sprintf("Atmospheric baffled settling sump + elevated %.0f L (%.0f gal) %s @ %.1f ft (%.2f PSI gravity head) on diagonally braced stand rated for >%.0f kg wet load.", frugal.GravityTankLiters, frugal.GravityTankGal, prof.tankBrand, frugal.TankElevationFt, frugal.GravityHeadPSI, frugal.GravityTankLiters*1.1+25.0),
+	}
+	sumpBOMName := fmt.Sprintf("Brick Baffled Settling Sump + %.0f L %s + Braced 3.5 m Stand", frugal.GravityTankLiters, prof.tankBrand)
+	pumpBOMName := fmt.Sprintf("%s & Gravity Downcomer Plumbing", frugal.ManualPumpType)
+	pumpBOMSpec := fmt.Sprintf("[LOCAL-PUMP-PLUMB] %s ($%.0f) + gravity downcomer/drain kit ($%.0f); flow %.2f L/min (%.2f GPM) at %.2f PSI head.", frugal.ManualPumpType, costs.pumpUSD, costs.plumbingUSD, frugal.SprayFlowLPM, frugal.SprayFlowGPM, frugal.GravityHeadPSI)
+	if !frugal.HasOverheadTank {
+		sumpPart = COTSPart{
+			SKU:         "LOCAL-DUAL-SUMP-POOL",
+			Name:        "Dual Ground-Level Baffled Brick Sump Pools + Submerged S-Baffle Curtain (No Overhead Tower)",
+			NominalIn:   36.0,
+			Material:    "Cement-Plastered Firebrick Dual Sump Pools + Refractory S-Baffle Impingement Slot + 1/2\" Carburetor Dip-Tube",
+			Source:      "Local Brickyard & Plumbing Shop (" + prof.label + ")",
+			UnitCostUSD: round2(costs.brickSumpUSD + costs.gravityTankUSD + costs.standBracingUSD),
+			WeightKg:    210.0,
+			Notes:       frugal.PumpEngineeringNote,
+		}
+		sumpBOMName = sumpPart.Name
+		pumpBOMName = "Zero-Pump Carburetor Aspiration Dip-Tube & Ground-Level Sump Interconnect Plumbing"
+		pumpBOMSpec = fmt.Sprintf("[LOCAL-NOPUMP-PLUMB] Zero pumps & zero 3.5 m water tower ($0 pump + $%.0f dip-tube/drain fittings); %.2f\" submerged S-baffle curtain (%.2f inWC dP) + steam-jet carburetor suction.", costs.plumbingUSD, frugal.SumpPoolSubmergenceIn, frugal.SumpPoolDPInWC)
 	}
 
 	nozzlePart := COTSPart{
@@ -1401,7 +1579,7 @@ func buildLocalCeramicCOTSSummary(project StudioProject, design model.ScrubberDe
 		},
 		{
 			Category:    "Liquid & Gravity Circulation",
-			Name:        fmt.Sprintf("Brick Baffled Settling Sump + %.0f L %s + Braced 3.5 m Stand", frugal.GravityTankLiters, prof.tankBrand),
+			Name:        sumpBOMName,
 			Material:    sumpPart.Material,
 			Quantity:    1,
 			Unit:        "assy",
@@ -1411,11 +1589,11 @@ func buildLocalCeramicCOTSSummary(project StudioProject, design model.ScrubberDe
 		},
 		{
 			Category:    "Liquid & Gravity Circulation",
-			Name:        fmt.Sprintf("%s & Gravity Downcomer Plumbing", frugal.ManualPumpType),
-			Material:    "Cast-Iron / HDPE Pump + PVC/HDPE Gravity Downcomer, Foot Valve & Drain Valve",
+			Name:        pumpBOMName,
+			Material:    "Cast-Iron / Stainless / HDPE Pump or Aspiration Dip-Tube + Drain Valve",
 			Quantity:    1,
 			Unit:        "assy",
-			Spec:        fmt.Sprintf("[LOCAL-PUMP-PLUMB] %s ($%.0f) + gravity downcomer/drain kit ($%.0f); flow %.2f L/min (%.2f GPM) at %.2f PSI head.", frugal.ManualPumpType, costs.pumpUSD, costs.plumbingUSD, frugal.SprayFlowLPM, frugal.SprayFlowGPM, frugal.GravityHeadPSI),
+			Spec:        pumpBOMSpec,
 			UnitCostUSD: round2(costs.pumpUSD + costs.plumbingUSD),
 			WeightKg:    18.5,
 		},

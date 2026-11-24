@@ -423,9 +423,109 @@ export function StudioSidebar({
                 </option>
               </select>
             </div>
+
+            {project.local_draft_mode !== "natural_chimney" && (
+              <>
+                <div className="control">
+                  <label htmlFor="in-local-boiler-source">
+                    Steam Boiler Heat Source (Phase 13)
+                  </label>
+                  <select
+                    id="in-local-boiler-source"
+                    value={project.local_boiler_source || "dedicated_hearth"}
+                    onChange={(e) => patch({ local_boiler_source: e.target.value })}
+                  >
+                    <option value="dedicated_hearth">
+                      Dedicated Firebox / Separate Burner (Zero Flue Corrosion)
+                    </option>
+                    <option value="stage1_water_jacket">
+                      Stage 1 Water-Jacket Collar (-42% Evap Water · 0 Extra Fuel)
+                    </option>
+                    <option value="kiln_exhaust_coil">
+                      Kiln Exhaust Steam Coil (SiC Muffle / Alloy 625 · -32% Water)
+                    </option>
+                  </select>
+                </div>
+
+                <div className="control">
+                  <label htmlFor="in-local-pump-mode">
+                    Off-Grid Water Pump / Sump Mode (Phase 13)
+                  </label>
+                  <select
+                    id="in-local-pump-mode"
+                    value={project.local_pump_mode || "manual_treadle"}
+                    disabled={project.local_draft_mode === "steam_ejector_subsonic"}
+                    onChange={(e) => patch({ local_pump_mode: e.target.value })}
+                  >
+                    <option value="manual_treadle">
+                      Manual Treadle / Hand Pump + 3.5 m Gravity Tank ($75)
+                    </option>
+                    <option value="sump_pool_no_pump">
+                      No Pump / No Water Tower — Sump Pools Only! (Saves ~$180, 0 W)
+                    </option>
+                    <option value="steam_ppcp">
+                      Steam PPCP Auto-Recirc (Forbes Marshall / Spirax, 0 W Hot Sump)
+                    </option>
+                    <option value="steam_jet_syphon">
+                      Steam-Jet Cold Syphon + Boiler Feed Injector (&lt;120°F Cold Only)
+                    </option>
+                  </select>
+                  {project.local_draft_mode === "steam_ejector_subsonic" && (
+                    <span className="control-hint">
+                      6 psig subsonic cannot lift 3.5 m head or pull submerged sump slots — switch to 20 or 60 psig for steam pumps or sump-pool mode.
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <>
+            {isDeluxe && (
+              <div
+                id="panel-deluxe-eco-settings"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                  padding: 8,
+                  borderRadius: 6,
+                  background: "rgba(16, 185, 129, 0.08)",
+                  border: "1px solid rgba(16, 185, 129, 0.35)",
+                }}
+              >
+                <strong style={{ fontSize: 11.5, color: "#6ee7b7", textTransform: "uppercase" }}>
+                  Deluxe Energy &amp; Water Savers (Phase 13)
+                </strong>
+                <label className="checkbox-row">
+                  <input
+                    id="in-deluxe-condensing"
+                    type="checkbox"
+                    checked={!!project.deluxe_condensing_reclaimer}
+                    onChange={(e) => patch({ deluxe_condensing_reclaimer: e.target.checked })}
+                  />
+                  <span>Condensing Plume &amp; Water Reclaimer (+$1,850 · -70% evap water)</span>
+                </label>
+                <label className="checkbox-row">
+                  <input
+                    id="in-deluxe-var-throat"
+                    type="checkbox"
+                    checked={!!project.deluxe_variable_throat_vfd}
+                    onChange={(e) => patch({ deluxe_variable_throat_vfd: e.target.checked })}
+                  />
+                  <span>Auto Variable-Throat Venturi + VFD (+$1,450 · -60% kWh)</span>
+                </label>
+                <label className="checkbox-row">
+                  <input
+                    id="in-deluxe-s1-heat"
+                    type="checkbox"
+                    checked={!!project.deluxe_stage1_heat_recovery}
+                    onChange={(e) => patch({ deluxe_stage1_heat_recovery: e.target.checked })}
+                  />
+                  <span>Stage 1 Water-Jacket Pre-Cooler (+$1,650 · -40% water + heat)</span>
+                </label>
+              </div>
+            )}
             <div className="control">
               <label>Corrosion Tier</label>
               <div className="seg-group">

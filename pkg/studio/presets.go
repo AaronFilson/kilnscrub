@@ -37,6 +37,16 @@ const (
 	LocalDraftSteamEjectorLP       = "steam_ejector_lp"
 	LocalDraftSteamEjectorHP       = "steam_ejector_hp"
 
+	// Phase 13 local ceramic boiler heat source & off-grid steam water pump / sump-pool constants.
+	LocalBoilerDedicatedHearth   = "dedicated_hearth"
+	LocalBoilerKilnExhaustCoil   = "kiln_exhaust_coil"
+	LocalBoilerStage1WaterJacket = "stage1_water_jacket"
+
+	LocalPumpManualTreadle  = "manual_treadle"
+	LocalPumpSteamPPCP      = "steam_ppcp"
+	LocalPumpSteamJetSyphon = "steam_jet_syphon"
+	LocalPumpSumpPoolNoPump = "sump_pool_no_pump"
+
 	// CorrosionTierStandard316L is the canonical light/occasional 316L SS tier.
 	CorrosionTierStandard316L = "standard_316l"
 	// CorrosionTierHobby316L is accepted as a backward-compatible alias for CorrosionTierStandard316L.
@@ -103,36 +113,41 @@ func SupportedCones() []string {
 // StudioProject wraps a kiln engineering DesignInput with studio-friendly build,
 // vapor-glaze, corrosion, urban site readiness, and Phase 7 stage-design parameters.
 type StudioProject struct {
-	PresetID            string            `json:"preset_id"`
-	StudioName          string            `json:"studio_name"`
-	FiringCone          string            `json:"firing_cone"`
-	FiringDurationHours float64           `json:"firing_duration_hours"`
-	SaltingHours        float64           `json:"salting_hours"`
-	VaporGlazeMode      string            `json:"vapor_glaze_mode"`
-	BuildPath           string            `json:"build_path"`
-	CorrosionTier       string            `json:"corrosion_tier"`
-	SnapToCOTS          bool              `json:"snap_to_cots"`
-	IncludeSilencer     bool              `json:"include_silencer"`
-	IncludePlumeDiluter bool              `json:"include_plume_diluter"`
-	StageAlignment      string            `json:"stage_alignment"`
-	PackedBedLayout     string            `json:"packed_bed_layout"`
-	VenturiLayout       string            `json:"venturi_layout"`
-	CompactFootprint    bool              `json:"compact_footprint"`
-	SharedBaffledSump   bool              `json:"shared_baffled_sump"`
-	ControlTier         string            `json:"control_tier"`
-	BlowerDriveOption   string            `json:"blower_drive_option,omitempty"`
-	ParallelPipeSizeIn  float64           `json:"parallel_pipe_size_in,omitempty"`
-	PackingMediaOption  string            `json:"packing_media_option,omitempty"`
-	ShopCompressorSCFM  float64           `json:"shop_compressor_scfm,omitempty"`
-	ZeroElectricity     bool              `json:"zero_electricity,omitempty"`
-	LocalRegion         string            `json:"local_region,omitempty"`
-	LocalAlkali         string            `json:"local_alkali,omitempty"`
-	LocalDraftMode      string            `json:"local_draft_mode,omitempty"`
-	PropertyLineFt      float64           `json:"property_line_ft"`
-	AmbientWinterF      float64           `json:"ambient_winter_f"`
-	AvailableVoltage    int               `json:"available_voltage"`
-	GardenHoseGPM       float64           `json:"garden_hose_gpm"`
-	Input               model.DesignInput `json:"input"`
+	PresetID                  string            `json:"preset_id"`
+	StudioName                string            `json:"studio_name"`
+	FiringCone                string            `json:"firing_cone"`
+	FiringDurationHours       float64           `json:"firing_duration_hours"`
+	SaltingHours              float64           `json:"salting_hours"`
+	VaporGlazeMode            string            `json:"vapor_glaze_mode"`
+	BuildPath                 string            `json:"build_path"`
+	CorrosionTier             string            `json:"corrosion_tier"`
+	SnapToCOTS                bool              `json:"snap_to_cots"`
+	IncludeSilencer           bool              `json:"include_silencer"`
+	IncludePlumeDiluter       bool              `json:"include_plume_diluter"`
+	StageAlignment            string            `json:"stage_alignment"`
+	PackedBedLayout           string            `json:"packed_bed_layout"`
+	VenturiLayout             string            `json:"venturi_layout"`
+	CompactFootprint          bool              `json:"compact_footprint"`
+	SharedBaffledSump         bool              `json:"shared_baffled_sump"`
+	ControlTier               string            `json:"control_tier"`
+	BlowerDriveOption         string            `json:"blower_drive_option,omitempty"`
+	ParallelPipeSizeIn        float64           `json:"parallel_pipe_size_in,omitempty"`
+	PackingMediaOption        string            `json:"packing_media_option,omitempty"`
+	ShopCompressorSCFM        float64           `json:"shop_compressor_scfm,omitempty"`
+	ZeroElectricity           bool              `json:"zero_electricity,omitempty"`
+	LocalRegion               string            `json:"local_region,omitempty"`
+	LocalAlkali               string            `json:"local_alkali,omitempty"`
+	LocalDraftMode            string            `json:"local_draft_mode,omitempty"`
+	LocalBoilerSource         string            `json:"local_boiler_source,omitempty"`
+	LocalPumpMode             string            `json:"local_pump_mode,omitempty"`
+	DeluxeCondensingReclaimer bool              `json:"deluxe_condensing_reclaimer,omitempty"`
+	DeluxeVariableThroatVFD   bool              `json:"deluxe_variable_throat_vfd,omitempty"`
+	DeluxeStage1HeatRecovery  bool              `json:"deluxe_stage1_heat_recovery,omitempty"`
+	PropertyLineFt            float64           `json:"property_line_ft"`
+	AmbientWinterF            float64           `json:"ambient_winter_f"`
+	AvailableVoltage          int               `json:"available_voltage"`
+	GardenHoseGPM             float64           `json:"garden_hose_gpm"`
+	Input                     model.DesignInput `json:"input"`
 }
 
 // StudioPreset describes a curated, ready-to-evaluate studio kiln profile.
@@ -449,6 +464,33 @@ func (p StudioProject) IsSteamEjector() bool {
 		p.LocalDraftMode == LocalDraftSteamEjectorHP
 }
 
+// HasPressurizedSteam20Plus reports whether >= 20 psig steam (LP or HP) is active,
+// which is required to drive a mechanical PPCP, steam-jet syphon, or submerged sump-pool scrubber.
+func (p StudioProject) HasPressurizedSteam20Plus() bool {
+	return p.LocalDraftMode == LocalDraftSteamEjectorLP ||
+		p.LocalDraftMode == LocalDraftSteamEjectorHP
+}
+
+// EffectiveLocalBoilerSource returns the canonical Phase 13 boiler heat source.
+func (p StudioProject) EffectiveLocalBoilerSource() string {
+	switch p.LocalBoilerSource {
+	case LocalBoilerKilnExhaustCoil, LocalBoilerStage1WaterJacket, LocalBoilerDedicatedHearth:
+		return p.LocalBoilerSource
+	default:
+		return LocalBoilerDedicatedHearth
+	}
+}
+
+// EffectiveLocalPumpMode returns the canonical Phase 13 off-grid water pump / sump-pool mode.
+func (p StudioProject) EffectiveLocalPumpMode() string {
+	switch p.LocalPumpMode {
+	case LocalPumpSteamPPCP, LocalPumpSteamJetSyphon, LocalPumpSumpPoolNoPump, LocalPumpManualTreadle:
+		return p.LocalPumpMode
+	default:
+		return LocalPumpManualTreadle
+	}
+}
+
 // EffectiveLocalRegion returns the canonical regional sourcing key ("nairobi",
 // "mumbai", or "general_local"), defaulting to "nairobi".
 func (p StudioProject) EffectiveLocalRegion() string {
@@ -504,6 +546,12 @@ func (p StudioProject) Normalize() StudioProject {
 	}
 	if out.LocalDraftMode == "" {
 		out.LocalDraftMode = LocalDraftNaturalChimney
+	}
+	if out.LocalBoilerSource == "" {
+		out.LocalBoilerSource = LocalBoilerDedicatedHearth
+	}
+	if out.LocalPumpMode == "" {
+		out.LocalPumpMode = LocalPumpManualTreadle
 	}
 	if out.BuildPath == "" && (out.IsSteamEjector() || out.ZeroElectricity) {
 		out.BuildPath = BuildPathLocalCeramic
@@ -668,6 +716,37 @@ func (p StudioProject) Validate() error {
 	default:
 		return fmt.Errorf("local_draft_mode must be %q, %q, %q, or %q, got %q",
 			LocalDraftNaturalChimney, LocalDraftSteamEjectorSubsonic, LocalDraftSteamEjectorLP, LocalDraftSteamEjectorHP, p.LocalDraftMode)
+	}
+	switch p.LocalBoilerSource {
+	case "", LocalBoilerDedicatedHearth, LocalBoilerKilnExhaustCoil, LocalBoilerStage1WaterJacket:
+	default:
+		return fmt.Errorf("local_boiler_source must be %q, %q, or %q, got %q",
+			LocalBoilerDedicatedHearth, LocalBoilerKilnExhaustCoil, LocalBoilerStage1WaterJacket, p.LocalBoilerSource)
+	}
+	if p.LocalBoilerSource != "" && p.LocalBoilerSource != LocalBoilerDedicatedHearth {
+		if p.BuildPath != "" && p.BuildPath != BuildPathLocalCeramic {
+			return fmt.Errorf("local_boiler_source=%q requires build_path=%q (got %q)", p.LocalBoilerSource, BuildPathLocalCeramic, p.BuildPath)
+		}
+		if !p.IsSteamEjector() {
+			return fmt.Errorf("local_boiler_source=%q requires a steam-jet local_draft_mode (steam_ejector_subsonic, steam_ejector_lp, or steam_ejector_hp)", p.LocalBoilerSource)
+		}
+	}
+	switch p.LocalPumpMode {
+	case "", LocalPumpManualTreadle, LocalPumpSteamPPCP, LocalPumpSteamJetSyphon, LocalPumpSumpPoolNoPump:
+	default:
+		return fmt.Errorf("local_pump_mode must be %q, %q, %q, or %q, got %q",
+			LocalPumpManualTreadle, LocalPumpSteamPPCP, LocalPumpSteamJetSyphon, LocalPumpSumpPoolNoPump, p.LocalPumpMode)
+	}
+	if p.LocalPumpMode != "" && p.LocalPumpMode != LocalPumpManualTreadle {
+		if p.BuildPath != "" && p.BuildPath != BuildPathLocalCeramic {
+			return fmt.Errorf("local_pump_mode=%q requires build_path=%q (got %q)", p.LocalPumpMode, BuildPathLocalCeramic, p.BuildPath)
+		}
+		if !p.HasPressurizedSteam20Plus() {
+			return fmt.Errorf("local_pump_mode=%q requires >=20 psig steam (local_draft_mode=steam_ejector_lp or steam_ejector_hp; 0/6 psig cannot overcome 3.5 m head or submerged sump-pool suction)", p.LocalPumpMode)
+		}
+	}
+	if (p.DeluxeCondensingReclaimer || p.DeluxeVariableThroatVFD || p.DeluxeStage1HeatRecovery) && p.BuildPath != BuildPathCustomFabDeluxe {
+		return fmt.Errorf("deluxe energy/water-saving upgrades require build_path=%q (got %q)", BuildPathCustomFabDeluxe, p.BuildPath)
 	}
 	switch p.CorrosionTier {
 	case CorrosionTierStandard316L, CorrosionTierHobby316L, CorrosionTierHeavyC276FRP:

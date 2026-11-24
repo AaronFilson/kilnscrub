@@ -74,6 +74,28 @@ export function DesignTab({ evaluation, units, active }: DesignTabProps) {
           <div style={{ fontSize: 12.5, color: "#e2e8f0" }}>
             {plan.deluxe_spec.summary}
           </div>
+          {(plan.deluxe_spec.eco_cost_delta_usd ?? 0) > 0 && (
+            <div className="grid-3" style={{ marginTop: 8 }}>
+              <div className="card" style={{ padding: 8 }}>
+                <div className="kpi-label">Evap Water Saved</div>
+                <div className="kpi-value" style={{ fontSize: 15 }}>
+                  {fmt(plan.deluxe_spec.water_saved_pct, 0)}% ({fmt(plan.deluxe_spec.water_saved_gal_per_firing, 0)} gal)
+                </div>
+              </div>
+              <div className="card" style={{ padding: 8 }}>
+                <div className="kpi-label">Blower Energy Saved</div>
+                <div className="kpi-value" style={{ fontSize: 15 }}>
+                  {fmt(plan.deluxe_spec.energy_saved_pct, 0)}% ({fmt(plan.deluxe_spec.energy_saved_kwh_per_firing, 1)} kWh)
+                </div>
+              </div>
+              <div className="card" style={{ padding: 8 }}>
+                <div className="kpi-label">Studio Waste Heat Reclaimed</div>
+                <div className="kpi-value" style={{ fontSize: 15 }}>
+                  {fmt(plan.deluxe_spec.recovered_heat_kw, 1)} kW
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -87,9 +109,25 @@ export function DesignTab({ evaluation, units, active }: DesignTabProps) {
               {frugal.local_currency_estimate} · {fmt(frugal.power_watts, 0)} W
             </span>
           </div>
-          <div style={{ fontSize: 12.5, color: "#fef3c7", marginBottom: 8 }}>
+          <div style={{ fontSize: 12.5, color: "#fef3c7", marginBottom: 6 }}>
             {frugal.summary}
           </div>
+          {frugal.steam_enabled && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+              <span className="pill info">
+                Boiler: {frugal.boiler_source_label || "Dedicated Firebox"}
+                {(frugal.boiler_water_saved_pct ?? 0) > 0
+                  ? ` (-${fmt(frugal.boiler_water_saved_pct, 0)}% Quench Water)`
+                  : ""}
+              </span>
+              <span className={`pill ${frugal.has_overhead_tank === false ? "ok" : "info"}`}>
+                Water Drive: {frugal.pump_mode_label || frugal.manual_pump_type}
+              </span>
+              {frugal.has_overhead_tank === false && (
+                <span className="pill ok">0 Pumps · 0 Water Tower (Ground Sump Pools Only)</span>
+              )}
+            </div>
+          )}
           <div className="grid-3">
             <div className="card" style={{ padding: 8 }}>
               <div className="kpi-label">HCl Acid Gas Capture</div>

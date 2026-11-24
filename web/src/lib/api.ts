@@ -66,16 +66,37 @@ export function reconcileProject(proj: StudioProject): StudioProject {
   if (next.build_path !== "local_ceramic_masonry") {
     next.zero_electricity = false;
     next.local_draft_mode = "natural_chimney";
+    next.local_boiler_source = "dedicated_hearth";
+    next.local_pump_mode = "manual_treadle";
     if (next.available_voltage === 0) {
       next.available_voltage = 240;
     }
-  } else if (next.zero_electricity) {
-    next.available_voltage = 0;
-    next.include_plume_diluter = false;
+  } else {
+    if (next.zero_electricity) {
+      next.available_voltage = 0;
+      next.include_plume_diluter = false;
+    }
+    const isSteam =
+      next.local_draft_mode === "steam_ejector_subsonic" ||
+      next.local_draft_mode === "steam_ejector_lp" ||
+      next.local_draft_mode === "steam_ejector_hp";
+    const has20Plus =
+      next.local_draft_mode === "steam_ejector_lp" ||
+      next.local_draft_mode === "steam_ejector_hp";
+    if (!isSteam) {
+      next.local_boiler_source = "dedicated_hearth";
+    }
+    if (!has20Plus) {
+      next.local_pump_mode = "manual_treadle";
+    }
   }
 
   if (next.build_path === "custom_fab_deluxe") {
     next.packed_bed_layout = "single_column";
+  } else {
+    next.deluxe_condensing_reclaimer = false;
+    next.deluxe_variable_throat_vfd = false;
+    next.deluxe_stage1_heat_recovery = false;
   }
 
   if (next.stage_alignment === "eductor_dry_fan") {

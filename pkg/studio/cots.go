@@ -1193,6 +1193,43 @@ func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSu
 				WeightKg:    round2(88.0 + 6.5*skidLenFt),
 			},
 		)
+		// Phase 13: Optional Deluxe Energy & Water Saving Upgrades
+		if p.DeluxeCondensingReclaimer {
+			items = append(items, model.BOMItem{
+				Category:    "Deluxe Energy & Water Recovery",
+				Name:        "Closed-Loop Condensing Plume Abater & Distilled Water Reclaimer (Indirect Finned Coil)",
+				Material:    "316L SS / Grade 2 Titanium Condensing Finned Tube Bundle + Condensate Return Trap",
+				Quantity:    1,
+				Unit:        "assy",
+				Spec:        "[DLX-COND-RECLAIM] Cools saturated 184 F Stage 3 exhaust down to ~120 F, condensing ~70% of Stage 1 evaporated water cleanly back into the sump, slashing visible winter plume >75%, and reclaiming low-grade studio hydronic heat",
+				UnitCostUSD: 1850.0,
+				WeightKg:    42.0,
+			})
+		}
+		if p.DeluxeVariableThroatVFD {
+			items = append(items, model.BOMItem{
+				Category:    "Deluxe Energy & Water Recovery",
+				Name:        "Auto-Actuated Variable-Throat Venturi Plug & VFD Turndown Interlock",
+				Material:    "Alloy C-276 / 316L SS Flooded-Disc Damper Plug + 24VDC Modulating Actuator",
+				Quantity:    1,
+				Unit:        "assy",
+				Spec:        "[DLX-VAR-THROAT] Opens venturi throat during non-salting ramp/cooldown (dP ~19 -> ~3.8 inWC), throttling VFD to ~48% RPM for ~55-68% blower kWh savings and -10 dBA off-peak noise while locking 70 m/s during salting",
+				UnitCostUSD: 1450.0,
+				WeightKg:    16.0,
+			})
+		}
+		if p.DeluxeStage1HeatRecovery {
+			items = append(items, model.BOMItem{
+				Category:    "Deluxe Energy & Water Recovery",
+				Name:        "Stage 1 Water-Jacketed Quench Pre-Cooler & Studio Heat Reclaimer",
+				Material:    "Double-Walled Alloy C-276 / 316L SS Pressurized Jacket Collar + Hydronic Relief Trim",
+				Quantity:    1,
+				Unit:        "assy",
+				Spec:        "[DLX-S1-WATER-JACKET] Harvests ~38-45% of Stage 1 kiln exhaust sensible heat BEFORE spray nozzles into studio hot water / hydronic heating, cutting Stage 1 evaporative water loss by ~40% and lowering blower power ~7%",
+				UnitCostUSD: 1650.0,
+				WeightKg:    34.0,
+			})
+		}
 	}
 
 	// NEC 430.102 lockable sight disconnect & 3% VFD line reactor.

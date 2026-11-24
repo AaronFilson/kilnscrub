@@ -44,6 +44,20 @@ export interface StudioProject {
     | "steam_ejector_lp"
     | "steam_ejector_hp"
     | string;
+  local_boiler_source?:
+    | "dedicated_hearth"
+    | "kiln_exhaust_coil"
+    | "stage1_water_jacket"
+    | string;
+  local_pump_mode?:
+    | "manual_treadle"
+    | "steam_ppcp"
+    | "steam_jet_syphon"
+    | "sump_pool_no_pump"
+    | string;
+  deluxe_condensing_reclaimer?: boolean;
+  deluxe_variable_throat_vfd?: boolean;
+  deluxe_stage1_heat_recovery?: boolean;
   corrosion_tier: "standard_316l" | "heavy_c276_frp" | string;
   stage_alignment: "inline_id_blower" | "eductor_dry_fan" | string;
   packed_bed_layout: "single_column" | "parallel_manifold" | string;
@@ -493,6 +507,18 @@ export interface FrugalAssessment {
   manual_steps: string[];
   warnings: string[];
   summary: string;
+  boiler_source?: string;
+  boiler_source_label?: string;
+  boiler_water_saved_pct?: number;
+  boiler_fuel_saved_note?: string;
+  boiler_corrosion_note?: string;
+  pump_mode?: string;
+  pump_mode_label?: string;
+  pump_steam_kg_hr?: number;
+  has_overhead_tank?: boolean;
+  sump_pool_submergence_in?: number;
+  sump_pool_dp_inwc?: number;
+  pump_engineering_note?: string;
 }
 
 export interface ShopPlan {
@@ -623,6 +649,17 @@ export interface ShopPlan {
     cost_delta_usd: number;
     summary: string;
     highlights: string[];
+    condensing_reclaimer?: boolean;
+    variable_throat_vfd?: boolean;
+    stage1_heat_recovery?: boolean;
+    eco_cost_delta_usd?: number;
+    water_saved_pct?: number;
+    water_saved_gal_per_firing?: number;
+    energy_saved_pct?: number;
+    energy_saved_kwh_per_firing?: number;
+    recovered_heat_kw?: number;
+    eco_summary?: string;
+    eco_highlights?: string[];
   } | null;
 }
 
