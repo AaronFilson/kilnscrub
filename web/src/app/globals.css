@@ -501,11 +501,11 @@ select {
 .viewport-shell {
   position: relative;
   width: 100%;
-  height: 430px;
+  height: 520px;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--border);
-  background: #0a121d;
+  background: #0a1320;
 }
 
 .viewport-hud {
@@ -521,13 +521,46 @@ select {
 
 .hud-chip {
   display: inline-block;
-  padding: 3px 8px;
+  padding: 3px 9px;
   border-radius: 5px;
-  background: rgba(8, 16, 24, 0.82);
-  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: rgba(8, 16, 26, 0.84);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(56, 189, 248, 0.32);
   color: #cbd5e1;
   font-size: 11px;
   font-family: var(--font-mono);
+}
+
+.viewport-legend {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: rgba(8, 16, 26, 0.84);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: #cbd5e1;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.viewport-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
 
 .charts-grid {

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import type { StudioEvaluation } from "@/types/kilnscrub";
 import { fmt, fmtUSD, kToF, mToIn } from "@/lib/api";
 import { Viewport3D } from "./Viewport3D";
+import type { StageKey } from "./scene3d/types";
 import { Schematic2D } from "./Schematic2D";
 import { EngineeringCharts } from "./EngineeringCharts";
 
@@ -18,7 +19,10 @@ export function DesignTab({ evaluation, units, active }: DesignTabProps) {
   const [cutaway, setCutaway] = useState(true);
   const [particles, setParticles] = useState(true);
   const [showSystems3D, setShowSystems3D] = useState(false);
-  const [focusStage, setFocusStage] = useState<string | null>("overview");
+  const [showDimensions, setShowDimensions] = useState(true);
+  const [focusStage, setFocusStage] = useState<StageKey>("overview");
+  const [resetCounter, setResetCounter] = useState(0);
+  const [scaleSummary, setScaleSummary] = useState("Scale 1:1 m");
 
   const { project, design, cots, urban, frugal, shop_plan: plan } = evaluation;
   const isLocal = project.build_path === "local_ceramic_masonry";
@@ -237,6 +241,13 @@ export function DesignTab({ evaluation, units, active }: DesignTabProps) {
                 >
                   Flow Particles: {particles ? "ON" : "OFF"}
                 </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${showDimensions ? "btn-accent" : ""}`}
+                  onClick={() => setShowDimensions((v) => !v)}
+                >
+                  Dimensions: {showDimensions ? "ON" : "OFF"}
+                </button>
                 {!isLocal && (
                   <button
                     id="btn-systems-3d"
@@ -247,6 +258,16 @@ export function DesignTab({ evaluation, units, active }: DesignTabProps) {
                     Skid, Pump &amp; Baffling: {showSystems3D || isDeluxe ? "ON" : "OFF"}
                   </button>
                 )}
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => {
+                    setFocusStage("overview");
+                    setResetCounter((c) => c + 1);
+                  }}
+                >
+                  Reset View
+                </button>
               </>
             )}
           </div>
@@ -260,7 +281,7 @@ export function DesignTab({ evaluation, units, active }: DesignTabProps) {
                 ["venturi", isLocal ? "2: Steam/Baffle" : "2: Venturi"],
                 ["packed", "3: Absorber"],
                 ["blower", isLocal ? "4: Chimney" : "4: Blower"],
-              ] as const
+              ] as Array<[StageKey, string]>
             ).map(([key, label]) => (
               <button
                 key={key}
@@ -278,7 +299,7 @@ export function DesignTab({ evaluation, units, active }: DesignTabProps) {
           <div className="viewport-hud">
             <span className="hud-chip" id="hud-renderer">
               {viewMode === "3d"
-                ? "Renderer: Three.js 0.170.0 WebGL (Bundled Offline)"
+                ? `Three.js 0.170.0 WebGL · ${scaleSummary}`
                 : "Renderer: 2D Parametric Cutaway SVG"}
             </span>
             <span className="hud-chip" id="hud-controls">
@@ -288,14 +309,27 @@ export function DesignTab({ evaluation, units, active }: DesignTabProps) {
             </span>
           </div>
 
+          {viewMode === "3d" && particles && (
+            <div className="viewport-legend" aria-label="Flow Particle Legend">
+              <span><i className="legend-dot" style={{ background: "#fb923c" }} /> Hot Kiln Gas</span>
+              <span><i className="legend-dot" style={{ background: "#38bdf8" }} /> Quenched Mist / Spray</span>
+              <span><i className="legend-dot" style={{ background: "#f8fafc" }} /> Steam / Motive Jet</span>
+              <span><i className="legend-dot" style={{ background: "#34d399" }} /> Clean Exhaust</span>
+            </div>
+          )}
+
           {viewMode === "3d" ? (
             <Viewport3D
               evaluation={evaluation}
               cutaway={cutaway}
               particles={particles}
               showSystemsOverlay={showSystems3D}
+              showDimensions={showDimensions}
+              units={units}
               focusStage={focusStage}
+              resetCounter={resetCounter}
               active={active && viewMode === "3d"}
+              onScaleSummary={setScaleSummary}
               onWebGLUnavailable={() => setViewMode("2d")}
             />
           ) : (
