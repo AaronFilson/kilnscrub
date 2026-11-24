@@ -7700,7 +7700,7 @@
           out += `<g stroke="${sel === numInlet ? "#f97316" : "#ea580c"}" stroke-width="${sel === numInlet ? 2.6 : 1.7}" fill="url(#bp-brick-hatch)">`;
           out += `<rect x="${qX - 54}" y="${qInY - 14}" width="54" height="28"/>`;
           out += `</g>`;
-          out += svgCalloutBubble(numInlet, qX - 28, qInY, qX - 38, qTopY - 38, sel);
+          out += svgCalloutBubble(numInlet, qX - 28, qInY, qX - 38, isSteamFrugal ? qTopY - 54 : qTopY - 38, sel);
 
           // Certified Baby Boiler / Monotube Steam Unit + PRV + Pressure Gauge (when Steam-Jet Ejector is active!)
           const boX = ex + 34;
@@ -7733,7 +7733,7 @@
           out += `<path d="M ${qX + qW * 0.5} ${qTopY + 26} L ${qX + 10} ${floorY - 18} L ${qX + qW - 10} ${floorY - 18} Z" fill="rgba(56,189,248,0.18)" stroke="#38bdf8" stroke-dasharray="3 2" stroke-width="1"/>`;
           out += `</g>`;
           out += `<text x="${qX + qW * 0.5}" y="${floorY - 6}" text-anchor="middle" fill="#fed7aa" font-family="monospace" font-size="8.0" font-weight="700">BRICK QUENCH</text>`;
-          out += svgCalloutBubble(numQuench, qX + qW * 0.5, qTopY + 52, qX + qW * 0.5, qTopY - 38, sel);
+          out += svgCalloutBubble(numQuench, qX + qW * 0.5, qTopY + 52, qX + qW * 0.5, isSteamFrugal ? qTopY - 54 : qTopY - 38, sel);
 
           // 2. Wide Masonry / SWG Stoneware-Packed Tower ([4]) + Steam-Jet Ejector Throat when steam enabled
           const ejGap = isSteamFrugal ? 64 * xScale : 28 * xScale;
@@ -7755,7 +7755,7 @@
             out += `<polygon points="${ejMidX - 5},${ejMidY} ${ejX2 + 22},${ejMidY - 13} ${ejX2 + 22},${ejMidY + 13}" fill="rgba(103,232,249,0.34)" stroke="#a5f3fc" stroke-dasharray="3 2" stroke-width="1"/>`;
             out += `</g>`;
             // Insulated Steam Line (S1) from Certified Baby Boiler crown -> Ejector Nozzle
-            const s1RouteY = qTopY - 12;
+            const s1RouteY = qTopY - 26;
             out += `<g class="plan-layer-plumbing">`;
             out += `<path d="M ${boX + boW * 0.70} ${boTopY} L ${boX + boW * 0.70} ${s1RouteY} L ${ejX1 + 10} ${s1RouteY} L ${ejX1 + 10} ${ejMidY}" fill="none" stroke="#f59e0b" stroke-width="2.4" stroke-dasharray="6 2" marker-end="url(#bp-arrow-elec)"/>`;
             out += `<text x="${(boX + ejX1) * 0.5 + 16}" y="${s1RouteY - 5}" text-anchor="middle" fill="#fde68a" font-family="monospace" font-size="7.8" font-weight="800">S1 INSULATED STEAM (${Math.round(frugal.steam_pressure_psig)} psig)</text>`;
@@ -7779,8 +7779,8 @@
           out += `</g>`;
           out += `<text x="${pX + pW * 0.5}" y="${pTopY + pH * 0.52}" text-anchor="middle" fill="#fef3c7" font-family="monospace" font-size="8.4" font-weight="700">${isSteamFrugal ? "CONDENSING BED" : "STONEWARE RINGS"}</text>`;
           out += `<text x="${pX + pW * 0.5}" y="${pTopY + pH * 0.52 + 12}" text-anchor="middle" fill="#fdba74" font-family="monospace" font-size="7.8">Ø${Math.round(frugal.bed_diameter_in || 30)}" · ΔP ${fmt(frugal.bed_dp_inwc, 2)}"</text>`;
-          out += svgDimLine(pX, pTopY, pX + pW, pTopY, `WIDE BED Ø${fmtPlanLen(frugal.bed_diameter_in || 30)}`, -16, false, "#fdba74");
-          out += svgCalloutBubble(numPacked, pX + pW * 0.5, pTopY + 26, pX + pW * 0.5, pTopY - 46, sel);
+          out += svgDimLine(pX, pTopY, pX + pW, pTopY, `WIDE BED Ø${fmtPlanLen(frugal.bed_diameter_in || 30)}`, -30, false, "#fdba74");
+          out += svgCalloutBubble(numPacked, pX + pW * 0.5, pTopY + 26, pX + pW * 0.5, pTopY - 58, sel);
 
           // 3. Brick / Terracotta Chimney ([6] / [8]) — Shorter 4.5-5.5 m stack when Steam-Jet Ejector is active!
           const chX = pX + pW + (isSteamFrugal ? 30 : 40) * xScale;
@@ -7862,7 +7862,7 @@
             const gravY = Math.min(pTopY - 12, tkBotY + 10);
             out += `<path d="M ${tkX + 12} ${tkBotY} L ${tkX + 12} ${gravY} L ${qX + qW * 0.5} ${gravY} L ${qX + qW * 0.5} ${qTopY}" fill="none" stroke="#06b6d4" stroke-width="2.1" marker-end="url(#bp-arrow-water)"/>`;
             out += `<path d="M ${pX + pW * 0.5} ${gravY} L ${pX + pW * 0.5} ${pTopY + 42}" fill="none" stroke="#06b6d4" stroke-width="2" marker-end="url(#bp-arrow-water)"/>`;
-            out += `<text x="${(pX + tkX) * 0.5}" y="${gravY - 5}" text-anchor="middle" fill="#67e8f9" font-family="monospace" font-size="7.8" font-weight="700">P1 GRAVITY FEED (${fmt(frugal.spray_flow_lpm, 1)} L/min)</text>`;
+            out += `<text x="${Math.max(pX + pW + 24, (pX + tkX) * 0.5 + 24)}" y="${gravY - 4}" text-anchor="middle" fill="#67e8f9" font-family="monospace" font-size="7.8" font-weight="700">P1 GRAVITY FEED (${fmt(frugal.spray_flow_lpm, 1)} L/min)</text>`;
             // Gravity returns into brick sump
             out += `<line x1="${qX + qW * 0.4}" y1="${floorY}" x2="${qX + qW * 0.4}" y2="${sumpY}" stroke="#38bdf8" stroke-width="2" stroke-dasharray="3 2" marker-end="url(#bp-arrow-water)"/>`;
             out += `<line x1="${pX + pW * 0.4}" y1="${floorY}" x2="${Math.min(sumpX + sumpW - 16, pX + pW * 0.4)}" y2="${sumpY}" stroke="#38bdf8" stroke-width="2" stroke-dasharray="3 2" marker-end="url(#bp-arrow-water)"/>`;
@@ -8525,18 +8525,20 @@
         const tbY = 480;
         const tbW = 476;
         const tbH = 114;
+        const rawPlanTitle = plan.title || "KILNSCRUB FULL SYSTEMS SHOP PLAN";
+        const planTitleDisplay = rawPlanTitle.length > 60 ? `${rawPlanTitle.slice(0, 59)}…` : rawPlanTitle;
         out += `<g class="plan-title-block">`;
         out += `<rect x="${tbX}" y="${tbY}" width="${tbW}" height="${tbH}" fill="#0c1b30" stroke="#38bdf8" stroke-width="1.6"/>`;
         out += `<line x1="${tbX}" y1="${tbY + 34}" x2="${tbX + tbW}" y2="${tbY + 34}" stroke="#234873" stroke-width="1"/>`;
         out += `<line x1="${tbX}" y1="${tbY + 74}" x2="${tbX + tbW}" y2="${tbY + 74}" stroke="#234873" stroke-width="1"/>`;
-        out += `<line x1="${tbX + 240}" y1="${tbY + 34}" x2="${tbX + 240}" y2="${tbY + tbH}" stroke="#234873" stroke-width="1"/>`;
-        out += `<text x="${tbX + 12}" y="${tbY + 22}" fill="#f8fafc" font-family="monospace" font-size="12" font-weight="800">${escapeHtml(plan.title || "KILNSCRUB FULL SYSTEMS SHOP PLAN")}</text>`;
-        out += `<text x="${tbX + 12}" y="${tbY + 51}" fill="#7dd3fc" font-family="monospace" font-size="9.5">BUILD: ${escapeHtml(isFrugal ? (isSteamFrugal ? `LOCAL CERAMIC (0V STEAM-JET ${Math.round(frugal.steam_pressure_psig)} psig)` : (isZeroElec ? "LOCAL CERAMIC (0V OFF-GRID)" : "LOCAL CERAMIC (HYBRID)")) : (isDeluxe ? "CUSTOM FAB DELUXE" : (normalizeBuildPath(plan.build_path) === "welded_dxf" ? "WELDED DXF" : "NO-WELD COTS")))}</text>`;
+        out += `<line x1="${tbX + 252}" y1="${tbY + 34}" x2="${tbX + 252}" y2="${tbY + tbH}" stroke="#234873" stroke-width="1"/>`;
+        out += `<text x="${tbX + 12}" y="${tbY + 22}" fill="#f8fafc" font-family="monospace" font-size="11.5" font-weight="800">${escapeHtml(planTitleDisplay)}</text>`;
+        out += `<text x="${tbX + 12}" y="${tbY + 51}" fill="#7dd3fc" font-family="monospace" font-size="9.5">BUILD: ${escapeHtml(isFrugal ? (isSteamFrugal ? `CERAMIC (0V STEAM ${Math.round(frugal.steam_pressure_psig)} psig)` : (isZeroElec ? "LOCAL CERAMIC (0V OFF-GRID)" : "LOCAL CERAMIC (HYBRID)")) : (isDeluxe ? "CUSTOM FAB DELUXE" : (normalizeBuildPath(plan.build_path) === "welded_dxf" ? "WELDED DXF" : "NO-WELD COTS")))}</text>`;
         out += `<text x="${tbX + 12}" y="${tbY + 66}" fill="#cbd5e1" font-family="monospace" font-size="9.5">BED: ${escapeHtml(isParallelBed ? `SHELL-LESS ${arch.parallelBed.pipeCount}×${arch.parallelBed.pipeNomIn}" UNISEAL` : "SINGLE COLUMN")}</text>`;
-        out += `<text x="${tbX + 252}" y="${tbY + 51}" fill="#7dd3fc" font-family="monospace" font-size="9.5">ENVELOPE: ${escapeHtml(fmtPlanLen(lenIn, true))} × ${escapeHtml(fmtPlanLen(widIn, true))}</text>`;
-        out += `<text x="${tbX + 252}" y="${tbY + 66}" fill="#cbd5e1" font-family="monospace" font-size="9.5">LAYERS: ${escapeHtml(activeLayerTags)}</text>`;
+        out += `<text x="${tbX + 260}" y="${tbY + 51}" fill="#7dd3fc" font-family="monospace" font-size="9.5">ENVELOPE: ${escapeHtml(fmtPlanLen(lenIn, true))} × ${escapeHtml(fmtPlanLen(widIn, true))}</text>`;
+        out += `<text x="${tbX + 260}" y="${tbY + 66}" fill="#cbd5e1" font-family="monospace" font-size="9.5">LAYERS: ${escapeHtml(activeLayerTags)}</text>`;
         out += `<text x="${tbX + 12}" y="${tbY + 98}" fill="#94a3b8" font-family="monospace" font-size="9.5">KILNSCRUB PHASE 9 FULL SYSTEMS PLAN</text>`;
-        out += `<text x="${tbX + 252}" y="${tbY + 98}" fill="#86efac" font-family="monospace" font-size="9.5">ZERO CAD REQUIRED · READY TO PRINT</text>`;
+        out += `<text x="${tbX + 260}" y="${tbY + 98}" fill="#86efac" font-family="monospace" font-size="9.5">ZERO CAD REQUIRED · READY TO PRINT</text>`;
         out += `</g>`;
 
         out += `</g>`; // close plan-viewport-transform
