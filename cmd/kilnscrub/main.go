@@ -410,32 +410,38 @@ func runPresets(args []string, stdout, stderr io.Writer) error {
 }
 
 type studioOptionFlags struct {
-	buildPath      *string
-	saltingHours   *float64
-	alignment      *string
-	bedLayout      *string
-	parallelPipeIn *float64
-	venturiLayout  *string
-	compact        *bool
-	controls       *string
-	blowerDrive    *string
-	packingMedia   *string
-	compressorSCFM *float64
+	buildPath       *string
+	saltingHours    *float64
+	alignment       *string
+	bedLayout       *string
+	parallelPipeIn  *float64
+	venturiLayout   *string
+	compact         *bool
+	controls        *string
+	blowerDrive     *string
+	packingMedia    *string
+	compressorSCFM  *float64
+	zeroElectricity *bool
+	localRegion     *string
+	localAlkali     *string
 }
 
 func bindStudioOptionFlags(fs *flag.FlagSet) studioOptionFlags {
 	return studioOptionFlags{
-		buildPath:      fs.String("build-path", "", "Fabrication build path: cots_no_weld, welded_dxf, or custom_fab_deluxe"),
-		saltingHours:   fs.Float64("salting-hours", 0, "Active peak salting window in hours (e.g. 2-4 hrs for salt mode)"),
-		alignment:      fs.String("alignment", "", "Stage alignment: inline_id_blower or eductor_dry_fan"),
-		bedLayout:      fs.String("bed-layout", "", "Stage 3 packed-bed layout: single_column or parallel_manifold"),
-		parallelPipeIn: fs.Float64("parallel-pipe-in", 0, "Shell-less parallel manifold pipe size in inches: 2, 3, or 4"),
-		venturiLayout:  fs.String("venturi-layout", "", "Stage 2 venturi layout: single_throat or parallel_mini_venturis"),
-		compact:        fs.Bool("compact", false, "Use compact U-turn folded skid footprint"),
-		controls:       fs.String("controls", "", "Control tier: rpi_modbus or electromechanical_only"),
-		blowerDrive:    fs.String("blower-drive", "", "Stage 4 blower drive: industrial_radial_vfd, regen_side_channel, dual_bypass_blowers, compressor_air_atomize, or compressor_eductor_only"),
-		packingMedia:   fs.String("packing-media", "", "Stage 3 packing media: pp_pall_rings, aquaculture_bioballs, or diy_ceramic_rings"),
-		compressorSCFM: fs.Float64("compressor-scfm", 0, "Existing studio shop air compressor capacity (SCFM @ 90 PSI, default 15)"),
+		buildPath:       fs.String("build-path", "", "Fabrication build path: cots_no_weld, welded_dxf, custom_fab_deluxe, or local_ceramic_masonry"),
+		saltingHours:    fs.Float64("salting-hours", 0, "Active peak salting window in hours (e.g. 2-4 hrs for salt mode)"),
+		alignment:       fs.String("alignment", "", "Stage alignment: inline_id_blower or eductor_dry_fan"),
+		bedLayout:       fs.String("bed-layout", "", "Stage 3 packed-bed layout: single_column or parallel_manifold"),
+		parallelPipeIn:  fs.Float64("parallel-pipe-in", 0, "Shell-less parallel manifold pipe size in inches: 2, 3, or 4"),
+		venturiLayout:   fs.String("venturi-layout", "", "Stage 2 venturi layout: single_throat or parallel_mini_venturis"),
+		compact:         fs.Bool("compact", false, "Use compact U-turn folded skid footprint"),
+		controls:        fs.String("controls", "", "Control tier: rpi_modbus or electromechanical_only"),
+		blowerDrive:     fs.String("blower-drive", "", "Stage 4 blower drive: industrial_radial_vfd, regen_side_channel, dual_bypass_blowers, compressor_air_atomize, or compressor_eductor_only"),
+		packingMedia:    fs.String("packing-media", "", "Stage 3 packing media: pp_pall_rings, aquaculture_bioballs, or diy_ceramic_rings"),
+		compressorSCFM:  fs.Float64("compressor-scfm", 0, "Existing studio shop air compressor capacity (SCFM @ 90 PSI, default 15)"),
+		zeroElectricity: fs.Bool("zero-electricity", false, "Zero electricity on site (passive thermal-reheat chimney draft + manual gravity tank; implies local_ceramic_masonry)"),
+		localRegion:     fs.String("local-region", "", "Local sourcing region: nairobi, mumbai, or general_local"),
+		localAlkali:     fs.String("local-alkali", "", "Local neutralizing alkali: soda_ash, slaked_lime, wood_ash_lye, or baking_soda"),
 	}
 }
 
@@ -473,6 +479,18 @@ func (f studioOptionFlags) applyExplicit(base studio.StudioProject, setFlags map
 	}
 	if setFlags["compressor-scfm"] || *f.compressorSCFM != 0 {
 		proj.ShopCompressorSCFM = *f.compressorSCFM
+	}
+	if setFlags["zero-electricity"] {
+		proj.ZeroElectricity = *f.zeroElectricity
+		if proj.ZeroElectricity && !setFlags["build-path"] {
+			proj.BuildPath = studio.BuildPathLocalCeramic
+		}
+	}
+	if setFlags["local-region"] {
+		proj.LocalRegion = strings.ToLower(strings.TrimSpace(*f.localRegion))
+	}
+	if setFlags["local-alkali"] {
+		proj.LocalAlkali = strings.ToLower(strings.TrimSpace(*f.localAlkali))
 	}
 	return proj
 }
@@ -559,6 +577,28 @@ func printStudioSummary(w io.Writer, eval studio.StudioEvaluation) {
 			p.BuildPath, sp.DeluxeSpec.CostDeltaUSD,
 			sp.AcousticSummary.BareDBA3Ft, sp.AcousticSummary.TreatedDBA3Ft,
 			sp.AcousticSummary.PropertyLineDBA, sp.AcousticSummary.PropertyLineFt)
+	}
+	if f := eval.Frugal; f != nil && f.Enabled {
+		powerLabel := fmt.Sprintf("%.0f W Local Hybrid", f.PowerWatts)
+		laborLabel := f.ManualPumpType
+		if f.ZeroElectricity {
+			powerLabel = "0 W Off-Grid"
+			laborLabel = fmt.Sprintf("%d jerrycans/hr or %.1f treadle min/hr (%s)",
+				f.Jerrycans20LPerHr, f.TreadleMinutesPerHr, f.ManualPumpType)
+		}
+		fmt.Fprintf(w, "Local Ceramic / Off-Grid : %s | %s | Power: %s\n",
+			f.RegionLabel, f.LocalCurrencyEstimate, powerLabel)
+		fmt.Fprintf(w, "  Chimney & Draft : %.1f m (%.1f ft) @ %.0f F reheat | %.3f vs %.3f inWC (feasible=%v)\n",
+			f.ChimneyHeightM, f.ChimneyHeightFt, f.StackReheatTempF,
+			f.AvailableDraftInWC, f.RequiredDraftInWC, f.DraftFeasible)
+		fmt.Fprintf(w, "  Ceramic Bed     : %.0f\" wide stoneware (v_s=%.2f m/s, Ergun dP=%.3f inWC)\n",
+			f.BedDiameterIn, f.BedSuperficialVelMS, f.BedDPInWC)
+		fmt.Fprintf(w, "  Gravity & Labor : %.0f L (%.0f gal) @ %.1f ft (%.2f PSI, %.2f L/min) | %s\n",
+			f.GravityTankLiters, f.GravityTankGal, f.TankElevationFt, f.GravityHeadPSI, f.SprayFlowLPM, laborLabel)
+		fmt.Fprintf(w, "  Local Alkali    : %s (%s) | %.2f kg/firing ($%.2f)\n",
+			f.AlkaliName, f.AlkaliFormula, f.AlkaliKgPerFiring, f.AlkaliCostUSD)
+		fmt.Fprintf(w, "  Honest Capture  : HCl %.1f%% | Coarse Ash %.1f%% | Submicron NaCl %.1f%%\n",
+			f.HClRemovalPct, f.CoarseAshCapturePct, f.SubmicronNaClCapturePct)
 	}
 	fmt.Fprintf(w, "Stage Options   : alignment=%s | bed=%s (%.0f\" pipe) | venturi=%s | compact=%v | controls=%s | delta=%+.2f USD\n",
 		a.StageAlignment, a.PackedBedLayout, a.ParallelBed.PipeNominalIn, a.VenturiLayout, a.CompactFootprint, a.ControlTier, a.CostDeltaUSD)

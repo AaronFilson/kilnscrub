@@ -165,6 +165,35 @@ func diluterAmps120V(design model.ScrubberDesign) float64 {
 }
 
 func assessElectrical(project StudioProject, design model.ScrubberDesign) ElectricalAssessment {
+	if project.ZeroElectricity {
+		return ElectricalAssessment{
+			Status:               StatusOK,
+			RequiredVoltage:      0,
+			RequiredAmps:         0,
+			CircuitLabel:         "0V / 0W — 100% Off-Grid (Zero Electricity)",
+			Summary:              "100% off-grid zero-electricity ceramic scrubber (0 V, 0 A, 0 W): natural chimney buoyancy draft + elevated overhead gravity water tank + manual treadle/hand pump eliminate all electric blowers, pumps, VFDs, and grid circuits.",
+			FitsAvailableVoltage: true,
+		}
+	}
+	if project.BuildPath == BuildPathLocalCeramic {
+		reqV := 230
+		if project.AvailableVoltage == 120 {
+			reqV = 120
+		}
+		reqAmps := round1(520.0 / float64(reqV) * 1.25)
+		label := "230V 50Hz 10A domestic circuit (0.5 HP pump + 12V/230V fan, ~520 W)"
+		if reqV == 120 {
+			label = "120V 15A domestic circuit (0.5 HP pump + 12V/120V fan, ~520 W)"
+		}
+		return ElectricalAssessment{
+			Status:               StatusOK,
+			RequiredVoltage:      reqV,
+			RequiredAmps:         reqAmps,
+			CircuitLabel:         label,
+			Summary:              fmt.Sprintf("Local-grid / 12V solar hybrid ceramic mode draws ~520 W (%.1f A @ %dV): local 0.5 HP 230V 50Hz domestic monoblock pump + low-dP 12V/230V draft fan on a standard RCD/GFCI-protected household circuit. Overhead gravity tank & ceramic body remain meltdown-proof during grid blackouts.", reqAmps, reqV),
+			FitsAvailableVoltage: true,
+		}
+	}
 	hp := design.Blower.RecommendedMotorHP
 	blowerRole := "blower"
 	if project.StageAlignment == StageAlignmentEductorDryFan && project.BlowerDriveOption == BlowerDriveIndustrialRadialVFD {
@@ -349,6 +378,43 @@ func assessNoise(project StudioProject, design model.ScrubberDesign) NoiseAssess
 		silencerDropDBA        = 13.0
 		deluxeAcousticBonusDBA = 9.0 // extra attenuation from Deluxe 2" Rockwool baffle box + cooling labyrinth + tuned stack silencer + vibration boots
 	)
+	if project.ZeroElectricity {
+		d2 := math.Max(refDistFt, project.PropertyLineFt)
+		atten := 20.0 * math.Log10(d2/refDistFt)
+		const barePassive = 45.0 // quiet gravity water trickle + natural chimney draft (zero electric blower!)
+		propDBA := round1(math.Max(25.0, barePassive-atten))
+		return NoiseAssessment{
+			Status:              StatusOK,
+			BareDBA3Ft:          barePassive,
+			SilencedDBA3Ft:      barePassive,
+			PropertyLineDBA:     propDBA,
+			PropertyLineFt:      d2,
+			UrbanLimitDBA:       urbanLimitDBA,
+			SilencerRecommended: false,
+			Summary:             fmt.Sprintf("Whisper-quiet zero-electricity operation: ~%.1f dBA at 3 ft (gentle gravity water trickle & natural chimney draw — no loud radial blower) -> %.1f dBA at %.0f ft property line.", barePassive, propDBA, d2),
+		}
+	}
+	if project.BuildPath == BuildPathLocalCeramic {
+		d2 := math.Max(refDistFt, project.PropertyLineFt)
+		atten := 20.0 * math.Log10(d2/refDistFt)
+		const bareHybrid = 64.0
+		const silHybrid = 56.0
+		src := bareHybrid
+		if project.IncludeSilencer {
+			src = silHybrid
+		}
+		propDBA := round1(math.Max(25.0, src-atten))
+		return NoiseAssessment{
+			Status:              StatusOK,
+			BareDBA3Ft:          bareHybrid,
+			SilencedDBA3Ft:      silHybrid,
+			PropertyLineDBA:     propDBA,
+			PropertyLineFt:      d2,
+			UrbanLimitDBA:       urbanLimitDBA,
+			SilencerRecommended: bareHybrid-atten > 55.0,
+			Summary:             fmt.Sprintf("Low-noise local hybrid ceramic operation (0.5 HP domestic monoblock pump + low-dP fan): %.1f dBA at 3 ft -> %.1f dBA at %.0f ft property line (comfortably under %.0f dBA limit).", src, propDBA, d2, urbanLimitDBA),
+		}
+	}
 	shaftHP := math.Max(0.15, design.Blower.ShaftPowerHP)
 	spInWC := math.Max(1.0, design.Blower.TotalStaticPressureInWC)
 	if project.StageAlignment == StageAlignmentEductorDryFan {
@@ -454,6 +520,12 @@ func assessPlume(project StudioProject, design model.ScrubberDesign) PlumeAssess
 		minStackFt = 15.0
 	} else if design.Input.KilnVolumeCuFt >= 20.0 || project.PropertyLineFt < 35.0 {
 		minStackFt = 12.0
+	}
+	if project.IsLocalCeramic() {
+		fr := EvaluateFrugal(project, design)
+		if fr.ChimneyHeightFt > minStackFt {
+			minStackFt = fr.ChimneyHeightFt
+		}
 	}
 
 	// Psychrometric state using IAPWS-95 WaterPsat (conservative 60% winter RH).
@@ -671,6 +743,17 @@ func assessDrain(project StudioProject, design model.ScrubberDesign) DrainAssess
 }
 
 func assessCorrosion(project StudioProject, design model.ScrubberDesign, drain DrainAssessment) CorrosionAssessment {
+	if project.IsLocalCeramic() {
+		fr := EvaluateFrugal(project, design)
+		return CorrosionAssessment{
+			Status:             StatusOK,
+			Tier:               BuildPathLocalCeramic,
+			TierLabel:          "All-Ceramic Firebrick & Salt-Glazed Stoneware (>1,800 F Immune)",
+			MaterialSummary:    fmt.Sprintf("All-Ceramic Masonry (%s): Firebrick, IS 651 salt-glazed stoneware (SWG) pipes, potter-extruded unglazed stoneware Raschig rings, and terracotta baffles are virtually immune to hot wet HCl corrosion and tolerate >1,800 F dry-run heat with zero CPVC meltdown risk.", fr.RegionLabel),
+			SodaComparison:     fmt.Sprintf("Local alkali chemistry (%s / %s): dose %.2f kg (%.1f lbs) per firing to hold sump pH 7.5-8.5, skim wood ash from the brick baffled sump, and flush the gravity spray rose after each firing.", fr.AlkaliName, fr.AlkaliFormula, fr.AlkaliKgPerFiring, fr.AlkaliLbsPerFiring),
+			InspectionInterval: "Every 10-15 firings (repoint weathered mortar joints, clean spray rose & remove CaCO3/ash sediment)",
+		}
+	}
 	hclPPM := design.PackedBed.HClInletPPM
 	tierLabel := CorrosionTierLabel(project.CorrosionTier)
 	saltingHrs := project.EffectiveSaltingHours()

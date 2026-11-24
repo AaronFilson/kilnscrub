@@ -1939,3 +1939,354 @@ func TestPhase9CustomFabDeluxeAndCompleteSystemsShopPlan(t *testing.T) {
 		b3PP, b3Cer,
 	)
 }
+
+func TestPhase10LocalCeramicNairobiMumbaiAndZeroElectricity(t *testing.T) {
+	eval := NewEvaluator(scrubber.NewDesigner(), cad.NewExporter())
+
+	// 1. Standard powered build always populates Frugal preview with enabled=false.
+	stdEval, err := eval.Evaluate(DefaultProject())
+	if err != nil {
+		t.Fatalf("default evaluate: %v", err)
+	}
+	if stdEval.Frugal == nil || stdEval.Frugal.Enabled || stdEval.Frugal.ZeroElectricity {
+		t.Fatalf("expected non-nil Frugal preview with enabled=false on standard build, got %+v", stdEval.Frugal)
+	}
+
+	// 2. Verify all 3 regions (Nairobi, Mumbai, General Local) in 100% Zero-Electricity mode.
+	bannedPhrases := []string{"Hobby " + "316L", "4-" + "lb", "gro" + "cery", "Switching from Salt " + "(NaCl) to Soda"}
+
+	regionChecks := []struct {
+		region   string
+		currency string
+	}{
+		{LocalRegionNairobi, "KES"},
+		{LocalRegionMumbai, "INR"},
+		{LocalRegionGeneral, "USD"},
+	}
+
+	var nairobiEval, mumbaiEval StudioEvaluation
+	for _, rc := range regionChecks {
+		proj := OffGridCeramicProject(rc.region)
+		ev, err := eval.Evaluate(proj)
+		if err != nil {
+			t.Fatalf("OffGridCeramicProject(%s) evaluate failed: %v", rc.region, err)
+		}
+		if rc.region == LocalRegionNairobi {
+			nairobiEval = ev
+		} else if rc.region == LocalRegionMumbai {
+			mumbaiEval = ev
+		}
+
+		fr := ev.Frugal
+		if fr == nil || !fr.Enabled || !fr.ZeroElectricity {
+			t.Fatalf("%s: expected enabled zero-electricity FrugalAssessment, got %+v", rc.region, fr)
+		}
+		if fr.Region != rc.region || !strings.Contains(fr.LocalCurrencyEstimate, rc.currency) {
+			t.Errorf("%s: unexpected region/currency: region=%q est=%q", rc.region, fr.Region, fr.LocalCurrencyEstimate)
+		}
+		if fr.PowerWatts != 0 {
+			t.Errorf("%s: zero_electricity power_watts = %v, want 0", rc.region, fr.PowerWatts)
+		}
+		if !fr.DraftFeasible || fr.AvailableDraftInWC <= fr.RequiredDraftInWC || fr.DraftMarginInWC < 0.039 {
+			t.Errorf("%s: passive draft must be feasible with >=0.04 inWC margin: avail=%.3f req=%.3f margin=%.3f",
+				rc.region, fr.AvailableDraftInWC, fr.RequiredDraftInWC, fr.DraftMarginInWC)
+		}
+		if fr.ChimneyHeightM < 8.0 || fr.ChimneyHeightM > 12.0 {
+			t.Errorf("%s: ChimneyHeightM = %.1f out of [8.0, 12.0]", rc.region, fr.ChimneyHeightM)
+		}
+		if math.Abs(fr.ChimneyHeightFt-round1(fr.ChimneyHeightM*3.28084)) > 0.11 {
+			t.Errorf("%s: ChimneyHeightFt mismatch: %.1f vs %.1f", rc.region, fr.ChimneyHeightFt, fr.ChimneyHeightM*3.28084)
+		}
+		if fr.BedSuperficialVelMS < 0.30 || fr.BedSuperficialVelMS > 0.46 {
+			t.Errorf("%s: BedSuperficialVelMS = %.2f out of [0.30, 0.46]", rc.region, fr.BedSuperficialVelMS)
+		}
+		if fr.BedDPInWC < 0.03 || fr.BedDPInWC > 0.10 {
+			t.Errorf("%s: BedDPInWC = %.3f out of [0.03, 0.10]", rc.region, fr.BedDPInWC)
+		}
+		if fr.GravityTankGal < 55.0 || fr.GravityTankGal > 130.0 || fr.GravityTankLiters < 200.0 || fr.GravityTankLiters > 500.0 {
+			t.Errorf("%s: gravity tank out of bounds: %.1f gal / %.0f L", rc.region, fr.GravityTankGal, fr.GravityTankLiters)
+		}
+		if math.Abs(fr.GravityHeadPSI-round2(fr.TankElevationFt*0.4335)) > 0.02 {
+			t.Errorf("%s: GravityHeadPSI mismatch: %.2f vs %.2f", rc.region, fr.GravityHeadPSI, fr.TankElevationFt*0.4335)
+		}
+		if fr.Jerrycans20LPerHr < 12 || fr.Jerrycans20LPerHr > 20 || fr.TreadleMinutesPerHr < 6.0 || fr.TreadleMinutesPerHr > 12.0 {
+			t.Errorf("%s: unexpected manual pumping labor: %d jerrycans/hr, %.1f min/hr", rc.region, fr.Jerrycans20LPerHr, fr.TreadleMinutesPerHr)
+		}
+		if fr.HClRemovalPct < 95.0 || fr.HClRemovalPct > 98.5 {
+			t.Errorf("%s: HClRemovalPct = %.1f%% out of [95.0, 98.5]", rc.region, fr.HClRemovalPct)
+		}
+		if fr.CoarseAshCapturePct < 88.0 || fr.CoarseAshCapturePct > 94.0 {
+			t.Errorf("%s: CoarseAshCapturePct = %.1f%% out of [88.0, 94.0]", rc.region, fr.CoarseAshCapturePct)
+		}
+		if fr.SubmicronNaClCapturePct < 25.0 || fr.SubmicronNaClCapturePct >= 45.0 {
+			t.Errorf("%s: SubmicronNaClCapturePct = %.1f%% must be honest (<45%%)", rc.region, fr.SubmicronNaClCapturePct)
+		}
+		if fr.EstimatedLocalCostUSD < 350.0 || fr.EstimatedLocalCostUSD > 1100.0 {
+			t.Errorf("%s: EstimatedLocalCostUSD = $%.2f out of [$350, $1100]", rc.region, fr.EstimatedLocalCostUSD)
+		}
+		if math.Abs(fr.EstimatedLocalCostUSD-ev.COTS.EstimatedTotalUSD) > 0.02 {
+			t.Errorf("%s: Frugal cost ($%.2f) != COTS BOM total ($%.2f)", rc.region, fr.EstimatedLocalCostUSD, ev.COTS.EstimatedTotalUSD)
+		}
+		// Verify BOM weight/cost invariants & positive weights.
+		var sumCost, sumWeight float64
+		for _, it := range ev.COTS.BOM.Items {
+			if it.WeightKg <= 0 {
+				t.Errorf("%s: BOM item %q has non-positive WeightKg %v", rc.region, it.Name, it.WeightKg)
+			}
+			sumCost += it.TotalCostUSD
+			sumWeight += it.WeightKg
+		}
+		if math.Abs(sumCost-ev.COTS.BOM.TotalCostUSD) > 0.02 || math.Abs(sumWeight-ev.COTS.BOM.TotalWeightKg) > 0.02 {
+			t.Errorf("%s: BOM totals mismatch: cost %.2f/%.2f wt %.2f/%.2f", rc.region, sumCost, ev.COTS.BOM.TotalCostUSD, sumWeight, ev.COTS.BOM.TotalWeightKg)
+		}
+
+		// Verify Urban electrical (0V / 0W) and whisper-quiet noise (~45 dBA bare).
+		if ev.Urban.Electrical.Status != StatusOK || ev.Urban.Electrical.RequiredVoltage != 0 || ev.Urban.Electrical.RequiredAmps != 0 ||
+			!strings.Contains(ev.Urban.Electrical.CircuitLabel, "0V / 0W") {
+			t.Errorf("%s: unexpected zero-elec Urban.Electrical: %+v", rc.region, ev.Urban.Electrical)
+		}
+		if ev.Urban.Noise.Status != StatusOK || ev.Urban.Noise.BareDBA3Ft != 45.0 {
+			t.Errorf("%s: unexpected zero-elec Urban.Noise: %+v", rc.region, ev.Urban.Noise)
+		}
+
+		// Verify ShopPlan: 0 electrical circuits ([] in JSON, not null), 0 NEC panel clearance, P1..P5, B1..B5.
+		if len(ev.ShopPlan.Electrical) != 0 || ev.ShopPlan.Electrical == nil {
+			t.Errorf("%s: expected empty non-nil ShopPlan.Electrical, got %#v", rc.region, ev.ShopPlan.Electrical)
+		}
+		if ev.ShopPlan.Clearances.NECPanelDepthIn != 0 || ev.ShopPlan.Clearances.NECPanelWidthIn != 0 {
+			t.Errorf("%s: expected 0 NEC panel clearance when off-grid, got %+v", rc.region, ev.ShopPlan.Clearances)
+		}
+		if len(ev.ShopPlan.Plumbing) != 5 || len(ev.ShopPlan.Bracing) != 5 || len(ev.ShopPlan.Parts) != 9 || len(ev.ShopPlan.CutList) < 6 {
+			t.Errorf("%s: unexpected ShopPlan counts: parts=%d cuts=%d plumb=%d brace=%d",
+				rc.region, len(ev.ShopPlan.Parts), len(ev.ShopPlan.CutList), len(ev.ShopPlan.Plumbing), len(ev.ShopPlan.Bracing))
+		}
+		if ev.ShopPlan.PumpStation.HP != 0 || ev.ShopPlan.PumpStation.Voltage != 0 {
+			t.Errorf("%s: expected 0 HP / 0 V manual pump station, got %+v", rc.region, ev.ShopPlan.PumpStation)
+		}
+
+		// Verify DIY steam boiler safety rejection & guide sections.
+		for _, want := range []string{
+			"STEAM BOILER",
+			"## 7. Local Ceramic & Zero-Electricity Build + Manual Firing Guide",
+			"Raschig Rings",
+			"Gravity Tank Stand",
+		} {
+			if !strings.Contains(strings.ToUpper(ev.BuildGuideMD), strings.ToUpper(want)) {
+				t.Errorf("%s: BuildGuideMD missing %q", rc.region, want)
+			}
+		}
+		if !strings.Contains(ev.OperationsChecklistMD, "Zero-Steam-Boiler") {
+			t.Errorf("%s: OperationsChecklistMD missing Zero-Steam-Boiler safety rule", rc.region)
+		}
+
+		// Verify zero banned strings across full JSON, guides, and README.
+		rawJSON, err := json.Marshal(ev)
+		if err != nil {
+			t.Fatalf("%s: marshal eval: %v", rc.region, err)
+		}
+		haystack := string(rawJSON) + "\n" + ev.BuildGuideMD + "\n" + ev.OperationsChecklistMD + "\n" + string(buildPacketReadme(ev))
+		for _, banned := range bannedPhrases {
+			if strings.Contains(strings.ToLower(haystack), strings.ToLower(banned)) {
+				t.Errorf("%s: output contains banned phrase %q", rc.region, banned)
+			}
+		}
+	}
+
+	// Nairobi high altitude (83.5 kPa) requires a taller chimney than sea-level Mumbai (101.3 kPa).
+	if nairobiEval.Frugal.ChimneyHeightM < mumbaiEval.Frugal.ChimneyHeightM {
+		t.Errorf("expected Nairobi highland chimney (%.1f m) >= Mumbai sea-level chimney (%.1f m)",
+			nairobiEval.Frugal.ChimneyHeightM, mumbaiEval.Frugal.ChimneyHeightM)
+	}
+
+	// 3. Verify all 4 local alkalis & exact molar stoichiometry on 24 cu.ft. wood/salt kiln (6.0 lbs = 2.72155 kg NaCl -> 46.568 mol HCl).
+	molHCl := (2.0 * 3.0 * model.KgPerLb) / 0.0584428
+	alkaliCases := []struct {
+		id         string
+		wantKg     float64
+		wantZero   bool
+		wantWarn   bool
+		formulaSub string
+	}{
+		{LocalAlkaliSodaAsh, round2(molHCl * 0.5 * 0.1059888 * 1.25), false, false, "Na2CO3"},
+		{LocalAlkaliSlakedLime, round2(molHCl * 0.5 * 0.074093 * 1.30), false, true, "Ca(OH)2"},
+		{LocalAlkaliWoodAshLye, round1((molHCl * 0.5 * 0.138205 * 1.25) / 0.07), true, true, "K2CO3"},
+		{LocalAlkaliBakingSoda, round2(molHCl * 1.0 * 0.0840066 * 1.25), false, false, "NaHCO3"},
+	}
+	for _, ac := range alkaliCases {
+		proj := OffGridCeramicProject(LocalRegionMumbai)
+		proj.LocalAlkali = ac.id
+		ev, err := eval.Evaluate(proj)
+		if err != nil {
+			t.Fatalf("alkali %s evaluate: %v", ac.id, err)
+		}
+		fr := ev.Frugal
+		if fr.AlkaliID != ac.id || !strings.Contains(fr.AlkaliFormula, ac.formulaSub) {
+			t.Errorf("alkali %s mismatch: id=%q formula=%q", ac.id, fr.AlkaliID, fr.AlkaliFormula)
+		}
+		if math.Abs(fr.AlkaliKgPerFiring-ac.wantKg) > 0.11 {
+			t.Errorf("alkali %s kg=%.2f, want %.2f", ac.id, fr.AlkaliKgPerFiring, ac.wantKg)
+		}
+		if ac.wantZero && fr.AlkaliCostUSD != 0 {
+			t.Errorf("alkali %s expected $0 cost, got $%.2f", ac.id, fr.AlkaliCostUSD)
+		}
+		if !ac.wantZero && fr.AlkaliCostUSD <= 0 {
+			t.Errorf("alkali %s expected positive cost, got $%.2f", ac.id, fr.AlkaliCostUSD)
+		}
+		if ac.wantWarn && fr.ScalingWarning == "" {
+			t.Errorf("alkali %s expected non-empty scaling_warning", ac.id)
+		}
+		if !ac.wantWarn && fr.ScalingWarning != "" {
+			t.Errorf("alkali %s expected empty scaling_warning, got %q", ac.id, fr.ScalingWarning)
+		}
+	}
+
+	// Non-salt (soda) mode yields 0 kg local alkali across all 4 alkalis.
+	for _, alk := range []string{LocalAlkaliSodaAsh, LocalAlkaliSlakedLime, LocalAlkaliWoodAshLye, LocalAlkaliBakingSoda} {
+		proj := OffGridCeramicProject(LocalRegionNairobi)
+		proj.VaporGlazeMode = VaporGlazeSoda
+		proj.LocalAlkali = alk
+		ev, err := eval.Evaluate(proj)
+		if err != nil {
+			t.Fatalf("soda mode alkali %s: %v", alk, err)
+		}
+		if ev.Frugal.AlkaliKgPerFiring != 0 || ev.Frugal.AlkaliCostUSD != 0 {
+			t.Errorf("soda mode alkali %s should be 0 kg / $0, got %.2f kg / $%.2f", alk, ev.Frugal.AlkaliKgPerFiring, ev.Frugal.AlkaliCostUSD)
+		}
+	}
+
+	// 4. Hybrid Local Ceramic mode (zero_electricity: false -> 230V 50Hz domestic pump + local fan + 4.5 m chimney).
+	hybridProj := OffGridCeramicProject(LocalRegionMumbai)
+	hybridProj.ZeroElectricity = false
+	hybridProj.AvailableVoltage = 230
+	hybridProj.IncludeSilencer = true
+	hybridEval, err := eval.Evaluate(hybridProj)
+	if err != nil {
+		t.Fatalf("hybrid ceramic evaluate: %v", err)
+	}
+	hfr := hybridEval.Frugal
+	if !hfr.Enabled || hfr.ZeroElectricity {
+		t.Fatalf("expected enabled hybrid FrugalAssessment, got %+v", hfr)
+	}
+	if hfr.PowerWatts < 450.0 || hfr.PowerWatts > 650.0 {
+		t.Errorf("hybrid PowerWatts = %.0f, want [450, 650]", hfr.PowerWatts)
+	}
+	if hfr.ChimneyHeightM != 4.5 || !strings.Contains(hfr.ManualPumpType, "230V 50Hz") || hfr.Jerrycans20LPerHr != 0 {
+		t.Errorf("unexpected hybrid specs: chimney=%.1f m pump=%q jerrycans=%d", hfr.ChimneyHeightM, hfr.ManualPumpType, hfr.Jerrycans20LPerHr)
+	}
+	if len(hybridEval.ShopPlan.Electrical) != 2 || hybridEval.ShopPlan.PumpStation.HP != 0.5 || hybridEval.ShopPlan.PumpStation.Voltage != 230 {
+		t.Errorf("unexpected hybrid ShopPlan electrical/pump: circuits=%d pump=%+v", len(hybridEval.ShopPlan.Electrical), hybridEval.ShopPlan.PumpStation)
+	}
+
+	// 120V hybrid & ZeroElectricity-only toggle on default COTS project (auto-activates ceramic passive mode!).
+	hybrid120 := hybridProj
+	hybrid120.AvailableVoltage = 120
+	hybrid120.LocalRegion = LocalRegionGeneral
+	if ev120, err := eval.Evaluate(hybrid120); err != nil || ev120.Urban.Electrical.RequiredVoltage != 120 {
+		t.Fatalf("120V hybrid evaluate failed: err=%v elec=%+v", err, ev120.Urban.Electrical)
+	}
+
+	autoZeroProj := DefaultProject()
+	autoZeroProj.ZeroElectricity = true
+	autoZeroProj.AvailableVoltage = 0
+	autoZeroEval, err := eval.Evaluate(autoZeroProj)
+	if err != nil {
+		t.Fatalf("ZeroElectricity=true auto-ceramic evaluate failed: %v", err)
+	}
+	if !autoZeroEval.Frugal.Enabled || !autoZeroEval.Frugal.ZeroElectricity || len(autoZeroEval.ShopPlan.Electrical) != 0 {
+		t.Errorf("ZeroElectricity=true should auto-activate ceramic passive mode with 0 circuits: %+v", autoZeroEval.Frugal)
+	}
+
+	// 5. Small (6 cu.ft.) and Large (48 cu.ft.) ceramic kilns + passive draft shortfall edge case.
+	smallCer := OffGridCeramicProject(LocalRegionNairobi)
+	smallCer.Input.KilnVolumeCuFt = 6.0
+	if evSmall, err := eval.Evaluate(smallCer); err != nil || evSmall.Frugal.GravityTankLiters != 210.0 {
+		t.Fatalf("small ceramic evaluate failed: err=%v tank=%v", err, evSmall.Frugal.GravityTankLiters)
+	}
+	bigCer := OffGridCeramicProject(LocalRegionMumbai)
+	bigCer.Input.KilnVolumeCuFt = 48.0
+	if evBig, err := eval.Evaluate(bigCer); err != nil || evBig.Frugal.GravityTankLiters != 490.0 {
+		t.Fatalf("big ceramic evaluate failed: err=%v tank=%v", err, evBig.Frugal.GravityTankLiters)
+	}
+	shortfallProj := OffGridCeramicProject(LocalRegionNairobi)
+	shortfallProj.Input.TargetKilnDraftInWC = -0.35
+	shortfallEval, err := eval.Evaluate(shortfallProj)
+	if err != nil {
+		t.Fatalf("shortfall evaluate: %v", err)
+	}
+	if shortfallEval.Frugal.DraftFeasible {
+		t.Errorf("expected DraftFeasible=false for extreme -0.35 inWC target draft, got avail=%.3f req=%.3f",
+			shortfallEval.Frugal.AvailableDraftInWC, shortfallEval.Frugal.RequiredDraftInWC)
+	}
+
+	// 6. Verify exact JSON contract keys matching p10-web-frugal & BuildPacketZip round-trip.
+	evalBytes, err := json.Marshal(nairobiEval)
+	if err != nil {
+		t.Fatalf("marshal nairobiEval: %v", err)
+	}
+	var topRaw map[string]any
+	if err := json.Unmarshal(evalBytes, &topRaw); err != nil {
+		t.Fatalf("unmarshal topRaw: %v", err)
+	}
+	frugalRaw, ok := topRaw["frugal"].(map[string]any)
+	if !ok {
+		t.Fatalf("StudioEvaluation JSON missing 'frugal' object")
+	}
+	for _, key := range []string{
+		"enabled", "zero_electricity", "region", "region_label",
+		"chimney_height_ft", "chimney_height_m", "stack_reheat_temp_f",
+		"available_draft_inwc", "required_draft_inwc", "draft_margin_inwc", "draft_feasible", "draft_mechanism",
+		"bed_diameter_in", "bed_superficial_vel_m_s", "bed_dp_inwc", "packing_material",
+		"gravity_tank_gal", "gravity_tank_liters", "tank_elevation_ft", "gravity_head_psi",
+		"spray_flow_gpm", "spray_flow_lpm", "manual_pump_type", "jerrycans_20l_per_hr", "treadle_minutes_per_hr",
+		"alkali_id", "alkali_name", "alkali_formula", "alkali_kg_per_firing", "alkali_lbs_per_firing",
+		"alkali_cost_usd", "alkali_local_note", "scaling_warning",
+		"hcl_removal_pct", "coarse_ash_capture_pct", "submicron_nacl_capture_pct", "submicron_honest_note", "thermal_immunity_note",
+		"estimated_local_cost_usd", "local_currency_estimate", "power_watts",
+		"manual_steps", "local_materials", "warnings", "summary",
+	} {
+		if _, exists := frugalRaw[key]; !exists {
+			t.Errorf("FrugalAssessment JSON missing required contract key %q", key)
+		}
+	}
+	spRaw := topRaw["shop_plan"].(map[string]any)
+	if elecArr, ok := spRaw["electrical"].([]any); !ok || len(elecArr) != 0 {
+		t.Errorf("expected off-grid shop_plan.electrical to marshal as empty JSON array [], got %#v", spRaw["electrical"])
+	}
+
+	if zipBytes, _, err := eval.BuildPacketZip(OffGridCeramicProject(LocalRegionNairobi)); err != nil || len(zipBytes) == 0 {
+		t.Fatalf("Off-Grid BuildPacketZip failed: err=%v len=%d", err, len(zipBytes))
+	}
+
+	// 7. Validation checks for invalid Phase 10 fields and ParseProject round-trip.
+	if parsed, err := ParseProject([]byte(`{"preset_id":"wood_salt_24","build_path":"local_ceramic_masonry","zero_electricity":true,"local_region":"mumbai","local_alkali":"slaked_lime"}`)); err != nil {
+		t.Fatalf("ParseProject local_ceramic_masonry failed: %v", err)
+	} else if parsed.LocalRegion != LocalRegionMumbai || parsed.LocalAlkali != LocalAlkaliSlakedLime || !parsed.ZeroElectricity {
+		t.Errorf("unexpected parsed Phase 10 project: %+v", parsed)
+	}
+	for _, bad := range []string{
+		`{"local_region": "mars"}`,
+		`{"local_alkali": "bleach"}`,
+		`{"available_voltage": 0, "zero_electricity": false}`,
+	} {
+		if _, err := ParseProject([]byte(bad)); err == nil {
+			t.Errorf("expected validation error for %s", bad)
+		}
+	}
+	// Cover formatIntCommas helper edge cases.
+	if formatIntCommas(-12500) != "-12,500" || formatIntCommas(500) != "500" || formatIntCommas(105300) != "105,300" {
+		t.Errorf("formatIntCommas unexpected output")
+	}
+
+	t.Logf("Phase 10 24 cu.ft. Zero-Electricity Ceramic Summary:\n"+
+		"  Nairobi (83.5 kPa, Magadi Na2CO3):  %s | %0.f\" bed (v_s=%.2f m/s, dP=%.3f inWC) | %.1f m chimney (%.0f F) -> %.3f inWC avail vs %.3f req (+%.3f) | %.0f L tank (%.2f PSI, %.2f L/min -> %d jerrycans/hr, %.1f min/hr treadle) | %.2f kg Na2CO3 | HCl=%.1f%% Ash=%.1f%% Submicron=%.0f%%\n"+
+		"  Mumbai  (101.3 kPa, Washing Soda):  %s | %0.f\" bed (v_s=%.2f m/s, dP=%.3f inWC) | %.1f m chimney (%.0f F) -> %.3f inWC avail vs %.3f req (+%.3f) | %.0f L tank (%.2f PSI, %.2f L/min -> %d jerrycans/hr, %.1f min/hr treadle) | %.2f kg Na2CO3 | HCl=%.1f%% Ash=%.1f%% Submicron=%.0f%%",
+		nairobiEval.Frugal.LocalCurrencyEstimate, nairobiEval.Frugal.BedDiameterIn, nairobiEval.Frugal.BedSuperficialVelMS, nairobiEval.Frugal.BedDPInWC,
+		nairobiEval.Frugal.ChimneyHeightM, nairobiEval.Frugal.StackReheatTempF, nairobiEval.Frugal.AvailableDraftInWC, nairobiEval.Frugal.RequiredDraftInWC, nairobiEval.Frugal.DraftMarginInWC,
+		nairobiEval.Frugal.GravityTankLiters, nairobiEval.Frugal.GravityHeadPSI, nairobiEval.Frugal.SprayFlowLPM, nairobiEval.Frugal.Jerrycans20LPerHr, nairobiEval.Frugal.TreadleMinutesPerHr,
+		nairobiEval.Frugal.AlkaliKgPerFiring, nairobiEval.Frugal.HClRemovalPct, nairobiEval.Frugal.CoarseAshCapturePct, nairobiEval.Frugal.SubmicronNaClCapturePct,
+		mumbaiEval.Frugal.LocalCurrencyEstimate, mumbaiEval.Frugal.BedDiameterIn, mumbaiEval.Frugal.BedSuperficialVelMS, mumbaiEval.Frugal.BedDPInWC,
+		mumbaiEval.Frugal.ChimneyHeightM, mumbaiEval.Frugal.StackReheatTempF, mumbaiEval.Frugal.AvailableDraftInWC, mumbaiEval.Frugal.RequiredDraftInWC, mumbaiEval.Frugal.DraftMarginInWC,
+		mumbaiEval.Frugal.GravityTankLiters, mumbaiEval.Frugal.GravityHeadPSI, mumbaiEval.Frugal.SprayFlowLPM, mumbaiEval.Frugal.Jerrycans20LPerHr, mumbaiEval.Frugal.TreadleMinutesPerHr,
+		mumbaiEval.Frugal.AlkaliKgPerFiring, mumbaiEval.Frugal.HClRemovalPct, mumbaiEval.Frugal.CoarseAshCapturePct, mumbaiEval.Frugal.SubmicronNaClCapturePct,
+	)
+}

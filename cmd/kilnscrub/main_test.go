@@ -405,6 +405,8 @@ func TestRunErrorCases(t *testing.T) {
 		{name: "guide invalid compressor scfm", args: []string{"guide", "--compressor-scfm", "-5"}},
 		{name: "guide invalid build path", args: []string{"guide", "--build-path", "bogus"}},
 		{name: "guide empty build path", args: []string{"guide", "--build-path", ""}},
+		{name: "guide invalid local region", args: []string{"guide", "--build-path", "local_ceramic_masonry", "--local-region", "bogus"}},
+		{name: "guide invalid local alkali", args: []string{"guide", "--build-path", "local_ceramic_masonry", "--local-alkali", "bogus"}},
 		{name: "packet unknown preset", args: []string{"packet", "--preset", "nonexistent"}},
 		{name: "packet empty out path", args: []string{"packet", "--out", "   "}},
 		{name: "packet invalid alignment", args: []string{"packet", "--alignment", "bogus"}},
@@ -414,6 +416,8 @@ func TestRunErrorCases(t *testing.T) {
 		{name: "packet invalid packing media", args: []string{"packet", "--packing-media", "bogus"}},
 		{name: "packet invalid compressor scfm", args: []string{"packet", "--compressor-scfm", "250"}},
 		{name: "packet invalid build path", args: []string{"packet", "--build-path", "bogus"}},
+		{name: "packet invalid local region", args: []string{"packet", "--build-path", "local_ceramic_masonry", "--local-region", "bogus"}},
+		{name: "packet invalid local alkali", args: []string{"packet", "--build-path", "local_ceramic_masonry", "--local-alkali", "bogus"}},
 		{name: "design unknown preset", args: []string{"design", "--preset", "nonexistent"}},
 		{name: "export unknown preset", args: []string{"export", "--preset", "nonexistent"}},
 	}
@@ -676,6 +680,135 @@ func TestRunGuideStdoutAndOutDirAndProject(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("phase10_nairobi_zero_electricity_soda_ash", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		err := run(context.Background(), []string{
+			"guide",
+			"--preset", "wood_salt_24",
+			"--zero-electricity",
+			"--local-region", "nairobi",
+			"--local-alkali", "soda_ash",
+		}, &stdout, &stderr)
+		if err != nil {
+			t.Fatalf("guide nairobi zero-electricity failed: %v (stderr: %s)", err, stderr.String())
+		}
+		out := stdout.String()
+		for _, want := range []string{
+			"path=local_ceramic_masonry",
+			"Local Ceramic / Off-Grid :",
+			"Nairobi / East Africa (KES)",
+			"KES",
+			"Power: 0 W Off-Grid",
+			"Chimney & Draft :",
+			"inWC (feasible=true)",
+			"Ceramic Bed     :",
+			"Ergun dP=",
+			"Gravity & Labor :",
+			"jerrycans/hr",
+			"treadle min/hr",
+			"Local Alkali    :",
+			"Na2CO3",
+			"Honest Capture  :",
+			"HCl ",
+			"Coarse Ash ",
+			"Submicron NaCl ",
+		} {
+			if !strings.Contains(out, want) {
+				t.Errorf("phase 10 nairobi guide stdout missing %q;\n%s", want, out)
+			}
+		}
+		for _, bad := range []string{"4-lb box", "Hobby 316L", "Switching from Salt (NaCl) to Soda"} {
+			if strings.Contains(out, bad) {
+				t.Errorf("phase 10 nairobi guide stdout must not contain deprecated string %q", bad)
+			}
+		}
+	})
+
+	t.Run("phase10_mumbai_zero_electricity_slaked_lime", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		err := run(context.Background(), []string{
+			"guide",
+			"--preset", "wood_salt_24",
+			"--build-path", "local_ceramic_masonry",
+			"--zero-electricity",
+			"--local-region", "mumbai",
+			"--local-alkali", "slaked_lime",
+		}, &stdout, &stderr)
+		if err != nil {
+			t.Fatalf("guide mumbai slaked_lime failed: %v (stderr: %s)", err, stderr.String())
+		}
+		out := stdout.String()
+		for _, want := range []string{
+			"path=local_ceramic_masonry",
+			"Mumbai / Western India (INR)",
+			"INR",
+			"Power: 0 W Off-Grid",
+			"Ca(OH)2",
+			"jerrycans/hr",
+			"treadle min/hr",
+			"inWC (feasible=true)",
+		} {
+			if !strings.Contains(out, want) {
+				t.Errorf("phase 10 mumbai guide stdout missing %q;\n%s", want, out)
+			}
+		}
+	})
+
+	t.Run("phase10_wood_ash_lye_zero_electricity", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		err := run(context.Background(), []string{
+			"guide",
+			"--preset", "wood_salt_24",
+			"--zero-electricity",
+			"--local-region", "general_local",
+			"--local-alkali", "wood_ash_lye",
+		}, &stdout, &stderr)
+		if err != nil {
+			t.Fatalf("guide wood_ash_lye failed: %v (stderr: %s)", err, stderr.String())
+		}
+		out := stdout.String()
+		for _, want := range []string{
+			"path=local_ceramic_masonry",
+			"Power: 0 W Off-Grid",
+			"K2CO3",
+			"$0.00",
+		} {
+			if !strings.Contains(out, want) {
+				t.Errorf("phase 10 wood_ash_lye guide stdout missing %q;\n%s", want, out)
+			}
+		}
+	})
+
+	t.Run("phase10_local_ceramic_hybrid_without_zero_electricity", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		err := run(context.Background(), []string{
+			"guide",
+			"--preset", "wood_salt_24",
+			"--build-path", "local_ceramic_masonry",
+			"--local-region", "mumbai",
+			"--local-alkali", "soda_ash",
+		}, &stdout, &stderr)
+		if err != nil {
+			t.Fatalf("guide local_ceramic_masonry hybrid failed: %v (stderr: %s)", err, stderr.String())
+		}
+		out := stdout.String()
+		for _, want := range []string{
+			"path=local_ceramic_masonry",
+			"Mumbai / Western India (INR)",
+			"W Local Hybrid",
+			"0.5 HP 230V",
+			"Na2CO3",
+			"inWC (feasible=true)",
+		} {
+			if !strings.Contains(out, want) {
+				t.Errorf("phase 10 hybrid guide stdout missing %q;\n%s", want, out)
+			}
+		}
+		if strings.Contains(out, "0 W Off-Grid") {
+			t.Errorf("phase 10 hybrid guide must not report 0 W Off-Grid:\n%s", out)
+		}
+	})
 }
 
 func TestRunPacketCreatesValid11FileZip(t *testing.T) {
@@ -837,6 +970,107 @@ func TestRunPacketCreatesValid11FileZip(t *testing.T) {
 			plan.Clearances.NECPanelDepthIn != 36.0 ||
 			plan.Clearances.NECPanelWidthIn != 30.0 {
 			t.Errorf("shop_plan.json did not reflect Phase 9 Custom Fab Deluxe systems: %+v", plan)
+		}
+	})
+
+	t.Run("phase10_nairobi_mumbai_wood_ash_and_hybrid_packets", func(t *testing.T) {
+		cases := []struct {
+			name            string
+			args            []string
+			wantZeroElec    bool
+			wantRegion      string
+			wantAlkali      string
+			wantGuideSubstr string
+		}{
+			{
+				name: "nairobi_soda_ash_zero_elec",
+				args: []string{
+					"--build-path", "local_ceramic_masonry",
+					"--zero-electricity",
+					"--local-region", "nairobi",
+					"--local-alkali", "soda_ash",
+				},
+				wantZeroElec:    true,
+				wantRegion:      studio.LocalRegionNairobi,
+				wantAlkali:      studio.LocalAlkaliSodaAsh,
+				wantGuideSubstr: "Nairobi",
+			},
+			{
+				name: "mumbai_slaked_lime_zero_elec",
+				args: []string{
+					"--zero-electricity",
+					"--local-region", "mumbai",
+					"--local-alkali", "slaked_lime",
+				},
+				wantZeroElec:    true,
+				wantRegion:      studio.LocalRegionMumbai,
+				wantAlkali:      studio.LocalAlkaliSlakedLime,
+				wantGuideSubstr: "Mumbai",
+			},
+			{
+				name: "wood_ash_lye_zero_elec",
+				args: []string{
+					"--zero-electricity",
+					"--local-region", "nairobi",
+					"--local-alkali", "wood_ash_lye",
+				},
+				wantZeroElec:    true,
+				wantRegion:      studio.LocalRegionNairobi,
+				wantAlkali:      studio.LocalAlkaliWoodAshLye,
+				wantGuideSubstr: "K2CO3",
+			},
+			{
+				name: "hybrid_local_ceramic",
+				args: []string{
+					"--build-path", "local_ceramic_masonry",
+					"--local-region", "mumbai",
+					"--local-alkali", "soda_ash",
+				},
+				wantZeroElec:    false,
+				wantRegion:      studio.LocalRegionMumbai,
+				wantAlkali:      studio.LocalAlkaliSodaAsh,
+				wantGuideSubstr: "0.5 HP 230V",
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				optZip := filepath.Join(t.TempDir(), tc.name+".zip")
+				cmdArgs := append([]string{"packet", "--preset", "wood_salt_24"}, tc.args...)
+				cmdArgs = append(cmdArgs, "--out", optZip)
+				var oStdout, oStderr bytes.Buffer
+				if err := run(context.Background(), cmdArgs, &oStdout, &oStderr); err != nil {
+					t.Fatalf("packet %s failed: %v (stderr: %s)", tc.name, err, oStderr.String())
+				}
+				data, err := os.ReadFile(optZip)
+				if err != nil {
+					t.Fatalf("read zip %s: %v", optZip, err)
+				}
+				files := assertValid11FilePacketZip(t, data)
+
+				var proj studio.StudioProject
+				if err := json.Unmarshal(files["project.json"], &proj); err != nil {
+					t.Fatalf("unmarshal project.json: %v", err)
+				}
+				if proj.BuildPath != studio.BuildPathLocalCeramic ||
+					proj.ZeroElectricity != tc.wantZeroElec ||
+					proj.LocalRegion != tc.wantRegion ||
+					proj.LocalAlkali != tc.wantAlkali {
+					t.Errorf("project.json mismatch: got build=%q zero=%v region=%q alkali=%q",
+						proj.BuildPath, proj.ZeroElectricity, proj.LocalRegion, proj.LocalAlkali)
+				}
+				if !strings.Contains(string(files["BUILD_GUIDE.md"]), tc.wantGuideSubstr) {
+					t.Errorf("BUILD_GUIDE.md missing %q", tc.wantGuideSubstr)
+				}
+				var plan studio.ShopPlan
+				if err := json.Unmarshal(files["shop_plan.json"], &plan); err != nil {
+					t.Fatalf("unmarshal shop_plan.json: %v", err)
+				}
+				if plan.BuildPath != studio.BuildPathLocalCeramic || len(plan.Parts) == 0 {
+					t.Errorf("shop_plan.json did not reflect local_ceramic_masonry: build=%q parts=%d",
+						plan.BuildPath, len(plan.Parts))
+				}
+			})
 		}
 	})
 }

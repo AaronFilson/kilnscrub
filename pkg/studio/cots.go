@@ -865,6 +865,9 @@ func selectBlowerForDrive(
 // all Phase 7 & Phase 8 selectable options, and builds a complete COTS Bill of Materials.
 func BuildCOTSSummary(project StudioProject, design model.ScrubberDesign) COTSSummary {
 	p := project.Normalize()
+	if p.IsLocalCeramic() {
+		return buildLocalCeramicCOTSSummary(p, design, EvaluateFrugal(p, design))
+	}
 	baseDesign := resolveBaselineDesign(p, design)
 	eductor := analyzeEductor(p, design)
 	parallelBed := analyzeParallelBed(p, design, eductor)

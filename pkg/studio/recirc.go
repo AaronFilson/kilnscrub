@@ -47,6 +47,8 @@ func workingSumpVolumeGal(cots COTSSummary, design model.ScrubberDesign) float64
 		return 48.0 // 60-gal Deluxe sloped-bottom baffled sump working fill
 	case "DLX-SUMP-SLOPED-110":
 		return 90.0 // 110-gal Deluxe sloped-bottom baffled sump working fill
+	case "LOCAL-BRICK-SUMP":
+		return 55.0 // brick baffled settling sump (~208 L) working fill
 	default:
 		gal := float64(design.PackedBed.SumpVolume) / model.CubicMetersPerUSGallon
 		return round1(math.Max(25.0, gal))

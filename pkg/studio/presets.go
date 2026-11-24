@@ -19,6 +19,17 @@ const (
 	BuildPathCOTSNoWeld      = "cots_no_weld"
 	BuildPathWeldedDXF       = "welded_dxf"
 	BuildPathCustomFabDeluxe = "custom_fab_deluxe"
+	BuildPathLocalCeramic    = "local_ceramic_masonry"
+
+	// Phase 10 regional sourcing & local alkali constants.
+	LocalRegionNairobi = "nairobi"
+	LocalRegionMumbai  = "mumbai"
+	LocalRegionGeneral = "general_local"
+
+	LocalAlkaliSodaAsh    = "soda_ash"
+	LocalAlkaliSlakedLime = "slaked_lime"
+	LocalAlkaliWoodAshLye = "wood_ash_lye"
+	LocalAlkaliBakingSoda = "baking_soda"
 
 	// CorrosionTierStandard316L is the canonical light/occasional 316L SS tier.
 	CorrosionTierStandard316L = "standard_316l"
@@ -107,6 +118,9 @@ type StudioProject struct {
 	ParallelPipeSizeIn  float64           `json:"parallel_pipe_size_in,omitempty"`
 	PackingMediaOption  string            `json:"packing_media_option,omitempty"`
 	ShopCompressorSCFM  float64           `json:"shop_compressor_scfm,omitempty"`
+	ZeroElectricity     bool              `json:"zero_electricity,omitempty"`
+	LocalRegion         string            `json:"local_region,omitempty"`
+	LocalAlkali         string            `json:"local_alkali,omitempty"`
 	PropertyLineFt      float64           `json:"property_line_ft"`
 	AmbientWinterF      float64           `json:"ambient_winter_f"`
 	AvailableVoltage    int               `json:"available_voltage"`
@@ -350,6 +364,65 @@ func DefaultProject() StudioProject {
 	return p.Project
 }
 
+// OffGridCeramicProject returns a pre-configured 24 cu.ft. Local Ceramic / Masonry
+// zero-electricity passive scrubber project for the requested region ("nairobi",
+// "mumbai", or "general_local"; defaults to "nairobi").
+func OffGridCeramicProject(region string) StudioProject {
+	p := DefaultProject()
+	p.BuildPath = BuildPathLocalCeramic
+	p.ZeroElectricity = true
+	p.PackingMediaOption = PackingMediaDIYCeramicRings
+	p.ControlTier = ControlTierElectromechanicalOnly
+	p.IncludeSilencer = false
+	p.IncludePlumeDiluter = false
+	switch strings.ToLower(strings.TrimSpace(region)) {
+	case LocalRegionMumbai:
+		p.StudioName = "Mumbai Off-Grid Ceramic Wood-Salt Studio"
+		p.LocalRegion = LocalRegionMumbai
+		p.LocalAlkali = LocalAlkaliSodaAsh
+		p.AmbientWinterF = 75.0
+	case LocalRegionGeneral:
+		p.StudioName = "Local Pottery Off-Grid Ceramic Wood-Salt Studio"
+		p.LocalRegion = LocalRegionGeneral
+		p.LocalAlkali = LocalAlkaliSodaAsh
+		p.AmbientWinterF = 55.0
+	default:
+		p.StudioName = "Nairobi Off-Grid Ceramic Wood-Salt Studio"
+		p.LocalRegion = LocalRegionNairobi
+		p.LocalAlkali = LocalAlkaliSodaAsh
+		p.AmbientWinterF = 65.0
+	}
+	return p.Normalize()
+}
+
+// IsLocalCeramic reports whether the project runs in Phase 10 Local Ceramic / Masonry
+// or 100% Zero-Electricity passive draft mode.
+func (p StudioProject) IsLocalCeramic() bool {
+	return p.BuildPath == BuildPathLocalCeramic || p.ZeroElectricity
+}
+
+// EffectiveLocalRegion returns the canonical regional sourcing key ("nairobi",
+// "mumbai", or "general_local"), defaulting to "nairobi".
+func (p StudioProject) EffectiveLocalRegion() string {
+	switch p.LocalRegion {
+	case LocalRegionMumbai, LocalRegionGeneral, LocalRegionNairobi:
+		return p.LocalRegion
+	default:
+		return LocalRegionNairobi
+	}
+}
+
+// EffectiveLocalAlkali returns the canonical local alkali key ("soda_ash",
+// "slaked_lime", "wood_ash_lye", or "baking_soda"), defaulting to "soda_ash".
+func (p StudioProject) EffectiveLocalAlkali() string {
+	switch p.LocalAlkali {
+	case LocalAlkaliSlakedLime, LocalAlkaliWoodAshLye, LocalAlkaliBakingSoda, LocalAlkaliSodaAsh:
+		return p.LocalAlkali
+	default:
+		return LocalAlkaliSodaAsh
+	}
+}
+
 // Normalize fills default Phase 7 option values, normalizes legacy "hobby_316l"
 // to canonical "standard_316l", and clamps salting_hours to firing_duration_hours.
 func (p StudioProject) Normalize() StudioProject {
@@ -380,6 +453,14 @@ func (p StudioProject) Normalize() StudioProject {
 	}
 	if out.ShopCompressorSCFM == 0 {
 		out.ShopCompressorSCFM = 15.0
+	}
+	if out.IsLocalCeramic() {
+		if out.LocalRegion == "" {
+			out.LocalRegion = LocalRegionNairobi
+		}
+		if out.LocalAlkali == "" {
+			out.LocalAlkali = LocalAlkaliSodaAsh
+		}
 	}
 	if out.VaporGlazeMode != VaporGlazeSalt {
 		out.SaltingHours = 0.0
@@ -469,10 +550,22 @@ func (p StudioProject) Validate() error {
 			VaporGlazeNone, VaporGlazeSoda, VaporGlazeSalt, p.VaporGlazeMode)
 	}
 	switch p.BuildPath {
-	case BuildPathCOTSNoWeld, BuildPathWeldedDXF, BuildPathCustomFabDeluxe:
+	case BuildPathCOTSNoWeld, BuildPathWeldedDXF, BuildPathCustomFabDeluxe, BuildPathLocalCeramic:
 	default:
-		return fmt.Errorf("build_path must be %q, %q, or %q, got %q",
-			BuildPathCOTSNoWeld, BuildPathWeldedDXF, BuildPathCustomFabDeluxe, p.BuildPath)
+		return fmt.Errorf("build_path must be %q, %q, %q, or %q, got %q",
+			BuildPathCOTSNoWeld, BuildPathWeldedDXF, BuildPathCustomFabDeluxe, BuildPathLocalCeramic, p.BuildPath)
+	}
+	switch p.LocalRegion {
+	case "", LocalRegionNairobi, LocalRegionMumbai, LocalRegionGeneral:
+	default:
+		return fmt.Errorf("local_region must be %q, %q, or %q, got %q",
+			LocalRegionNairobi, LocalRegionMumbai, LocalRegionGeneral, p.LocalRegion)
+	}
+	switch p.LocalAlkali {
+	case "", LocalAlkaliSodaAsh, LocalAlkaliSlakedLime, LocalAlkaliWoodAshLye, LocalAlkaliBakingSoda:
+	default:
+		return fmt.Errorf("local_alkali must be %q, %q, %q, or %q, got %q",
+			LocalAlkaliSodaAsh, LocalAlkaliSlakedLime, LocalAlkaliWoodAshLye, LocalAlkaliBakingSoda, p.LocalAlkali)
 	}
 	switch p.CorrosionTier {
 	case CorrosionTierStandard316L, CorrosionTierHobby316L, CorrosionTierHeavyC276FRP:
@@ -529,8 +622,8 @@ func (p StudioProject) Validate() error {
 	if !isFinite(p.AmbientWinterF) || p.AmbientWinterF < -60.0 || p.AmbientWinterF > 120.0 {
 		return fmt.Errorf("ambient_winter_f must be finite and in [-60, 120], got %v", p.AmbientWinterF)
 	}
-	if p.AvailableVoltage != 120 && p.AvailableVoltage != 240 {
-		return fmt.Errorf("available_voltage must be 120 or 240, got %d", p.AvailableVoltage)
+	if p.AvailableVoltage != 120 && p.AvailableVoltage != 230 && p.AvailableVoltage != 240 && !(p.ZeroElectricity && p.AvailableVoltage == 0) {
+		return fmt.Errorf("available_voltage must be 120, 230, or 240 (or 0 when zero_electricity=true), got %d", p.AvailableVoltage)
 	}
 	if !isFinite(p.GardenHoseGPM) || p.GardenHoseGPM <= 0 || p.GardenHoseGPM > 100.0 {
 		return fmt.Errorf("garden_hose_gpm must be finite and in (0, 100], got %v", p.GardenHoseGPM)

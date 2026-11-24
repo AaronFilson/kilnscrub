@@ -425,6 +425,9 @@
       grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
       gap: 5px;
     }
+    .seg-group.seg-grid-2x2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
     .seg-btn {
       appearance: none;
       border: 1px solid var(--border);
@@ -1571,6 +1574,199 @@
       color: #fde68a;
       white-space: nowrap;
     }
+    .btn-offgrid-combo {
+      width: 100%;
+      justify-content: space-between;
+      padding: 8px 11px;
+      border-radius: 7px;
+      border: 1px solid rgba(217, 119, 6, 0.68);
+      background: linear-gradient(135deg, rgba(180, 83, 9, 0.28) 0%, rgba(16, 185, 129, 0.20) 100%);
+      color: #ffedd5;
+      font-weight: 700;
+      font-size: 12px;
+      box-shadow: 0 2px 10px rgba(180, 83, 9, 0.16);
+    }
+    .btn-offgrid-combo:hover {
+      background: linear-gradient(135deg, rgba(180, 83, 9, 0.42) 0%, rgba(16, 185, 129, 0.30) 100%);
+      border-color: #fdba74;
+    }
+    .offgrid-combo-tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(180, 83, 9, 0.32);
+      border: 1px solid rgba(253, 186, 116, 0.55);
+      color: #fed7aa;
+      white-space: nowrap;
+    }
+    .zero-elec-toggle {
+      border: 1px solid rgba(217, 119, 6, 0.48);
+      background: linear-gradient(135deg, rgba(180, 83, 9, 0.14) 0%, rgba(16, 185, 129, 0.10) 100%);
+      border-radius: 7px;
+      padding: 8px 9px !important;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .zero-elec-toggle.active-offgrid {
+      border-color: rgba(52, 211, 153, 0.72);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.20) 0%, rgba(180, 83, 9, 0.18) 100%);
+    }
+    .local-ceramic-settings {
+      border: 1px solid rgba(217, 119, 6, 0.45);
+      background: rgba(180, 83, 9, 0.08);
+      border-radius: 8px;
+      padding: 9px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .local-ceramic-settings-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 10.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #fdba74;
+    }
+    .frugal-spec-banner {
+      border: 1px solid rgba(217, 119, 6, 0.56);
+      background: linear-gradient(135deg, rgba(180, 83, 9, 0.14) 0%, rgba(16, 185, 129, 0.10) 100%);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .frugal-spec-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #fed7aa;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .frugal-spec-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+    }
+    @media (max-width: 1280px) {
+      .frugal-spec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .frugal-spec-chip {
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(251, 146, 60, 0.28);
+      background: rgba(12, 17, 24, 0.72);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .frugal-spec-k {
+      font-size: 9.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #fdba74;
+    }
+    .frugal-spec-v {
+      font-size: 11px;
+      color: #f1f5f9;
+      line-height: 1.35;
+    }
+    .frugal-meters-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    @media (max-width: 860px) {
+      .frugal-meters-grid { grid-template-columns: 1fr; }
+    }
+    .frugal-meter-card {
+      padding: 7px 9px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(12, 17, 24, 0.78);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .frugal-meter-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+    .frugal-meter-track {
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(30, 41, 59, 0.9);
+      overflow: hidden;
+    }
+    .frugal-meter-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+    .frugal-honest-note {
+      font-size: 11px;
+      color: #cbd5e1;
+      line-height: 1.42;
+      padding: 7px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(251, 146, 60, 0.35);
+      background: rgba(15, 23, 42, 0.72);
+    }
+    .frugal-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    @media (max-width: 1100px) {
+      .frugal-detail-grid { grid-template-columns: 1fr; }
+    }
+    .frugal-subcard {
+      padding: 10px 12px;
+      border-radius: 7px;
+      border: 1px solid rgba(251, 146, 60, 0.28);
+      background: rgba(12, 17, 24, 0.72);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .frugal-subcard h4 {
+      margin: 0;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #fdba74;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+    .offgrid-elec-banner {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(34, 197, 94, 0.62);
+      background: rgba(16, 185, 129, 0.16);
+      color: #86efac;
+      font-family: var(--mono);
+      font-size: 11.5px;
+      font-weight: 800;
+    }
     .deluxe-spec-banner {
       border: 1px solid rgba(245, 158, 11, 0.52);
       background: linear-gradient(135deg, rgba(245, 158, 11, 0.11) 0%, rgba(99, 102, 241, 0.11) 100%);
@@ -2104,7 +2300,7 @@
     @media print {
       body { background: #ffffff; color: #111827; }
       .topbar, .guide-hero-actions, .doc-toolbar .ctrl-btn-row, .plans-toolbar, .plan-overlay-bar, .plan-hud-br, .toast { display: none !important; }
-      .panel, .urban-card, .cots-part-card, .guide-hero, .p7-mini-card, .recirc-kpi, .arch-sub-card, .budget-role-card, .trigger-box, .deluxe-spec-banner, .sched-kpi {
+      .panel, .urban-card, .cots-part-card, .guide-hero, .p7-mini-card, .recirc-kpi, .arch-sub-card, .budget-role-card, .trigger-box, .deluxe-spec-banner, .frugal-spec-banner, .frugal-subcard, .sched-kpi {
         background: #ffffff !important;
         color: #111827 !important;
         border-color: #cbd5e1 !important;
@@ -2274,10 +2470,48 @@
             <div class="control-row">
               <label>How Will You Build It?</label>
             </div>
-            <div class="seg-group" role="group" aria-label="Build Path">
+            <div class="seg-group seg-grid-2x2" role="group" aria-label="Build Path">
               <button class="seg-btn active" type="button" data-build-path="cots_no_weld">No-Weld COTS<span class="seg-sub">Clamps &amp; Pipe</span></button>
               <button class="seg-btn" type="button" data-build-path="welded_dxf">Welded Sheet Metal<span class="seg-sub">Shop DXF</span></button>
               <button class="seg-btn" type="button" data-build-path="custom_fab_deluxe">Custom Fab Deluxe<span class="seg-sub">TIG / FRP / Acoustic Skid</span></button>
+              <button class="seg-btn" type="button" data-build-path="local_ceramic_masonry">Local Ceramic / Brick<span class="seg-sub">Nairobi / Mumbai</span></button>
+            </div>
+          </div>
+
+          <label class="check-row zero-elec-toggle" for="in-zero-electricity" id="wrap-zero-electricity" title="Zero Electricity On Site: eliminates all electric motors, blowers, and grid wiring using thermal-reheat brick chimney buoyancy draft, an overhead gravity water drum, and a manual treadle or hand pump.">
+            <input id="in-zero-electricity" type="checkbox" />
+            <span>Zero Electricity On Site (No Motors / No Grid)<small>Passive thermal-reheat chimney draft + overhead gravity drum + manual pump (0V / 0W)</small></span>
+          </label>
+
+          <div class="local-ceramic-settings hidden" id="panel-local-ceramic-settings">
+            <div class="local-ceramic-settings-head">
+              <span>Local Ceramic &amp; Off-Grid Settings</span>
+              <span id="badge-local-power-mode" class="offgrid-combo-tag">0W Off-Grid</span>
+            </div>
+            <div class="control">
+              <div class="control-row">
+                <label for="in-local-region">Regional Sourcing</label>
+                <span class="control-sub">Local BOM &amp; Currency</span>
+              </div>
+              <select id="in-local-region" aria-label="Regional Sourcing">
+                <option value="nairobi">Nairobi / East Africa (KES)</option>
+                <option value="mumbai">Mumbai / India (INR)</option>
+                <option value="general_local">General Local Pottery</option>
+              </select>
+              <span class="control-hint" id="hint-local-region">East Africa sourcing: local firebrick, Kentank overhead drum, Magadi soda ash, KES pricing.</span>
+            </div>
+            <div class="control">
+              <div class="control-row">
+                <label for="in-local-alkali">Local Neutralizing Alkali</label>
+                <span class="control-sub"><span class="unit-literal">HCl</span> Scrubbing</span>
+              </div>
+              <select id="in-local-alkali" aria-label="Local Neutralizing Alkali">
+                <option value="soda_ash">Magadi Soda Ash (Na₂CO₃)</option>
+                <option value="slaked_lime">Slaked Lime / Chuna (Ca(OH)₂)</option>
+                <option value="wood_ash_lye">Kiln Wood-Ash Lye (K₂CO₃ — Free)</option>
+                <option value="baking_soda">Bulk Baking Soda (NaHCO₃)</option>
+              </select>
+              <span class="control-hint" id="hint-local-alkali">Sodium carbonate (<span class="unit-literal">Na₂CO₃</span>) — locally mined at Lake Magadi / widely sold as washing soda.</span>
             </div>
           </div>
 
@@ -2359,6 +2593,10 @@
             <button id="btn-apply-deluxe-fab" class="btn btn-deluxe-combo" type="button" title="Selects Custom Fab Deluxe: TIG-welded heavy-gauge vessels, ANSI Class 150 flanges, sight glasses, NFPA 91 cleanout hatches, steel forklift skid, UL 508A NEMA 4X panel, mag-drive pump, and 2 in Rockwool acoustic baffle box + tuned stack silencer">
               <span>Apply Custom Fab Deluxe</span>
               <span class="deluxe-combo-tag">TIG · FRP · Acoustic Skid</span>
+            </button>
+            <button id="btn-apply-offgrid-ceramic" class="btn btn-offgrid-combo" type="button" title="Selects Local Ceramic / Brick build path with Zero Electricity On Site (0V / 0W): thermal-reheat brick chimney buoyancy draft, wide masonry stoneware-ring tower, Kentank/Sintex overhead gravity drum, and manual treadle/hand pump">
+              <span>Apply Off-Grid Ceramic (Zero Electricity)</span>
+              <span class="offgrid-combo-tag">0W · Nairobi / Mumbai</span>
             </button>
           </div>
 
@@ -2629,6 +2867,21 @@
           <div id="deluxe-spec-summary" class="control-hint" style="color:#fde68a;">TIG-welded heavy-gauge vessels, ANSI Class 150 flanges, sight glasses, NFPA 91 cleanout hatches, forklift skid, UL 508A NEMA 4X panel, magnetic-drive pump, and 2" Rockwool acoustic blower enclosure.</div>
           <div id="deluxe-spec-grid" class="deluxe-spec-grid"></div>
         </div>
+        <!-- Phase 10: Off-Grid / Local Ceramic Summary Banner -->
+        <div id="frugal-spec-banner" class="frugal-spec-banner hidden" role="region" aria-label="Local Ceramic and Zero-Electricity Engineering Summary">
+          <div class="deluxe-spec-head">
+            <span class="frugal-spec-title" id="frugal-spec-title">Local Ceramic &amp; Off-Grid Scrubber — Passive Chimney Draft</span>
+            <div class="preset-actions">
+              <span id="frugal-draft-pill" class="pill ok">Draft Feasible</span>
+              <span id="frugal-power-pill" class="pill ok">0V / 0W Off-Grid</span>
+              <span id="frugal-cost-pill" class="pill warn">Local Cost: —</span>
+            </div>
+          </div>
+          <div id="frugal-spec-summary" class="control-hint" style="color:#fed7aa;">Refractory brick + thrown stoneware Raschig rings + thermal-reheat chimney + overhead Kentank/Sintex gravity drum.</div>
+          <div id="frugal-spec-grid" class="frugal-spec-grid"></div>
+          <div id="frugal-honest-strip" class="frugal-meters-grid"></div>
+          <div id="frugal-honest-note" class="frugal-honest-note"></div>
+        </div>
       </section>
 
       <!-- KPI Strip -->
@@ -2823,6 +3076,21 @@
         <p>Start the dashboard with the Studio Kit enabled (default in <code>kilnscrub ui</code>) to generate COTS shopping lists, urban neighbor checks, tailored build guides, and complete <code>.zip</code> Build Packets. You can still save/load <code>project.json</code> and download STL/DXF/BOM files from the Design tab.</p>
       </div>
       <button id="btn-guide-retry" class="btn btn-primary" type="button">Retry Studio API</button>
+    </section>
+
+    <!-- Phase 10: Local Ceramic & Zero-Electricity Engineering Card -->
+    <section class="panel hidden" id="guide-frugal-panel" aria-label="Local Ceramic and Zero-Electricity Engineering">
+      <div class="panel-header">
+        <span class="panel-title">Local Ceramic &amp; Zero-Electricity Engineering (Nairobi / Mumbai)</span>
+        <div class="preset-actions">
+          <span id="guide-frugal-draft-pill" class="pill ok">Draft Feasible</span>
+          <span id="guide-frugal-power-pill" class="pill ok">0V / 0W Off-Grid</span>
+          <span id="guide-frugal-cost-pill" class="pill warn">Local Cost: —</span>
+        </div>
+      </div>
+      <div class="p7-panel-body" id="guide-frugal-body">
+        <p class="ctrl-note">Select Local Ceramic / Brick or Zero Electricity On Site to inspect natural chimney buoyancy draft, gravity tank manual labor budget, local alkali stoichiometry, and honest capture performance.</p>
+      </div>
     </section>
 
     <!-- COTS Parts & Shopping List -->
@@ -3360,6 +3628,9 @@
         firingCone: "Cone 11",
         vaporGlazeMode: "salt",
         buildPath: "cots_no_weld",
+        zeroElectricity: false,
+        localRegion: "nairobi",
+        localAlkali: "soda_ash",
         corrosionTier: "standard_316l",
         stageAlignment: "inline_id_blower",
         packedBedLayout: "single_column",
@@ -3403,14 +3674,33 @@
 
       function normalizeBuildPath(raw) {
         const s = String(raw || "").trim().toLowerCase();
-        if (s === "welded_dxf" || s === "custom_fab_deluxe") return s;
+        if (s === "welded_dxf" || s === "custom_fab_deluxe" || s === "local_ceramic_masonry") return s;
         return "cots_no_weld";
+      }
+
+      function normalizeLocalRegion(raw) {
+        const s = String(raw || "").trim().toLowerCase();
+        if (s === "mumbai" || s === "general_local") return s;
+        return "nairobi";
+      }
+
+      function normalizeLocalAlkali(raw) {
+        const s = String(raw || "").trim().toLowerCase();
+        if (s === "slaked_lime" || s === "wood_ash_lye" || s === "baking_soda") return s;
+        return "soda_ash";
+      }
+
+      function isFrugalMode(proj) {
+        const bp = normalizeBuildPath(proj?.build_path ?? studioState.buildPath);
+        const ze = typeof proj?.zero_electricity === "boolean" ? proj.zero_electricity : !!studioState.zeroElectricity;
+        return bp === "local_ceramic_masonry" || ze;
       }
 
       function buildPathLabel(raw) {
         switch (normalizeBuildPath(raw)) {
           case "custom_fab_deluxe": return "Custom Fab Deluxe (TIG / FRP / Acoustic Skid)";
           case "welded_dxf": return "Welded Sheet Metal (DXF)";
+          case "local_ceramic_masonry": return "Local Ceramic / Brick (Nairobi / Mumbai)";
           default: return "No-Weld COTS Hardware";
         }
       }
@@ -3620,6 +3910,43 @@
         document.querySelectorAll("[data-build-path]").forEach((btn) => {
           btn.classList.toggle("active", btn.dataset.buildPath === studioState.buildPath);
         });
+        const zeroEl = el("in-zero-electricity");
+        if (zeroEl) zeroEl.checked = !!studioState.zeroElectricity;
+        const zeroWrap = el("wrap-zero-electricity");
+        if (zeroWrap) zeroWrap.classList.toggle("active-offgrid", !!studioState.zeroElectricity);
+        const frugalActive = isFrugalMode();
+        const localPanel = el("panel-local-ceramic-settings");
+        if (localPanel) localPanel.classList.toggle("hidden", !frugalActive);
+        studioState.localRegion = normalizeLocalRegion(studioState.localRegion);
+        studioState.localAlkali = normalizeLocalAlkali(studioState.localAlkali);
+        if (el("in-local-region")) el("in-local-region").value = studioState.localRegion;
+        if (el("in-local-alkali")) el("in-local-alkali").value = studioState.localAlkali;
+        const pModeBadge = el("badge-local-power-mode");
+        if (pModeBadge) {
+          pModeBadge.textContent = studioState.zeroElectricity ? "0V / 0W Off-Grid" : "230V 50Hz Hybrid";
+        }
+        const regHint = el("hint-local-region");
+        if (regHint) {
+          if (studioState.localRegion === "mumbai") {
+            regHint.textContent = "India sourcing: local firebrick, IS 651 SWG clay pipes, Sintex overhead tank, Kirloskar pump / hand pump, INR pricing.";
+          } else if (studioState.localRegion === "general_local") {
+            regHint.textContent = "General local pottery sourcing: kiln-fired stoneware rings, masonry firebrick, local 200–500 L drum, USD pricing.";
+          } else {
+            regHint.textContent = "East Africa sourcing: local firebrick, Kentank overhead drum, Magadi soda ash, Davis & Shirtliff / treadle pump, KES pricing.";
+          }
+        }
+        const alkHint = el("hint-local-alkali");
+        if (alkHint) {
+          if (studioState.localAlkali === "slaked_lime") {
+            alkHint.innerHTML = `Slaked lime / <em>chuna</em> (<span class="unit-literal">Ca(OH)₂</span>): low cost, requires continuous stirring to avoid <span class="unit-literal">CaCO₃</span> nozzle scaling.`;
+          } else if (studioState.localAlkali === "wood_ash_lye") {
+            alkHint.innerHTML = `Free leached kiln wood ash (<span class="unit-literal">K₂CO₃</span> ~7% extractable): soak dry wood ash in a 200 L drum &amp; decant clear lye ($0 cost).`;
+          } else if (studioState.localAlkali === "baking_soda") {
+            alkHint.innerHTML = `Bulk sodium bicarbonate (<span class="unit-literal">NaHCO₃</span>): gentle buffer (<span class="unit-literal">pH</span> ~8.3), widely stocked in 25–50 lb sacks.`;
+          } else {
+            alkHint.innerHTML = `Magadi soda ash / washing soda (<span class="unit-literal">Na₂CO₃</span>): high neutralizing strength per kg, readily available in Nairobi &amp; Mumbai.`;
+          }
+        }
         const normTier = normalizeCorrosionTier(studioState.corrosionTier);
         studioState.corrosionTier = normTier;
         document.querySelectorAll("[data-corrosion]").forEach((btn) => {
@@ -3727,9 +4054,15 @@
 
         const pillBlower = el("pill-blower-label");
         if (pillBlower) {
-          pillBlower.textContent = studioState.stageAlignment === "eductor_dry_fan"
-            ? "4: Dry Motive Fan"
-            : "4: ID Blower";
+          if (isFrugalMode()) {
+            pillBlower.textContent = studioState.zeroElectricity
+              ? "4: Brick Chimney (0W)"
+              : "4: Chimney + 230V Fan";
+          } else {
+            pillBlower.textContent = studioState.stageAlignment === "eductor_dry_fan"
+              ? "4: Dry Motive Fan"
+              : "4: ID Blower";
+          }
         }
       }
 
@@ -3767,6 +4100,12 @@
         if (saltingHrs > 0) studioState.lastSaltingHours = saltingHrs;
 
         studioState.buildPath = normalizeBuildPath(proj.build_path);
+        studioState.zeroElectricity = !!proj.zero_electricity;
+        studioState.localRegion = normalizeLocalRegion(proj.local_region || studioState.localRegion);
+        studioState.localAlkali = normalizeLocalAlkali(proj.local_alkali || studioState.localAlkali);
+        if (el("in-zero-electricity")) el("in-zero-electricity").checked = studioState.zeroElectricity;
+        if (el("in-local-region")) el("in-local-region").value = studioState.localRegion;
+        if (el("in-local-alkali")) el("in-local-alkali").value = studioState.localAlkali;
         if (studioState.buildPath === "custom_fab_deluxe") {
           state.showSystems3D = true;
           syncSystems3DButton();
@@ -3846,6 +4185,9 @@
           salting_hours: saltingHrs,
           vapor_glaze_mode: studioState.vaporGlazeMode,
           build_path: studioState.buildPath,
+          zero_electricity: !!studioState.zeroElectricity,
+          local_region: normalizeLocalRegion(studioState.localRegion),
+          local_alkali: normalizeLocalAlkali(studioState.localAlkali),
           corrosion_tier: normalizeCorrosionTier(studioState.corrosionTier),
           stage_alignment: studioState.stageAlignment,
           packed_bed_layout: studioState.packedBedLayout,
@@ -4035,6 +4377,7 @@
             renderDesign(data.design);
           }
           renderStudioReadiness(data);
+          renderFrugalPanels(data);
           renderArchitecturePanels(data);
           renderRecirculationPanels(data);
           renderBuildGuideTab(data);
@@ -4067,6 +4410,7 @@
           setStatus("ok", "Live Design");
           renderDesign(data);
           renderFallbackReadiness(data, studioState.project);
+          renderFrugalPanels(null);
           renderArchitecturePanels(null);
           renderRecirculationPanels(null);
           renderShopPlansTab();
@@ -4096,12 +4440,21 @@
         const u = ev.urban || {};
         const c = ev.cots || {};
         const overall = u.overall_status || "ok";
+        const frugal = getEffectiveFrugalData(ev);
+        const frugalOn = !!frugal.enabled;
+        const zeroElec = frugalOn && !!frugal.zero_electricity;
 
         const pill = el("readiness-overall-pill");
         pill.className = "pill " + statusToPillClass(overall);
         el("readiness-overall-text").textContent = statusLabel(overall);
         const isDeluxeMode = normalizeBuildPath(ev.project?.build_path || studioState.buildPath) === "custom_fab_deluxe" || !!ev.shop_plan?.is_deluxe;
-        el("readiness-cost-pill").textContent = `${isDeluxeMode ? "Est. Deluxe Fab" : "Est. COTS"}: ${fmtUSD(c.estimated_total_usd)}`;
+        if (frugalOn) {
+          const usdText = fmtUSD(Number.isFinite(frugal.estimated_local_cost_usd) ? frugal.estimated_local_cost_usd : c.estimated_total_usd);
+          const curTag = frugal.local_currency_estimate ? ` (${frugal.local_currency_estimate})` : "";
+          el("readiness-cost-pill").textContent = `Est. Local Ceramic: ${usdText}${curTag}`;
+        } else {
+          el("readiness-cost-pill").textContent = `${isDeluxeMode ? "Est. Deluxe Fab" : "Est. COTS"}: ${fmtUSD(c.estimated_total_usd)}`;
+        }
         renderDeluxeSpecBanner(ev);
 
         const gDot = el("tab-guide-dot");
@@ -4110,47 +4463,99 @@
         }
 
         const elec = u.electrical || {};
-        setReadinessChip(
-          "readiness-power",
-          elec.status,
-          elec.circuit_label || `${elec.required_voltage || 240}V`,
-          elec.fits_available_voltage === false ? `Needs ${elec.required_voltage || 240}V circuit` : (elec.summary || "Fits studio power"),
-          elec.summary || ""
-        );
+        if (zeroElec) {
+          setReadinessChip(
+            "readiness-power",
+            "ok",
+            "0V / 0W Off-Grid",
+            "No motors / No grid — passive chimney + gravity",
+            elec.summary || "100% zero-electricity operation: buoyancy chimney draft + overhead gravity tank + manual pump."
+          );
+        } else if (frugalOn) {
+          setReadinessChip(
+            "readiness-power",
+            elec.status || "ok",
+            elec.circuit_label || `230V 50Hz Hybrid (~${Math.round(frugal.power_watts || 550)}W)`,
+            elec.summary || "Local 0.5 HP domestic pump + low-ΔP assist fan",
+            elec.summary || ""
+          );
+        } else {
+          setReadinessChip(
+            "readiness-power",
+            elec.status,
+            elec.circuit_label || `${elec.required_voltage || 240}V`,
+            elec.fits_available_voltage === false ? `Needs ${elec.required_voltage || 240}V circuit` : (elec.summary || "Fits studio power"),
+            elec.summary || ""
+          );
+        }
 
         const water = u.water || {};
-        setReadinessChip(
-          "readiness-water",
-          water.status,
-          `${fmt(water.required_gpm, 2)} GPM`,
-          water.total_firing_gallons ? `~${Math.round(water.total_firing_gallons)} gal / firing` : (water.summary || "Garden hose check"),
-          water.summary || ""
-        );
+        if (frugalOn) {
+          setReadinessChip(
+            "readiness-water",
+            water.status || "ok",
+            `${fmt(frugal.spray_flow_lpm, 1)} L/min (${fmt(frugal.spray_flow_gpm, 1)} GPM)`,
+            zeroElec
+              ? `${Math.round(frugal.gravity_tank_liters)} L tank · ${Math.round(frugal.jerrycans_20l_per_hr)}×20L/hr`
+              : `${Math.round(frugal.gravity_tank_liters)} L tank · 0.5 HP 230V pump`,
+            water.summary || frugal.summary || ""
+          );
+        } else {
+          setReadinessChip(
+            "readiness-water",
+            water.status,
+            `${fmt(water.required_gpm, 2)} GPM`,
+            water.total_firing_gallons ? `~${Math.round(water.total_firing_gallons)} gal / firing` : (water.summary || "Garden hose check"),
+            water.summary || ""
+          );
+        }
 
         const noise = u.noise || {};
-        setReadinessChip(
-          "readiness-noise",
-          noise.status,
-          Number.isFinite(noise.property_line_dba) ? `${fmt(noise.property_line_dba, 0)} dBA @ ${fmt(noise.property_line_ft, 0)} ft` : "—",
-          `Limit ${fmt(noise.urban_limit_dba || 60, 0)} dBA${noise.silencer_recommended ? " · Silencer rec." : ""}`,
-          noise.summary || ""
-        );
+        if (zeroElec) {
+          setReadinessChip(
+            "readiness-noise",
+            "ok",
+            "~45 dBA Whisper Quiet",
+            "No Blower — passive water trickle only",
+            noise.summary || "Zero rotating blower noise; quiet gravity water trickle (~45 dBA at 3 ft)."
+          );
+        } else {
+          setReadinessChip(
+            "readiness-noise",
+            noise.status,
+            Number.isFinite(noise.property_line_dba) ? `${fmt(noise.property_line_dba, 0)} dBA @ ${fmt(noise.property_line_ft, 0)} ft` : "—",
+            `Limit ${fmt(noise.urban_limit_dba || 60, 0)} dBA${noise.silencer_recommended ? " · Silencer rec." : ""}`,
+            noise.summary || ""
+          );
+        }
 
         const drain = u.drain || {};
         const lbs = drain.baking_soda_lbs_per_firing;
         const bags15 = drain.baking_soda_15lb_bags;
         const sacks50 = drain.baking_soda_50lb_sacks;
         const saltHrs = Number.isFinite(drain.salting_hours) ? drain.salting_hours : (studioState.project?.salting_hours || 0);
-        const sodaSub = lbs > 0.05 && saltHrs > 0
-          ? `${fmt(saltHrs, 1)} hr salting · Drain pH ${drain.target_drain_ph || "6.5–8.5"}`
-          : (drain.target_drain_ph ? `Drain pH ${drain.target_drain_ph}` : (drain.summary || "Neutralized brine"));
-        setReadinessChip(
-          "readiness-soda",
-          drain.status,
-          formatBulkSodaShort(lbs, bags15, sacks50),
-          sodaSub,
-          [drain.bulk_packaging_label, drain.summary].filter(Boolean).join(" — ")
-        );
+        if (frugalOn) {
+          const alkKg = frugal.alkali_kg_per_firing;
+          const alkLbs = frugal.alkali_lbs_per_firing;
+          setReadinessChip(
+            "readiness-soda",
+            drain.status || "ok",
+            alkKg > 0.05 ? `${fmt(alkKg, 1)} kg (${fmt(alkLbs, 1)} lbs)` : "0 kg (No HCl)",
+            `${frugal.alkali_name || "Local Alkali"} (${frugal.alkali_formula || "Na₂CO₃"})`,
+            [frugal.alkali_local_note, frugal.scaling_warning].filter(Boolean).join(" — ")
+          );
+        } else {
+          const sodaSub = lbs > 0.05 && saltHrs > 0
+            ? `${fmt(saltHrs, 1)} hr salting · Drain pH ${drain.target_drain_ph || "6.5–8.5"}`
+            : (drain.target_drain_ph ? `Drain pH ${drain.target_drain_ph}` : (drain.summary || "Neutralized brine"));
+          setReadinessChip(
+            "readiness-soda",
+            drain.status,
+            formatBulkSodaShort(lbs, bags15, sacks50),
+            sodaSub,
+            [drain.bulk_packaging_label, drain.summary].filter(Boolean).join(" — ")
+          );
+        }
 
         const plume = u.plume || {};
         const hasPlumeLengths = Number.isFinite(plume.bare_plume_length_ft) && Number.isFinite(plume.diluted_plume_length_ft) && plume.bare_plume_length_ft > 0;
@@ -4161,23 +4566,35 @@
             ? `${String(plume.visible_plume_risk).replace(/^\w/, (ch) => ch.toUpperCase())} mist risk`
             : (Number.isFinite(plume.exhaust_temp_f) ? `${fmt(plume.exhaust_temp_f, 0)}°F steam` : "—"));
         let plumeSub = plume.min_stack_height_ft ? `Stack >= ${fmt(plume.min_stack_height_ft, 0)} ft` : "Clean water vapor";
-        if (hasPlumeLengths && Number.isFinite(fenceFt)) {
+        if (frugalOn) {
+          plumeSub = `${fmt(frugal.chimney_height_m, 1)} m (${fmt(frugal.chimney_height_ft, 0)} ft) reheat chimney @ ${fmt(frugal.stack_reheat_temp_f, 0)}°F`;
+        } else if (hasPlumeLengths && Number.isFinite(fenceFt)) {
           plumeSub = `vs ${fmt(fenceFt, 0)} ft fence · ${Math.round(plume.dilution_cfm_needed || 0)} CFM`;
         } else if (Number.isFinite(plume.dilution_cfm_needed) && plume.dilution_cfm_needed > 0) {
           plumeSub = `Dilute: ${Math.round(plume.dilution_cfm_needed)} CFM${Number.isFinite(plume.dilution_reheat_kw) && plume.dilution_reheat_kw > 0 ? ` · ${fmt(plume.dilution_reheat_kw, 1)} kW` : ""}`;
         }
         const plumeTip = [plume.summary, plume.squirrel_cage_verdict].filter(Boolean).join(" — ");
-        setReadinessChip("readiness-plume", plume.status, plumeVal, plumeSub, plumeTip);
+        setReadinessChip("readiness-plume", plume.status, frugalOn ? `${fmt(frugal.chimney_height_m, 1)} m Chimney` : plumeVal, plumeSub, plumeTip);
 
         const corr = u.corrosion || {};
-        const tierLabel = normalizeCorrosionTier(corr.tier) === "heavy_c276_frp" ? "C-276 / FRP" : "Standard 316L SS";
-        setReadinessChip(
-          "readiness-corrosion",
-          corr.status,
-          tierLabel,
-          corr.inspection_interval || corr.material_summary || "Buffered flush & weld check",
-          [corr.material_summary, corr.soda_comparison].filter(Boolean).join(" — ")
-        );
+        if (frugalOn) {
+          setReadinessChip(
+            "readiness-corrosion",
+            "ok",
+            "Fired Ceramic / Brick",
+            "Zero CPVC Meltdown (>1,800°F)",
+            frugal.thermal_immunity_note || "Fired stoneware, firebrick, and salt-glazed SWG clay tolerate >1,800°F dry-run without melting."
+          );
+        } else {
+          const tierLabel = normalizeCorrosionTier(corr.tier) === "heavy_c276_frp" ? "C-276 / FRP" : "Standard 316L SS";
+          setReadinessChip(
+            "readiness-corrosion",
+            corr.status,
+            tierLabel,
+            corr.inspection_interval || corr.material_summary || "Buffered flush & weld check",
+            [corr.material_summary, corr.soda_comparison].filter(Boolean).join(" — ")
+          );
+        }
       }
 
       function renderFallbackReadiness(d, proj) {
@@ -4188,21 +4605,367 @@
         const reqV = hp <= 1.0 ? 120 : 240;
         const availV = proj ? proj.available_voltage : 240;
         const elecOk = availV >= reqV;
+        const frugal = getEffectiveFrugalData(null);
+        const frugalOn = !!frugal.enabled;
+        const zeroElec = frugalOn && !!frugal.zero_electricity;
 
         el("readiness-overall-pill").className = "pill";
-        el("readiness-overall-text").textContent = "Core Sizing Mode";
-        el("readiness-cost-pill").textContent = "Studio Kit: Offline";
+        el("readiness-overall-text").textContent = frugalOn ? (zeroElec ? "Off-Grid Ceramic" : "Local Ceramic") : "Core Sizing Mode";
+        el("readiness-cost-pill").textContent = frugalOn
+          ? `Est. Local Ceramic: ${fmtUSD(frugal.estimated_local_cost_usd)} (${frugal.local_currency_estimate})`
+          : "Studio Kit: Offline";
 
-        setReadinessChip("readiness-power", elecOk ? "ok" : "action_needed", `${reqV}V (${fmt(hp, 1)} HP)`, elecOk ? "Fits selected power" : `Needs ${reqV}V VFD`);
-        const gpm = q.total_spray_water_gpm || 0;
-        setReadinessChip("readiness-water", gpm <= (proj?.garden_hose_gpm || 5) ? "ok" : "caution", `${fmt(gpm, 2)} GPM`, "Spray demand");
-        setReadinessChip("readiness-noise", "caution", "Silencer advised", "Enable Studio API for dBA");
-        const saltHrs = proj?.vapor_glaze_mode === "salt" ? (proj?.salting_hours || 3.0) : 0;
-        const lbs = (p.nahco3_consumption_kg_hr || 0) * 2.20462 * saltHrs;
-        setReadinessChip("readiness-soda", "ok", formatBulkSodaShort(lbs), saltHrs > 0 ? `${fmt(saltHrs, 1)} hr salting` : "Zero HCl load");
-        setReadinessChip("readiness-plume", "caution", `${fmt(kToF(q.outlet_temp_k || 360), 0)}°F sat. mist`, "Clean water vapor");
-        setReadinessChip("readiness-corrosion", (proj?.vapor_glaze_mode === "salt") ? "caution" : "ok", normalizeCorrosionTier(proj?.corrosion_tier) === "heavy_c276_frp" ? "C-276 / FRP" : "Standard 316L SS", proj?.vapor_glaze_mode === "salt" ? "Buffered pH 8 flush" : "Zero HCl acid load");
+        if (zeroElec) {
+          setReadinessChip("readiness-power", "ok", "0V / 0W Off-Grid", "No motors / No grid — passive chimney");
+          setReadinessChip("readiness-water", "ok", `${fmt(frugal.spray_flow_lpm, 1)} L/min`, `${Math.round(frugal.gravity_tank_liters)} L tank · ${Math.round(frugal.jerrycans_20l_per_hr)}×20L/hr`);
+          setReadinessChip("readiness-noise", "ok", "~45 dBA Whisper Quiet", "No Blower — passive water trickle");
+          setReadinessChip("readiness-soda", "ok", `${fmt(frugal.alkali_kg_per_firing, 1)} kg (${fmt(frugal.alkali_lbs_per_firing, 1)} lbs)`, `${frugal.alkali_name} (${frugal.alkali_formula})`);
+          setReadinessChip("readiness-plume", "ok", `${fmt(frugal.chimney_height_m, 1)} m Chimney`, `Reheat ${fmt(frugal.stack_reheat_temp_f, 0)}°F`);
+          setReadinessChip("readiness-corrosion", "ok", "Fired Ceramic / Brick", "Zero CPVC Meltdown (>1,800°F)");
+        } else {
+          setReadinessChip("readiness-power", elecOk ? "ok" : "action_needed", `${reqV}V (${fmt(hp, 1)} HP)`, elecOk ? "Fits selected power" : `Needs ${reqV}V VFD`);
+          const gpm = q.total_spray_water_gpm || 0;
+          setReadinessChip("readiness-water", gpm <= (proj?.garden_hose_gpm || 5) ? "ok" : "caution", `${fmt(gpm, 2)} GPM`, "Spray demand");
+          setReadinessChip("readiness-noise", "caution", "Silencer advised", "Enable Studio API for dBA");
+          const saltHrs = proj?.vapor_glaze_mode === "salt" ? (proj?.salting_hours || 3.0) : 0;
+          const lbs = (p.nahco3_consumption_kg_hr || 0) * 2.20462 * saltHrs;
+          setReadinessChip("readiness-soda", "ok", formatBulkSodaShort(lbs), saltHrs > 0 ? `${fmt(saltHrs, 1)} hr salting` : "Zero HCl load");
+          setReadinessChip("readiness-plume", "caution", `${fmt(kToF(q.outlet_temp_k || 360), 0)}°F sat. mist`, "Clean water vapor");
+          setReadinessChip("readiness-corrosion", (proj?.vapor_glaze_mode === "salt") ? "caution" : "ok", normalizeCorrosionTier(proj?.corrosion_tier) === "heavy_c276_frp" ? "C-276 / FRP" : "Standard 316L SS", proj?.vapor_glaze_mode === "salt" ? "Buffered pH 8 flush" : "Zero HCl acid load");
+        }
         renderDeluxeSpecBanner(null);
+      }
+
+      /* ===================== PHASE 10: LOCAL CERAMIC & ZERO-ELECTRICITY ENGINE ===================== */
+
+      function getEffectiveFrugalData(ev) {
+        const proj = readProjectFromControls();
+        const uiFrugal = isFrugalMode(proj);
+        const rawCand = (ev && ev.frugal) || null;
+        const rawMatches = !!(rawCand && typeof rawCand.enabled === "boolean" && rawCand.enabled === uiFrugal && !!rawCand.zero_electricity === !!proj.zero_electricity && normalizeLocalRegion(rawCand.region) === normalizeLocalRegion(proj.local_region) && normalizeLocalAlkali(rawCand.alkali_id) === normalizeLocalAlkali(proj.local_alkali));
+        const raw = rawMatches ? rawCand : null;
+        const d = (ev && ev.design) || state.design || {};
+        const enabled = uiFrugal;
+        const zeroElec = !!proj.zero_electricity;
+        const region = normalizeLocalRegion(raw?.region || proj.local_region || studioState.localRegion);
+        const alkaliId = normalizeLocalAlkali(raw?.alkali_id || proj.local_alkali || studioState.localAlkali);
+
+        const regionLabels = {
+          nairobi: "Nairobi / East Africa (KES)",
+          mumbai: "Mumbai / India (INR)",
+          general_local: "General Local Pottery (USD)",
+        };
+        const regionLabel = raw?.region_label || regionLabels[region] || regionLabels.nairobi;
+
+        // First-principles offline fallback physics (mirrors pkg/studio/frugal.go)
+        const kilnVol = Number(proj.input?.kiln_volume_cu_ft || d.input?.kiln_volume_cu_ft || 24);
+        const scaleF = Math.sqrt(Math.max(0.35, kilnVol / 24.0));
+        const targetDraft = Math.abs(Number(proj.input?.target_kiln_draft_in_wc || -0.05));
+        const bedDiamIn = Number.isFinite(raw?.bed_diameter_in) ? raw.bed_diameter_in : Math.round(Math.max(24, 30 * scaleF));
+        const bedVelMs = Number.isFinite(raw?.bed_superficial_vel_m_s) ? raw.bed_superficial_vel_m_s : 0.38;
+        const bedDpInwc = Number.isFinite(raw?.bed_dp_inwc) ? raw.bed_dp_inwc : 0.062;
+        const reqDraft = Number.isFinite(raw?.required_draft_inwc) ? raw.required_draft_inwc : Number((targetDraft + bedDpInwc + 0.05).toFixed(3));
+
+        const reheatF = Number.isFinite(raw?.stack_reheat_temp_f) ? raw.stack_reheat_temp_f : (zeroElec ? 340.0 : 210.0);
+        const tAmbK = ((Number(proj.ambient_winter_f ?? 68) - 32) * 5 / 9) + 273.15;
+        const tStackK = ((reheatF - 32) * 5 / 9) + 273.15;
+        const rhoAmb = (101325 * 0.02897) / (8.3145 * Math.max(255, tAmbK));
+        const rhoStack = (101325 * 0.02897) / (8.3145 * Math.max(320, tStackK));
+        const chimM = Number.isFinite(raw?.chimney_height_m) ? raw.chimney_height_m : (zeroElec ? 9.5 : 4.5);
+        const chimFt = Number.isFinite(raw?.chimney_height_ft) ? raw.chimney_height_ft : chimM * 3.28084;
+        const buoyInwc = (9.80665 * chimM * Math.max(0.05, rhoAmb - rhoStack)) / 249.08891;
+        const availDraft = Number.isFinite(raw?.available_draft_inwc)
+          ? raw.available_draft_inwc
+          : (zeroElec ? Number((buoyInwc + 0.03).toFixed(3)) : 1.85);
+        const marginDraft = Number.isFinite(raw?.draft_margin_inwc) ? raw.draft_margin_inwc : Number((availDraft - reqDraft).toFixed(3));
+        const draftFeasible = typeof raw?.draft_feasible === "boolean" ? raw.draft_feasible : (marginDraft >= 0);
+
+        const tankL = Number.isFinite(raw?.gravity_tank_liters) ? raw.gravity_tank_liters : (kilnVol > 32 ? 500 : 300);
+        const tankGal = Number.isFinite(raw?.gravity_tank_gal) ? raw.gravity_tank_gal : tankL * 0.264172;
+        const elevFt = Number.isFinite(raw?.tank_elevation_ft) ? raw.tank_elevation_ft : 11.5;
+        const headPsi = Number.isFinite(raw?.gravity_head_psi) ? raw.gravity_head_psi : elevFt * 0.4335;
+        const sprayGpm = Number.isFinite(raw?.spray_flow_gpm) ? raw.spray_flow_gpm : Number(Math.max(1.2, 1.8 * scaleF).toFixed(2));
+        const sprayLpm = Number.isFinite(raw?.spray_flow_lpm) ? raw.spray_flow_lpm : sprayGpm * 3.78541;
+        const jerrycansHr = Number.isFinite(raw?.jerrycans_20l_per_hr) ? raw.jerrycans_20l_per_hr : Math.ceil((sprayLpm * 60) / 20);
+        const treadleMinHr = Number.isFinite(raw?.treadle_minutes_per_hr) ? raw.treadle_minutes_per_hr : Number(((sprayLpm * 60) / 35.0).toFixed(1));
+        const pumpType = raw?.manual_pump_type || (zeroElec
+          ? "Treadle / Semi-Rotary Cast-Iron Hand Pump"
+          : (region === "mumbai" ? "Local 0.5 HP 230V 50Hz Monoblock Pump (Kirloskar)" : "Local 0.5 HP 230V 50Hz Domestic Pump (Davis & Shirtliff)"));
+
+        // Local alkali stoichiometry fallback
+        const saltMode = (proj.vapor_glaze_mode || "salt") === "salt";
+        const saltLbsHr = saltMode ? Number(proj.input?.salt_rate_lbs_per_hr ?? 2.0) : 0;
+        const saltHrs = saltMode ? Number(proj.salting_hours ?? 3.0) : 0;
+        const molHcl = (saltLbsHr * saltHrs * 0.453592) / 0.05844;
+        const alkaliCatalog = {
+          soda_ash: {
+            name: "Magadi Soda Ash", formula: "Na₂CO₃",
+            kg: molHcl * 0.5 * 0.10599 * 1.25, costPerKg: 0.45,
+            note: region === "nairobi" ? "Locally mined Lake Magadi soda ash (~KES 55/kg) — stock in dry 25 kg sacks." : "Commercial washing soda (Na₂CO₃) widely stocked in local bazaar hardware shops.",
+            warn: "",
+          },
+          slaked_lime: {
+            name: "Slaked Lime / Chuna", formula: "Ca(OH)₂",
+            kg: molHcl * 0.5 * 0.07409 * 1.30, costPerKg: 0.25,
+            note: region === "mumbai" ? "Builder's chuna (Ca(OH)₂, ~INR 20/kg) — ultra-low cost across India." : "Hydrated builder's lime (Ca(OH)₂) available at local masonry yards.",
+            warn: "SCALING CAUTION: Stir lime slurry continuously and use large-orifice (>6 mm) brass spray roses to prevent CaCO₃ crusting.",
+          },
+          wood_ash_lye: {
+            name: "Kiln Wood-Ash Lye", formula: "K₂CO₃",
+            kg: (molHcl * 0.5 * 0.13821 * 1.30) / 0.07, costPerKg: 0.0,
+            note: "Free leached wood-kiln ash (~7% extractable K₂CO₃): soak dry wood ash in a 200 L drum for 24 hrs and decant clear potash lye ($0 cost).",
+            warn: "Strain decanted wood-ash lye through coarse cloth before pouring into overhead drum to keep grit out of spray rose.",
+          },
+          baking_soda: {
+            name: "Bulk Baking Soda", formula: "NaHCO₃",
+            kg: molHcl * 1.0 * 0.08401 * 1.25, costPerKg: 0.90,
+            note: "Sodium bicarbonate (NaHCO₃) — gentle self-buffering pH ~8.3, safe for bare-hand mixing.",
+            warn: "",
+          },
+        };
+        const alkDef = alkaliCatalog[alkaliId] || alkaliCatalog.soda_ash;
+        const alkKg = Number.isFinite(raw?.alkali_kg_per_firing) ? raw.alkali_kg_per_firing : Number(alkDef.kg.toFixed(2));
+        const alkLbs = Number.isFinite(raw?.alkali_lbs_per_firing) ? raw.alkali_lbs_per_firing : Number((alkKg * 2.20462).toFixed(1));
+        const alkCost = Number.isFinite(raw?.alkali_cost_usd) ? raw.alkali_cost_usd : Number((alkKg * alkDef.costPerKg).toFixed(2));
+
+        const baseUsd = zeroElec
+          ? (region === "mumbai" ? 540 : (region === "nairobi" ? 640 : 690))
+          : (region === "mumbai" ? 680 : (region === "nairobi" ? 790 : 840));
+        const estUsd = Number.isFinite(raw?.estimated_local_cost_usd) ? raw.estimated_local_cost_usd : Math.round(baseUsd * Math.max(0.85, Math.min(1.4, scaleF)));
+        const localCurrency = raw?.local_currency_estimate || (region === "nairobi"
+          ? `~KES ${Math.round(estUsd * 130).toLocaleString("en-US")}`
+          : (region === "mumbai" ? `~INR ${Math.round(estUsd * 84).toLocaleString("en-US")}` : `~$${estUsd.toLocaleString("en-US")} USD`));
+
+        return {
+          enabled,
+          zero_electricity: zeroElec,
+          region,
+          region_label: regionLabel,
+          chimney_height_ft: chimFt,
+          chimney_height_m: chimM,
+          stack_reheat_temp_f: reheatF,
+          available_draft_inwc: availDraft,
+          required_draft_inwc: reqDraft,
+          draft_margin_inwc: marginDraft,
+          draft_feasible: draftFeasible,
+          draft_mechanism: raw?.draft_mechanism || (zeroElec
+            ? "Concentric Brick Flue Thermal-Reheat Chimney Buoyancy + Gravity-Spray Assist (0W)"
+            : "Brick Chimney Buoyancy + Local Low-ΔP 230V 50Hz Assist Fan"),
+          bed_diameter_in: bedDiamIn,
+          bed_superficial_vel_m_s: bedVelMs,
+          bed_dp_inwc: bedDpInwc,
+          packing_material: raw?.packing_material || "1\" Potter-Extruded Kiln-Fired Stoneware Raschig Rings (ε = 0.70)",
+          gravity_tank_gal: tankGal,
+          gravity_tank_liters: tankL,
+          tank_elevation_ft: elevFt,
+          gravity_head_psi: headPsi,
+          spray_flow_gpm: sprayGpm,
+          spray_flow_lpm: sprayLpm,
+          manual_pump_type: pumpType,
+          jerrycans_20l_per_hr: jerrycansHr,
+          treadle_minutes_per_hr: treadleMinHr,
+          alkali_id: alkaliId,
+          alkali_name: raw?.alkali_name || alkDef.name,
+          alkali_formula: raw?.alkali_formula || alkDef.formula,
+          alkali_kg_per_firing: alkKg,
+          alkali_lbs_per_firing: alkLbs,
+          alkali_cost_usd: alkCost,
+          alkali_local_note: raw?.alkali_local_note || alkDef.note,
+          scaling_warning: raw?.scaling_warning !== undefined ? raw.scaling_warning : alkDef.warn,
+          hcl_removal_pct: Number.isFinite(raw?.hcl_removal_pct) ? raw.hcl_removal_pct : 96.4,
+          coarse_ash_capture_pct: Number.isFinite(raw?.coarse_ash_capture_pct) ? raw.coarse_ash_capture_pct : 90.5,
+          submicron_nacl_capture_pct: Number.isFinite(raw?.submicron_nacl_capture_pct) ? raw.submicron_nacl_capture_pct : 30.5,
+          submicron_honest_note: raw?.submicron_honest_note || "Honest Physics Check: A passive zero-electricity scrubber has only ~0.18–0.28 inWC of chimney buoyancy draft and cannot reach the 18–22 inWC throat shear needed for 84% submicron NaCl aerosol capture. Instead, it achieves ~96% HCl acid gas neutralization and ~90% coarse wood-ash removal via deep irrigated stoneware rings, while relying on condensation growth and tall-chimney dispersion for submicron salt mist.",
+          thermal_immunity_note: raw?.thermal_immunity_note || "Zero-Plastic-Meltdown Ceramic Immunity: Firebrick, glazed SWG clay flue pipes, and kiln-fired stoneware Raschig rings survive >1,800°F dry-run if water is ever interrupted — completely eliminating the 210°F CPVC plastic meltdown failure mode.",
+          estimated_local_cost_usd: estUsd,
+          local_currency_estimate: localCurrency,
+          power_watts: Number.isFinite(raw?.power_watts) ? raw.power_watts : (zeroElec ? 0 : 550),
+          manual_steps: Array.isArray(raw?.manual_steps) && raw.manual_steps.length > 0 ? raw.manual_steps : [
+            "Pre-warm the brick thermal-reheat chimney during kiln preheat so buoyant updraft establishes cleanly before salting.",
+            `Fill the ${Math.round(tankL)} L overhead ${region === "mumbai" ? "Sintex" : "Kentank"} gravity tank to full head (${(elevFt * 0.3048).toFixed(1)} m / ${fmt(elevFt, 1)} ft = ${fmt(headPsi, 1)} PSI) and charge baffled brick sump with ${fmt(alkKg, 1)} kg ${alkDef.name}.`,
+            "Open brass gravity spray valves just before first salt throw; verify steady water trickle through the stoneware ring bed sight port.",
+            zeroElec
+              ? `Every 20 minutes during salting, operate the treadle/semi-rotary hand pump (~${fmt(treadleMinHr, 1)} min/hr, equiv. to ${jerrycansHr}× 20 L jerrycans/hr) to return settled sump liquor to the overhead tank.`
+              : "Run local 0.5 HP 230V 50Hz monoblock pump from baffled brick sump clean bay up to overhead header; verify Y-strainer flow.",
+            "Check sump pH with litmus strips every 30 min (keep pH 7.5–9.0); top up local alkali before pH drops below 7.0.",
+          ],
+          local_materials: Array.isArray(raw?.local_materials) ? raw.local_materials : [],
+          warnings: Array.isArray(raw?.warnings) && raw.warnings.length > 0 ? raw.warnings : [
+            "NEVER build DIY pressurized steam boilers or steam-jet ejectors to pull chimney draft — catastrophic explosion hazard.",
+            `Brace the overhead ${Math.round(tankL)} L water tank tower with diagonal X-bracing rated for >= ${Math.round(tankL * 1.4)} kg wet load + wind.`,
+            "Site the masonry scrubber strictly outdoors with >= 36 in (0.9 m) clearance from combustible roofs and timber.",
+          ],
+          summary: raw?.summary || `${regionLabel}: ${fmt(chimM, 1)} m thermal-reheat brick chimney + Ø${bedDiamIn}" stoneware-ring masonry tower + ${Math.round(tankL)} L gravity drum (${fmtUSD(estUsd)} / ${localCurrency}).`,
+        };
+      }
+
+      function renderFrugalPanels(ev) {
+        const f = getEffectiveFrugalData(ev);
+        const active = !!f.enabled;
+        const banner = el("frugal-spec-banner");
+        const guidePanel = el("guide-frugal-panel");
+        if (banner) banner.classList.toggle("hidden", !active);
+        if (guidePanel) guidePanel.classList.toggle("hidden", !active);
+        if (!active) return;
+
+        const elevM = f.tank_elevation_ft * 0.3048;
+        const draftPillText = f.draft_feasible
+          ? `Draft Feasible (+${fmt(f.draft_margin_inwc, 2)} inWC)`
+          : `Draft Deficit (${fmt(f.draft_margin_inwc, 2)} inWC)`;
+        const draftPillCls = f.draft_feasible ? "pill ok" : "pill danger";
+        const powerPillText = f.zero_electricity ? "0V / 0W Off-Grid" : `230V 50Hz Hybrid (${Math.round(f.power_watts)}W)`;
+        const costPillText = `${fmtUSD(f.estimated_local_cost_usd)} (${f.local_currency_estimate})`;
+
+        // Tab 1 Summary Banner (#frugal-spec-banner)
+        if (el("frugal-spec-title")) {
+          el("frugal-spec-title").textContent = `Local Ceramic / Brick Scrubber — ${f.region_label}${f.zero_electricity ? " · ZERO ELECTRICITY" : " · LOCAL HYBRID"}`;
+        }
+        if (el("frugal-draft-pill")) {
+          el("frugal-draft-pill").className = draftPillCls;
+          el("frugal-draft-pill").textContent = draftPillText;
+        }
+        if (el("frugal-power-pill")) {
+          el("frugal-power-pill").className = "pill " + (f.zero_electricity ? "ok" : "warn");
+          el("frugal-power-pill").textContent = powerPillText;
+        }
+        if (el("frugal-cost-pill")) {
+          el("frugal-cost-pill").textContent = `Local Build: ${costPillText}`;
+        }
+        if (el("frugal-spec-summary")) {
+          el("frugal-spec-summary").textContent = f.summary;
+        }
+
+        const tankName = f.region === "mumbai" ? "Sintex" : (f.region === "nairobi" ? "Kentank" : "HDPE");
+        const laborLine = f.zero_electricity
+          ? `${Math.round(f.jerrycans_20l_per_hr)}× 20L buckets/hr · ${fmt(f.treadle_minutes_per_hr, 1)} min/hr treadle/hand pump`
+          : `${f.manual_pump_type} (${Math.round(f.power_watts)}W)`;
+
+        const bannerGrid = el("frugal-spec-grid");
+        if (bannerGrid) {
+          const chips = [
+            ["Natural Chimney Buoyancy", `${fmt(f.available_draft_inwc, 2)} vs ${fmt(f.required_draft_inwc, 2)} inWC · ${fmt(f.chimney_height_m, 1)} m (${fmt(f.chimney_height_ft, 0)} ft) @ ${fmt(f.stack_reheat_temp_f, 0)}°F`],
+            [`${Math.round(f.gravity_tank_liters)} L ${tankName} Gravity Tank`, `@ ${fmt(elevM, 1)} m (${fmt(f.tank_elevation_ft, 1)} ft · ${fmt(f.gravity_head_psi, 1)} PSI) · ${fmt(f.spray_flow_lpm, 1)} L/min · ${laborLine}`],
+            ["Local Alkali Chemistry", `${f.alkali_name} (${f.alkali_formula}): ${fmt(f.alkali_kg_per_firing, 1)} kg (${fmt(f.alkali_lbs_per_firing, 1)} lbs)/firing · ${f.alkali_cost_usd <= 0.01 ? "FREE ($0)" : fmtUSD(f.alkali_cost_usd)}`],
+            ["Ceramic Thermal Immunity", `Wide Ø${Math.round(f.bed_diameter_in)}" stoneware bed (${fmt(f.bed_dp_inwc, 2)} inWC) — Zero CPVC plastic meltdown (>1,800°F dry-run)`],
+          ];
+          bannerGrid.innerHTML = chips.map(([k, v]) => `
+            <div class="frugal-spec-chip">
+              <span class="frugal-spec-k">${escapeHtml(k)}</span>
+              <span class="frugal-spec-v">${escapeHtml(v)}</span>
+            </div>
+          `).join("");
+        }
+
+        const metersHtml = `
+          <div class="frugal-meter-card">
+            <div class="frugal-meter-head"><span><span class="unit-literal">HCl</span> Acid Gas Removal</span><span style="color:#86efac;font-family:var(--mono)">~${fmt(f.hcl_removal_pct, 1)}%</span></div>
+            <div class="frugal-meter-track"><div class="frugal-meter-fill" style="width:${Math.min(100, f.hcl_removal_pct).toFixed(1)}%;background:#22c55e"></div></div>
+            <span class="p7-mini-sub">Deep irrigated kiln-fired stoneware rings neutralize HCl acid vapor</span>
+          </div>
+          <div class="frugal-meter-card">
+            <div class="frugal-meter-head"><span>Coarse Wood Ash Capture</span><span style="color:#fcd34d;font-family:var(--mono)">~${fmt(f.coarse_ash_capture_pct, 1)}%</span></div>
+            <div class="frugal-meter-track"><div class="frugal-meter-fill" style="width:${Math.min(100, f.coarse_ash_capture_pct).toFixed(1)}%;background:#f59e0b"></div></div>
+            <span class="p7-mini-sub">Brick settling chamber + gravity spray + terracotta chevrons</span>
+          </div>
+          <div class="frugal-meter-card">
+            <div class="frugal-meter-head"><span>Submicron <span class="unit-literal">NaCl</span> Fume (Honest)</span><span style="color:#fb923c;font-family:var(--mono)">~${fmt(f.submicron_nacl_capture_pct, 1)}%</span></div>
+            <div class="frugal-meter-track"><div class="frugal-meter-fill" style="width:${Math.min(100, f.submicron_nacl_capture_pct).toFixed(1)}%;background:#f97316"></div></div>
+            <span class="p7-mini-sub">Passive buoyancy trades away 19 inWC venturi fine-fume shear</span>
+          </div>
+        `;
+        if (el("frugal-honest-strip")) el("frugal-honest-strip").innerHTML = metersHtml;
+        if (el("frugal-honest-note")) {
+          el("frugal-honest-note").innerHTML = `<strong>Honest Capture Reality Check:</strong> ${escapeHtml(f.submicron_honest_note)}`;
+        }
+
+        // Tab 2 Full Local Ceramic & Zero-Electricity Engineering Card (#guide-frugal-panel)
+        if (el("guide-frugal-draft-pill")) {
+          el("guide-frugal-draft-pill").className = draftPillCls;
+          el("guide-frugal-draft-pill").textContent = draftPillText;
+        }
+        if (el("guide-frugal-power-pill")) {
+          el("guide-frugal-power-pill").className = "pill " + (f.zero_electricity ? "ok" : "warn");
+          el("guide-frugal-power-pill").textContent = powerPillText;
+        }
+        if (el("guide-frugal-cost-pill")) {
+          el("guide-frugal-cost-pill").textContent = `Local Build: ${costPillText}`;
+        }
+        const guideBody = el("guide-frugal-body");
+        if (!guideBody) return;
+
+        const scalingHtml = f.scaling_warning
+          ? `<div class="p7-warn-inline">${escapeHtml(f.scaling_warning)}</div>`
+          : "";
+        const stepsHtml = Array.isArray(f.manual_steps) && f.manual_steps.length > 0
+          ? `<div class="trigger-box"><h4>Manual Firing-Day Operating Steps</h4><ol class="trigger-list">${f.manual_steps.map((s) => `<li>${escapeHtml(String(s).replace(/^\s*\d+\.\s*/, ""))}</li>`).join("")}</ol></div>`
+          : "";
+        const warnsHtml = Array.isArray(f.warnings) && f.warnings.length > 0
+          ? `<div class="p7-warn-inline"><strong>Safety &amp; Structural Warnings:</strong><ul class="trigger-list" style="margin-top:4px;color:#fde68a">${f.warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join("")}</ul></div>`
+          : "";
+        const matsHtml = Array.isArray(f.local_materials) && f.local_materials.length > 0
+          ? `<div class="trigger-box"><h4>Key Local Materials (${escapeHtml(f.region_label)})</h4><ul class="trigger-list">${f.local_materials.map((m) => `<li>${escapeHtml(m)}</li>`).join("")}</ul></div>`
+          : "";
+
+        guideBody.innerHTML = `
+          <div class="frugal-detail-grid">
+            <div class="frugal-subcard">
+              <h4>
+                <span>Natural Chimney Buoyancy Draft</span>
+                <span class="${f.draft_feasible ? "budget-badge-ok" : "budget-badge-fail"}">${f.draft_feasible ? "DRAFT FEASIBLE" : "DRAFT DEFICIT"}</span>
+              </h4>
+              <div class="kv-list">${kvHtml([
+                ["Available vs Required", `${fmt(f.available_draft_inwc, 3)} vs ${fmt(f.required_draft_inwc, 3)} inWC`],
+                ["Draft Margin", `${f.draft_margin_inwc >= 0 ? "+" : ""}${fmt(f.draft_margin_inwc, 3)} inWC`],
+                ["Chimney Height", `${fmt(f.chimney_height_m, 1)} m (${fmt(f.chimney_height_ft, 1)} ft)`],
+                ["Thermal Reheat Temp", `${fmt(f.stack_reheat_temp_f, 0)} °F (brick flue wall)`],
+                ["Wide Masonry Bed", `Ø${fmt(f.bed_diameter_in, 0)}" · v_s ${fmt(f.bed_superficial_vel_m_s, 2)} m/s · ΔP ${fmt(f.bed_dp_inwc, 3)} inWC`],
+                ["Draft Mechanism", f.draft_mechanism],
+              ])}</div>
+            </div>
+
+            <div class="frugal-subcard">
+              <h4>
+                <span>Gravity Tank &amp; Manual Labor Budget</span>
+                <span class="offgrid-combo-tag">${f.zero_electricity ? "0W Manual" : "0.5 HP 230V"}</span>
+              </h4>
+              <div class="kv-list">${kvHtml([
+                [`Overhead ${tankName} Tank`, `${Math.round(f.gravity_tank_liters)} L (${Math.round(f.gravity_tank_gal)} gal)`],
+                ["Stand Elevation / Head", `${fmt(elevM, 1)} m (${fmt(f.tank_elevation_ft, 1)} ft) · ${fmt(f.gravity_head_psi, 1)} PSI`],
+                ["Gravity Spray Flow", `${fmt(f.spray_flow_lpm, 1)} L/min (${fmt(f.spray_flow_gpm, 2)} GPM)`],
+                ["Pumping System", f.manual_pump_type],
+                ["20L Buckets / Hr", `${Math.round(f.jerrycans_20l_per_hr)} jerrycans / hr (closed-loop refill)`],
+                ["Treadle / Hand Pump", f.zero_electricity ? `${fmt(f.treadle_minutes_per_hr, 1)} min / hr active pumping` : "Electric 230V 50Hz (manual backup ready)"],
+              ])}</div>
+            </div>
+
+            <div class="frugal-subcard">
+              <h4>
+                <span>Local Alkali Chemistry</span>
+                <span class="budget-badge-ok">${escapeHtml(f.alkali_formula)}</span>
+              </h4>
+              <div class="kv-list">${kvHtml([
+                ["Selected Alkali", `${f.alkali_name} (${f.alkali_formula})`],
+                ["Dose per Firing", `${fmt(f.alkali_kg_per_firing, 2)} kg (${fmt(f.alkali_lbs_per_firing, 1)} lbs)`],
+                ["Est. Alkali Cost", f.alkali_cost_usd <= 0.01 ? "$0 (Free Kiln Wood Ash)" : `${fmtUSD(f.alkali_cost_usd)} / firing`],
+                ["Estimated Local Build", `${fmtUSD(f.estimated_local_cost_usd)} (${f.local_currency_estimate})`],
+                ["Packing Media", f.packing_material],
+              ])}</div>
+              <p class="urban-card-summary" style="margin:2px 0 0">${escapeHtml(f.alkali_local_note)}</p>
+              ${scalingHtml}
+            </div>
+          </div>
+
+          <div class="trigger-box" style="border-color:rgba(251,146,60,0.42)">
+            <h4 style="color:#fdba74">Honest Capture Reality Check &amp; Zero-Plastic-Meltdown Ceramic Immunity</h4>
+            <div class="frugal-meters-grid" style="margin-bottom:8px">${metersHtml}</div>
+            <p class="urban-card-summary" style="margin:0 0 6px">${escapeHtml(f.submicron_honest_note)}</p>
+            <div class="urban-card-note" style="margin:0"><strong>Zero-Plastic-Meltdown Ceramic Immunity:</strong> ${escapeHtml(f.thermal_immunity_note)}</div>
+          </div>
+
+          ${warnsHtml}
+          ${stepsHtml}
+          ${matsHtml}
+        `;
       }
 
       function renderDeluxeSpecBanner(ev) {
@@ -4887,7 +5650,12 @@
         gPill.className = "pill " + statusToPillClass(overall);
         el("guide-overall-text").textContent = statusLabel(overall);
         const isDeluxeGuide = normalizeBuildPath(proj.build_path || studioState.buildPath) === "custom_fab_deluxe";
-        el("guide-cost-pill").textContent = `${isDeluxeGuide ? "Est. Deluxe Fab Hardware" : "Est. COTS Hardware"}: ${fmtUSD(cots.estimated_total_usd)}`;
+        const frugalGuide = getEffectiveFrugalData(ev);
+        if (frugalGuide.enabled) {
+          el("guide-cost-pill").textContent = `Est. Local Ceramic: ${fmtUSD(frugalGuide.estimated_local_cost_usd)} (${frugalGuide.local_currency_estimate})`;
+        } else {
+          el("guide-cost-pill").textContent = `${isDeluxeGuide ? "Est. Deluxe Fab Hardware" : "Est. COTS Hardware"}: ${fmtUSD(cots.estimated_total_usd)}`;
+        }
 
         const floodVal = Number.isFinite(cots.actual_percent_of_flood)
           ? cots.actual_percent_of_flood
@@ -5509,6 +6277,67 @@
       function renderInspector(d, stage) {
         if (!d) return;
         const q = d.quench, v = d.venturi, p = d.packed_bed, b = d.blower, env = d.envelope;
+        const frugal = getEffectiveFrugalData(studioState.evaluation);
+        if (frugal.enabled) {
+          const tankName = frugal.region === "mumbai" ? "Sintex" : (frugal.region === "nairobi" ? "Kentank" : "HDPE");
+          let title = frugal.zero_electricity ? "Off-Grid Local Ceramic Scrubber (0W)" : "Local Ceramic Masonry Scrubber";
+          let mat = "Firebrick / SWG Clay";
+          let rows = [
+            ["Chimney Height", `${fmt(frugal.chimney_height_m, 1)} m (${fmt(frugal.chimney_height_ft, 0)} ft) @ ${fmt(frugal.stack_reheat_temp_f, 0)}°F`],
+            ["Buoyancy Draft", `${fmt(frugal.available_draft_inwc, 2)} vs ${fmt(frugal.required_draft_inwc, 2)} inWC (${frugal.draft_feasible ? "OK" : "Low"})`],
+            ["Overhead Tank", `${Math.round(frugal.gravity_tank_liters)} L ${tankName} @ ${fmt(frugal.gravity_head_psi, 1)} PSI`],
+            ["Local Alkali", `${frugal.alkali_name} (${frugal.alkali_formula}) · ${fmt(frugal.alkali_kg_per_firing, 1)} kg`],
+            ["Est. Local Cost", `${fmtUSD(frugal.estimated_local_cost_usd)} (${frugal.local_currency_estimate})`],
+          ];
+          if (stage === "quench") {
+            title = "Stage 1: Brick Quench & Settling";
+            mat = "Firebrick / Brass Rose";
+            rows = [
+              ["Gravity Spray", `${fmt(frugal.spray_flow_lpm, 1)} L/min (${fmt(frugal.spray_flow_gpm, 2)} GPM)`],
+              ["Tank Head", `${fmt(frugal.tank_elevation_ft * 0.3048, 1)} m (${fmt(frugal.gravity_head_psi, 1)} PSI)`],
+              ["Thermal Immunity", ">1,800°F dry-run firebrick (zero meltdown)"],
+              ["Coarse Wood Ash", `~${fmt(frugal.coarse_ash_capture_pct, 1)}% capture`],
+              ["Refill Labor", frugal.zero_electricity ? `${Math.round(frugal.jerrycans_20l_per_hr)}×20L/hr · ${fmt(frugal.treadle_minutes_per_hr, 1)} min/hr` : "0.5 HP 230V pump"],
+            ];
+          } else if (stage === "venturi") {
+            title = "Stage 2: Gravity Spray & Thermal Jacket";
+            mat = "Refractory Brick";
+            rows = [
+              ["Flue Reheat Jacket", `Recovers kiln heat → ${fmt(frugal.stack_reheat_temp_f, 0)}°F stack`],
+              ["Honest NaCl Fume", `~${fmt(frugal.submicron_nacl_capture_pct, 1)}% (passive draft trade-off)`],
+              ["Quench + Baffle ΔP", "~0.05 inWC ultra-low resistance"],
+              ["Spray Orifice", "Large >=6 mm brass rose (non-clogging)"],
+              ["Safety", "No pressurized steam boilers"],
+            ];
+          } else if (stage === "packed") {
+            title = "Stage 3: Wide Masonry Stoneware Bed";
+            mat = "Brick / Stoneware Rings";
+            rows = [
+              ["Wide Tower Ø", `Ø${fmt(frugal.bed_diameter_in, 0)}" (${Math.round(frugal.bed_diameter_in * 25.4)} mm)`],
+              ["Superficial Vel.", `${fmt(frugal.bed_superficial_vel_m_s, 2)} m/s (low-ΔP Ergun)`],
+              ["Irrigated Bed ΔP", `${fmt(frugal.bed_dp_inwc, 3)} inWC`],
+              ["HCl Removal", `~${fmt(frugal.hcl_removal_pct, 1)}% (${frugal.alkali_formula})`],
+              ["Packing Media", "Kiln-fired 1\" stoneware Raschig rings"],
+            ];
+          } else if (stage === "blower") {
+            title = frugal.zero_electricity ? "Stage 4: Thermal-Reheat Brick Chimney" : "Stage 4: Chimney + 230V Assist Fan";
+            mat = frugal.zero_electricity ? "0V / 0W Passive" : "230V 50Hz Hybrid";
+            rows = [
+              ["Chimney Height", `${fmt(frugal.chimney_height_m, 1)} m (${fmt(frugal.chimney_height_ft, 1)} ft)`],
+              ["Available Draft", `${fmt(frugal.available_draft_inwc, 3)} inWC`],
+              ["Required Draft", `${fmt(frugal.required_draft_inwc, 3)} inWC`],
+              ["Power Draw", frugal.zero_electricity ? "0 W (Zero Electricity)" : `${Math.round(frugal.power_watts)} W (230V 50Hz)`],
+              ["Noise Level", frugal.zero_electricity ? "~45 dBA Whisper Quiet" : "~58 dBA low-ΔP fan"],
+            ];
+          }
+          el("inspector-heading").textContent = title;
+          el("inspector-mat").textContent = mat;
+          el("inspector-rows").innerHTML = rows
+            .map(([k, v]) => `<span class="inspector-k">${escapeHtml(k)}</span><span class="inspector-v">${escapeHtml(v)}</span>`)
+            .join("");
+          return;
+        }
+
         let title = "4-Stage Assembly Overview";
         let mat = "316L SS → CPVC/PP";
         let rows = [
@@ -5732,11 +6561,14 @@
 
       function enrichShopPlanSystems(basePlan, ev, d, proj, arch) {
         const bp = normalizeBuildPath(basePlan.build_path || proj.build_path || studioState.buildPath);
-        const isDeluxe = typeof basePlan.is_deluxe === "boolean" ? basePlan.is_deluxe : (bp === "custom_fab_deluxe");
+        const frugal = getEffectiveFrugalData(ev);
+        const isFrugal = !!frugal.enabled || bp === "local_ceramic_masonry" || !!proj.zero_electricity;
+        const isZeroElec = isFrugal && (!!frugal.zero_electricity || !!proj.zero_electricity);
+        const isDeluxe = !isFrugal && (typeof basePlan.is_deluxe === "boolean" ? basePlan.is_deluxe : (bp === "custom_fab_deluxe"));
         const isEductor = (basePlan.stage_alignment || arch.align) === "eductor_dry_fan";
         const isParallelBed = (basePlan.packed_bed_layout || arch.bedLayout) === "parallel_manifold";
         const isAirAtomize = arch.blowerDriveOption === "compressor_air_atomize";
-        const hasDiluter = !!(proj.include_plume_diluter ?? el("in-include-plume-diluter")?.checked);
+        const hasDiluter = !isZeroElec && !!(proj.include_plume_diluter ?? el("in-include-plume-diluter")?.checked);
         const hasSilencer = (proj.include_silencer ?? el("in-include-silencer")?.checked) !== false;
         const isHeavy = normalizeCorrosionTier(proj.corrosion_tier) === "heavy_c276_frp";
         const u = (ev && ev.urban) || {};
@@ -5752,14 +6584,14 @@
         const sprayGpm = Math.max(1.2, Number(q.total_spray_water_gpm || 2.4));
         const recircGpm = Number((sprayGpm * 1.65 + 2.5).toFixed(1));
         const propFt = Number.isFinite(uNoise.property_line_ft) ? uNoise.property_line_ft : (proj.property_line_ft || 35);
-        const bareDba = Number.isFinite(uNoise.bare_dba_3ft) && uNoise.bare_dba_3ft > 0 ? uNoise.bare_dba_3ft : 86;
-        const defaultAtten = (hasSilencer ? 13 : 0) + (isDeluxe ? 9 : 4);
-        const treatedDba = Number.isFinite(uNoise.silenced_dba_3ft) && uNoise.silenced_dba_3ft > 0
+        const bareDba = isZeroElec ? 45 : (Number.isFinite(uNoise.bare_dba_3ft) && uNoise.bare_dba_3ft > 0 ? uNoise.bare_dba_3ft : 86);
+        const defaultAtten = isZeroElec ? 0 : ((hasSilencer ? 13 : 0) + (isDeluxe ? 9 : 4));
+        const treatedDba = isZeroElec ? 45 : (Number.isFinite(uNoise.silenced_dba_3ft) && uNoise.silenced_dba_3ft > 0
           ? uNoise.silenced_dba_3ft
-          : Math.max(54, bareDba - defaultAtten);
-        const propDba = Number.isFinite(uNoise.property_line_dba) && uNoise.property_line_dba > 0
+          : Math.max(54, bareDba - defaultAtten));
+        const propDba = isZeroElec ? 30 : (Number.isFinite(uNoise.property_line_dba) && uNoise.property_line_dba > 0
           ? uNoise.property_line_dba
-          : Math.max(32, Math.round(treatedDba - 20 * Math.log10(Math.max(3, propFt) / 3)));
+          : Math.max(32, Math.round(treatedDba - 20 * Math.log10(Math.max(3, propFt) / 3))));
 
         const baseCl = basePlan.clearances || {};
         const clearances = {
@@ -5767,15 +6599,24 @@
           property_line_min_ft: Number.isFinite(baseCl.property_line_min_ft) ? baseCl.property_line_min_ft : (proj.vapor_glaze_mode === "salt" ? 30 : 10),
           stack_above_roof_ft: Number.isFinite(baseCl.stack_above_roof_ft) ? baseCl.stack_above_roof_ft : 6,
           service_aisle_in: Number.isFinite(baseCl.service_aisle_in) ? baseCl.service_aisle_in : 36,
-          nec_panel_depth_in: Number.isFinite(baseCl.nec_panel_depth_in) ? baseCl.nec_panel_depth_in : 36,
-          nec_panel_width_in: Number.isFinite(baseCl.nec_panel_width_in) ? baseCl.nec_panel_width_in : 30,
+          nec_panel_depth_in: isZeroElec ? 0 : (Number.isFinite(baseCl.nec_panel_depth_in) ? baseCl.nec_panel_depth_in : 36),
+          nec_panel_width_in: isZeroElec ? 0 : (Number.isFinite(baseCl.nec_panel_width_in) ? baseCl.nec_panel_width_in : 30),
           pump_service_in: Number.isFinite(baseCl.pump_service_in) ? baseCl.pump_service_in : 24,
           cleanout_swing_in: Number.isFinite(baseCl.cleanout_swing_in) ? baseCl.cleanout_swing_in : 24,
           hose_bend_radius_in: Number.isFinite(baseCl.hose_bend_radius_in) ? baseCl.hose_bend_radius_in : 6,
-          wiring_access_note: baseCl.wiring_access_note || "NEC 110.26: Keep 36\" depth × 30\" width completely clear in front of NEMA 4X Panel & NEC 430.102 Lockable Sight Disconnect; maintain 6\" min hose bend radius.",
+          wiring_access_note: baseCl.wiring_access_note || (isZeroElec
+            ? "0V / OFF-GRID — ZERO ELECTRICAL CIRCUITS: No electric motors, VFD panel, or NEC 110.26 panel clearance required."
+            : "NEC 110.26: Keep 36\" depth × 30\" width completely clear in front of NEMA 4X Panel & NEC 430.102 Lockable Sight Disconnect; maintain 6\" min hose bend radius."),
         };
 
-        const electrical = (Array.isArray(basePlan.electrical) && basePlan.electrical.length > 0) ? basePlan.electrical : [
+        const electrical = isZeroElec ? [] : ((Array.isArray(basePlan.electrical) && basePlan.electrical.length > 0) ? basePlan.electrical : (isFrugal ? [
+          {
+            id: "E1", label: "Local 230V 50Hz Pump & Assist Fan Breaker", from: "Studio RCD / ELCB Box", to: "0.5 HP Monoblock Pump + Low-ΔP Assist Fan",
+            voltage: "230V 50Hz 1Ø", amps: 3.2, breaker_amps: 10, wire_gauge: "2.5 mm² (14 AWG) Armoured", conduit: "20 mm PVC Conduit",
+            nec_ref: "IEC 60364 / 30 mA RCD", is_safety_loop: false,
+            notes: "Weatherproof 30 mA RCD / ELCB protection for local domestic water pump & assist fan",
+          },
+        ] : [
           {
             id: "E1", label: "Main Studio Feeder & Sight Disconnect", from: "Main Studio Panel", to: "NEC 430.102 Disconnect → NEMA 4X VFD Panel",
             voltage: `${reqV}V 1Ø`, amps: Number(reqA.toFixed(1)), breaker_amps: breakerA, wire_gauge: awg, conduit: "3/4\" LFMC / EMT Wet-Loc",
@@ -5813,9 +6654,22 @@
             nec_ref: "NEC 210.8", is_safety_loop: false,
             notes: "Interlocked with blower run signal for winter condensation plume suppression",
           }] : []),
-        ];
+        ]));
 
-        const pump_station = (basePlan.pump_station && basePlan.pump_station.pump_type) ? basePlan.pump_station : {
+        const tankName = frugal.region === "mumbai" ? "Sintex" : (frugal.region === "nairobi" ? "Kentank" : "HDPE");
+        const pump_station = (basePlan.pump_station && basePlan.pump_station.pump_type) ? basePlan.pump_station : (isFrugal ? {
+          location: `Next to Baffled Brick Sump → Overhead ${Math.round(frugal.gravity_tank_liters)} L ${tankName} Gravity Tank`,
+          pump_type: frugal.manual_pump_type,
+          flow_gpm: Number(frugal.spray_flow_gpm.toFixed(2)),
+          head_ft: Number(frugal.tank_elevation_ft.toFixed(1)),
+          hp: isZeroElec ? 0 : 0.50,
+          voltage: isZeroElec ? "0V Manual (Off-Grid)" : "230V 50Hz RCD",
+          suction_size_in: 1.25,
+          discharge_size_in: 1.0,
+          strainer: "Coarse 4 mm Brass / Mesh Foot-Valve Strainer",
+          backflow_preventer: "Gravity Air-Gap Fill into Overhead Tank",
+          drain_spec: "Brick Sump Plug / Valve → Cool <= 140°F & pH 6.5–8.5",
+        } : {
           location: "Skid Front-Left next to Baffled Sump (24\" front service clearance)",
           pump_type: isDeluxe ? "Sealless Magnetic-Drive Chemical Pump (PVDF / Ryton)" : "Chemical-Duty Mag-Drive Recirculation Pump (PP/Viton)",
           flow_gpm: recircGpm,
@@ -5827,9 +6681,27 @@
           strainer: "1\" CPVC Y-Strainer (40-mesh 316L screen) + Union Ball Valve",
           backflow_preventer: "IPC 608 ASSE 1013 RPZ / 2\" Vertical Air Gap",
           drain_spec: "2\" Full-Port Ball Valve → Cool <= 140°F & pH 6.5–8.5 (IPC 702.5)",
-        };
+        });
 
-        const plumbing = (Array.isArray(basePlan.plumbing) && basePlan.plumbing.length > 0) ? basePlan.plumbing : [
+        const plumbing = (Array.isArray(basePlan.plumbing) && basePlan.plumbing.length > 0) ? basePlan.plumbing : (isFrugal ? [
+          {
+            id: "P1", label: `Overhead ${Math.round(frugal.gravity_tank_liters)} L ${tankName} Gravity Downcomer`,
+            fluid: `Alkaline ${frugal.alkali_formula} Liquor`, from: `Elevated ${tankName} Tank (@ ${fmt(frugal.tank_elevation_ft, 1)} ft)`, to: "Quench Brass Spray Rose + Stoneware Tower Distributor",
+            size_in: 1.0, material: "1\" GI / HDPE Gravity Pipe + Brass Valves", flow_gpm: Number(frugal.spray_flow_gpm.toFixed(2)), pressure_psi: Number(frugal.gravity_head_psi.toFixed(1)),
+            valves_fittings: "2× Brass Gate Valves + >=6 mm Non-Clogging Brass Roses", notes: "Passive gravity head — zero electricity required during spray",
+          },
+          {
+            id: "P2", label: "Masonry Sump Gravity Return Channel", fluid: "Spent Brine + Wood Ash", from: "Brick Quench & Stoneware Tower Floors", to: "Baffled Brick Settling Sump",
+            size_in: 3.0, material: "Salt-Glazed SWG Clay Pipe / Brick Channel", flow_gpm: Number(frugal.spray_flow_gpm.toFixed(2)), pressure_psi: 0,
+            valves_fittings: "Settling Weir + Ash Cleanout Sump Bay", notes: "Settles coarse wood ash before manual/pump return",
+          },
+          {
+            id: "P3", label: isZeroElec ? "Manual Treadle / Hand Pump Refill Riser" : "Local 0.5 HP 230V 50Hz Refill Riser",
+            fluid: `Settled ${frugal.alkali_formula} Liquor`, from: "Baffled Brick Sump Clean Bay", to: `Overhead ${tankName} Tank Top Air-Gap`,
+            size_in: 1.0, material: "1\" HDPE / Reinforced Hose", flow_gpm: isZeroElec ? 9.2 : 10.5, pressure_psi: Number((frugal.gravity_head_psi + 4).toFixed(1)),
+            valves_fittings: "Foot Valve + Coarse Mesh Strainer + Swing Check", notes: isZeroElec ? `~${fmt(frugal.treadle_minutes_per_hr, 1)} min/hr pumping (~${Math.round(frugal.jerrycans_20l_per_hr)}× 20L buckets/hr)` : "Runs intermittently on float switch or manual toggle",
+          },
+        ] : [
           {
             id: "P1", label: "Potable Makeup Water Supply", fluid: "Potable Cold Water", from: "Studio Hose Bib / Line", to: "IPC 608 RPZ / Air Gap → Sump Float Valve",
             size_in: 0.75, material: "Braided Hose / PEX + Brass RPZ", flow_gpm: Number(sprayGpm.toFixed(1)), pressure_psi: 45,
@@ -5872,10 +6744,30 @@
             size_in: 2.0, material: "Sch 80 CPVC + Full-Port Ball Valve", flow_gpm: 12.0, pressure_psi: 0,
             valves_fittings: "2\" Full-Port Ball Valve + Sample Cock + Camlock Hose", notes: "IPC 702.5: Verify temp <= 140°F and pH 6.5–8.5 before draining",
           },
-        ];
+        ]);
 
         const ceramicExtraLbs = arch.packingMediaOption === "diy_ceramic_rings" ? 135 : 0;
-        const bracing = (Array.isArray(basePlan.bracing) && basePlan.bracing.length > 0) ? basePlan.bracing : [
+        const tankLoadLbs = Math.round(frugal.gravity_tank_liters * 2.20462 * 1.15);
+        const bracing = (Array.isArray(basePlan.bracing) && basePlan.bracing.length > 0) ? basePlan.bracing : (isFrugal ? [
+          {
+            id: "B1", component: `Braced Overhead ${Math.round(frugal.gravity_tank_liters)} L Gravity Tank Stand`,
+            member_spec: "4× 4\"×4\" Structural Timber / Brick Pier Tower + Full Diagonal X-Bracing",
+            mounting: `Elevated ${fmt(frugal.tank_elevation_ft * 0.3048, 1)} m (${fmt(frugal.tank_elevation_ft, 1)} ft) on concrete footing pads`, load_lbs: tankLoadLbs,
+            anchor_spec: "Concrete Pier Footings (450×450 mm) + Through-Bolted Gussets", notes: `CRITICAL: Rated for ${Math.round(frugal.gravity_tank_liters)} kg water load + wind shear`,
+          },
+          {
+            id: "B2", component: "Wide Masonry Stoneware Packed Tower Footing",
+            member_spec: "Reinforced Concrete Plinth + Double-Wythe Firebrick & Refractory Mortar",
+            mounting: "Full perimeter plinth + steel tension bands every 4 courses", load_lbs: 1450,
+            anchor_spec: "150 mm Reinforced Concrete Slab on Compacted Murram/Gravel", notes: "Supports wet stoneware Raschig ring bed without mortar cracking",
+          },
+          {
+            id: "B3", component: `Tall ${fmt(frugal.chimney_height_m, 1)} m Thermal-Reheat Brick/SWG Chimney`,
+            member_spec: "Brick Base Reheat Jacket + Guyed SWG Terracotta Flue Column",
+            mounting: "3-point galvanized wire guy cables @ 2/3 chimney height", load_lbs: 1180,
+            anchor_spec: "Concrete Deadman Guy Anchors + Brick Foundation Plinth", notes: "Guy wires resist tropical monsoon / storm gusts",
+          },
+        ] : [
           {
             id: "B1", component: "Base Structural Skid Frame",
             member_spec: isDeluxe ? "2\"×2\"×3/16\" Welded Powder-Coated Steel Forklift Skid" : "1-5/8\" Galvanized Unistrut / PT Skid Frame",
@@ -5906,9 +6798,17 @@
             mounting: "Neoprene shear-mount isolators between blower base & skid", load_lbs: 185,
             anchor_spec: "4× 3/8\" Captive Isolator Studs + SS Hose Clamps", notes: "Decouples blower vibration from CPVC ductwork & exhaust stack",
           },
-        ];
+        ]);
 
-        const acoustics = (Array.isArray(basePlan.acoustics) && basePlan.acoustics.length > 0) ? basePlan.acoustics : [
+        const acoustics = (Array.isArray(basePlan.acoustics) && basePlan.acoustics.length > 0) ? basePlan.acoustics : (isZeroElec ? [
+          {
+            id: "S1", location: "Passive Masonry Scrubber & Brick Chimney",
+            treatment: "Zero Electric Blower — Natural Buoyancy Draft & Gravity Water Trickle",
+            material: "High-Mass Firebrick & Stoneware Walls (inherent sound damping)",
+            thickness_in: 4.5, attenuation_dba: 0,
+            notes: "~45 dBA whisper quiet at 3 ft; no acoustic baffle box or stack silencer needed",
+          },
+        ] : [
           {
             id: "S1", location: isEductor ? "Elevated Dry Motive Fan Enclosure" : "Stage 4 ID Blower Enclosure",
             treatment: "Acoustic Blower Baffle Box w/ Baffled Cooling-Air Labyrinth",
@@ -5937,17 +6837,17 @@
             thickness_in: 1.0, attenuation_dba: 3,
             notes: "Damps squirrel-cage inlet intake rush noise",
           }] : []),
-        ];
+        ]);
 
         const acRaw = basePlan.acoustic_summary || {};
         const acoustic_summary = {
-          bare_dba_3ft: Number.isFinite(acRaw.bare_dba_3ft) && acRaw.bare_dba_3ft > 0 ? acRaw.bare_dba_3ft : bareDba,
-          treated_dba_3ft: Number.isFinite(acRaw.treated_dba_3ft) && acRaw.treated_dba_3ft > 0 ? acRaw.treated_dba_3ft : treatedDba,
-          property_line_dba: Number.isFinite(acRaw.property_line_dba) && acRaw.property_line_dba > 0 ? acRaw.property_line_dba : propDba,
+          bare_dba_3ft: isZeroElec ? 45 : (Number.isFinite(acRaw.bare_dba_3ft) && acRaw.bare_dba_3ft > 0 ? acRaw.bare_dba_3ft : bareDba),
+          treated_dba_3ft: isZeroElec ? 45 : (Number.isFinite(acRaw.treated_dba_3ft) && acRaw.treated_dba_3ft > 0 ? acRaw.treated_dba_3ft : treatedDba),
+          property_line_dba: isZeroElec ? 30 : (Number.isFinite(acRaw.property_line_dba) && acRaw.property_line_dba > 0 ? acRaw.property_line_dba : propDba),
           property_line_ft: Number.isFinite(acRaw.property_line_ft) && acRaw.property_line_ft > 0 ? acRaw.property_line_ft : propFt,
-          total_reduction_dba: Number.isFinite(acRaw.total_reduction_dba) && acRaw.total_reduction_dba > 0
+          total_reduction_dba: isZeroElec ? 0 : (Number.isFinite(acRaw.total_reduction_dba) && acRaw.total_reduction_dba > 0
             ? acRaw.total_reduction_dba
-            : Math.max(0, Math.round((Number.isFinite(acRaw.bare_dba_3ft) ? acRaw.bare_dba_3ft : bareDba) - (Number.isFinite(acRaw.treated_dba_3ft) ? acRaw.treated_dba_3ft : treatedDba))),
+            : Math.max(0, Math.round((Number.isFinite(acRaw.bare_dba_3ft) ? acRaw.bare_dba_3ft : bareDba) - (Number.isFinite(acRaw.treated_dba_3ft) ? acRaw.treated_dba_3ft : treatedDba)))),
         };
 
         const dsRaw = basePlan.deluxe_spec || {};
@@ -5968,6 +6868,8 @@
         return Object.assign({}, basePlan, {
           build_path: bp,
           is_deluxe: isDeluxe,
+          is_frugal: isFrugal,
+          zero_electricity: isZeroElec,
           clearances,
           electrical,
           plumbing,
@@ -6240,13 +7142,18 @@
         const isParallelBed = (plan.packed_bed_layout || arch.bedLayout) === "parallel_manifold";
         const isParallelVent = (plan.venturi_layout || arch.ventLayout) === "parallel_mini_venturis";
         const isCompact = !!(plan.compact_footprint ?? arch.compact);
-        const isDeluxe = !!plan.is_deluxe || normalizeBuildPath(plan.build_path || studioState.buildPath) === "custom_fab_deluxe";
+        const frugal = getEffectiveFrugalData(ev);
+        const isFrugal = !!plan.is_frugal || !!frugal.enabled || normalizeBuildPath(plan.build_path || studioState.buildPath) === "local_ceramic_masonry";
+        const isZeroElec = isFrugal && (!!plan.zero_electricity || !!frugal.zero_electricity);
+        const isDeluxe = !isFrugal && (!!plan.is_deluxe || normalizeBuildPath(plan.build_path || studioState.buildPath) === "custom_fab_deluxe");
         const isAirAtomize = arch.blowerDriveOption === "compressor_air_atomize";
-        const hasDiluter = !!(el("in-include-plume-diluter")?.checked);
+        const hasDiluter = !isZeroElec && !!(el("in-include-plume-diluter")?.checked);
         const sel = planState.selectedPartNum;
         const layers = planState.layers || { electrical: true, plumbing: true, bracing: true, clearances: true, acoustics: true };
         const acSum = plan.acoustic_summary || { bare_dba_3ft: 86, treated_dba_3ft: 64, property_line_dba: 41, property_line_ft: 35, total_reduction_dba: 22 };
-        const acBadgeText = `${Math.round(acSum.bare_dba_3ft || 86)} → ${Math.round(acSum.treated_dba_3ft || 64)} dBA @ 3 ft · ${Math.round(acSum.property_line_dba || 41)} dBA @ ${Math.round(acSum.property_line_ft || 35)} ft`;
+        const acBadgeText = isZeroElec
+          ? "~45 dBA WHISPER QUIET — NO BLOWER"
+          : `${Math.round(acSum.bare_dba_3ft || 86)} → ${Math.round(acSum.treated_dba_3ft || 64)} dBA @ 3 ft · ${Math.round(acSum.property_line_dba || 41)} dBA @ ${Math.round(acSum.property_line_ft || 35)} ft`;
 
         // Map canonical part IDs to their actual callout numbers from plan.parts (supports [1]..[9])
         const partsList = Array.isArray(plan.parts) ? plan.parts : [];
@@ -6299,6 +7206,10 @@
             <pattern id="bp-acoustic-hatch" width="7" height="7" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
               <line x1="0" y1="0" x2="0" y2="7" stroke="#a855f7" stroke-width="1.6" opacity="0.55"/>
             </pattern>
+            <pattern id="bp-brick-hatch" width="18" height="10" patternUnits="userSpaceOnUse">
+              <rect width="18" height="10" fill="rgba(180, 83, 60, 0.16)"/>
+              <path d="M 0 5 L 18 5 M 0 10 L 18 10 M 9 0 L 9 5 M 0 5 L 0 10 M 18 5 L 18 10" fill="none" stroke="#c2633a" stroke-width="0.9" opacity="0.72"/>
+            </pattern>
             <marker id="bp-arrow-end" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
               <path d="M 0 1 L 7 4 L 0 7 z" fill="#7dd3fc"/>
             </marker>
@@ -6322,7 +7233,181 @@
         `;
 
         // ---------- VIEW 1: FRONT ELEVATION BLUEPRINT ----------
-        if (showElev) {
+        if (showElev && isFrugal) {
+          const ex = 26;
+          const ey = 26;
+          const ew = showTop ? 740 : 1228;
+          const eh = 568;
+          const floorY = ey + eh - 110;
+          const xScale = showTop ? 1.0 : 1.35;
+          const baseX = ex + (showTop ? 88 : 165);
+          const tankName = frugal.region === "mumbai" ? "SINTEX" : (frugal.region === "nairobi" ? "KENTANK" : "HDPE");
+          const tankL = Math.round(frugal.gravity_tank_liters || 300);
+          const tankKg = Math.round(tankL * 1.1);
+
+          out += `<rect x="${ex}" y="${ey}" width="${ew}" height="${eh}" fill="rgba(10, 24, 42, 0.55)" stroke="#234873" stroke-width="1"/>`;
+          out += `<text x="${ex + 14}" y="${ey + 22}" fill="#fdba74" font-family="monospace" font-size="11.5" font-weight="800">FRONT ELEVATION — LOCAL CERAMIC / MASONRY SCRUBBER (${escapeHtml(isZeroElec ? "0V / 0W PASSIVE DRAFT" : "230V 50Hz HYBRID")})</text>`;
+
+          // Ground / concrete plinth datum
+          out += `<line x1="${ex + 24}" y1="${floorY}" x2="${ex + ew - 24}" y2="${floorY}" stroke="#b4533c" stroke-width="2.2"/>`;
+          out += `<text x="${ex + 30}" y="${floorY + 14}" fill="#d6a288" font-family="monospace" font-size="9.5">COMPACTED PLINTH / MASONRY FOUNDATION DATUM (EL 0.0)</text>`;
+
+          // 1. Hot Brick Kiln Flue + Settling & Gravity-Spray Quench Chamber
+          const qX = baseX;
+          const qW = 86 * xScale;
+          const qH = 152;
+          const qTopY = floorY - qH;
+          const qInY = qTopY + 34;
+
+          if (layers.clearances) {
+            out += `<g class="plan-layer-clearances">`;
+            out += `<rect x="${qX - 62}" y="${qInY - 34}" width="68" height="68" fill="url(#bp-nfpa-hatch)" stroke="#f97316" stroke-width="1.2" stroke-dasharray="5 3"/>`;
+            out += `<text x="${qX - 60}" y="${qInY - 40}" fill="#fdba74" font-family="monospace" font-size="8.2" font-weight="700">NFPA 211: ${fmtPlanLen(cl.flue_to_combustibles_in || 36)}</text>`;
+            out += `<text x="${ex + 30}" y="${ey + eh - 14}" fill="#86efac" font-family="monospace" font-size="8.6">${isZeroElec ? "0V OFF-GRID: ZERO NEC 110.26 PANEL · OUTDOOR SITING · >=36\" HOT-FLUE CLEARANCE" : "230V 50Hz RCD PROTECTION · OUTDOOR SITING · >=36\" HOT-FLUE CLEARANCE"}</text>`;
+            out += `</g>`;
+          }
+
+          // Hot firebrick inlet flue ([1])
+          out += `<g stroke="${sel === numInlet ? "#f97316" : "#ea580c"}" stroke-width="${sel === numInlet ? 2.6 : 1.7}" fill="url(#bp-brick-hatch)">`;
+          out += `<rect x="${qX - 54}" y="${qInY - 14}" width="54" height="28"/>`;
+          out += `</g>`;
+          out += svgCalloutBubble(numInlet, qX - 28, qInY, qX - 38, qTopY - 38, sel);
+
+          // Brick Quench / Settling Chamber ([2])
+          out += `<g stroke="${sel === numQuench ? "#f97316" : "#c2633a"}" stroke-width="${sel === numQuench ? 2.6 : 1.7}" fill="url(#bp-brick-hatch)">`;
+          out += `<rect x="${qX}" y="${qTopY}" width="${qW}" height="${qH}"/>`;
+          // Brass gravity spray rose + water cone
+          out += `<line x1="${qX + qW * 0.5}" y1="${qTopY}" x2="${qX + qW * 0.5}" y2="${qTopY + 26}" stroke="#fbbf24" stroke-width="2.2"/>`;
+          out += `<path d="M ${qX + qW * 0.5} ${qTopY + 26} L ${qX + 10} ${floorY - 18} L ${qX + qW - 10} ${floorY - 18} Z" fill="rgba(56,189,248,0.18)" stroke="#38bdf8" stroke-dasharray="3 2" stroke-width="1"/>`;
+          out += `</g>`;
+          out += `<text x="${qX + qW * 0.5}" y="${floorY - 6}" text-anchor="middle" fill="#fed7aa" font-family="monospace" font-size="8.2" font-weight="700">BRICK QUENCH</text>`;
+          out += svgCalloutBubble(numQuench, qX + qW * 0.5, qTopY + 52, qX + qW * 0.5, qTopY - 38, sel);
+
+          // 2. Wide Masonry / SWG Stoneware-Packed Tower ([4])
+          const pX = qX + qW + 28 * xScale;
+          const pW = 136 * xScale;
+          const pH = 216;
+          const pTopY = floorY - pH;
+          // Brick connecting flue (low-ΔP wide channel)
+          out += `<rect x="${qX + qW}" y="${floorY - 56}" width="${pX - (qX + qW)}" height="28" fill="url(#bp-brick-hatch)" stroke="#c2633a" stroke-width="1.5"/>`;
+          out += `<g stroke="${sel === numPacked ? "#f97316" : "#d97706"}" stroke-width="${sel === numPacked ? 2.6 : 1.8}" fill="url(#bp-brick-hatch)">`;
+          out += `<rect x="${pX}" y="${pTopY}" width="${pW}" height="${pH}"/>`;
+          // Stoneware Raschig ring bed
+          out += `<rect x="${pX + 8}" y="${pTopY + 56}" width="${pW - 16}" height="${pH - 108}" fill="rgba(200, 147, 99, 0.30)" stroke="#eab308" stroke-dasharray="4 2" stroke-width="1.2"/>`;
+          // Stacked terracotta chevron baffles above spray distributor
+          for (let ci = 0; ci < 3; ci++) {
+            const cy = pTopY + 18 + ci * 10;
+            out += `<polyline points="${pX + 12},${cy + 6} ${pX + pW * 0.33},${cy} ${pX + pW * 0.5},${cy + 6} ${pX + pW * 0.67},${cy} ${pX + pW - 12},${cy + 6}" fill="none" stroke="#fdba74" stroke-width="1.4"/>`;
+          }
+          out += `</g>`;
+          out += `<text x="${pX + pW * 0.5}" y="${pTopY + pH * 0.52}" text-anchor="middle" fill="#fef3c7" font-family="monospace" font-size="8.8" font-weight="700">STONEWARE RINGS</text>`;
+          out += `<text x="${pX + pW * 0.5}" y="${pTopY + pH * 0.52 + 12}" text-anchor="middle" fill="#fdba74" font-family="monospace" font-size="8">Ø${Math.round(frugal.bed_diameter_in || 30)}" · ΔP ${fmt(frugal.bed_dp_inwc, 2)}"</text>`;
+          out += svgDimLine(pX, pTopY, pX + pW, pTopY, `WIDE BED Ø${fmtPlanLen(frugal.bed_diameter_in || 30)}`, -16, false, "#fdba74");
+          out += svgCalloutBubble(numPacked, pX + pW * 0.5, pTopY + 26, pX + pW * 0.5, pTopY - 46, sel);
+
+          // 3. Tall Brick / Terracotta Thermal-Reheat Chimney ([6] / [8])
+          const chX = pX + pW + 40 * xScale;
+          const chW = 42 * xScale;
+          const chTopY = ey + 56;
+          const chH = floorY - chTopY;
+          // Overhead brick/SWG flue from tower top to chimney base thermal-reheat jacket
+          out += `<path d="M ${pX + pW} ${pTopY + 26} L ${chX - 10} ${pTopY + 26} L ${chX - 10} ${floorY - 68} L ${chX} ${floorY - 68}" fill="none" stroke="#c2633a" stroke-width="14" stroke-linejoin="round"/>`;
+          // Concentric brick thermal-reheat jacket at chimney base
+          out += `<rect x="${chX - 10}" y="${floorY - 124}" width="${chW + 20}" height="124" fill="rgba(234, 88, 12, 0.22)" stroke="#fb923c" stroke-width="1.8"/>`;
+          out += `<text x="${chX + chW * 0.5}" y="${floorY - 102}" text-anchor="middle" fill="#fed7aa" font-family="monospace" font-size="7.5" font-weight="700">REHEAT</text>`;
+          out += `<text x="${chX + chW * 0.5}" y="${floorY - 91}" text-anchor="middle" fill="#fdba74" font-family="monospace" font-size="7.5">${Math.round(frugal.stack_reheat_temp_f || 340)}°F</text>`;
+          // Tall brick/SWG chimney shaft
+          out += `<g stroke="${sel === numStack ? "#f97316" : "#c2633a"}" stroke-width="${sel === numStack ? 2.6 : 1.7}" fill="url(#bp-brick-hatch)">`;
+          out += `<rect x="${chX}" y="${chTopY}" width="${chW}" height="${chH}"/>`;
+          out += `</g>`;
+          out += `<text x="${chX + chW * 0.5}" y="${chTopY - 8}" text-anchor="middle" fill="#86efac" font-family="monospace" font-size="8.6" font-weight="700">${fmt(frugal.chimney_height_m, 1)}m (${fmt(frugal.chimney_height_ft, 0)}ft) CHIMNEY</text>`;
+          out += svgDimLine(chX + chW, chTopY, chX + chW, floorY, `H: ${fmt(frugal.chimney_height_m, 1)}m`, 18, true, "#86efac");
+          out += svgCalloutBubble(numStack, chX + chW * 0.5, chTopY + 34, chX + chW + 46, chTopY + 24, sel);
+
+          // 4. Elevated Blue HDPE Kentank / Sintex Overhead Gravity Drum on Braced Stand ([5])
+          const tkX = chX + chW + 84 * xScale;
+          const tkW = 76 * xScale;
+          const tkH = 66;
+          const standH = 166;
+          const tkTopY = floorY - standH - tkH;
+          const tkBotY = floorY - standH;
+          // Braced Timber / Brick Tank Tower Stand (200-500 kg water load bracing!)
+          if (layers.bracing) {
+            out += `<g class="plan-layer-bracing">`;
+            out += `<line x1="${tkX + 6}" y1="${tkBotY}" x2="${tkX + 6}" y2="${floorY}" stroke="#818cf8" stroke-width="3"/>`;
+            out += `<line x1="${tkX + tkW - 6}" y1="${tkBotY}" x2="${tkX + tkW - 6}" y2="${floorY}" stroke="#818cf8" stroke-width="3"/>`;
+            out += `<line x1="${tkX + 6}" y1="${tkBotY}" x2="${tkX + tkW - 6}" y2="${tkBotY + standH * 0.5}" stroke="#a5b4fc" stroke-width="1.6"/>`;
+            out += `<line x1="${tkX + tkW - 6}" y1="${tkBotY}" x2="${tkX + 6}" y2="${tkBotY + standH * 0.5}" stroke="#a5b4fc" stroke-width="1.6"/>`;
+            out += `<line x1="${tkX + 6}" y1="${tkBotY + standH * 0.5}" x2="${tkX + tkW - 6}" y2="${floorY}" stroke="#a5b4fc" stroke-width="1.6"/>`;
+            out += `<line x1="${tkX + tkW - 6}" y1="${tkBotY + standH * 0.5}" x2="${tkX + 6}" y2="${floorY}" stroke="#a5b4fc" stroke-width="1.6"/>`;
+            out += `<line x1="${tkX + 6}" y1="${tkBotY + standH * 0.5}" x2="${tkX + tkW - 6}" y2="${tkBotY + standH * 0.5}" stroke="#818cf8" stroke-width="1.8"/>`;
+            out += `<text x="${tkX + tkW * 0.5}" y="${tkBotY + standH * 0.5 - 5}" text-anchor="middle" fill="#c7d2fe" font-family="monospace" font-size="7.5" font-weight="700">X-BRACED (${tankKg} kg)</text>`;
+            // Concrete footings + chimney guy line
+            out += `<rect x="${tkX - 2}" y="${floorY - 6}" width="18" height="8" fill="#6366f1"/>`;
+            out += `<rect x="${tkX + tkW - 16}" y="${floorY - 6}" width="18" height="8" fill="#6366f1"/>`;
+            out += `</g>`;
+          }
+          // Blue ribbed HDPE overhead gravity tank
+          out += `<g stroke="${sel === numSump ? "#f97316" : "#38bdf8"}" stroke-width="${sel === numSump ? 2.6 : 1.8}" fill="rgba(29, 111, 184, 0.42)">`;
+          out += `<rect x="${tkX}" y="${tkTopY}" width="${tkW}" height="${tkH}" rx="6"/>`;
+          out += `<line x1="${tkX + 3}" y1="${tkTopY + 18}" x2="${tkX + tkW - 3}" y2="${tkTopY + 18}" stroke="#60a5fa" stroke-width="1.1"/>`;
+          out += `<line x1="${tkX + 3}" y1="${tkTopY + 36}" x2="${tkX + tkW - 3}" y2="${tkTopY + 36}" stroke="#60a5fa" stroke-width="1.1"/>`;
+          out += `<line x1="${tkX + 3}" y1="${tkTopY + 52}" x2="${tkX + tkW - 3}" y2="${tkTopY + 52}" stroke="#60a5fa" stroke-width="1.1"/>`;
+          out += `</g>`;
+          out += `<text x="${tkX + tkW * 0.5}" y="${tkTopY + 31}" text-anchor="middle" fill="#e0f2fe" font-family="monospace" font-size="8.2" font-weight="800">${tankL} L ${tankName}</text>`;
+          out += `<text x="${tkX + tkW * 0.5}" y="${tkTopY + 44}" text-anchor="middle" fill="#bae6fd" font-family="monospace" font-size="7.6">${fmt(frugal.gravity_head_psi, 1)} PSI GRAVITY</text>`;
+          out += svgCalloutBubble(numSump, tkX + tkW * 0.5, tkTopY + 8, tkX + tkW * 0.5, tkTopY - 26, sel);
+
+          // 5. Baffled Brick Sump + Manual Treadle/Hand Pump (or 0.5 HP 230V pump) + Gravity Plumbing
+          const sumpY = floorY + 24;
+          const sumpX = qX + 16;
+          const sumpW = 246 * xScale;
+          out += `<g stroke="#c2633a" stroke-width="1.5" fill="rgba(14,165,233,0.16)">`;
+          out += `<rect x="${sumpX}" y="${sumpY}" width="${sumpW}" height="38" rx="2"/>`;
+          out += `<line x1="${sumpX + sumpW * 0.42}" y1="${sumpY + 10}" x2="${sumpX + sumpW * 0.42}" y2="${sumpY + 38}" stroke="#fdba74" stroke-dasharray="3 2"/>`;
+          out += `</g>`;
+          out += `<text x="${sumpX + sumpW * 0.5}" y="${sumpY + 23}" text-anchor="middle" fill="#bae6fd" font-family="monospace" font-size="8.8" font-weight="700">BAFFLED BRICK SUMP (${escapeHtml(frugal.alkali_formula || "Na₂CO₃")})</text>`;
+
+          if (layers.plumbing) {
+            const mpX = sumpX + sumpW + 34;
+            const mpY = sumpY + 6;
+            out += `<g class="plan-layer-plumbing">`;
+            // Manual treadle / hand pump OR 230V pump
+            out += `<rect x="${mpX}" y="${mpY}" width="64" height="28" rx="4" fill="rgba(6,182,212,0.22)" stroke="#06b6d4" stroke-width="1.6"/>`;
+            out += `<text x="${mpX + 32}" y="${mpY + 13}" text-anchor="middle" fill="#e0f2fe" font-family="monospace" font-size="7.6" font-weight="800">${isZeroElec ? "TREADLE /" : "0.5 HP"}</text>`;
+            out += `<text x="${mpX + 32}" y="${mpY + 23}" text-anchor="middle" fill="#67e8f9" font-family="monospace" font-size="7.4">${isZeroElec ? "HAND PUMP" : "230V PUMP"}</text>`;
+            // Sump -> pump -> riser up to overhead Kentank
+            out += `<line x1="${sumpX + sumpW}" y1="${mpY + 14}" x2="${mpX}" y2="${mpY + 14}" stroke="#06b6d4" stroke-width="2" marker-end="url(#bp-arrow-water)"/>`;
+            out += `<path d="M ${mpX + 54} ${mpY} L ${mpX + 54} ${tkTopY + 12} L ${tkX} ${tkTopY + 12}" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="5 2" marker-end="url(#bp-arrow-water)"/>`;
+            // Gravity downcomer from overhead Kentank -> Quench & Stoneware Tower sprays
+            const gravY = Math.min(pTopY - 12, tkBotY + 10);
+            out += `<path d="M ${tkX + 12} ${tkBotY} L ${tkX + 12} ${gravY} L ${qX + qW * 0.5} ${gravY} L ${qX + qW * 0.5} ${qTopY}" fill="none" stroke="#06b6d4" stroke-width="2.1" marker-end="url(#bp-arrow-water)"/>`;
+            out += `<path d="M ${pX + pW * 0.5} ${gravY} L ${pX + pW * 0.5} ${pTopY + 42}" fill="none" stroke="#06b6d4" stroke-width="2" marker-end="url(#bp-arrow-water)"/>`;
+            out += `<text x="${(pX + tkX) * 0.5}" y="${gravY - 5}" text-anchor="middle" fill="#67e8f9" font-family="monospace" font-size="7.8" font-weight="700">P1 GRAVITY FEED (${fmt(frugal.spray_flow_lpm, 1)} L/min)</text>`;
+            // Gravity returns into brick sump
+            out += `<line x1="${qX + qW * 0.4}" y1="${floorY}" x2="${qX + qW * 0.4}" y2="${sumpY}" stroke="#38bdf8" stroke-width="2" stroke-dasharray="3 2" marker-end="url(#bp-arrow-water)"/>`;
+            out += `<line x1="${pX + pW * 0.4}" y1="${floorY}" x2="${Math.min(sumpX + sumpW - 16, pX + pW * 0.4)}" y2="${sumpY}" stroke="#38bdf8" stroke-width="2" stroke-dasharray="3 2" marker-end="url(#bp-arrow-water)"/>`;
+            out += `</g>`;
+          }
+
+          // Zero-Electricity / Acoustics / Buoyancy Status Badges at top-left of Elevation
+          if (layers.electrical && isZeroElec) {
+            out += `<g class="plan-layer-electrical">`;
+            out += `<rect x="${ex + 14}" y="${ey + 30}" width="268" height="20" rx="4" fill="rgba(16, 185, 129, 0.22)" stroke="#22c55e" stroke-width="1.4"/>`;
+            out += `<text x="${ex + 22}" y="${ey + 43.5}" fill="#86efac" font-family="monospace" font-size="8.4" font-weight="800">0V / OFF-GRID — ZERO ELECTRICAL CIRCUITS</text>`;
+            out += `</g>`;
+          }
+          if (layers.acoustics) {
+            out += `<g class="plan-layer-acoustics">`;
+            out += `<rect x="${ex + 14}" y="${ey + 54}" width="268" height="19" rx="4" fill="rgba(88, 28, 135, 0.56)" stroke="#c084fc" stroke-width="1.2"/>`;
+            out += `<text x="${ex + 22}" y="${ey + 66.5}" fill="#f3e8ff" font-family="monospace" font-size="8.2" font-weight="700">ACOUSTIC: ${escapeHtml(acBadgeText)}</text>`;
+            out += `</g>`;
+          }
+          out += `<rect x="${ex + 292}" y="${ey + 30}" width="244" height="20" rx="4" fill="rgba(180, 83, 9, 0.34)" stroke="${frugal.draft_feasible ? "#34d399" : "#ef4444"}" stroke-width="1.3"/>`;
+          out += `<text x="${ex + 300}" y="${ey + 43.5}" fill="#fef3c7" font-family="monospace" font-size="8.2" font-weight="700">DRAFT: ${fmt(frugal.available_draft_inwc, 2)} vs ${fmt(frugal.required_draft_inwc, 2)} inWC (${frugal.draft_feasible ? "OK" : "LOW"})</text>`;
+
+          out += svgDimLine(qX, floorY, Math.min(ex + ew - 30, tkX + tkW), floorY, `OVERALL L: ${fmtPlanLen(lenIn, true)}`, 78, false, "#38bdf8");
+        } else if (showElev) {
           const ex = 26;
           const ey = 26;
           const ew = showTop ? 740 : 1228;
@@ -6603,9 +7688,9 @@
             out += `<rect x="${elevGeom.bX - 28}" y="${floorY - 4}" width="56" height="5" fill="#2dd4bf" stroke="#a855f7" stroke-width="1"/>`;
             // Live dBA Attenuation Callout Badge
             const badgeX = ex + 14;
-            const badgeY = ey + 34;
-            out += `<rect x="${badgeX}" y="${badgeY}" width="268" height="22" rx="4" fill="rgba(88,28,135,0.68)" stroke="#c084fc" stroke-width="1.3"/>`;
-            out += `<text x="${badgeX + 8}" y="${badgeY + 14.5}" fill="#f3e8ff" font-family="monospace" font-size="9" font-weight="700">ACOUSTIC: ${escapeHtml(acBadgeText)}</text>`;
+            const badgeY = ey + 30;
+            out += `<rect x="${badgeX}" y="${badgeY}" width="258" height="20" rx="4" fill="rgba(88,28,135,0.68)" stroke="#c084fc" stroke-width="1.3"/>`;
+            out += `<text x="${badgeX + 8}" y="${badgeY + 13.5}" fill="#f3e8ff" font-family="monospace" font-size="8.6" font-weight="700">ACOUSTIC: ${escapeHtml(acBadgeText)}</text>`;
             out += `</g>`;
           }
 
@@ -6660,7 +7745,8 @@
             out += `<path d="M ${qX - 27} ${qInY - 26} L ${qX - 27} ${ey + 36} L ${panelX} ${ey + 36} L ${panelX} ${panelY - 6}" fill="none" stroke="#ef4444" stroke-width="1.9" stroke-dasharray="6 3" marker-end="url(#bp-arrow-safety)"/>`;
             out += `<circle cx="${qX + qW}" cy="${qTopY + 18}" r="4.5" fill="#ef4444" stroke="#fecaca" stroke-width="1"/>`;
             out += `<line x1="${qX + qW}" y1="${qTopY + 18}" x2="${qX + qW}" y2="${ey + 36}" stroke="#ef4444" stroke-width="1.4" stroke-dasharray="4 2"/>`;
-            out += `<text x="${qX + qW + 8}" y="${ey + 47}" fill="#fca5a5" font-family="monospace" font-size="8" font-weight="700">E3 24VDC NFPA 86 SAFETY LOOP (200°F + FLOW + E-STOP → DAMPER)</text>`;
+            const e3LblX = Math.max(qX + qW + 10, ex + 284);
+            out += `<text x="${e3LblX}" y="${ey + 48}" fill="#fca5a5" font-family="monospace" font-size="7.8" font-weight="700">E3 24VDC NFPA 86 SAFETY LOOP (200°F + FLOW + E-STOP → DAMPER)</text>`;
             // Pump 120V GFCI line (E4) + Modbus RS-485 sensor conduit (E5)
             const pumpTargetX = sumpX + sumpW + 86;
             out += `<path d="M ${ctrlBoxX + 76} ${ctrlBoxY + 36} L ${ctrlBoxX + 76} ${floorY + 46} L ${pumpTargetX} ${floorY + 46}" fill="none" stroke="#f59e0b" stroke-width="1.6" stroke-dasharray="3 2" marker-end="url(#bp-arrow-elec)"/>`;
@@ -6676,7 +7762,90 @@
         }
 
         // ---------- VIEW 2: TOP / FOOTPRINT PLAN VIEW ----------
-        if (showTop) {
+        if (showTop && isFrugal) {
+          const tx = showElev ? 778 : 26;
+          const ty = 26;
+          const tw = showElev ? 476 : 1228;
+          const th = 442;
+          const tankName = frugal.region === "mumbai" ? "SINTEX" : (frugal.region === "nairobi" ? "KENTANK" : "HDPE");
+          const tankL = Math.round(frugal.gravity_tank_liters || 300);
+
+          out += `<rect x="${tx}" y="${ty}" width="${tw}" height="${th}" fill="rgba(10, 24, 42, 0.55)" stroke="#234873" stroke-width="1"/>`;
+          out += `<text x="${tx + 14}" y="${ty + 22}" fill="#fdba74" font-family="monospace" font-size="11.5" font-weight="800">TOP / FOOTPRINT PLAN — MASONRY PAD &amp; GRAVITY TOWER</text>`;
+
+          const padW = Math.min(tw - 130, 310);
+          const padH = 148;
+          const padX = tx + Math.round((tw - padW) * 0.48);
+          const padY = ty + 104;
+
+          if (layers.clearances) {
+            out += `<g class="plan-layer-clearances">`;
+            const clPx = 36;
+            out += `<rect x="${padX - clPx}" y="${padY - clPx}" width="${106 + clPx}" height="${padH + clPx * 1.4}" fill="url(#bp-nfpa-hatch)" stroke="#f97316" stroke-width="1.3" stroke-dasharray="6 3"/>`;
+            out += `<text x="${padX - clPx + 4}" y="${padY - clPx - 5}" fill="#fdba74" font-family="monospace" font-size="8.8" font-weight="700">NFPA 211: ${fmtPlanLen(cl.flue_to_combustibles_in || 36)} HOT-FLUE</text>`;
+            out += `<rect x="${padX}" y="${padY + padH + 8}" width="${padW}" height="38" fill="rgba(56,189,248,0.07)" stroke="#38bdf8" stroke-width="1.1" stroke-dasharray="5 4"/>`;
+            out += `<text x="${padX + padW * 0.5}" y="${padY + padH + 30}" text-anchor="middle" fill="#7dd3fc" font-family="monospace" font-size="9" font-weight="700">MANUAL PUMPING &amp; ASH CLEANOUT AISLE (${fmtPlanLen(cl.service_aisle_in || 36)})</text>`;
+            out += `</g>`;
+          }
+
+          // Concrete masonry pad outline
+          out += `<rect x="${padX}" y="${padY}" width="${padW}" height="${padH}" fill="rgba(180, 83, 60, 0.12)" stroke="#c2633a" stroke-width="1.8" rx="4"/>`;
+
+          // Brick Quench Chamber [2]
+          const s1X = padX + 44, midY = padY + 56;
+          out += `<line x1="${padX - 30}" y1="${midY}" x2="${s1X - 24}" y2="${midY}" stroke="#ea580c" stroke-width="10"/>`;
+          out += `<rect x="${s1X - 24}" y="${midY - 24}" width="48" height="48" fill="url(#bp-brick-hatch)" stroke="#c2633a" stroke-width="1.8"/>`;
+          out += `<text x="${s1X}" y="${midY + 4}" text-anchor="middle" fill="#fed7aa" font-family="monospace" font-size="9.5" font-weight="700">${numQuench} QUENCH</text>`;
+
+          // Wide Masonry Stoneware Tower [4]
+          const s3X = padX + 132;
+          out += `<line x1="${s1X + 24}" y1="${midY}" x2="${s3X - 34}" y2="${midY}" stroke="#c2633a" stroke-width="10"/>`;
+          out += `<rect x="${s3X - 34}" y="${midY - 34}" width="68" height="68" fill="url(#bp-brick-hatch)" stroke="#d97706" stroke-width="2"/>`;
+          out += `<circle cx="${s3X}" cy="${midY}" r="22" fill="rgba(200,147,99,0.34)" stroke="#eab308" stroke-dasharray="3 2" stroke-width="1.2"/>`;
+          out += `<text x="${s3X}" y="${midY + 4}" text-anchor="middle" fill="#fef3c7" font-family="monospace" font-size="9.5" font-weight="700">${numPacked} BED</text>`;
+
+          // Tall Brick Chimney + Thermal Reheat Jacket [8]
+          const chTopX = padX + 216;
+          out += `<line x1="${s3X + 34}" y1="${midY}" x2="${chTopX - 22}" y2="${midY}" stroke="#c2633a" stroke-width="9"/>`;
+          out += `<rect x="${chTopX - 22}" y="${midY - 22}" width="44" height="44" fill="rgba(234,88,12,0.28)" stroke="#fb923c" stroke-width="1.8"/>`;
+          out += `<circle cx="${chTopX}" cy="${midY}" r="12" fill="#081424" stroke="#fdba74" stroke-width="1.5"/>`;
+          out += `<text x="${chTopX}" y="${midY - 27}" text-anchor="middle" fill="#86efac" font-family="monospace" font-size="8" font-weight="700">${fmt(frugal.chimney_height_m, 1)}m CHIMNEY</text>`;
+
+          // Elevated Gravity Tank Braced Stand Footprint [5]
+          const tkTopX = padX + padW - 34;
+          const tkTopY = padY + padH - 36;
+          out += `<rect x="${tkTopX - 24}" y="${tkTopY - 24}" width="48" height="48" rx="4" fill="rgba(29,111,184,0.36)" stroke="#38bdf8" stroke-width="1.8"/>`;
+          if (layers.bracing) {
+            out += `<line x1="${tkTopX - 24}" y1="${tkTopY - 24}" x2="${tkTopX + 24}" y2="${tkTopY + 24}" stroke="#818cf8" stroke-width="1.3" stroke-dasharray="3 2"/>`;
+            out += `<line x1="${tkTopX + 24}" y1="${tkTopY - 24}" x2="${tkTopX - 24}" y2="${tkTopY + 24}" stroke="#818cf8" stroke-width="1.3" stroke-dasharray="3 2"/>`;
+          }
+          out += `<text x="${tkTopX}" y="${tkTopY + 3}" text-anchor="middle" fill="#e0f2fe" font-family="monospace" font-size="7.6" font-weight="800">${tankL}L ${tankName}</text>`;
+
+          // Brick Sump + Manual Pump (Plumbing Layer)
+          if (layers.plumbing) {
+            const sumpTopX = padX + 86;
+            const sumpTopY = padY + padH - 22;
+            const mpTopX = padX + 162;
+            out += `<g class="plan-layer-plumbing">`;
+            out += `<rect x="${sumpTopX - 36}" y="${sumpTopY - 11}" width="72" height="22" rx="2" fill="rgba(6,182,212,0.24)" stroke="#06b6d4" stroke-width="1.4"/>`;
+            out += `<text x="${sumpTopX}" y="${sumpTopY + 3}" text-anchor="middle" fill="#e0f2fe" font-family="monospace" font-size="7.4" font-weight="700">BRICK SUMP</text>`;
+            out += `<rect x="${mpTopX - 24}" y="${sumpTopY - 10}" width="48" height="20" rx="3" fill="rgba(56,189,248,0.24)" stroke="#38bdf8" stroke-width="1.4"/>`;
+            out += `<text x="${mpTopX}" y="${sumpTopY + 3}" text-anchor="middle" fill="#e0f2fe" font-family="monospace" font-size="7.2" font-weight="700">${isZeroElec ? "HAND PUMP" : "230V PUMP"}</text>`;
+            out += `<line x1="${sumpTopX + 36}" y1="${sumpTopY}" x2="${mpTopX - 24}" y2="${sumpTopY}" stroke="#06b6d4" stroke-width="1.6" marker-end="url(#bp-arrow-water)"/>`;
+            out += `<line x1="${mpTopX + 24}" y1="${sumpTopY}" x2="${tkTopX - 24}" y2="${tkTopY}" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4 2" marker-end="url(#bp-arrow-water)"/>`;
+            out += `</g>`;
+          }
+
+          if (layers.electrical && isZeroElec) {
+            out += `<rect x="${tx + 14}" y="${ty + 34}" width="262" height="20" rx="4" fill="rgba(16,185,129,0.20)" stroke="#22c55e" stroke-width="1.2"/>`;
+            out += `<text x="${tx + 22}" y="${ty + 47.5}" fill="#86efac" font-family="monospace" font-size="8.2" font-weight="800">0V / OFF-GRID — ZERO ELECTRICAL PANEL</text>`;
+          }
+
+          out += svgDimLine(padX, padY, padX + padW, padY, `PAD L: ${fmtPlanLen(lenIn, true)}`, -18, false, "#38bdf8");
+          out += svgDimLine(padX + padW, padY, padX + padW, padY + padH, `W: ${fmtPlanLen(widIn, true)}`, 22, true, "#38bdf8");
+          out += `<text x="${tx + 14}" y="${ty + th - 26}" fill="#cbd5e1" font-family="monospace" font-size="9.5">LOCAL CERAMIC: ${escapeHtml(frugal.region_label)} · ${fmtUSD(frugal.estimated_local_cost_usd)} (${escapeHtml(frugal.local_currency_estimate)})</text>`;
+          out += `<text x="${tx + 14}" y="${ty + th - 10}" fill="#86efac" font-family="monospace" font-size="9.5">${isZeroElec ? "ZERO ELECTRICITY · PASSIVE BUOYANCY CHIMNEY + GRAVITY TANK" : "LOCAL 230V 50Hz HYBRID · BRICK MASONRY + STONEWARE RINGS"}</text>`;
+        } else if (showTop) {
           const tx = showElev ? 778 : 26;
           const ty = 26;
           const tw = showElev ? 476 : 1228;
@@ -6866,7 +8035,7 @@
         out += `<line x1="${tbX}" y1="${tbY + 74}" x2="${tbX + tbW}" y2="${tbY + 74}" stroke="#234873" stroke-width="1"/>`;
         out += `<line x1="${tbX + 240}" y1="${tbY + 34}" x2="${tbX + 240}" y2="${tbY + tbH}" stroke="#234873" stroke-width="1"/>`;
         out += `<text x="${tbX + 12}" y="${tbY + 22}" fill="#f8fafc" font-family="monospace" font-size="12" font-weight="800">${escapeHtml(plan.title || "KILNSCRUB FULL SYSTEMS SHOP PLAN")}</text>`;
-        out += `<text x="${tbX + 12}" y="${tbY + 51}" fill="#7dd3fc" font-family="monospace" font-size="9.5">BUILD: ${escapeHtml(isDeluxe ? "CUSTOM FAB DELUXE" : (normalizeBuildPath(plan.build_path) === "welded_dxf" ? "WELDED DXF" : "NO-WELD COTS"))}</text>`;
+        out += `<text x="${tbX + 12}" y="${tbY + 51}" fill="#7dd3fc" font-family="monospace" font-size="9.5">BUILD: ${escapeHtml(isFrugal ? (isZeroElec ? "LOCAL CERAMIC (0V OFF-GRID)" : "LOCAL CERAMIC (HYBRID)") : (isDeluxe ? "CUSTOM FAB DELUXE" : (normalizeBuildPath(plan.build_path) === "welded_dxf" ? "WELDED DXF" : "NO-WELD COTS")))}</text>`;
         out += `<text x="${tbX + 12}" y="${tbY + 66}" fill="#cbd5e1" font-family="monospace" font-size="9.5">BED: ${escapeHtml(isParallelBed ? `SHELL-LESS ${arch.parallelBed.pipeCount}×${arch.parallelBed.pipeNomIn}" UNISEAL` : "SINGLE COLUMN")}</text>`;
         out += `<text x="${tbX + 252}" y="${tbY + 51}" fill="#7dd3fc" font-family="monospace" font-size="9.5">ENVELOPE: ${escapeHtml(fmtPlanLen(lenIn, true))} × ${escapeHtml(fmtPlanLen(widIn, true))}</text>`;
         out += `<text x="${tbX + 252}" y="${tbY + 66}" fill="#cbd5e1" font-family="monospace" font-size="9.5">LAYERS: ${escapeHtml(activeLayerTags)}</text>`;
@@ -7193,9 +8362,14 @@
 
       function renderPlanSchedules(plan) {
         const cl = plan.clearances || {};
+        const isZeroElecPlan = !!plan.zero_electricity || (isFrugalMode() && !!studioState.zeroElectricity);
         if (el("plan-elec-access-note")) {
-          el("plan-elec-access-note").textContent = cl.wiring_access_note ||
-            `NEC 110.26: Maintain ${fmtPlanLen(cl.nec_panel_depth_in || 36)} clear depth × ${fmtPlanLen(cl.nec_panel_width_in || 30)} clear width in front of NEMA 4X Panel & Lockable Sight Disconnect (min hose bend radius ${fmtPlanLen(cl.hose_bend_radius_in || 6)}).`;
+          if (isZeroElecPlan) {
+            el("plan-elec-access-note").innerHTML = `<span class="offgrid-elec-banner">0V / OFF-GRID — ZERO ELECTRICAL CIRCUITS</span><span style="margin-left:8px;color:#a7f3d0">No electric blower, no VFD panel, no NEC 110.26 electrical panel clearance required.</span>`;
+          } else {
+            el("plan-elec-access-note").textContent = cl.wiring_access_note ||
+              `NEC 110.26: Maintain ${fmtPlanLen(cl.nec_panel_depth_in || 36)} clear depth × ${fmtPlanLen(cl.nec_panel_width_in || 30)} clear width in front of NEMA 4X Panel & Lockable Sight Disconnect (min hose bend radius ${fmtPlanLen(cl.hose_bend_radius_in || 6)}).`;
+          }
         }
 
         // 1. Electrical & Wiring Schedule
@@ -7203,7 +8377,9 @@
         const elecList = Array.isArray(plan.electrical) ? plan.electrical : [];
         if (elecBody) {
           if (elecList.length === 0) {
-            elecBody.innerHTML = `<tr><td colspan="9" style="color:var(--muted)">No electrical circuits defined.</td></tr>`;
+            elecBody.innerHTML = isZeroElecPlan
+              ? `<tr><td colspan="9" style="padding:14px 12px"><span class="offgrid-elec-banner">0V / OFF-GRID — ZERO ELECTRICAL CIRCUITS</span><span style="margin-left:10px;color:#cbd5e1;font-size:11.5px">Passive thermal-reheat brick chimney draft + overhead gravity water tank + manual treadle/hand pump (0 W total load).</span></td></tr>`
+              : `<tr><td colspan="9" style="color:var(--muted)">No electrical circuits defined.</td></tr>`;
           } else {
             elecBody.innerHTML = elecList.map((c) => `
               <tr>
@@ -7345,7 +8521,9 @@
         const plan = getEffectiveShopPlan();
         const isEductor = (plan.stage_alignment || studioState.stageAlignment) === "eductor_dry_fan";
         const isCompact = !!(plan.compact_footprint ?? studioState.compactFootprint);
-        const isDeluxe = !!plan.is_deluxe || normalizeBuildPath(plan.build_path || studioState.buildPath) === "custom_fab_deluxe";
+        const isFrugal = !!plan.is_frugal || isFrugalMode();
+        const isZeroElec = !!plan.zero_electricity || (isFrugal && !!studioState.zeroElectricity);
+        const isDeluxe = !isFrugal && (!!plan.is_deluxe || normalizeBuildPath(plan.build_path || studioState.buildPath) === "custom_fab_deluxe");
 
         if (el("plan-sheet-title")) el("plan-sheet-title").textContent = plan.title || "Shop Plan Blueprint";
         if (el("plan-envelope-pill")) {
@@ -7353,8 +8531,13 @@
         }
         const aPill = el("plan-alignment-pill");
         if (aPill) {
-          aPill.className = "pill " + (isEductor ? "warn" : "ok");
-          aPill.textContent = `${isEductor ? "Dry-Fan Downflow Eductor" : "Inline ID Blower"}${isCompact ? " · U-Turn" : ""}`;
+          if (isFrugal) {
+            aPill.className = "pill ok";
+            aPill.textContent = isZeroElec ? "Off-Grid Ceramic (0W Passive Draft)" : "Local Ceramic (230V Hybrid)";
+          } else {
+            aPill.className = "pill " + (isEductor ? "warn" : "ok");
+            aPill.textContent = `${isEductor ? "Dry-Fan Downflow Eductor" : "Inline ID Blower"}${isCompact ? " · U-Turn" : ""}`;
+          }
         }
         const dPill = el("plan-deluxe-pill");
         if (dPill) {
@@ -7363,11 +8546,15 @@
         const acSum = plan.acoustic_summary || {};
         const acPill = el("plan-acoustic-pill");
         if (acPill) {
-          acPill.textContent = `Acoustic: ${Math.round(acSum.bare_dba_3ft || 86)} → ${Math.round(acSum.treated_dba_3ft || 64)} dBA @ 3 ft · ${Math.round(acSum.property_line_dba || 41)} dBA @ ${Math.round(acSum.property_line_ft || 35)} ft`;
+          acPill.textContent = isZeroElec
+            ? "Acoustic: ~45 dBA Whisper Quiet (No Blower)"
+            : `Acoustic: ${Math.round(acSum.bare_dba_3ft || 86)} → ${Math.round(acSum.treated_dba_3ft || 64)} dBA @ 3 ft · ${Math.round(acSum.property_line_dba || 41)} dBA @ ${Math.round(acSum.property_line_ft || 35)} ft`;
         }
         const cl = plan.clearances || { flue_to_combustibles_in: 36, service_aisle_in: 36, nec_panel_depth_in: 36, nec_panel_width_in: 30, pump_service_in: 24 };
         if (el("plan-clearance-summary")) {
-          el("plan-clearance-summary").textContent = `NFPA 211: ${fmtPlanLen(cl.flue_to_combustibles_in || 36)} Flue · NEC 110.26: ${fmtPlanLen(cl.nec_panel_depth_in || 36)}×${fmtPlanLen(cl.nec_panel_width_in || 30)} Panel · ${fmtPlanLen(cl.pump_service_in || 24)} Pump/Hatch`;
+          el("plan-clearance-summary").textContent = isZeroElec
+            ? `NFPA 211: ${fmtPlanLen(cl.flue_to_combustibles_in || 36)} Flue · 0V / OFF-GRID (No NEC Panel) · Braced Gravity Tank Stand`
+            : `NFPA 211: ${fmtPlanLen(cl.flue_to_combustibles_in || 36)} Flue · NEC 110.26: ${fmtPlanLen(cl.nec_panel_depth_in || 36)}×${fmtPlanLen(cl.nec_panel_width_in || 30)} Panel · ${fmtPlanLen(cl.pump_service_in || 24)} Pump/Hatch`;
         }
 
         // Toggle visibility based on view mode
@@ -7618,6 +8805,202 @@
           ctx.font = "10px monospace";
           ctx.fillText(isParallelBed ? "Shell-Less Uniseal" : `Ø${fmt(mToMm(p.column_diameter_m), 0)}×${fmt(p.column_height_m, 2)}m`, px - 4, floorY + 29);
           ctx.restore();
+        }
+
+        // ---------- MODE 0: LOCAL CERAMIC / ZERO-ELECTRICITY 2D SCHEMATIC ----------
+        const frugal2d = getEffectiveFrugalData(studioState.evaluation);
+        if (frugal2d.enabled) {
+          const isZero = !!frugal2d.zero_electricity;
+          const tankName = frugal2d.region === "mumbai" ? "SINTEX" : (frugal2d.region === "nairobi" ? "KENTANK" : "HDPE");
+          const qX = Math.max(66, w * 0.10);
+          const qW2 = Math.max(58, Math.min(82, w * 0.095));
+          const qH2 = Math.max(106, Math.min(148, h * 0.36));
+          const pX = qX + qW2 + Math.max(24, w * 0.032);
+          const pW2 = Math.max(88, Math.min(126, w * 0.15));
+          const pH2 = Math.max(158, Math.min(208, h * 0.50));
+          const chX = pX + pW2 + Math.max(28, w * 0.036);
+          const chW2 = Math.max(28, Math.min(42, w * 0.045));
+          const chTopY = Math.max(22, floorY - Math.min(h - 90, pH2 * 1.48));
+          const tkX = Math.min(w - 220, chX + chW2 + Math.max(46, w * 0.06));
+          const tkW2 = Math.max(56, Math.min(76, w * 0.09));
+          const tkH2 = 50;
+          const standH2 = Math.max(115, Math.min(156, pH2 * 0.78));
+          const tkBotY = floorY - standH2;
+          const tkTopY = tkBotY - tkH2;
+
+          // Banner badge
+          ctx.save();
+          ctx.fillStyle = "rgba(180, 83, 9, 0.24)";
+          ctx.strokeStyle = isZero ? "#34d399" : "#f59e0b";
+          ctx.lineWidth = 1.3;
+          ctx.fillRect(w - 306, 12, 290, 24);
+          ctx.strokeRect(w - 306, 12, 290, 24);
+          ctx.fillStyle = isZero ? "#a7f3d0" : "#fde68a";
+          ctx.font = "bold 10.5px monospace";
+          ctx.fillText(isZero ? "0V / 0W OFF-GRID CERAMIC PASSIVE DRAFT" : "LOCAL CERAMIC MASONRY (230V HYBRID)", w - 294, 28);
+          ctx.restore();
+
+          // Hot firebrick kiln flue inlet
+          const qInY = floorY - qH2 + 28;
+          ctx.fillStyle = "rgba(234, 88, 12, 0.30)";
+          ctx.strokeStyle = "#ea580c";
+          ctx.lineWidth = 2;
+          ctx.fillRect(22, qInY - 10, qX - 22, 20);
+          ctx.strokeRect(22, qInY - 10, qX - 22, 20);
+
+          // 1. Brick Settling & Gravity-Spray Quench Chamber
+          ctx.save();
+          ctx.globalAlpha = hi("quench") ? 1.0 : 0.35;
+          ctx.fillStyle = state.cutaway ? "rgba(180, 83, 60, 0.20)" : "#9a3e28";
+          ctx.strokeStyle = "#d97706";
+          ctx.lineWidth = state.selectedStage === "quench" ? 3 : 2;
+          ctx.fillRect(qX, floorY - qH2, qW2, qH2);
+          ctx.strokeRect(qX, floorY - qH2, qW2, qH2);
+          if (state.cutaway) {
+            ctx.strokeStyle = "#fbbf24";
+            ctx.lineWidth = 2.5;
+            ctx.beginPath(); ctx.moveTo(qX + qW2 * 0.5, floorY - qH2); ctx.lineTo(qX + qW2 * 0.5, floorY - qH2 + 20); ctx.stroke();
+            ctx.fillStyle = "rgba(56, 189, 248, 0.28)";
+            ctx.beginPath();
+            ctx.moveTo(qX + qW2 * 0.5, floorY - qH2 + 20);
+            ctx.lineTo(qX + 6, floorY - 14);
+            ctx.lineTo(qX + qW2 - 6, floorY - 14);
+            ctx.closePath();
+            ctx.fill();
+          }
+          ctx.fillStyle = "#fdba74";
+          ctx.font = "bold 10.5px monospace";
+          ctx.fillText("1. BRICK QUENCH", qX - 6, floorY + 16);
+          ctx.restore();
+
+          // Connecting brick channel
+          ctx.fillStyle = "rgba(180, 83, 60, 0.28)";
+          ctx.strokeStyle = "#c2633a";
+          ctx.fillRect(qX + qW2, floorY - 46, pX - (qX + qW2), 22);
+          ctx.strokeRect(qX + qW2, floorY - 46, pX - (qX + qW2), 22);
+
+          // 2. Wide Masonry Stoneware-Ring Packed Tower + Terracotta Chevron Baffles
+          ctx.save();
+          ctx.globalAlpha = hi("packed") ? 1.0 : 0.35;
+          const pTopY = floorY - pH2;
+          ctx.fillStyle = state.cutaway ? "rgba(180, 83, 60, 0.16)" : "#9a3e28";
+          ctx.strokeStyle = "#d97706";
+          ctx.lineWidth = state.selectedStage === "packed" ? 3 : 2;
+          ctx.fillRect(pX, pTopY, pW2, pH2);
+          ctx.strokeRect(pX, pTopY, pW2, pH2);
+          if (state.cutaway) {
+            ctx.fillStyle = "rgba(200, 147, 99, 0.42)";
+            ctx.fillRect(pX + 5, pTopY + 46, pW2 - 10, pH2 - 86);
+            ctx.strokeStyle = "#eab308";
+            ctx.lineWidth = 1;
+            for (let rx = pX + 12; rx < pX + pW2 - 10; rx += 14) {
+              for (let ry = pTopY + 54; ry < floorY - 46; ry += 13) {
+                ctx.beginPath(); ctx.arc(rx, ry, 4, 0, Math.PI * 2); ctx.stroke();
+              }
+            }
+            // Terracotta chevron baffles
+            ctx.strokeStyle = "#fdba74";
+            ctx.lineWidth = 1.8;
+            for (let ci = 0; ci < 3; ci++) {
+              const cy = pTopY + 14 + ci * 9;
+              ctx.beginPath();
+              ctx.moveTo(pX + 8, cy + 5);
+              ctx.lineTo(pX + pW2 * 0.35, cy);
+              ctx.lineTo(pX + pW2 * 0.5, cy + 5);
+              ctx.lineTo(pX + pW2 * 0.65, cy);
+              ctx.lineTo(pX + pW2 - 8, cy + 5);
+              ctx.stroke();
+            }
+          }
+          ctx.fillStyle = "#fde68a";
+          ctx.font = "bold 10.5px monospace";
+          ctx.fillText(`3. STONEWARE BED Ø${Math.round(frugal2d.bed_diameter_in)}"`, pX - 6, floorY + 16);
+          ctx.restore();
+
+          // 3. Tall Brick / Terracotta Thermal-Reheat Chimney
+          ctx.save();
+          ctx.globalAlpha = hi("blower") ? 1.0 : 0.35;
+          ctx.strokeStyle = "#c2633a";
+          ctx.lineWidth = 10;
+          ctx.beginPath();
+          ctx.moveTo(pX + pW2, pTopY + 20);
+          ctx.lineTo(chX - 8, pTopY + 20);
+          ctx.lineTo(chX - 8, floorY - 54);
+          ctx.lineTo(chX, floorY - 54);
+          ctx.stroke();
+          // Reheat jacket at chimney base
+          ctx.fillStyle = "rgba(234, 88, 12, 0.28)";
+          ctx.strokeStyle = "#fb923c";
+          ctx.lineWidth = 1.8;
+          ctx.fillRect(chX - 7, floorY - 88, chW2 + 14, 88);
+          ctx.strokeRect(chX - 7, floorY - 88, chW2 + 14, 88);
+          // Chimney shaft
+          ctx.fillStyle = state.cutaway ? "rgba(180, 83, 60, 0.22)" : "#8c3b27";
+          ctx.strokeStyle = "#c2633a";
+          ctx.fillRect(chX, chTopY, chW2, floorY - chTopY);
+          ctx.strokeRect(chX, chTopY, chW2, floorY - chTopY);
+          ctx.fillStyle = "#86efac";
+          ctx.font = "bold 10px monospace";
+          ctx.fillText(`4. ${fmt(frugal2d.chimney_height_m, 1)}m CHIMNEY`, chX - 18, floorY + 16);
+          ctx.fillText(`${Math.round(frugal2d.stack_reheat_temp_f)}°F REHEAT`, chX - 14, floorY + 29);
+          ctx.restore();
+
+          // 4. Elevated Blue Kentank / Sintex Gravity Tank on X-Braced Stand + Gravity Downcomer + Manual Pump
+          ctx.save();
+          ctx.strokeStyle = "#818cf8";
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.moveTo(tkX + 6, tkBotY); ctx.lineTo(tkX + 6, floorY);
+          ctx.moveTo(tkX + tkW2 - 6, tkBotY); ctx.lineTo(tkX + tkW2 - 6, floorY);
+          ctx.moveTo(tkX + 6, tkBotY); ctx.lineTo(tkX + tkW2 - 6, floorY);
+          ctx.moveTo(tkX + tkW2 - 6, tkBotY); ctx.lineTo(tkX + 6, floorY);
+          ctx.stroke();
+          ctx.fillStyle = "rgba(29, 111, 184, 0.65)";
+          ctx.strokeStyle = "#38bdf8";
+          ctx.lineWidth = 2;
+          ctx.fillRect(tkX, tkTopY, tkW2, tkH2);
+          ctx.strokeRect(tkX, tkTopY, tkW2, tkH2);
+          ctx.fillStyle = "#e0f2fe";
+          ctx.font = "bold 9.5px monospace";
+          ctx.fillText(`${Math.round(frugal2d.gravity_tank_liters)}L`, tkX + 10, tkTopY + 22);
+          ctx.fillText(tankName, tkX + 10, tkTopY + 36);
+          // Gravity feed line from tank to Quench & Stoneware Tower
+          const gLineY = Math.min(pTopY - 12, tkBotY + 6);
+          ctx.strokeStyle = "#06b6d4";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(tkX + 10, tkBotY);
+          ctx.lineTo(tkX + 10, gLineY);
+          ctx.lineTo(qX + qW2 * 0.5, gLineY);
+          ctx.lineTo(qX + qW2 * 0.5, floorY - qH2);
+          ctx.moveTo(pX + pW2 * 0.5, gLineY);
+          ctx.lineTo(pX + pW2 * 0.5, pTopY + 38);
+          ctx.stroke();
+          ctx.fillStyle = "#67e8f9";
+          ctx.font = "bold 9.5px monospace";
+          ctx.fillText(isZero ? "TREADLE / HAND PUMP" : "0.5 HP 230V PUMP", tkX - 18, floorY + 16);
+          ctx.restore();
+
+          // Buoyant flow particles
+          if (state.particles) {
+            const dt = p2d.lastTime ? Math.min(0.05, (ts - p2d.lastTime) / 1000) : 0.016;
+            p2d.lastTime = ts;
+            const cPts = [
+              [22, qInY], [qX + qW2 * 0.5, qInY], [qX + qW2 * 0.5, floorY - 35],
+              [pX + pW2 * 0.5, floorY - 35], [pX + pW2 * 0.5, pTopY + 20],
+              [chX - 8, pTopY + 20], [chX - 8, floorY - 54], [chX + chW2 * 0.5, floorY - 54],
+              [chX + chW2 * 0.5, chTopY - 14],
+            ];
+            for (const pt of p2d.particles) {
+              pt.t = (pt.t + dt * 0.14) % 1.0;
+              const [x, y] = sample2DPolyline(cPts, pt.t);
+              ctx.fillStyle = pt.t < 0.22 ? "#fb923c" : pt.t < 0.58 ? "#38bdf8" : "#86efac";
+              ctx.beginPath();
+              ctx.arc(x + pt.jitter * 3, y + pt.jitter * 2, 2.5, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+          return;
         }
 
         // ---------- MODE A: DRY-FAN DOWNFLOW EDUCTOR 2D SCHEMATIC ----------
@@ -8200,6 +9583,7 @@
           draw2DSchematic();
         }
         renderDeluxeSpecBanner(studioState.evaluation);
+        renderFrugalPanels(studioState.evaluation);
         renderArchitecturePanels(studioState.evaluation);
         renderShopPlansTab();
       }
@@ -8208,6 +9592,7 @@
         const inputIds = [
           "in-studio-name", "in-kiln-vol", "in-peak-temp", "in-salt-rate", "in-fuel-type",
           "in-firing-hours", "in-salting-hours", "in-property-line", "in-ambient-winter", "in-garden-hose",
+          "in-zero-electricity", "in-local-region", "in-local-alkali",
           "in-blower-drive", "in-compressor-scfm",
           "in-compact-footprint", "in-shared-baffled-sump",
           "in-snap-cots", "in-include-silencer", "in-include-plume-diluter",
@@ -8227,6 +9612,23 @@
             } else if (id === "in-salting-hours") {
               const v = parseFloat(node.value);
               if (v > 0) studioState.lastSaltingHours = v;
+            } else if (id === "in-zero-electricity") {
+              studioState.zeroElectricity = !!node.checked;
+              if (studioState.zeroElectricity) {
+                studioState.buildPath = "local_ceramic_masonry";
+                studioState.packingMediaOption = "diy_ceramic_rings";
+                if (el("in-include-plume-diluter")) el("in-include-plume-diluter").checked = false;
+              }
+              syncSegmentedButtons();
+              refreshVisualGeometryImmediate();
+            } else if (id === "in-local-region") {
+              studioState.localRegion = normalizeLocalRegion(node.value);
+              syncSegmentedButtons();
+              refreshVisualGeometryImmediate();
+            } else if (id === "in-local-alkali") {
+              studioState.localAlkali = normalizeLocalAlkali(node.value);
+              syncSegmentedButtons();
+              refreshVisualGeometryImmediate();
             } else if (id === "in-blower-drive") {
               studioState.blowerDriveOption = normalizeBlowerDriveOption(node.value);
               syncSegmentedButtons();
@@ -8245,7 +9647,24 @@
             scheduleEvaluate();
           });
           node.addEventListener("change", () => {
-            if (id === "in-blower-drive") {
+            if (id === "in-zero-electricity") {
+              studioState.zeroElectricity = !!node.checked;
+              if (studioState.zeroElectricity) {
+                studioState.buildPath = "local_ceramic_masonry";
+                studioState.packingMediaOption = "diy_ceramic_rings";
+                if (el("in-include-plume-diluter")) el("in-include-plume-diluter").checked = false;
+              }
+              syncSegmentedButtons();
+              refreshVisualGeometryImmediate();
+            } else if (id === "in-local-region") {
+              studioState.localRegion = normalizeLocalRegion(node.value);
+              syncSegmentedButtons();
+              refreshVisualGeometryImmediate();
+            } else if (id === "in-local-alkali") {
+              studioState.localAlkali = normalizeLocalAlkali(node.value);
+              syncSegmentedButtons();
+              refreshVisualGeometryImmediate();
+            } else if (id === "in-blower-drive") {
               studioState.blowerDriveOption = normalizeBlowerDriveOption(node.value);
               syncSegmentedButtons();
               refreshVisualGeometryImmediate();
@@ -8298,13 +9717,18 @@
           });
         });
 
-        // Build Path buttons (No-Weld COTS, Welded Sheet Metal, Custom Fab Deluxe)
+        // Build Path buttons (No-Weld COTS, Welded Sheet Metal, Custom Fab Deluxe, Local Ceramic / Brick)
         document.querySelectorAll("[data-build-path]").forEach((btn) => {
           btn.addEventListener("click", () => {
             studioState.buildPath = normalizeBuildPath(btn.dataset.buildPath);
             if (studioState.buildPath === "custom_fab_deluxe") {
+              studioState.zeroElectricity = false;
+              if (el("in-zero-electricity")) el("in-zero-electricity").checked = false;
               state.showSystems3D = true;
               syncSystems3DButton();
+            } else if (studioState.buildPath !== "local_ceramic_masonry") {
+              studioState.zeroElectricity = false;
+              if (el("in-zero-electricity")) el("in-zero-electricity").checked = false;
             }
             syncSegmentedButtons();
             refreshVisualGeometryImmediate();
@@ -8367,6 +9791,8 @@
         if (budgetBtn) {
           budgetBtn.addEventListener("click", () => {
             studioState.buildPath = "cots_no_weld";
+            studioState.zeroElectricity = false;
+            if (el("in-zero-electricity")) el("in-zero-electricity").checked = false;
             studioState.packedBedLayout = "parallel_manifold";
             studioState.parallelPipeSizeIn = 4;
             studioState.packingMediaOption = "diy_ceramic_rings";
@@ -8393,6 +9819,8 @@
         if (deluxeBtn) {
           deluxeBtn.addEventListener("click", () => {
             studioState.buildPath = "custom_fab_deluxe";
+            studioState.zeroElectricity = false;
+            if (el("in-zero-electricity")) el("in-zero-electricity").checked = false;
             studioState.stageAlignment = "inline_id_blower";
             studioState.packedBedLayout = "single_column";
             studioState.packingMediaOption = "pp_pall_rings";
@@ -8409,6 +9837,28 @@
             refreshVisualGeometryImmediate();
             requestEvaluateOrSize();
             showToast("Applied Custom Fab Deluxe: TIG/FRP Vessels, ANSI Class 150 Flanges, Forklift Skid, UL 508A Panel & Acoustic Baffling!");
+          });
+        }
+
+        // Phase 10: One-Click "Apply Off-Grid Ceramic (Zero Electricity)" Button
+        const offgridBtn = el("btn-apply-offgrid-ceramic");
+        if (offgridBtn) {
+          offgridBtn.addEventListener("click", () => {
+            studioState.buildPath = "local_ceramic_masonry";
+            studioState.zeroElectricity = true;
+            if (el("in-zero-electricity")) el("in-zero-electricity").checked = true;
+            studioState.localRegion = normalizeLocalRegion(studioState.localRegion);
+            studioState.localAlkali = normalizeLocalAlkali(studioState.localAlkali);
+            studioState.packingMediaOption = "diy_ceramic_rings";
+            studioState.sharedBaffledSump = true;
+            if (el("in-shared-baffled-sump")) el("in-shared-baffled-sump").checked = true;
+            studioState.controlTier = "electromechanical_only";
+            if (el("in-include-plume-diluter")) el("in-include-plume-diluter").checked = false;
+            syncSegmentedButtons();
+            updateControlLabels();
+            refreshVisualGeometryImmediate();
+            requestEvaluateOrSize();
+            showToast("Applied Off-Grid Local Ceramic (0V / 0W): Thermal-Reheat Brick Chimney + Wide Stoneware Bed + Overhead Gravity Tank!");
           });
         }
 
@@ -9791,7 +11241,10 @@
         const isParallelVent = studio.venturiLayout === "parallel_mini_venturis";
         const isCompact = !!(document.getElementById("in-compact-footprint")?.checked ?? studio.compactFootprint);
         const hasDiluter = !!(document.getElementById("in-include-plume-diluter")?.checked);
-        const isDeluxe = String(studio.buildPath || "").toLowerCase() === "custom_fab_deluxe";
+        const bpLower = String(studio.buildPath || "").toLowerCase();
+        const isZeroElec = !!(document.getElementById("in-zero-electricity")?.checked ?? studio.zeroElectricity);
+        const isLocalCeramic = bpLower === "local_ceramic_masonry" || isZeroElec;
+        const isDeluxe = !isLocalCeramic && bpLower === "custom_fab_deluxe";
         const showSystems = !!state.showSystems3D;
 
         const q = d.quench, v = d.venturi, p = d.packed_bed, b = d.blower, env = d.envelope;
@@ -9799,6 +11252,349 @@
         const thetaStart = cut ? Math.PI * 0.5 : 0;
         const thetaLen = cut ? Math.PI : Math.PI * 2;
         const side = cut ? THREE.DoubleSide : THREE.FrontSide;
+
+        // =========================================================================
+        // BRANCH C (PHASE 10): LOCAL CERAMIC / BRICK MASONRY SCRUBBER (0W OR HYBRID)
+        // =========================================================================
+        if (isLocalCeramic) {
+          const fr = ev.frugal || {};
+          const chimM = Number.isFinite(fr.chimney_height_m) ? fr.chimney_height_m : (isZeroElec ? 9.5 : 4.5);
+          const bedDiamIn = Number.isFinite(fr.bed_diameter_in) ? fr.bed_diameter_in : 30;
+          const matBrick = new THREE.MeshStandardMaterial({ color: 0xb4533c, metalness: 0.05, roughness: 0.86, side });
+          const matBrickSolid = new THREE.MeshStandardMaterial({ color: 0x9f432e, metalness: 0.05, roughness: 0.88, side: THREE.DoubleSide });
+          const matMortar = new THREE.MeshStandardMaterial({ color: 0x8c7a6b, metalness: 0.04, roughness: 0.92 });
+          const matTerracotta = new THREE.MeshStandardMaterial({ color: 0xc2633a, metalness: 0.08, roughness: 0.68, side: THREE.DoubleSide });
+          const matStoneware = new THREE.MeshStandardMaterial({ color: 0xc89363, metalness: 0.06, roughness: 0.82 });
+          const matHotCore = new THREE.MeshStandardMaterial({ color: 0xf97316, metalness: 0.25, roughness: 0.42, emissive: 0x5c1d06, side: THREE.DoubleSide });
+          const matKentank = new THREE.MeshStandardMaterial({ color: 0x1d6fb8, metalness: 0.12, roughness: 0.36 });
+          const matKentankRib = new THREE.MeshStandardMaterial({ color: 0x175a96, metalness: 0.14, roughness: 0.34 });
+          const matTimber = new THREE.MeshStandardMaterial({ color: 0x7c5332, metalness: 0.04, roughness: 0.88 });
+          const matWater = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, metalness: 0.1, roughness: 0.18, transparent: true, opacity: 0.58 });
+          const matSprayC = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.30, side: THREE.DoubleSide, depthWrite: false });
+          const matPipeC = new THREE.MeshStandardMaterial({ color: 0x06b6d4, metalness: 0.22, roughness: 0.40 });
+          const matBrass = new THREE.MeshStandardMaterial({ color: 0xd4a238, metalness: 0.78, roughness: 0.28 });
+          const matIron = new THREE.MeshStandardMaterial({ color: 0x374151, metalness: 0.56, roughness: 0.46 });
+          const matPlinth = new THREE.MeshStandardMaterial({ color: 0x52525b, metalness: 0.08, roughness: 0.90 });
+
+          // Concrete foundation plinth
+          const plinth = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.10, 2.5), matPlinth);
+          plinth.position.set(0.55, 0.05, 0.15);
+          assemblyGroup.add(plinth);
+
+          // 1. Refractory Brick Kiln Inlet Flue + Settling & Gravity-Spray Quench Chamber
+          const qX = -1.65, qZ = 0, qW = 0.88, qH = 1.48, qD = 0.88;
+          const qInY = 1.18;
+          // Hot kiln flue duct + brick collar
+          const flueIn = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.34, 0.34), matBrickSolid);
+          flueIn.position.set(qX - qW * 0.5 - 0.32, qInY, qZ);
+          assemblyGroup.add(flueIn);
+          const flueGlow = new THREE.Mesh(new THREE.BoxGeometry(0.70, 0.22, 0.22), matHotCore);
+          flueGlow.position.set(qX - qW * 0.5 - 0.32, qInY, qZ);
+          assemblyGroup.add(flueGlow);
+
+          // Brick Quench Chamber walls (front open when cutaway=true!)
+          const wallT = 0.09;
+          const qBack = new THREE.Mesh(new THREE.BoxGeometry(qW, qH, wallT), matBrickSolid);
+          qBack.position.set(qX, 0.10 + qH * 0.5, qZ - qD * 0.5 + wallT * 0.5);
+          assemblyGroup.add(qBack);
+          const qLeft = new THREE.Mesh(new THREE.BoxGeometry(wallT, qH, qD), matBrickSolid);
+          qLeft.position.set(qX - qW * 0.5 + wallT * 0.5, 0.10 + qH * 0.5, qZ);
+          assemblyGroup.add(qLeft);
+          const qRight = new THREE.Mesh(new THREE.BoxGeometry(wallT, qH, qD), matBrickSolid);
+          qRight.position.set(qX + qW * 0.5 - wallT * 0.5, 0.10 + qH * 0.5, qZ);
+          assemblyGroup.add(qRight);
+          const qCap = new THREE.Mesh(new THREE.BoxGeometry(qW + 0.08, 0.08, qD + 0.08), matMortar);
+          qCap.position.set(qX, 0.10 + qH + 0.04, qZ);
+          assemblyGroup.add(qCap);
+          if (!cut) {
+            const qFront = new THREE.Mesh(new THREE.BoxGeometry(qW, qH, wallT), matBrickSolid);
+            qFront.position.set(qX, 0.10 + qH * 0.5, qZ + qD * 0.5 - wallT * 0.5);
+            assemblyGroup.add(qFront);
+          }
+          // Internal brass gravity-spray rose & falling water spray cone + settled ash pool
+          const qRose = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.075, 0.10, 16), matBrass);
+          qRose.position.set(qX, 0.10 + qH - 0.12, qZ);
+          assemblyGroup.add(qRose);
+          const qSpray = new THREE.Mesh(new THREE.ConeGeometry(qW * 0.36, qH * 0.72, 20, 1, true), matSprayC);
+          qSpray.position.set(qX, 0.10 + qH * 0.44, qZ);
+          assemblyGroup.add(qSpray);
+          const qPool = new THREE.Mesh(new THREE.BoxGeometry(qW - 0.20, 0.18, qD - 0.20), matWater);
+          qPool.position.set(qX, 0.20, qZ);
+          assemblyGroup.add(qPool);
+
+          // Low-ΔP wide brick transfer duct from Quench -> Wide Masonry Packed Tower
+          const pX = -0.25, pZ = 0;
+          const pR = Math.max(0.46, Math.min(0.64, (bedDiamIn * 0.0254) * 0.56));
+          const pH = 2.38;
+          const xferLen = (pX - pR) - (qX + qW * 0.5) + 0.12;
+          const xferFlue = new THREE.Mesh(new THREE.BoxGeometry(xferLen, 0.38, 0.44), matBrickSolid);
+          xferFlue.position.set((qX + qW * 0.5 + pX - pR) * 0.5, 0.56, qZ);
+          assemblyGroup.add(xferFlue);
+
+          // 2. Wide Masonry / SWG-Ceramic Packed Tower (Stoneware Clay Raschig Rings + Stacked Terracotta Chevron Baffles)
+          const pShell = new THREE.Mesh(new THREE.CylinderGeometry(pR, pR * 1.03, pH, 32, 1, cut, thetaStart, thetaLen), matBrick);
+          pShell.position.set(pX, 0.10 + pH * 0.5, pZ);
+          assemblyGroup.add(pShell);
+          // Mortar & iron tension hoop bands around masonry tower
+          for (const hf of [0.22, 0.50, 0.78, 0.96]) {
+            const hoop = new THREE.Mesh(new THREE.TorusGeometry(pR * 1.03, 0.014, 8, 32, cut ? Math.PI : Math.PI * 2), matIron);
+            hoop.rotation.x = Math.PI / 2;
+            if (cut) hoop.rotation.z = Math.PI * 0.5;
+            hoop.position.set(pX, 0.10 + pH * hf, pZ);
+            assemblyGroup.add(hoop);
+          }
+          // Bottom liquid pool & perforated clay brick support arch
+          const pPool = new THREE.Mesh(new THREE.CylinderGeometry(pR * 0.92, pR * 0.92, 0.22, 24), matWater);
+          pPool.position.set(pX, 0.22, pZ);
+          assemblyGroup.add(pPool);
+          const pGrate = new THREE.Mesh(new THREE.CylinderGeometry(pR * 0.92, pR * 0.92, 0.045, 24), matMortar);
+          pGrate.position.set(pX, 0.86, pZ);
+          assemblyGroup.add(pGrate);
+
+          // Stoneware Clay Raschig Ring Bed (porous core + visible individual fired stoneware rings in cutaway!)
+          const bedBaseY = 0.89;
+          const bedH = 1.05;
+          const bedCore = new THREE.Mesh(new THREE.CylinderGeometry(pR * 0.86, pR * 0.86, bedH, 24), matStoneware);
+          bedCore.position.set(pX, bedBaseY + bedH * 0.5, pZ);
+          assemblyGroup.add(bedCore);
+          if (cut) {
+            const ringGeo = new THREE.TorusGeometry(0.036, 0.012, 6, 12);
+            for (let ri = 0; ri < 42; ri++) {
+              const row = Math.floor(ri / 7);
+              const col = ri % 7;
+              const ang = -0.35 + (col / 6) * 0.70;
+              const ry = bedBaseY + 0.08 + row * 0.16 + ((col % 2) * 0.05);
+              const rr = pR * 0.87;
+              const ringMesh = new THREE.Mesh(ringGeo, matStoneware);
+              ringMesh.position.set(pX + Math.sin(ang) * rr, ry, pZ + Math.cos(ang) * rr);
+              ringMesh.rotation.set(ri * 0.7, ri * 1.1, ri * 0.4);
+              assemblyGroup.add(ringMesh);
+            }
+          }
+          // Gravity water trickle spray ring above stoneware bed
+          const trickleRing = new THREE.Mesh(new THREE.TorusGeometry(pR * 0.62, 0.016, 8, 24), matBrass);
+          trickleRing.rotation.x = Math.PI / 2;
+          trickleRing.position.set(pX, bedBaseY + bedH + 0.08, pZ);
+          assemblyGroup.add(trickleRing);
+          const trickleCone = new THREE.Mesh(new THREE.CylinderGeometry(pR * 0.65, pR * 0.82, 0.18, 20, 1, true), matSprayC);
+          trickleCone.position.set(pX, bedBaseY + bedH + 0.01, pZ);
+          assemblyGroup.add(trickleCone);
+
+          // Stacked Terracotta Chevron Mist-Eliminator Baffles near top of tower
+          for (let ci = 0; ci < 3; ci++) {
+            const cy = bedBaseY + bedH + 0.20 + ci * 0.08;
+            const chev = new THREE.Mesh(new THREE.ConeGeometry(pR * 0.76, 0.07, 16, 1, true), matTerracotta);
+            chev.position.set(pX, cy, pZ);
+            assemblyGroup.add(chev);
+          }
+          const pTopCap = new THREE.Mesh(new THREE.CylinderGeometry(pR * 1.06, pR * 1.06, 0.07, 32), matMortar);
+          pTopCap.position.set(pX, 0.10 + pH + 0.035, pZ);
+          assemblyGroup.add(pTopCap);
+
+          // 3. Tall Brick / Terracotta Thermal-Reheat Chimney (8-12 m scaled cleanly in dynamic camera framing!)
+          const chX = 1.08, chZ = -0.05;
+          const chBaseW = 0.66;
+          const chH = Math.max(3.8, Math.min(5.4, 2.4 + chimM * 0.28));
+          // Overhead SWG ceramic duct from tower top down into concentric brick thermal-reheat jacket
+          const chDuctPath = new THREE.CurvePath();
+          chDuctPath.add(new THREE.LineCurve3(new THREE.Vector3(pX + pR * 0.75, 0.10 + pH - 0.16, pZ), new THREE.Vector3(chX - 0.44, 0.10 + pH - 0.16, chZ)));
+          chDuctPath.add(new THREE.LineCurve3(new THREE.Vector3(chX - 0.44, 0.10 + pH - 0.16, chZ), new THREE.Vector3(chX - 0.44, 0.72, chZ)));
+          chDuctPath.add(new THREE.LineCurve3(new THREE.Vector3(chX - 0.44, 0.72, chZ), new THREE.Vector3(chX, 0.72, chZ)));
+          assemblyGroup.add(new THREE.Mesh(new THREE.TubeGeometry(chDuctPath, 36, 0.14, 16, false), matTerracotta));
+
+          // Concentric Brick Thermal-Reheat Jacket around Chimney Base (hot flue wall heat exchange!)
+          const reheatH = 1.32;
+          const reheatOuter = new THREE.Mesh(new THREE.BoxGeometry(chBaseW + 0.18, reheatH, chBaseW + 0.18), matBrickSolid);
+          reheatOuter.position.set(chX, 0.10 + reheatH * 0.5, chZ);
+          assemblyGroup.add(reheatOuter);
+          const reheatCoreBand = new THREE.Mesh(new THREE.BoxGeometry(chBaseW + 0.20, 0.22, chBaseW + 0.20), matHotCore);
+          reheatCoreBand.position.set(chX, 0.10 + reheatH * 0.45, chZ);
+          assemblyGroup.add(reheatCoreBand);
+
+          // Tall Tapered Terracotta / Brick Chimney Shaft
+          const chShaftH = chH - reheatH;
+          const chShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.26, chShaftH, 24), matTerracotta);
+          chShaft.position.set(chX, 0.10 + reheatH + chShaftH * 0.5, chZ);
+          assemblyGroup.add(chShaft);
+          // SWG clay pipe bell-socket joint collars up the chimney
+          for (let j = 1; j <= 4; j++) {
+            const jy = 0.10 + reheatH + (chShaftH * j) / 5;
+            const jr = 0.26 - (0.07 * j) / 5 + 0.025;
+            const collar = new THREE.Mesh(new THREE.CylinderGeometry(jr, jr, 0.08, 20), matMortar);
+            collar.position.set(chX, jy, chZ);
+            assemblyGroup.add(collar);
+          }
+          const chExitY = 0.10 + chH;
+          const chLip = new THREE.Mesh(new THREE.TorusGeometry(0.20, 0.02, 8, 24), matMortar);
+          chLip.rotation.x = Math.PI / 2;
+          chLip.position.set(chX, chExitY, chZ);
+          assemblyGroup.add(chLip);
+
+          // 4. Elevated Blue HDPE Kentank / Sintex Overhead Gravity Tank on 4-Post X-Braced Timber/Brick Stand
+          const tkX = 2.45, tkZ = 0.0;
+          const standH = 2.65;
+          const stHalf = 0.42;
+          const postGeo = new THREE.BoxGeometry(0.085, standH, 0.085);
+          for (const [dx, dz] of [[-stHalf, -stHalf], [stHalf, -stHalf], [-stHalf, stHalf], [stHalf, stHalf]]) {
+            const post = new THREE.Mesh(postGeo, matTimber);
+            post.position.set(tkX + dx, 0.10 + standH * 0.5, tkZ + dz);
+            assemblyGroup.add(post);
+          }
+          // Platform deck + diagonal X-bracing struts on all 4 sides (200-500 kg wet load!)
+          const deck = new THREE.Mesh(new THREE.BoxGeometry(stHalf * 2 + 0.24, 0.08, stHalf * 2 + 0.24), matTimber);
+          deck.position.set(tkX, 0.10 + standH + 0.04, tkZ);
+          assemblyGroup.add(deck);
+          const addTimberBrace = (p1, p2) => {
+            const dir = new THREE.Vector3().subVectors(p2, p1);
+            const m = new THREE.Mesh(new THREE.BoxGeometry(0.045, dir.length(), 0.045), matTimber);
+            m.position.copy(p1).addScaledVector(dir, 0.5);
+            m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+            assemblyGroup.add(m);
+          };
+          const yBot = 0.16, yMid = 0.10 + standH * 0.5, yTop = 0.10 + standH - 0.06;
+          for (const [a, bPt] of [
+            [[-stHalf, -stHalf], [stHalf, -stHalf]],
+            [[-stHalf, stHalf], [stHalf, stHalf]],
+            [[-stHalf, -stHalf], [-stHalf, stHalf]],
+            [[stHalf, -stHalf], [stHalf, stHalf]],
+          ]) {
+            addTimberBrace(new THREE.Vector3(tkX + a[0], yBot, tkZ + a[1]), new THREE.Vector3(tkX + bPt[0], yMid, tkZ + bPt[1]));
+            addTimberBrace(new THREE.Vector3(tkX + bPt[0], yBot, tkZ + bPt[1]), new THREE.Vector3(tkX + a[0], yMid, tkZ + a[1]));
+            addTimberBrace(new THREE.Vector3(tkX + a[0], yMid, tkZ + a[1]), new THREE.Vector3(tkX + bPt[0], yTop, tkZ + bPt[1]));
+            addTimberBrace(new THREE.Vector3(tkX + bPt[0], yMid, tkZ + bPt[1]), new THREE.Vector3(tkX + a[0], yTop, tkZ + a[1]));
+          }
+          // Blue HDPE Kentank / Sintex Cylindrical Ribbed Tank + Black Lid
+          const tkR = 0.44, tkH = 0.96;
+          const tkBaseY = 0.10 + standH + 0.08;
+          const tankMesh = new THREE.Mesh(new THREE.CylinderGeometry(tkR, tkR, tkH, 28), matKentank);
+          tankMesh.position.set(tkX, tkBaseY + tkH * 0.5, tkZ);
+          assemblyGroup.add(tankMesh);
+          for (const rf of [0.22, 0.48, 0.74]) {
+            const rib = new THREE.Mesh(new THREE.TorusGeometry(tkR + 0.012, 0.018, 8, 28), matKentankRib);
+            rib.rotation.x = Math.PI / 2;
+            rib.position.set(tkX, tkBaseY + tkH * rf, tkZ);
+            assemblyGroup.add(rib);
+          }
+          const tkLid = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.19, 0.07, 18), matIron);
+          tkLid.position.set(tkX, tkBaseY + tkH + 0.035, tkZ);
+          assemblyGroup.add(tkLid);
+
+          // 5. Brick Baffled Sump + Manual Treadle / Semi-Rotary Hand Pump (OR local 0.5 HP 230V pump when grid ON)
+          const sumpX = -0.92, sumpZ = 0.88;
+          const sumpOuter = new THREE.Mesh(new THREE.BoxGeometry(1.18, 0.42, 0.56), matBrickSolid);
+          sumpOuter.position.set(sumpX, 0.31, sumpZ);
+          assemblyGroup.add(sumpOuter);
+          const sumpWater = new THREE.Mesh(new THREE.BoxGeometry(1.04, 0.30, 0.44), matWater);
+          sumpWater.position.set(sumpX, 0.38, sumpZ);
+          assemblyGroup.add(sumpWater);
+
+          const pumpX = 0.35, pumpZ = 0.88;
+          if (isZeroElec) {
+            // Manual Treadle / Cast-Iron Hand Pump (twin cylinders + timber foot treadles / lever arm — ZERO electric motor!)
+            const pBase = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.08, 0.36), matTimber);
+            pBase.position.set(pumpX, 0.14, pumpZ);
+            assemblyGroup.add(pBase);
+            for (const dx of [-0.09, 0.09]) {
+              const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.38, 16), matIron);
+              cyl.position.set(pumpX + dx, 0.37, pumpZ - 0.04);
+              assemblyGroup.add(cyl);
+              const treadle = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.04, 0.52), matTimber);
+              treadle.position.set(pumpX + dx, 0.24 + (dx > 0 ? 0.08 : 0.0), pumpZ + 0.14);
+              treadle.rotation.x = dx > 0 ? -0.18 : 0.12;
+              assemblyGroup.add(treadle);
+            }
+            const handleBar = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.72, 10), matIron);
+            handleBar.position.set(pumpX + 0.22, 0.52, pumpZ - 0.06);
+            assemblyGroup.add(handleBar);
+          } else {
+            // Compact Local 0.5 HP 230V 50Hz Domestic Monoblock Pump (Kirloskar / Davis & Shirtliff) + small low-ΔP assist fan
+            const monoblock = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.26, 18), matKentank);
+            monoblock.rotation.z = Math.PI / 2;
+            monoblock.position.set(pumpX, 0.22, pumpZ);
+            assemblyGroup.add(monoblock);
+            const assistFan = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.16, 20), matIron);
+            assistFan.rotation.x = Math.PI / 2;
+            assistFan.position.set(chX - 0.44, 1.38, chZ + 0.12);
+            assemblyGroup.add(assistFan);
+          }
+
+          // Gravity downcomer pipe from overhead Kentank -> Quench & Stoneware Tower + Pump refill riser
+          const addCPipe = (pts, rad, mat) => {
+            assemblyGroup.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 28, rad, 10, false), mat));
+          };
+          addCPipe([
+            new THREE.Vector3(tkX - 0.16, tkBaseY, tkZ),
+            new THREE.Vector3(tkX - 0.16, tkBaseY - 0.28, tkZ + 0.34),
+            new THREE.Vector3(pX, tkBaseY - 0.28, pZ + 0.34),
+            new THREE.Vector3(qX, 0.10 + qH + 0.22, qZ),
+            new THREE.Vector3(qX, 0.10 + qH - 0.06, qZ),
+          ], 0.022, matPipeC);
+          addCPipe([
+            new THREE.Vector3(pX, tkBaseY - 0.28, pZ + 0.34),
+            new THREE.Vector3(pX, 0.10 + pH - 0.26, pZ),
+          ], 0.020, matPipeC);
+          // Sump suction -> manual/230V pump -> refill riser into top of Kentank
+          addCPipe([
+            new THREE.Vector3(sumpX + 0.54, 0.26, sumpZ),
+            new THREE.Vector3(pumpX - 0.08, 0.26, pumpZ),
+          ], 0.024, matPipeC);
+          addCPipe([
+            new THREE.Vector3(pumpX + 0.08, 0.36, pumpZ),
+            new THREE.Vector3(tkX - 0.34, 0.36, sumpZ),
+            new THREE.Vector3(tkX - 0.34, tkBaseY + tkH + 0.06, tkZ + 0.18),
+            new THREE.Vector3(tkX - 0.10, tkBaseY + tkH - 0.02, tkZ),
+          ], 0.020, matPipeC);
+
+          // Center assembly & dynamic bounding-box camera framing so tall chimney & overhead Kentank fit cleanly!
+          const rawBox = new THREE.Box3().setFromObject(assemblyGroup);
+          const centerX = -(rawBox.min.x + rawBox.max.x) * 0.5;
+          const centerZ = -(rawBox.min.z + rawBox.max.z) * 0.5;
+          assemblyGroup.position.set(centerX, 0, centerZ);
+
+          const totalW = rawBox.max.x - rawBox.min.x;
+          const totalD = rawBox.max.z - rawBox.min.z;
+          const totalH = Math.max(rawBox.max.y, chExitY) + 0.22;
+          const tanHalfFov = Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
+          const allTargetY = totalH * 0.46;
+          const allDist = Math.max(6.8, Math.max((totalH * 0.56) / tanHalfFov, (totalW * 0.52) / (tanHalfFov * Math.max(1.45, camera.aspect || 2.1))) * 1.18 + totalD * 0.35);
+
+          stageViews = {
+            all: { target: new THREE.Vector3(0.15, allTargetY, 0), cam: new THREE.Vector3(0.95, allTargetY + totalH * 0.12, allDist) },
+            quench: { target: new THREE.Vector3(qX + centerX + 0.10, 0.88, qZ + centerZ), cam: new THREE.Vector3(qX + centerX + 0.45, 1.25, qZ + centerZ + 2.8) },
+            venturi: { target: new THREE.Vector3(chX + centerX, 0.85, chZ + centerZ), cam: new THREE.Vector3(chX + centerX + 0.65, 1.35, chZ + centerZ + 3.0) },
+            packed: { target: new THREE.Vector3(pX + centerX + 0.15, 1.32, pZ + centerZ), cam: new THREE.Vector3(pX + centerX + 0.55, 1.65, pZ + centerZ + 3.4) },
+            blower: { target: new THREE.Vector3(chX + centerX + 0.35, totalH * 0.48, chZ + centerZ), cam: new THREE.Vector3(chX + centerX + 1.15, totalH * 0.56, chZ + centerZ + Math.max(5.5, totalH * 1.15)) },
+          };
+
+          const ox = centerX, oz = centerZ;
+          const ceramicFlow = new THREE.CurvePath();
+          ceramicFlow.add(new THREE.LineCurve3(new THREE.Vector3(qX - qW * 0.5 - 0.65 + ox, qInY, qZ + oz), new THREE.Vector3(qX + ox, qInY, qZ + oz)));
+          ceramicFlow.add(new THREE.LineCurve3(new THREE.Vector3(qX + ox, qInY, qZ + oz), new THREE.Vector3(qX + ox, 0.56, qZ + oz)));
+          ceramicFlow.add(new THREE.LineCurve3(new THREE.Vector3(qX + ox, 0.56, qZ + oz), new THREE.Vector3(pX + ox, 0.56, pZ + oz)));
+          ceramicFlow.add(new THREE.LineCurve3(new THREE.Vector3(pX + ox, 0.56, pZ + oz), new THREE.Vector3(pX + ox, 0.10 + pH - 0.16, pZ + oz)));
+          ceramicFlow.add(new THREE.LineCurve3(new THREE.Vector3(pX + ox, 0.10 + pH - 0.16, pZ + oz), new THREE.Vector3(chX - 0.44 + ox, 0.10 + pH - 0.16, chZ + oz)));
+          ceramicFlow.add(new THREE.LineCurve3(new THREE.Vector3(chX - 0.44 + ox, 0.10 + pH - 0.16, chZ + oz), new THREE.Vector3(chX - 0.44 + ox, 0.72, chZ + oz)));
+          ceramicFlow.add(new THREE.LineCurve3(new THREE.Vector3(chX - 0.44 + ox, 0.72, chZ + oz), new THREE.Vector3(chX + ox, 0.72, chZ + oz)));
+          ceramicFlow.add(new THREE.LineCurve3(new THREE.Vector3(chX + ox, 0.72, chZ + oz), new THREE.Vector3(chX + ox, chExitY + 0.45, chZ + oz)));
+          const cRaw = ceramicFlow.getSpacedPoints(220);
+          flowSamples = cRaw.map((pt, idx) => {
+            const u = idx / (cRaw.length - 1);
+            return { pt, swirl: (u > 0.25 && u < 0.52) ? 0.08 : 0.022 };
+          });
+
+          if (!hasFramedInitial) {
+            hasFramedInitial = true;
+            const initView = stageViews[state.selectedStage] || stageViews.all;
+            camera.position.copy(initView.cam);
+            controls.target.copy(initView.target);
+            controls.update();
+          } else {
+            const vGoal = stageViews[state.selectedStage] || stageViews.all;
+            targetGoal = vGoal.target.clone();
+            camGoal = vGoal.cam.clone();
+          }
+          return;
+        }
 
         const matSS = new THREE.MeshStandardMaterial({ color: 0xb8c5d4, metalness: 0.72, roughness: 0.28, side });
         const matSSPipe = new THREE.MeshStandardMaterial({ color: 0xb8c5d4, metalness: 0.72, roughness: 0.28, side: THREE.DoubleSide });

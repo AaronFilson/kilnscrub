@@ -877,17 +877,20 @@ func buildDeluxeSpec(
 		deluxeTotal = cots.EstimatedTotalUSD
 		cotsProj := p
 		cotsProj.BuildPath = BuildPathCOTSNoWeld
+		cotsProj.ZeroElectricity = false
 		cotsTotal = BuildCOTSSummary(cotsProj, design).EstimatedTotalUSD
 	} else {
 		cotsProj := p
 		cotsProj.BuildPath = BuildPathCOTSNoWeld
-		if p.BuildPath == BuildPathCOTSNoWeld {
+		cotsProj.ZeroElectricity = false
+		if p.BuildPath == BuildPathCOTSNoWeld && !p.ZeroElectricity {
 			cotsTotal = cots.EstimatedTotalUSD
 		} else {
 			cotsTotal = BuildCOTSSummary(cotsProj, design).EstimatedTotalUSD
 		}
 		dlxProj := p
 		dlxProj.BuildPath = BuildPathCustomFabDeluxe
+		dlxProj.ZeroElectricity = false
 		deluxeTotal = BuildCOTSSummary(dlxProj, design).EstimatedTotalUSD
 	}
 	costDelta := round2(deluxeTotal - cotsTotal)
@@ -936,6 +939,9 @@ func BuildShopPlan(
 	arch ArchitectureOptionsResult,
 ) ShopPlan {
 	p := project.Normalize()
+	if p.IsLocalCeramic() {
+		return buildLocalCeramicShopPlan(p, design, cots, urban, arch)
+	}
 	isDeluxe := p.IsDeluxe()
 
 	ductIn := round1(design.Envelope.DuctDiameter.Inches())
@@ -1398,5 +1404,509 @@ func BuildShopPlan(
 		Acoustics:       acoustics,
 		AcousticSummary: acousticSummary,
 		DeluxeSpec:      deluxeSpec,
+	}
+}
+
+// buildLocalCeramicShopPlan produces the complete masonry, stoneware-packed tower,
+// elevated overhead gravity tank stand, manual/local pump plumbing (P1..P5), tall
+// thermal-reheat brick chimney, bracing (B1..B5), and 0-circuit (when off-grid)
+// ShopPlan for Phase 10 Local Ceramic / Zero-Electricity builds.
+func buildLocalCeramicShopPlan(
+	p StudioProject,
+	design model.ScrubberDesign,
+	cots COTSSummary,
+	urban UrbanAssessment,
+	arch ArchitectureOptionsResult,
+) ShopPlan {
+	fr := EvaluateFrugal(p, design)
+	prof := resolveLocalRegionProfile(p.EffectiveLocalRegion())
+
+	bedDiaIn := fr.BedDiameterIn
+	bedDepthIn := round1(1.20 / model.MetersPerInch)
+	if design.Input.KilnVolumeCuFt <= 16.0 {
+		bedDepthIn = round1(1.10 / model.MetersPerInch)
+	} else if design.Input.KilnVolumeCuFt >= 40.0 {
+		bedDepthIn = round1(1.35 / model.MetersPerInch)
+	}
+	towerHIn := round1(bedDepthIn + 34.0) // lower plenum + stoneware bed + spray clearance + terracotta chevron baffles
+	chimneyHIn := round1(fr.ChimneyHeightFt * 12.0)
+	quenchDiaIn := round1(cots.QuenchVessel.NominalIn)
+	quenchHIn := round1(math.Max(48.0, design.Quench.TowerHeight.Inches()*0.75))
+	ductIn := round1(math.Max(10.0, design.Envelope.DuctDiameter.Inches()+2.0))
+
+	overallLenIn := round1(math.Max(96.0, quenchDiaIn+bedDiaIn+56.0))
+	overallWidthIn := round1(math.Max(48.0, bedDiaIn+26.0))
+	overallHeightIn := round1(math.Max(fr.TankElevationFt*12.0+42.0, towerHIn+18.0))
+
+	tankWetKg := round1(fr.GravityTankLiters*1.05 + 22.0)
+	tankWetLbs := round1(tankWetKg / model.KgPerLb)
+	ringCuFt := math.Max(4.0, math.Ceil(model.CubicMeters(math.Pi*math.Pow(float64(model.InchesToMeters(bedDiaIn)), 2)/4.0*(bedDepthIn*model.MetersPerInch)).CuFt()))
+	towerWetLbs := round1((cots.PackedColumn.WeightKg + ringCuFt*21.0 + 40.0) / model.KgPerLb)
+	chimneyLbs := round1(cots.BlowerVFD.WeightKg / model.KgPerLb)
+	quenchLbs := round1(cots.QuenchVessel.WeightKg / model.KgPerLb)
+	totalPadLbs := round1(quenchLbs + towerWetLbs + tankWetLbs + chimneyLbs + 350.0)
+
+	parts := []PlanPart{
+		{
+			Num:          1,
+			ID:           "brick_flue_recuperator",
+			Label:        "Refractory Brick Kiln Flue & Concentric Flue-Wall Thermal Recuperator",
+			Stage:        "Inlet",
+			Material:     prof.pipeLocalSpec,
+			DimensionsIn: fmt.Sprintf(`%.0f" masonry flue × 48" L (concentric brick reheat wall)`, ductIn),
+			DimensionsMM: fmt.Sprintf("%.0f mm masonry flue × 1220 mm L", ductIn*25.4),
+			SKU:          "LOCAL-BRICK-FLUE",
+			Qty:          1,
+			CostUSD:      round2(cots.QuenchVessel.UnitCostUSD * 0.40),
+			Notes:        fmt.Sprintf("Transfers waste heat from %.0f F kiln flue across a split-firebrick wall to warm scrubbed exhaust back to %.0f F without mixing raw gas.", design.Input.PeakExitTempF, fr.StackReheatTempF),
+		},
+		{
+			Num:          2,
+			ID:           "masonry_quench_chamber",
+			Label:        "Stage 1: Masonry Settling & Gravity-Spray Quench Chamber",
+			Stage:        "Stage 1",
+			Material:     cots.QuenchVessel.Material,
+			DimensionsIn: fmt.Sprintf(`%.0f" sq/dia masonry × %.0f" H`, quenchDiaIn, quenchHIn),
+			DimensionsMM: fmt.Sprintf("%.0f mm × %.0f mm H", quenchDiaIn*25.4, quenchHIn*25.4),
+			SKU:          cots.QuenchVessel.SKU,
+			Qty:          1,
+			CostUSD:      round2(cots.QuenchVessel.UnitCostUSD * 0.60),
+			Notes:        "All-ceramic firebrick chamber tolerates >1,800 F dry-run heat with zero plastic meltdown risk; includes brick ash cleanout arch.",
+		},
+		{
+			Num:          3,
+			ID:           "terracotta_baffles_rose",
+			Label:        "Stage 2: Terracotta Settling Baffles & Brass/PVC Gravity Spray Rose",
+			Stage:        "Stage 2",
+			Material:     cots.SprayNozzle.Material,
+			DimensionsIn: fmt.Sprintf(`3× baffle tiers + 1" gravity spray rose (%.2f GPM @ %.2f PSI)`, fr.SprayFlowGPM, fr.GravityHeadPSI),
+			DimensionsMM: fmt.Sprintf("3× terracotta baffles + 25 mm spray rose (%.2f L/min)", fr.SprayFlowLPM),
+			SKU:          cots.SprayNozzle.SKU,
+			Qty:          1,
+			CostUSD:      cots.SprayNozzle.UnitCostUSD,
+			Notes:        "Low-resistance coarse droplet quench & fly-ash knockdown (0.030 inWC dP) driven purely by overhead gravity head.",
+		},
+		{
+			Num:          4,
+			ID:           "wide_stoneware_tower",
+			Label:        fmt.Sprintf(`Stage 3: %.0f" Wide Masonry / SWG Ceramic Packed Tower & 1" Stoneware Rings`, bedDiaIn),
+			Stage:        "Stage 3",
+			Material:     cots.PackedColumn.Material,
+			DimensionsIn: fmt.Sprintf(`%.0f" bore × %.0f" H (%.0f" stoneware ring bed + terracotta chevron baffles)`, bedDiaIn, towerHIn, bedDepthIn),
+			DimensionsMM: fmt.Sprintf("%.0f mm bore × %.0f mm H (%.0f mm bed)", bedDiaIn*25.4, towerHIn*25.4, bedDepthIn*25.4),
+			SKU:          cots.PackedColumn.SKU,
+			Qty:          1,
+			CostUSD:      round2(cots.PackedColumn.UnitCostUSD + ringCuFt*cots.PackingMedia.UnitCostUSD),
+			Notes:        fmt.Sprintf("Wide low-velocity bore (v_s=%.2f m/s) keeps irrigated Ergun bed dP down to %.3f inWC while achieving %.1f%% HCl neutralization.", fr.BedSuperficialVelMS, fr.BedDPInWC, fr.HClRemovalPct),
+		},
+		{
+			Num:          5,
+			ID:           "brick_baffled_sump",
+			Label:        "Plastered Brick / Glazed-Tile Baffled Settling Sump",
+			Stage:        "Stage 3 Sump",
+			Material:     "Cement-Plastered Brick / Glazed Stoneware Tile Baffled Basin",
+			DimensionsIn: `36" L × 24" W × 24" D (~55 gal / 208 L working volume)`,
+			DimensionsMM: "915 mm × 610 mm × 610 mm (~208 L)",
+			SKU:          "LOCAL-BRICK-SUMP",
+			Qty:          1,
+			CostUSD:      round2(cots.SumpTank.UnitCostUSD * 0.35),
+			Notes:        fmt.Sprintf("Weir baffle traps settled wood ash & lime/alkali sediment before suction strainer; dose %.2f kg %s (%s) per firing.", fr.AlkaliKgPerFiring, fr.AlkaliName, fr.AlkaliFormula),
+		},
+		{
+			Num:          6,
+			ID:           "overhead_gravity_tank",
+			Label:        fmt.Sprintf("Elevated %.0f L (%.0f gal) %s on Braced 3.5 m Stand", fr.GravityTankLiters, fr.GravityTankGal, prof.tankBrand),
+			Stage:        "Gravity Feed",
+			Material:     fmt.Sprintf("UV-Stabilized HDPE Tank + Diagonally Braced Timber/Brick Stand (%.0f kg Wet Load)", tankWetKg),
+			DimensionsIn: fmt.Sprintf(`%.0f L tank @ %.1f ft elevation (%.2f PSI static head)`, fr.GravityTankLiters, fr.TankElevationFt, fr.GravityHeadPSI),
+			DimensionsMM: fmt.Sprintf("%.0f L tank @ 3500 mm elevation (%.2f PSI)", fr.GravityTankLiters, fr.GravityHeadPSI),
+			SKU:          "LOCAL-GRAV-TANK",
+			Qty:          1,
+			CostUSD:      round2(cots.SumpTank.UnitCostUSD * 0.65),
+			Notes:        fmt.Sprintf("MANDATORY STRUCTURAL BRACING: Filled tank weighs ~%.0f kg (%.0f lbs) — cross-brace all 4 stand legs on compacted concrete/brick footings!", tankWetKg, tankWetLbs),
+		},
+		{
+			Num:          7,
+			ID:           "circulation_pump",
+			Label:        fr.ManualPumpType,
+			Stage:        "Pumping",
+			Material:     "Cast-Iron / HDPE Manual Pump (or Local 0.5 HP 230V 50Hz Domestic Monoblock Pump)",
+			DimensionsIn: fmt.Sprintf(`%.2f GPM (%.2f L/min) closed-loop lift to %.1f ft`, fr.SprayFlowGPM, fr.SprayFlowLPM, fr.TankElevationFt),
+			DimensionsMM: fmt.Sprintf("%.2f L/min lift to 3.5 m overhead tank", fr.SprayFlowLPM),
+			SKU:          "LOCAL-PUMP-UNIT",
+			Qty:          1,
+			CostUSD:      round2(75.0 * prof.costScale),
+			Notes: func() string {
+				if p.ZeroElectricity {
+					return fmt.Sprintf("Zero-electricity manual closed-loop refill: %.1f min/hr on treadle/hand pump (or %d × 20L jerrycans/hr).", fr.TreadleMinutesPerHr, fr.Jerrycans20LPerHr)
+				}
+				return fmt.Sprintf("Local 230V 50Hz domestic monoblock pump (%.0f W w/ low-dP fan) automates closed-loop tank refill; overhead gravity tank provides blackout ride-through.", fr.PowerWatts)
+			}(),
+		},
+		{
+			Num:          8,
+			ID:           "reheat_brick_chimney",
+			Label:        fmt.Sprintf("Stage 4: Tall Brick / Terracotta Thermal-Reheat Chimney (%.1f m / %.0f ft)", fr.ChimneyHeightM, fr.ChimneyHeightFt),
+			Stage:        "Exhaust",
+			Material:     cots.BlowerVFD.Material,
+			DimensionsIn: fmt.Sprintf(`12" flue × %.0f" H (%.1f ft / %.1f m)`, chimneyHIn, fr.ChimneyHeightFt, fr.ChimneyHeightM),
+			DimensionsMM: fmt.Sprintf("300 mm flue × %.0f mm H (%.1f m)", fr.ChimneyHeightM*1000.0, fr.ChimneyHeightM),
+			SKU:          cots.BlowerVFD.SKU,
+			Qty:          1,
+			CostUSD:      cots.BlowerVFD.UnitCostUSD,
+			Notes:        fmt.Sprintf("Available draft %.3f inWC vs %.3f inWC required (margin %+.3f inWC, feasible=%v); guy-wire / wall-tie every 3 m.", fr.AvailableDraftInWC, fr.RequiredDraftInWC, fr.DraftMarginInWC, fr.DraftFeasible),
+		},
+		{
+			Num:          9,
+			ID:           "field_test_alkali_kit",
+			Label:        "Field Hydrometer, Litmus pH Strips, Stem Thermometer & Local Alkali Charge",
+			Stage:        "Monitoring & Chemistry",
+			Material:     cots.SensorKit.Material,
+			DimensionsIn: `Zero-electronics field kit (SG 1.000-1.200 + pH 1-14 strips)`,
+			DimensionsMM: fmt.Sprintf("%.2f kg %s (%s) per firing", fr.AlkaliKgPerFiring, fr.AlkaliName, fr.AlkaliFormula),
+			SKU:          cots.SensorKit.SKU,
+			Qty:          1,
+			CostUSD:      cots.SensorKit.UnitCostUSD,
+			Notes:        fr.AlkaliLocalNote,
+		},
+	}
+
+	cutList := []CutSheetItem{
+		{
+			PartNum:      1,
+			Name:         "Refractory Brick Quench & Concentric Flue-Wall Recuperator Courses",
+			Shape:        "masonry",
+			Material:     "Local Firebrick & Refractory Clay / Lime-Sand Mortar",
+			FlatWidthIn:  quenchDiaIn,
+			FlatHeightIn: quenchHIn,
+			Qty:          1,
+			Notes:        fmt.Sprintf(`Lay %.0f" internal masonry chamber × %.0f" H with a 65 mm split-firebrick heat-transfer wall separating %.0f F raw flue from clean chimney reheat duct (zero gas cross-leakage).`, quenchDiaIn, quenchHIn, design.Input.PeakExitTempF),
+		},
+		{
+			PartNum:      4,
+			Name:         fmt.Sprintf(`Wide Masonry / SWG Absorber Tower (%.0f" Bore × %.0f" H)`, bedDiaIn, towerHIn),
+			Shape:        "cylinder",
+			Material:     prof.pipeLocalSpec,
+			FlatWidthIn:  round2(math.Pi * bedDiaIn),
+			FlatHeightIn: towerHIn,
+			Qty:          1,
+			Notes:        fmt.Sprintf(`Construct %.0f" (%.0f mm) wide brick or IS 651 SWG clay-pipe absorber with a heavy firebrick/stoneware packing support arch 14" above the lower gas inlet.`, bedDiaIn, bedDiaIn*25.4),
+		},
+		{
+			PartNum:      4,
+			Name:         `Potter-Extruded 1" Unglazed Stoneware Raschig Rings`,
+			Shape:        "ceramic",
+			Material:     "Grogged Stoneware Clay Fired to Cone 6-10 (70% Voidage)",
+			FlatWidthIn:  1.0,
+			FlatHeightIn: 1.0,
+			Qty:          int(math.Round(ringCuFt * 950.0)), // ~950 rings per cu.ft.
+			Notes:        fmt.Sprintf(`Extrude & cut ~%.0f hollow 1" OD × 1" L stoneware rings (%.0f cu.ft. total bed volume, %.0f" bed depth); bisque/stoneware fire tucked inside normal studio kiln loads.`, ringCuFt*950.0, ringCuFt, bedDepthIn),
+		},
+		{
+			PartNum:      4,
+			Name:         "Hand-Formed Terracotta 3-Pass Chevron Mist Baffle Tiles",
+			Shape:        "plate",
+			Material:     "Unglazed Fired Terracotta Louver Slabs (3/8\" thick)",
+			FlatWidthIn:  round1(bedDiaIn - 1.0),
+			FlatHeightIn: 6.0,
+			Qty:          12,
+			Notes:        `Form 12 louvered terracotta baffle strips set at 45° alternating angles above the gravity spray rose to knock down mist droplets at <=0.020 inWC dP.`,
+		},
+		{
+			PartNum:      6,
+			Name:         "Braced 3.5 m (11.5 ft) Overhead Gravity Tank Stand Timber/Steel Legs & X-Braces",
+			Shape:        "frame",
+			Material:     `4"×4" Treated Cypress/Eucalyptus Timber or 2"×2" Mild Steel Angle + Diagonal X-Bracing`,
+			FlatWidthIn:  42.0,
+			FlatHeightIn: 138.0,
+			Qty:          4,
+			Notes:        fmt.Sprintf(`Cut 4× 138" (3.5 m) corner posts + 8× diagonal X-braces + bolted deck joists rated safely for %.0f kg (%.0f lbs) filled tank weight.`, tankWetKg, tankWetLbs),
+		},
+		{
+			PartNum:      8,
+			Name:         fmt.Sprintf("Tall Brick / SWG Thermal-Reheat Chimney (%.1f m / %.0f ft)", fr.ChimneyHeightM, fr.ChimneyHeightFt),
+			Shape:        "masonry",
+			Material:     "Fired Clay Bricks / 300 mm IS 651 SWG Flue Tiles + Mortar + Galvanized Guy-Wires",
+			FlatWidthIn:  38.0,
+			FlatHeightIn: chimneyHIn,
+			Qty:          1,
+			Notes:        fmt.Sprintf(`Build %.1f m (%.0f ft) vertical chimney on reinforced footing with cleanout door at base and lateral wall ties / 3-way guy-wires every 3 m.`, fr.ChimneyHeightM, fr.ChimneyHeightFt),
+		},
+	}
+
+	// Electrical schedule: strictly EMPTY (0 circuits) when zero_electricity == true!
+	electrical := []ElectricalCircuit{}
+	if !p.ZeroElectricity {
+		reqV := urban.Electrical.RequiredVoltage
+		if reqV <= 0 {
+			reqV = 230
+		}
+		electrical = []ElectricalCircuit{
+			{
+				ID:           "E1",
+				Label:        fmt.Sprintf("Local %dV 50Hz RCD/GFCI Circuit -> 0.5 HP Domestic Monoblock Pump", reqV),
+				From:         "Studio Domestic Breaker / RCD Panel",
+				To:           fr.ManualPumpType,
+				Voltage:      reqV,
+				Amps:         round1(370.0 / float64(reqV) * 1.25),
+				BreakerAmps:  10,
+				WireGauge:    "1.5 mm² / 14 AWG Weatherproof Flexible Cable in Conduit",
+				Conduit:      "20 mm PVC Outdoor Conduit w/ Weatherproof Isolator Switch",
+				NECRef:       "IEC 60364 / Local 30mA RCD Protection",
+				IsSafetyLoop: false,
+				Notes:        "Powers the 0.5 HP (370 W) domestic monoblock recirculation pump; overhead gravity tank maintains flow during grid blackouts.",
+			},
+			{
+				ID:           "E2",
+				Label:        "Local Low-dP Draft Fan (12V Solar / 230V Jua-Kali Fan)",
+				From:         "12V Solar Charge Controller / Local RCD Circuit",
+				To:           "Low-Static Ceramic Chimney Assist Fan (~150 W, 1.8 inWC)",
+				Voltage:      12,
+				Amps:         12.5,
+				BreakerAmps:  20,
+				WireGauge:    "4 mm² / 12 AWG DC Twin Cable (or 1.5 mm² AC)",
+				Conduit:      "20 mm PVC Outdoor Conduit",
+				NECRef:       "Local Low-Voltage DC / RCD Protected",
+				IsSafetyLoop: false,
+				Notes:        "Provides 1.8 inWC mechanical draft with shorter 4.5 m ceramic chimney; all-ceramic body stays safe even if fan stops.",
+			},
+		}
+	}
+
+	// Plumbing schedule P1..P5 for gravity tank + manual treadle/hand pump (or local 0.5 HP pump).
+	pumpLineLabel := "Manual Treadle / Hand Pump Lift Riser -> Overhead Gravity Tank"
+	pumpPressure := 8.0
+	if !p.ZeroElectricity {
+		pumpLineLabel = "Local 0.5 HP Monoblock Pump Lift Riser -> Overhead Gravity Tank"
+		pumpPressure = 18.0
+	}
+	plumbing := []PlumbingLine{
+		{
+			ID:             "P1",
+			Label:          "Makeup Water Supply (Bucket / Hose w/ Air-Gap Fill) -> Overhead Gravity Tank",
+			Fluid:          "Fresh Makeup Water",
+			From:           "Studio Tap / Borehole / Jerrycan Fill",
+			To:             fmt.Sprintf("Elevated %.0f L %s (Top Air-Gap Fill)", fr.GravityTankLiters, prof.tankBrand),
+			SizeIn:         0.75,
+			Material:       `3/4" HDPE / PVC Pipe (or 20L Jerrycan Top Fill w/ Air Gap)`,
+			FlowGPM:        round2(math.Max(0.35, design.Quench.EvaporatedWaterGPM*1.4)),
+			PressurePSI:    15.0,
+			ValvesFittings: "Top Air-Gap Fill Pipe (>=1\" above overflow rim) + Overflow Drain",
+			Notes:          "Replaces evaporative quench loss (~1-2 twenty-liter jerrycans/hr) while keeping potable supply air-gapped from alkaline scrubber liquor.",
+		},
+		{
+			ID:             "P2",
+			Label:          "Brick Baffled Sump Suction -> Foot Valve -> Circulation Pump",
+			Fluid:          fmt.Sprintf("Alkaline %s (%s) Scrubber Liquor (pH 7.5-8.5)", fr.AlkaliName, fr.AlkaliFormula),
+			From:           "Brick Baffled Sump Clean Chamber",
+			To:             fr.ManualPumpType,
+			SizeIn:         1.25,
+			Material:       `1-1/4" Reinforced PVC / HDPE Suction Hose + Brass Foot Valve & Mesh Basket`,
+			FlowGPM:        fr.SprayFlowGPM,
+			PressurePSI:    1.0,
+			ValvesFittings: "Coarse Cloth/Mesh Ash Basket, Brass Foot Valve, Isolation Valve",
+			Notes:          "Keep foot valve elevated 4\" off sump floor behind the weir baffle so settled wood ash and lime sediment never enter the pump.",
+		},
+		{
+			ID:             "P3",
+			Label:          pumpLineLabel,
+			Fluid:          "Recirculated Alkaline Scrubber Liquor",
+			From:           fr.ManualPumpType,
+			To:             fmt.Sprintf("Elevated %.0f L %s @ %.1f ft (3.5 m)", fr.GravityTankLiters, prof.tankBrand, fr.TankElevationFt),
+			SizeIn:         1.0,
+			Material:       `1" Class-D PVC / HDPE Riser Pipe Strapped to Tank Stand`,
+			FlowGPM:        round2(math.Max(fr.SprayFlowGPM, 9.2)), // ~35 L/min intermittent treadle burst rate
+			PressurePSI:    pumpPressure,
+			ValvesFittings: "Swing Check Valve, Union, Stand Pipe Clamps",
+			Notes: func() string {
+				if p.ZeroElectricity {
+					return fmt.Sprintf("Closed-loop manual lift: pump %.1f min/hr on treadle/hand pump (or carry %d × 20L jerrycans/hr) to keep overhead gravity tank topped up.", fr.TreadleMinutesPerHr, fr.Jerrycans20LPerHr)
+				}
+				return "Automated 0.5 HP monoblock pump refill with overhead tank float/overflow bypass back to sump."
+			}(),
+		},
+		{
+			ID:             "P4",
+			Label:          "Gravity Tank Downcomer -> Brass/PVC Coarse Spray Rose (Quench + Stoneware Bed)",
+			Fluid:          "Gravity-Fed Alkaline Spray Liquor",
+			From:           fmt.Sprintf("Elevated %.0f L %s (%.2f PSI Gravity Head)", fr.GravityTankLiters, prof.tankBrand, fr.GravityHeadPSI),
+			To:             "Stage 1-2 Quench Rose & Stage 3 Wide Stoneware Bed Top Distributor",
+			SizeIn:         1.0,
+			Material:       `1" PVC / HDPE Gravity Downcomer + Brass/PVC Coarse Spray Rose`,
+			FlowGPM:        fr.SprayFlowGPM,
+			PressurePSI:    fr.GravityHeadPSI,
+			ValvesFittings: "Full-Port PVC Throttle Ball Valve, Cleanout Tee, Removable Spray Rose",
+			Notes:          fmt.Sprintf("Delivers %.2f L/min (%.2f GPM) at %.2f PSI gravity head — large 3-4 mm spray-rose holes resist plugging from ash or local alkali slurry.", fr.SprayFlowLPM, fr.SprayFlowGPM, fr.GravityHeadPSI),
+		},
+		{
+			ID:             "P5",
+			Label:          "Gravity Brick Channel Return & Cool-Down Sump Cleanout Drain",
+			Fluid:          "Cooled Neutralized Brine Effluent (<=140 F, pH 6.5-8.5)",
+			From:           "Stage 1 Quench Base & Stage 3 Stoneware Tower Base -> Brick Sump -> Drain",
+			To:             "Settling Bucket / Ash Filter -> Approved Neutralized Disposal",
+			SizeIn:         2.0,
+			Material:       `2" Glazed Clay / PVC Gravity Return Channel + Sump Drain Plug/Valve`,
+			FlowGPM:        round2(fr.SprayFlowGPM + 1.0),
+			PressurePSI:    1.0,
+			ValvesFittings: "Sloped Masonry Return Weir, 2\" Drain Valve, Stem Thermometer & Litmus pH Check",
+			Notes:          "Cool sump <=140 F (60 C), confirm pH 6.5-8.5 with litmus strips & SG < 1.105 for multi-firing reuse, and strain wood ash before draining.",
+		},
+	}
+
+	pumpHP := 0.0
+	pumpVolt := 0
+	if !p.ZeroElectricity {
+		pumpHP = 0.5
+		pumpVolt = urban.Electrical.RequiredVoltage
+		if pumpVolt <= 0 {
+			pumpVolt = 230
+		}
+	}
+	pumpStation := PumpStationSpec{
+		Location:          fmt.Sprintf("Beside Plastered Brick Baffled Sump below %.1f ft Overhead Tank Stand", fr.TankElevationFt),
+		PumpType:          fr.ManualPumpType,
+		FlowGPM:           fr.SprayFlowGPM,
+		HeadFt:            round1(fr.TankElevationFt + 3.5),
+		HP:                pumpHP,
+		Voltage:           pumpVolt,
+		SuctionSizeIn:     1.25,
+		DischargeSizeIn:   1.0,
+		Strainer:          "Woven Cloth / Coarse Mesh Foot-Valve Basket in Baffled Sump Clean Chamber",
+		BackflowPreventer: `Engineered >=1" Open Air-Gap Top Fill into Overhead Gravity Tank (Zero Direct Pressurized Connection)`,
+		DrainSpec:         "Cool Sump <=140 F (60 C) + Litmus pH 6.5-8.5 Check + Ash Settling Before Disposal",
+	}
+
+	bracing := []BracingMember{
+		{
+			ID:         "B1",
+			Component:  "Reinforced Masonry Footing & Slab Pad",
+			MemberSpec: `150 mm (6") Concrete Slab / Compacted Stone Masonry Foundation`,
+			Mounting:   "Level Outdoor Grade w/ Perimeter Storm Drainage",
+			LoadLbs:    totalPadLbs,
+			AnchorSpec: "Continuous Mortar Bed & Footing Pads Under Brick Chambers & Tank Stand",
+			Notes:      fmt.Sprintf("Supports ~%.0f lbs combined wet masonry, stoneware packing, brick sump & chimney mass without differential settling.", totalPadLbs),
+		},
+		{
+			ID:         "B2",
+			Component:  "Concentric Firebrick Flue-Wall Recuperator & Quench Buckstays",
+			MemberSpec: `2"×2" Mild Steel Corner Angles + 1/2" Threaded Tie-Rods (or Buttressed Brick Piers)`,
+			Mounting:   "Perimeter Clamping Around Hot Firebrick Quench & Flue Wall",
+			LoadLbs:    quenchLbs,
+			AnchorSpec: "Spring-Tensioned Tie-Rods Allowing Brick Thermal Expansion at 2400 F",
+			Notes:      "Prevents mortar-joint hairline cracks from thermal expansion between the 2400 F flue inlet and concentric brick reheat wall.",
+		},
+		{
+			ID:         "B3",
+			Component:  "Wide Stoneware-Packed Masonry Tower & Heavy Ceramic Support Arch",
+			MemberSpec: `Double-Wythe Brick / Wire-Banded SWG Wall + Firebrick Arch Packing Grate`,
+			Mounting:   "Bonded Directly to Masonry Slab Footing",
+			LoadLbs:    towerWetLbs,
+			AnchorSpec: "External Galvanized Steel Banding Straps Every 600 mm Vertical",
+			Notes:      fmt.Sprintf("Carries %.0f lbs wet tower load (including ~%.0f lbs heavy potter-extruded stoneware rings @ ~46 lb/cu.ft. + water holdup).", towerWetLbs, ringCuFt*21.0/model.KgPerLb),
+		},
+		{
+			ID:         "B4",
+			Component:  fmt.Sprintf("Elevated %.0f L Overhead Gravity Tank Stand Bracing (3.5 m / 11.5 ft)", fr.GravityTankLiters),
+			MemberSpec: `4× 4"×4" Treated Hardwood/Steel Corner Posts + Full Diagonal X-Bracing + Bolted Deck Joists`,
+			Mounting:   "Anchored Concrete Pier Footings (450 mm Deep)",
+			LoadLbs:    tankWetLbs,
+			AnchorSpec: `4× Concrete Pier Footings + M12 Through-Bolts on All Diagonal X-Braces`,
+			Notes:      fmt.Sprintf("CRITICAL LIFE-SAFETY BRACING: Filled %.0f L %s weighs ~%.0f kg (%.0f lbs) at 3.5 m elevation — never mount on unbraced loose blocks or rotting poles!", fr.GravityTankLiters, prof.tankBrand, tankWetKg, tankWetLbs),
+		},
+		{
+			ID:         "B5",
+			Component:  fmt.Sprintf("Tall Brick / Terracotta Chimney Guy-Wires & Wall Ties (%.1f m / %.0f ft)", fr.ChimneyHeightM, fr.ChimneyHeightFt),
+			MemberSpec: `3-Way 6 mm Galvanized Steel Guy-Wires + Collar Bands Every 3 m (or Masonry Wall Ties)`,
+			Mounting:   "Turnbuckle Anchors into Concrete Deadmen / Adjacent Masonry Wall",
+			LoadLbs:    chimneyLbs,
+			AnchorSpec: "Galvanized Masonry Collar Bands + Turnbuckles + Anchor Stakes",
+			Notes:      fmt.Sprintf("Stabilizes the %.1f m (%.0f ft) brick/SWG chimney against storm wind overturning and seismic lateral sway.", fr.ChimneyHeightM, fr.ChimneyHeightFt),
+		},
+	}
+
+	var acoustics []AcousticZone
+	if p.ZeroElectricity {
+		acoustics = []AcousticZone{
+			{
+				ID:             "S1",
+				Location:       "Natural Chimney Buoyancy & Gravity Water Trickle (Zero Electric Blower)",
+				Treatment:      "Inherently Whisper-Quiet Passive Ceramic Operation (No Silencer Needed)",
+				Material:       "Thick Firebrick / Masonry Acoustic Mass Walls",
+				ThicknessIn:    4.5,
+				AttenuationDBA: 0.0,
+				Notes:          fmt.Sprintf("Zero rotating blower machinery: ~%.1f dBA at 3 ft (gentle water trickle) -> %.1f dBA at %.0f ft property line.", urban.Noise.BareDBA3Ft, urban.Noise.PropertyLineDBA, urban.Noise.PropertyLineFt),
+			},
+		}
+	} else {
+		acoustics = []AcousticZone{
+			{
+				ID:             "S1",
+				Location:       "Local 0.5 HP Domestic Monoblock Pump & Low-dP Assist Fan",
+				Treatment:      "Rubber Anti-Vibration Pad + Simple Masonry Wind Screen",
+				Material:       "Recycled Tire Rubber Pad + Brick Baffle Wall",
+				ThicknessIn:    1.0,
+				AttenuationDBA: round1(math.Max(0.0, urban.Noise.BareDBA3Ft-urban.Noise.SilencedDBA3Ft)),
+				Notes:          fmt.Sprintf("Quiet local hybrid operation: %.1f dBA bare -> %.1f dBA at %.0f ft property line.", urban.Noise.BareDBA3Ft, urban.Noise.PropertyLineDBA, urban.Noise.PropertyLineFt),
+			},
+		}
+	}
+	treated3Ft := urban.Noise.BareDBA3Ft
+	if !p.ZeroElectricity && p.IncludeSilencer {
+		treated3Ft = urban.Noise.SilencedDBA3Ft
+	}
+	acousticSummary := AcousticSummary{
+		BareDBA3Ft:        urban.Noise.BareDBA3Ft,
+		TreatedDBA3Ft:     treated3Ft,
+		PropertyLineDBA:   urban.Noise.PropertyLineDBA,
+		PropertyLineFt:    urban.Noise.PropertyLineFt,
+		TotalReductionDBA: round1(math.Max(0.0, urban.Noise.BareDBA3Ft-treated3Ft)),
+	}
+
+	propMinFt := 10.0
+	if p.VaporGlazeMode == VaporGlazeSalt || design.PackedBed.HClOutletPPM > 0 {
+		propMinFt = 30.0
+	}
+
+	necDepth := 0.0
+	necWidth := 0.0
+	wiringNote := `0V / OFF-GRID (Zero Electricity): No electrical panel, VFD, or NEC 110.26 working clearance required. Maintain >=36" hot-flue clearance to combustibles (NFPA 211), >=36" service aisle around brick cleanouts & treadle pump, and inspect braced overhead gravity tank stand before every firing.`
+	if !p.ZeroElectricity {
+		necDepth = 36.0
+		necWidth = 30.0
+		wiringNote = `Local Hybrid Power (~520 W): Mount weatherproof RCD/GFCI isolator switch in clear view of the 0.5 HP 230V 50Hz domestic pump and low-dP fan with >=36" unobstructed dry access.`
+	}
+
+	return ShopPlan{
+		Title:            fmt.Sprintf("Local Ceramic Shop Plan (%s) — %s (%.1f cu.ft.)", prof.label, p.StudioName, design.Input.KilnVolumeCuFt),
+		BuildPath:        BuildPathLocalCeramic,
+		IsDeluxe:         false,
+		StageAlignment:   "passive_masonry_buoyancy",
+		PackedBedLayout:  "wide_masonry_stoneware_bed",
+		VenturiLayout:    "terracotta_baffle_quench",
+		CompactFootprint: p.CompactFootprint,
+		OverallLengthIn:  overallLenIn,
+		OverallWidthIn:   overallWidthIn,
+		OverallHeightIn:  overallHeightIn,
+		Parts:            parts,
+		CutList:          cutList,
+		Clearances: PlanClearances{
+			FlueToCombustiblesIn: 36.0,
+			PropertyLineMinFt:    propMinFt,
+			StackAboveRoofFt:     math.Max(6.0, round1(fr.ChimneyHeightFt-10.0)),
+			ServiceAisleIn:       36.0,
+			NECPanelDepthIn:      necDepth,
+			NECPanelWidthIn:      necWidth,
+			PumpServiceIn:        24.0,
+			CleanoutSwingIn:      24.0,
+			HoseBendRadiusIn:     6.0,
+			WiringAccessNote:     wiringNote,
+		},
+		Electrical:      electrical,
+		Plumbing:        plumbing,
+		PumpStation:     pumpStation,
+		Bracing:         bracing,
+		Acoustics:       acoustics,
+		AcousticSummary: acousticSummary,
+		DeluxeSpec:      buildDeluxeSpec(p, design, cots, urban),
 	}
 }

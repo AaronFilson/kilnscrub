@@ -25,6 +25,7 @@ type StudioEvaluation struct {
 	ArchitectureOptions   ArchitectureOptionsResult `json:"architecture_options"`
 	Recirculation         RecirculationPlan         `json:"recirculation"`
 	ShopPlan              ShopPlan                  `json:"shop_plan"`
+	Frugal                *FrugalAssessment         `json:"frugal,omitempty"`
 	BuildGuideMD          string                    `json:"build_guide_md"`
 	OperationsChecklistMD string                    `json:"operations_checklist_md"`
 }
@@ -67,6 +68,7 @@ func (e *Evaluator) Evaluate(project StudioProject) (StudioEvaluation, error) {
 		return StudioEvaluation{}, fmt.Errorf("studio design: %w", err)
 	}
 
+	frugal := EvaluateFrugal(project, design)
 	cots := BuildCOTSSummary(project, design)
 	archOpts := EvaluateArchitectureOptions(project, design, cots)
 	recirc := BuildRecirculationPlan(project, design, cots)
@@ -81,6 +83,7 @@ func (e *Evaluator) Evaluate(project StudioProject) (StudioEvaluation, error) {
 		ArchitectureOptions: archOpts,
 		Recirculation:       recirc,
 		ShopPlan:            shopPlan,
+		Frugal:              frugal,
 	}
 	eval.BuildGuideMD = GenerateBuildGuide(eval)
 	eval.OperationsChecklistMD = GenerateOperationsChecklist(eval)
@@ -276,7 +279,16 @@ func buildPacketReadme(eval StudioEvaluation) []byte {
 	fmt.Fprintf(&b, "Winter Plume:     ~%.0f ft bare -> ~%.0f ft with %.0f CFM squirrel-cage HV diluter (reheat for 0 ft: %.1f kW)\n",
 		eval.Urban.Plume.BarePlumeLengthFt, eval.Urban.Plume.DilutedPlumeLengthFt,
 		eval.Urban.Plume.DilutionCFMNeeded, eval.Urban.Plume.DilutionReheatKW)
-	fmt.Fprintf(&b, "Bulk Baking Soda: %s\n\n", eval.Urban.Drain.BulkPackagingLabel)
+	fmt.Fprintf(&b, "Bulk Baking Soda: %s\n", eval.Urban.Drain.BulkPackagingLabel)
+	if eval.Frugal != nil && eval.Frugal.Enabled {
+		fmt.Fprintf(&b, "Local Ceramic:    %s | Zero-Electricity=%v (%.0f W) | Chimney=%.1f m (%.3f inWC avail vs %.3f inWC req)\n",
+			eval.Frugal.RegionLabel, eval.Frugal.ZeroElectricity, eval.Frugal.PowerWatts,
+			eval.Frugal.ChimneyHeightM, eval.Frugal.AvailableDraftInWC, eval.Frugal.RequiredDraftInWC)
+		fmt.Fprintf(&b, "Local Cost/Chem:  %s | Alkali=%s (%s): %.2f kg/firing | Capture: %.1f%% HCl / %.0f%% submicron NaCl\n",
+			eval.Frugal.LocalCurrencyEstimate, eval.Frugal.AlkaliName, eval.Frugal.AlkaliFormula,
+			eval.Frugal.AlkaliKgPerFiring, eval.Frugal.HClRemovalPct, eval.Frugal.SubmicronNaClCapturePct)
+	}
+	b.WriteString("\n")
 
 	b.WriteString("FILES INCLUDED IN THIS PACKET\n")
 	b.WriteString("-----------------------------\n")

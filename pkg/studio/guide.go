@@ -109,6 +109,13 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 		b.WriteString("- MIG/TIG structural welder for `2\"×2\"×3/16\"` steel forklift skid + diagonal K-bracing, rotary hammer drill (`1/2\"` masonry bit) for stainless concrete wedge anchors\n")
 		b.WriteString("- Acoustic fabrication tools for `2\"` Rockwool Safe'n'Sound panels + perforated metal inner liner + baffled TEFC motor cooling-air labyrinth\n")
 		b.WriteString("- Digital multimeter, clamp ammeter, megohmmeter (for VFD motor insulation check), dBA sound level meter, and brine hydrometer (`SG 1.000–1.200`)\n\n")
+	case BuildPathLocalCeramic:
+		b.WriteString("**Build Path: Local Ceramic & Masonry (`local_ceramic_masonry`)** — designed for Nairobi, Mumbai, and local pottery studios using fired firebrick, IS 651 salt-glazed stoneware (SWG) pipes, potter-extruded stoneware Raschig rings, terracotta baffles, an elevated HDPE gravity tank, and manual treadle/hand pumping (or a local 0.5 HP 230V 50Hz domestic pump):\n\n")
+		b.WriteString("- Masonry trowel, spirit level, plumb bob, mortar mixing tub, and firebrick / lime-sand refractory mortar\n")
+		b.WriteString("- Studio clay extruder (or hollow wooden dowel) + wire cutter to produce `1\"` unglazed grogged stoneware Raschig rings fired in your own kiln to Cone 6–10\n")
+		b.WriteString("- Hand saw, drill, wrenches, and M12 through-bolts for the **diagonally X-braced `3.5 m (11.5 ft)` overhead gravity tank stand** (`200–500 kg` water load!)\n")
+		b.WriteString("- Basic plumbing cutters & PVC/HDPE pipe fittings for the gravity downcomer, brass/PVC spray rose, foot valve, and drain valve\n")
+		b.WriteString("- `$10` brine hydrometer (`SG 1.000–1.200`), litmus pH test strips (`pH 1–14`), and mechanical bimetallic stem thermometer\n\n")
 	default:
 		b.WriteString("**Build Path: Rolled Sheet Metal & DXF Fabrication (`welded_dxf`)** — uses the exact flat patterns in `scrubber.dxf` and `shop_plan.json` for laser/plasma cutting and TIG welding:\n\n")
 		b.WriteString("- Send `scrubber.dxf` (units: **millimeters**) to a local CNC laser/waterjet shop for Stage 1–2 shells, venturi cones, and bolted flanges\n")
@@ -331,6 +338,58 @@ func GenerateBuildGuide(eval StudioEvaluation) string {
 		b.WriteString("- **Segregation & NEC 110.26 Sign-Off:** Route shielded VFD motor cable in dedicated LFMC **`>= 12\"`** away from `24VDC` NFPA 86 safety loop & RS-485 instrumentation conduit, and verify unobstructed **`36\"` depth × `30\"` width × `78\"` height** electrical working clearance (**NEC 110.26(A)**) plus **`24\"`** pump & cleanout door service swing.\n")
 	}
 
+	if p.IsLocalCeramic() {
+		fr := eval.Frugal
+		if fr == nil {
+			fr = EvaluateFrugal(p, d)
+		}
+		b.WriteString("\n## 7. Local Ceramic & Zero-Electricity Build + Manual Firing Guide\n\n")
+		fmt.Fprintf(&b, "> **Region:** %s | **Zero Electricity:** `%v` (`%.0f W`) | **Est. Local Cost:** %s | **Alkali:** %s (`%s`)\n\n",
+			fr.RegionLabel, fr.ZeroElectricity, fr.PowerWatts, fr.LocalCurrencyEstimate, fr.AlkaliName, fr.AlkaliFormula)
+		fmt.Fprintf(&b, "%s\n\n", fr.Summary)
+
+		b.WriteString("### 7.1 Firing Your Own Stoneware Raschig Rings & Terracotta Mist Baffles\n")
+		fmt.Fprintf(&b, "- **Packing Spec:** %s.\n", fr.PackingMaterial)
+		b.WriteString("- **Extrusion & Firing:** Wedge coarse grogged stoneware clay (15–20% sand/grog for thermal-shock immunity), extrude `1\" OD × 3/4\" ID` hollow tubes, slice to `1\"` lengths, dry slowly, and fire unglazed to **Cone 6–10** tucked into unused corners of normal studio firings.\n")
+		b.WriteString("- **Heavy Ceramic Support Arch:** Stoneware rings weigh `~46 lb/cu.ft.` (`~21 kg/cu.ft.`) — lay an open **firebrick arch grate** (or heavy stoneware kiln shelves with `1/2\"` gas slots) at the bottom of the wide masonry tower so the bed never sags.\n")
+		b.WriteString("- **Terracotta Chevron Baffles:** Slab-roll `3/8\"` unglazed terracotta strips and set 3 alternating 45° chevron tiers above the spray rose to knock down mist droplets at `<= 0.020 inWC` pressure drop.\n\n")
+
+		b.WriteString("### 7.2 Masonry Mortar Sealing, Concentric Flue Reheat & Zero-Meltdown Immunity\n")
+		fmt.Fprintf(&b, "- **Thermal Immunity:** %s\n", fr.ThermalImmunityNote)
+		fmt.Fprintf(&b, "- **Concentric Brick Flue-Wall Recuperator:** Build a gas-tight `65 mm` split-firebrick partition wall between the `%.0f F` kiln exit flue and the clean chimney riser so waste heat warms scrubbed gas back to **`%.0f F`** (`%.3f inWC` available draft vs `%.3f inWC` required, margin `%+.3f inWC`, feasible=`%v`). Point every masonry joint tightly with refractory clay/lime-sand mortar and smoke-test cold before first firing so raw flue gas never short-circuits past the packed bed.\n\n",
+			d.Input.PeakExitTempF, fr.StackReheatTempF, fr.AvailableDraftInWC, fr.RequiredDraftInWC, fr.DraftMarginInWC, fr.DraftFeasible)
+
+		b.WriteString("### 7.3 Elevated Overhead Gravity Tank Stand Bracing (200–500 kg Load)\n")
+		fmt.Fprintf(&b, "- Mount the **`%.0f L` (`%.0f gal`)** overhead HDPE gravity tank at **`%.1f ft` (`3.5 m`)** elevation (`%.2f PSI` static gravity head, `%.2f L/min` / `%.2f GPM` downcomer flow).\n",
+			fr.GravityTankLiters, fr.GravityTankGal, fr.TankElevationFt, fr.GravityHeadPSI, fr.SprayFlowLPM, fr.SprayFlowGPM)
+		fmt.Fprintf(&b, "- **CRITICAL STRUCTURAL BRACING:** Full of water, the tank weighs **`~%.0f kg` (`%.0f lbs`)** — build a 4-post treated hardwood or mild-steel stand on concrete pier footings with **full diagonal X-bracing on all 4 sides** and M12 through-bolts. Never stack loose dry bricks under an overhead water tank!\n\n",
+			fr.GravityTankLiters*1.05+22.0, (fr.GravityTankLiters*1.05+22.0)/0.45359237)
+
+		b.WriteString("### 7.4 Chimney Pre-Warming, Manual Pumping Cadence & Local Alkali Dosing\n")
+		fmt.Fprintf(&b, "- **Draft & Pumping Mechanism:** %s | **Pump:** %s\n", fr.DraftMechanism, fr.ManualPumpType)
+		if fr.ZeroElectricity {
+			fmt.Fprintf(&b, "- **Manual Pumping Budget:** Closed-loop recirculation at `%.2f L/min` requires **`%.1f minutes/hour`** on a treadle or cast-iron semi-rotary hand pump (or **`%d × 20L jerrycans/hour`**) during the active salting window.\n",
+				fr.SprayFlowLPM, fr.TreadleMinutesPerHr, fr.Jerrycans20LPerHr)
+		} else {
+			fmt.Fprintf(&b, "- **Local Hybrid Power (`%.0f W`):** Local `0.5 HP` 230V 50Hz domestic monoblock pump + low-dP fan automate recirculation and draft; if grid power cuts out mid-firing, the elevated `%.0f L` gravity tank and all-ceramic body continue safely.\n",
+				fr.PowerWatts, fr.GravityTankLiters)
+		}
+		fmt.Fprintf(&b, "- **Local Alkali (`%s` / `%s`):** %s\n", fr.AlkaliName, fr.AlkaliFormula, fr.AlkaliLocalNote)
+		if fr.ScalingWarning != "" {
+			fmt.Fprintf(&b, "  - *Alkali Caution:* %s\n", fr.ScalingWarning)
+		}
+		fmt.Fprintf(&b, "- **Honest Capture Performance:** HCl acid gas **`%.1f%%`** | Coarse wood fly ash **`%.1f%%`** | Submicron NaCl fume **`%.0f%%`**. %s\n",
+			fr.HClRemovalPct, fr.CoarseAshCapturePct, fr.SubmicronNaClCapturePct, fr.SubmicronHonestNote)
+		b.WriteString("- **Manual Firing-Day Sequence:**\n")
+		for _, step := range fr.ManualSteps {
+			fmt.Fprintf(&b, "  - %s\n", step)
+		}
+		b.WriteString("\n### 7.5 Critical Safety Warnings (NO DIY Pressurized Steam Boilers!)\n")
+		for _, w := range fr.Warnings {
+			fmt.Fprintf(&b, "- **SAFETY WARNING:** %s\n", w)
+		}
+	}
+
 	return b.String()
 }
 
@@ -410,6 +469,25 @@ func GenerateOperationsChecklist(eval StudioEvaluation) string {
 		u.Drain.TargetDrainPH, u.Drain.TargetDrainPH)
 	b.WriteString("- [ ] **5-Minute Buffered / Fresh-Water Rinse:** Run clean tap water (or pH 8 buffered rinse in salt mode) through the pump, quench nozzles, and venturi manifold for 5 minutes so dried salt crystals do not seize the mag-drive impeller or clog orifices between firings.\n")
 	fmt.Fprintf(&b, "- [ ] **Log Maintenance:** Record firing hours and schedule next corrosion check (**%s**).\n", u.Corrosion.InspectionInterval)
+
+	if p.IsLocalCeramic() {
+		fr := eval.Frugal
+		if fr == nil {
+			fr = EvaluateFrugal(p, d)
+		}
+		b.WriteString("\n## 5. Local Ceramic & Zero-Electricity Field Operations Addendum\n\n")
+		fmt.Fprintf(&b, "- [ ] **Chimney Pre-Warming Before Salting:** Establish warm buoyancy draw (`%.1f m` chimney, target `>280 F` stack reheat -> `%.3f inWC` avail vs `%.3f inWC` req) before introducing the first salt charge.\n",
+			fr.ChimneyHeightM, fr.AvailableDraftInWC, fr.RequiredDraftInWC)
+		fmt.Fprintf(&b, "- [ ] **Overhead Gravity Tank & Stand Check:** Inspect all diagonal X-braces on the `3.5 m` stand (`~%.0f kg` filled load) and top up the `%.0f L` tank (`%.2f PSI` head) before high-fire.\n",
+			fr.GravityTankLiters*1.05+22.0, fr.GravityTankLiters, fr.GravityHeadPSI)
+		if fr.ZeroElectricity {
+			fmt.Fprintf(&b, "- [ ] **Manual Pumping Cadence (0 W Off-Grid):** Maintain `%.2f L/min` gravity spray via **`%.1f min/hr`** on the treadle/hand pump (or **`%d × 20L jerrycans/hr`**) during active salting.\n",
+				fr.SprayFlowLPM, fr.TreadleMinutesPerHr, fr.Jerrycans20LPerHr)
+		}
+		fmt.Fprintf(&b, "- [ ] **Local Alkali Dosing (`%s` / `%s`):** Stage **`%.2f kg` (`%.1f lbs`)** per firing and verify sump `pH 7.5 - 8.5` hourly with litmus strips.\n",
+			fr.AlkaliName, fr.AlkaliFormula, fr.AlkaliKgPerFiring, fr.AlkaliLbsPerFiring)
+		b.WriteString("- [ ] **Zero-Steam-Boiler Rule:** NEVER attempt to build a DIY pressurized steam boiler or steam-jet ejector on the kiln flue (lethal boiler explosion hazard).\n")
+	}
 
 	return b.String()
 }
