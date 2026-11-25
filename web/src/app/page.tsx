@@ -222,6 +222,8 @@ export default function KilnScrubDashboard() {
         isLocalCeramic={project?.build_path === "local_ceramic_masonry"}
         onExport={handleExport}
         onDownloadPacket={handleDownloadPacket}
+        onSaveJSON={handleSaveJSON}
+        onLoadJSON={handleLoadJSON}
       />
 
       {evalError && (
@@ -248,8 +250,6 @@ export default function KilnScrubDashboard() {
               project={project}
               onChange={setProject}
               onSelectPreset={handleSelectPreset}
-              onSaveJSON={handleSaveJSON}
-              onLoadJSON={handleLoadJSON}
               onApplyBudgetCombo={applyBudgetCombo}
               onApplyDeluxe={applyDeluxe}
               onApplyOffGrid={applyOffGrid}

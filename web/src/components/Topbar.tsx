@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 export type ActiveTab = "design" | "guide" | "control" | "plans";
 
@@ -14,6 +14,8 @@ interface TopbarProps {
   isLocalCeramic: boolean;
   onExport: (format: "stl" | "dxf" | "bom_csv" | "bom_md") => void;
   onDownloadPacket: () => void;
+  onSaveJSON: () => void;
+  onLoadJSON: (file: File) => void;
 }
 
 export function Topbar({
@@ -26,7 +28,24 @@ export function Topbar({
   isLocalCeramic,
   onExport,
   onDownloadPacket,
+  onSaveJSON,
+  onLoadJSON,
 }: TopbarProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [menuOpen]);
+
   return (
     <header className="topbar">
       <div className="brand">
@@ -35,9 +54,7 @@ export function Topbar({
         </div>
         <div>
           <div className="brand-title">kilnscrub</div>
-          <div className="brand-sub">
-            Studio Kiln Scrubber Designer · Single-Binary Embedded UI
-          </div>
+          <div className="brand-sub">Kiln Exhaust Scrubber Designer</div>
         </div>
       </div>
 
@@ -63,6 +80,16 @@ export function Topbar({
           Build &amp; Firing Guide
         </button>
         <button
+          id="tab-plans"
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "plans"}
+          className={`tab-btn ${activeTab === "plans" ? "active" : ""}`}
+          onClick={() => onSelectTab("plans")}
+        >
+          Shop Plans &amp; Cut Sheets
+        </button>
+        <button
           id="tab-control"
           type="button"
           role="tab"
@@ -76,63 +103,113 @@ export function Topbar({
           />
           Live Control &amp; Telemetry
         </button>
-        <button
-          id="tab-plans"
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "plans"}
-          className={`tab-btn ${activeTab === "plans" ? "active" : ""}`}
-          onClick={() => onSelectTab("plans")}
-        >
-          Shop Plans &amp; Cut Sheets
-        </button>
       </nav>
 
       <div className="topbar-actions">
         <button
           type="button"
-          className="btn btn-sm"
+          className="btn btn-sm btn-ghost"
           onClick={onToggleUnits}
-          title="Toggle Imperial (in/ft) vs Metric (mm/m) display units"
+          title="Switch between Imperial (in/ft) and Metric (mm/m)"
         >
-          Units: {units === "in" ? "in / ft" : "mm / m"}
+          {units === "in" ? "in / ft" : "mm / m"}
         </button>
-        {!isLocalCeramic && (
-          <>
-            <button
-              type="button"
-              className="btn btn-sm"
-              disabled={busy}
-              onClick={() => onExport("stl")}
-              title="Download baseline 3D assembly STL (mm)"
-            >
-              STL
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm"
-              disabled={busy}
-              onClick={() => onExport("dxf")}
-              title="Download unfolded R12 DXF cut sheets (mm)"
-            >
-              DXF
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm"
-              disabled={busy}
-              onClick={() => onExport("bom_csv")}
-            >
-              BOM CSV
-            </button>
-          </>
-        )}
+
+        <div className="popover-wrap" ref={menuRef}>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-expanded={menuOpen}
+          >
+            Export &amp; Files ▾
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,application/json"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onLoadJSON(f);
+              e.target.value = "";
+            }}
+          />
+          {menuOpen && (
+            <div className="popover-menu" role="menu">
+              <div className="popover-label">Project File</div>
+              <button
+                type="button"
+                className="popover-item"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onSaveJSON();
+                }}
+              >
+                <span>Save project.json</span>
+              </button>
+              <button
+                type="button"
+                className="popover-item"
+                onClick={() => {
+                  setMenuOpen(false);
+                  fileInputRef.current?.click();
+                }}
+              >
+                <span>Load project.json</span>
+              </button>
+              {!isLocalCeramic && (
+                <>
+                  <div className="popover-sep" />
+                  <div className="popover-label">CAD &amp; Parts Export</div>
+                  <button
+                    type="button"
+                    className="popover-item"
+                    disabled={busy}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onExport("stl");
+                    }}
+                  >
+                    <span>3D Assembly Mesh</span>
+                    <span className="pill">STL</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="popover-item"
+                    disabled={busy}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onExport("dxf");
+                    }}
+                  >
+                    <span>Unfolded Sheet Cut Patterns</span>
+                    <span className="pill">DXF</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="popover-item"
+                    disabled={busy}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onExport("bom_csv");
+                    }}
+                  >
+                    <span>Bill of Materials</span>
+                    <span className="pill">CSV</span>
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
         <button
           type="button"
           className="btn btn-sm btn-primary"
           disabled={busy}
           onClick={onDownloadPacket}
-          title="Download tailored Build Packet (.zip)"
+          title="Download complete tailored Build Packet (.zip) with guides, BOM & plans"
         >
           Build Packet (.zip)
         </button>
