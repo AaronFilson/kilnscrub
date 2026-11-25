@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go 1.24.x
         uses: actions/setup-go@v5
@@ -139,7 +139,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go 1.24.x
         uses: actions/setup-go@v5
@@ -193,7 +193,7 @@ jobs:
             ext: '.exe'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go 1.24.x
         uses: actions/setup-go@v5
