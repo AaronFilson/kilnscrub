@@ -221,7 +221,7 @@ jobs:
           ls -lh "dist/${bin_name}" dist/SHA256SUMS.txt
 
       - name: Upload binary and checksum artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: kilnscrub-${{ matrix.goos }}-${{ matrix.goarch }}
           path: |
