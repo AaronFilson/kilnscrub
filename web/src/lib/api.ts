@@ -68,6 +68,7 @@ export function reconcileProject(proj: StudioProject): StudioProject {
     next.local_draft_mode = "natural_chimney";
     next.local_boiler_source = "dedicated_hearth";
     next.local_pump_mode = "manual_treadle";
+    next.local_afterburner = false;
     if (next.available_voltage === 0) {
       next.available_voltage = 240;
     }
@@ -75,6 +76,8 @@ export function reconcileProject(proj: StudioProject): StudioProject {
     if (next.zero_electricity) {
       next.available_voltage = 0;
       next.include_plume_diluter = false;
+    } else if (next.available_voltage === 0) {
+      next.available_voltage = 230;
     }
     const isSteam =
       next.local_draft_mode === "steam_ejector_subsonic" ||

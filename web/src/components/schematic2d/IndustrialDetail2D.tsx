@@ -224,7 +224,11 @@ export function IndustrialDetail2D({
         2D P&amp;ID &amp; CUTAWAY — {project.studio_name.toUpperCase()} ({project.build_path.toUpperCase()} · {isHeavyAlloy ? "C-276 / FRP" : "316L / CPVC"})
       </text>
       <text x="1134" y="32" textAnchor="end" fill="#7dd3fc" fontSize="10" fontFamily="monospace">
-        ENVELOPE: {fmt(arch.footprint_length_ft, 1)} ft L × {fmt(arch.footprint_width_ft, 1)} ft W × {fmt(design.envelope.height_m / 0.3048, 1)} ft H · {isEductor ? "POSITIVE +inWC EDUCTOR" : "NEGATIVE -inWC ID SUCTION"}
+        ENVELOPE:{" "}
+        {units === "in"
+          ? `${fmt(arch.footprint_length_ft, 1)} ft L × ${fmt(arch.footprint_width_ft, 1)} ft W × ${fmt(design.envelope.height_m / 0.3048, 1)} ft H`
+          : `${fmt(arch.footprint_length_ft * 0.3048, 2)} m L × ${fmt(arch.footprint_width_ft * 0.3048, 2)} m W × ${fmt(design.envelope.height_m, 2)} m H`}{" "}
+        · {isEductor ? "POSITIVE +inWC EDUCTOR" : "NEGATIVE -inWC ID SUCTION"}
       </text>
 
       {/* Structural Steel Skid Deck Line (y = 398) */}

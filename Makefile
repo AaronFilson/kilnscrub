@@ -10,7 +10,7 @@ PKG := ./cmd/kilnscrub
 VERSION ?= $(shell git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: help web-install web-build build build-full test vet fmt fmt-check check coverage coverage-branch smoke packet-smoke release-all release-archives clean
+.PHONY: help web-install web-build build build-full test vet fmt fmt-check check coverage coverage-branch smoke packet-smoke e2e-live e2e-cypress release-all release-archives clean
 
 help: ## Show available make targets
 	@echo "kilnscrub Makefile targets:"
@@ -27,6 +27,8 @@ help: ## Show available make targets
 	@echo "  coverage-branch   Run atomic race tests and enforce Line (>=85%) & AST Branch (>=72%) coverage"
 	@echo "  smoke             Build and run CLI design, export, and daemon smoke checks"
 	@echo "  packet-smoke      Build and verify CLI presets & Build Packet .zip export"
+	@echo "  e2e-live          Build binary and run Node live-server E2E decision-tree walkthrough"
+	@echo "  e2e-cypress       Run Cypress headless browser E2E suite against live kilnscrub ui"
 	@echo "  release-all       Cross-compile all 5 static binaries and SHA256SUMS.txt to $(DIST_DIR)/"
 	@echo "  release-archives  Build packaged release archives (.tar.gz/.zip) + SHA256SUMS.txt"
 	@echo "  clean             Remove $(BINARY), bin/, $(DIST_DIR)/, and coverage.out"
@@ -97,6 +99,17 @@ packet-smoke: build ## Run CLI presets and Build Packet zip smoke verification
 		python3 -m zipfile -t "$$tmp_dir/packet.zip"; \
 	fi; \
 	echo "Packet smoke check passed: presets and packet.zip verified."
+
+e2e-live: build ## Run zero-dependency Node live-server E2E decision-tree walkthrough
+	node --test e2e/live_trees.test.mjs
+
+e2e-cypress: build ## Run Cypress browser E2E decision-tree suite against live kilnscrub ui
+	@set -euo pipefail; \
+	./$(BINARY) ui --addr 127.0.0.1:8888 >/tmp/kilnscrub-e2e.log 2>&1 & \
+	srv_pid=$$!; \
+	trap 'kill $$srv_pid 2>/dev/null || true' EXIT; \
+	for i in $$(seq 1 30); do curl -sf http://127.0.0.1:8888/api/health >/dev/null && break; sleep 0.25; done; \
+	npx --yes cypress@13 run --config-file e2e/cypress.config.mjs
 
 release-all: ## Cross-compile static binaries for all 5 targets to dist/
 	@mkdir -p $(DIST_DIR)

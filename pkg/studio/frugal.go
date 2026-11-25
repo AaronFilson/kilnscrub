@@ -1206,7 +1206,7 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 		powerWatts = 0.0
 		draftMechanism = fmt.Sprintf(
 			"Natural Chimney Buoyancy + Concentric Brick Flue-Wall Thermal Reheat (%.0f F stack, %.1f m / %.1f ft brick chimney at %s) + %.3f inWC gravity-spray downflow assist — 0 W electric.",
-			stackReheatF, chimneyM, chimneyM*3.28084, prof.elevationNote, gravityAssist,
+			stackReheatF, chimneyM, model.Meters(chimneyM).Feet(), prof.elevationNote, gravityAssist,
 		)
 	} else {
 		// Local-grid / 12V solar hybrid: shorter 4.5 m ceramic/SWG chimney + local low-dP fan + 0.5 HP 230V 50Hz pump.
@@ -1223,14 +1223,15 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 		powerWatts = 520.0 // 370 W (0.5 HP 230V 50Hz domestic monoblock pump) + 150 W local low-dP fan
 		draftMechanism = fmt.Sprintf(
 			"Local Low-dP 12V Solar / 230V Jua-Kali Draft Fan (1.80 inWC) + %.1f m (%.1f ft) Ceramic Chimney + 0.5 HP 230V 50Hz Domestic Monoblock Pump (~%.0f W total).",
-			chimneyM, chimneyM*3.28084, powerWatts,
+			chimneyM, model.Meters(chimneyM).Feet(), powerWatts,
 		)
 	}
 
-	chimneyFt := round1(chimneyM * 3.28084)
+	chimneyFt := round1(model.Meters(chimneyM).Feet())
+	const litersPerUSGal = model.CubicMetersPerUSGallon * 1000.0 // exact 3.785411784 L / US gal
 
 	// Phase 13/14: Energy-conserved Boiler Heat Source calculations (both Stage 1 options + 20 psig LP coil)
-	qEvapKW := math.Max(15.0, design.Quench.EvaporatedWaterGPM*3.785411784/60.0*2260.0)
+	qEvapKW := math.Max(15.0, design.Quench.EvaporatedWaterGPM*litersPerUSGal/60.0*2260.0)
 	boilerSourceLabel := "Dedicated Firebox / Separate Wood or LPG Burner"
 	boilerWaterSavedPct := 0.0
 	boilerFuelSavedNote := ""
@@ -1271,7 +1272,7 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 	} else if design.Input.KilnVolumeCuFt >= 40.0 {
 		tankLiters = 490.0
 	}
-	tankGal := round1(tankLiters / 3.785411784)
+	tankGal := round1(tankLiters / litersPerUSGal)
 	tankElevFt := 11.5 // 3.5 m braced brick/timber stand
 	gravityHeadPSI := round2(tankElevFt * 0.4335)
 
@@ -1281,7 +1282,7 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 		evapGPM = design.Quench.TotalSprayWaterGPM / 3.0
 	}
 	sprayFlowGPM := round2(math.Max(1.05, math.Min(2.20, evapGPM*1.55+0.45)))
-	sprayFlowLPM := round2(sprayFlowGPM * 3.78541)
+	sprayFlowLPM := round2(sprayFlowGPM * litersPerUSGal)
 
 	var manualPumpType string
 	var jerrycansPerHr int
@@ -1325,7 +1326,7 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 		steam.steamWaterLHr = round1(steam.steamFlowKgHr)
 		recomputeSteamThermal()
 		totalHourlyLiters := sprayFlowLPM*60.0 + steam.steamWaterLHr
-		evapMakeupLitersHr := evapGPM*3.78541*60.0 + steam.steamWaterLHr
+		evapMakeupLitersHr := evapGPM*litersPerUSGal*60.0 + steam.steamWaterLHr
 		jerrycansPerHr = int(math.Ceil(math.Max(0.0, totalHourlyLiters-evapMakeupLitersHr) / 20.0))
 		treadleMinPerHr = round1(math.Max(0.0, totalHourlyLiters-evapMakeupLitersHr) / 35.0)
 		pumpEngNote = fmt.Sprintf("Low-cost gunmetal/316L steam-jet liquid syphon + bronze boiler feed injector lifts COLD fresh makeup water (<120 F / 49 C) from a dedicated cold makeup drum to the 3.5 m tank and feeds the pressurized boiler automatically (~%.1f kg/hr intermittent steam). NEVER feed hot recirculating sump liquor (>120 F) into a condensing steam syphon — keep manual/PPCP return for hot sump.", pumpSteamKgHr)
@@ -1344,7 +1345,7 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 		bedDPInWC = 0.150     // 1.4 m horizontal co-current drenched stoneware Raschig-ring trough
 		sumpPoolDPInWC = 1.80 // 0.65 inWC surge-damped 0.5" S-vane skimmer + 1.15 inWC 2-stage ceramic sieve tray
 		reqDraftInWC = round3(kilnDraftReq + bedDPInWC + sumpPoolDPInWC + terracottaDemisterDPInWC)
-		evapMakeupLitersHr := evapGPM*3.78541*60.0 + steam.steamWaterLHr
+		evapMakeupLitersHr := evapGPM*litersPerUSGal*60.0 + steam.steamWaterLHr
 		jerrycansPerHr = int(math.Ceil(evapMakeupLitersHr / 20.0))
 		treadleMinPerHr = 0.0
 		pumpEngNote = fmt.Sprintf("HIGH-CAPTURE ZERO-PUMP, ZERO-TOWER ARCHITECTURE (60 psig HP): Wide 2x barometric surge plenum + shallow 0.50\" S-vane skimmer in Pool #1 (0.65 inWC, damps kiln spyhole pulsing!) -> gravity-flooded sump-level 60 psig ejector at Pool #2 waterline (0\" suction lift — eliminates impossible dip-tube lift!) shears alkaline liquor into 15-30 um mist sweeping through a 1.4 m co-current drenched stoneware Raschig-ring trough (0.15 inWC) -> 2-stage shallow 0.5\"+0.5\" perforated ceramic sieve trays (1.15 inWC) -> ~96.8%% HCl & ~78%% NaCl capture with 0 pumps, 0 water tower, and only ~%d x 20L ground-level makeup buckets/hr!", jerrycansPerHr)
