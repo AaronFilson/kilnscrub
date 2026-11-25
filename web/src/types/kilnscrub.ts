@@ -2,7 +2,19 @@ export interface DesignInput {
   kiln_volume_cu_ft: number;
   peak_exit_temp_f: number;
   salt_rate_lbs_per_hr: number;
-  fuel_type: "wood_salt" | "wood" | "gas_salt" | "gas" | string;
+  fuel_type:
+    | "wood_salt"
+    | "wood"
+    | "gas_salt"
+    | "gas"
+    | "coal_salt"
+    | "coal"
+    | "peat_salt"
+    | "peat"
+    | "biomass_ag_salt"
+    | "biomass_ag"
+    | string;
+  fuel_sulfur_pct?: number;
   excess_air_fraction: number;
   ambient_temp_k?: number;
   ambient_pressure_pa?: number;
@@ -31,10 +43,22 @@ export interface StudioProject {
     | "local_ceramic_masonry"
     | string;
   zero_electricity: boolean;
-  local_region: "nairobi" | "mumbai" | "general_local" | string;
+  local_region:
+    | "nairobi"
+    | "mumbai"
+    | "kathmandu"
+    | "lagos_accra"
+    | "tonala_puebla"
+    | "cusco_andes"
+    | "khurja_dhaka"
+    | "cairo_fez"
+    | "highland_peat"
+    | "general_local"
+    | string;
   local_alkali:
     | "soda_ash"
     | "slaked_lime"
+    | "trona_kanwa"
     | "wood_ash_lye"
     | "baking_soda"
     | string;
@@ -47,6 +71,7 @@ export interface StudioProject {
   local_boiler_source?:
     | "dedicated_hearth"
     | "kiln_exhaust_coil"
+    | "stage1_feedwater_preheater"
     | "stage1_water_jacket"
     | string;
   local_pump_mode?:
@@ -55,6 +80,7 @@ export interface StudioProject {
     | "steam_jet_syphon"
     | "sump_pool_no_pump"
     | string;
+  local_afterburner?: boolean;
   deluxe_condensing_reclaimer?: boolean;
   deluxe_variable_throat_vfd?: boolean;
   deluxe_stage1_heat_recovery?: boolean;
@@ -179,6 +205,10 @@ export interface ScrubberDesign {
     hcl_inlet_ppm: number;
     hcl_outlet_ppm: number;
     hcl_removal_efficiency: number;
+    so2_inlet_ppm?: number;
+    so2_outlet_ppm?: number;
+    so2_removal_efficiency?: number;
+    sulfur_acid_dew_point_f?: number;
     nahco3_consumption_kg_hr: number;
     recirculation_flow_gpm: number;
     sump_ph: number;
@@ -519,6 +549,16 @@ export interface FrugalAssessment {
   sump_pool_submergence_in?: number;
   sump_pool_dp_inwc?: number;
   pump_engineering_note?: string;
+  ambient_pressure_kpa?: number;
+  elevation_note?: string;
+  fuel_type?: string;
+  so2_inlet_ppm?: number;
+  so2_removal_pct?: number;
+  sulfur_acid_dew_point_f?: number;
+  afterburner_enabled?: boolean;
+  afterburner_note?: string;
+  tar_mitigation_note?: string;
+  regional_machinery_note?: string;
 }
 
 export interface ShopPlan {

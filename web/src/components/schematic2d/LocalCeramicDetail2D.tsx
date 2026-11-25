@@ -157,6 +157,22 @@ export function LocalCeramicDetail2D({
           REFRACTORY FLUE ({Math.round(design.input.peak_exit_temp_f)}°F)
         </text>
 
+        {/* Stage 0 Passive Secondary-Air Masonry Tar Afterburner (Phase 16) */}
+        {(project.local_afterburner || fr?.afterburner_enabled) && (
+          <g>
+            <rect x="64" y="178" width="66" height="44" rx="2" fill="rgba(234,88,12,0.28)" stroke="#f59e0b" strokeWidth="1.8" />
+            <line x1="78" y1="180" x2="78" y2="220" stroke="#fbbf24" strokeWidth="2.5" strokeDasharray="5 3" />
+            <line x1="96" y1="180" x2="96" y2="220" stroke="#fbbf24" strokeWidth="2.5" strokeDasharray="5 3" />
+            <line x1="114" y1="180" x2="114" y2="220" stroke="#fbbf24" strokeWidth="2.5" strokeDasharray="5 3" />
+            {/* Secondary air inlet ports */}
+            <path d="M 86 238 L 86 222" stroke="#38bdf8" strokeWidth="1.8" markerEnd="url(#lArrGas)" />
+            <path d="M 106 238 L 106 222" stroke="#38bdf8" strokeWidth="1.8" markerEnd="url(#lArrGas)" />
+            <text x="97" y="250" textAnchor="middle" fill="#fde68a" fontSize="7.4" fontWeight="700" fontFamily="monospace">
+              STAGE 0: 2° AIR TAR BURNER (&gt;750°C · 0W)
+            </text>
+          </g>
+        )}
+
         {/* Optional Kiln Exhaust Monotube Coil (20 psig LP ONLY) */}
         {isSteam && boilerSrc === "kiln_exhaust_coil" && (
           <g>

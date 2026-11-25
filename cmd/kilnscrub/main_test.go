@@ -380,7 +380,7 @@ func TestRunErrorCases(t *testing.T) {
 		{name: "unknown subcommand", args: []string{"bogus"}},
 		{name: "design invalid volume", args: []string{"design", "--kiln-volume", "-5"}},
 		{name: "design positive draft", args: []string{"design", "--draft", "0.10"}},
-		{name: "design invalid fuel", args: []string{"design", "--fuel", "coal"}},
+		{name: "design invalid fuel", args: []string{"design", "--fuel", "plutonium"}},
 		{name: "design invalid hcl removal", args: []string{"design", "--hcl-removal", "1.5"}},
 		{name: "design unexpected arg", args: []string{"design", "extra"}},
 		{name: "export invalid peak temp", args: []string{"export", "--peak-temp", "50"}},

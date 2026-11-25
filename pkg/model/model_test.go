@@ -159,7 +159,7 @@ func TestDefaultsAndValidation(t *testing.T) {
 		t.Error("expected validation error for PackingFactor=-10")
 	}
 
-	for _, ft := range []string{"", FuelWoodSalt, FuelWood, FuelGasSalt, FuelGas} {
+	for _, ft := range []string{"", FuelWoodSalt, FuelWood, FuelGasSalt, FuelGas, FuelCoalSalt, FuelCoal, FuelPeatSalt, FuelPeat, FuelBiomassAgSalt, FuelBiomassAg} {
 		okFuel := in
 		okFuel.FuelType = ft
 		if err := okFuel.Validate(); err != nil {
@@ -167,7 +167,7 @@ func TestDefaultsAndValidation(t *testing.T) {
 		}
 	}
 	bad = in
-	bad.FuelType = "coal"
+	bad.FuelType = "plutonium"
 	if err := bad.Validate(); err == nil {
 		t.Error("expected validation error for unknown FuelType")
 	}

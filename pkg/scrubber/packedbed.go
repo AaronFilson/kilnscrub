@@ -175,12 +175,43 @@ func SizePackedBed(
 		hclEff = 0.999999
 	}
 
-	// HCl mass balance and NaHCO3 reagent consumption (HCl + NaHCO3 -> NaCl + H2O + CO2).
+	// HCl & SO2 mass balance and combined NaHCO3 reagent consumption:
+	//   HCl + NaHCO3 -> NaCl + H2O + CO2        (1.0 mol NaHCO3 / mol HCl)
+	//   SO2 + 2 NaHCO3 -> Na2SO3 + H2O + 2 CO2  (2.0 mol NaHCO3 / mol SO2)
+	// SO2 absorption has mixed gas/liquid-film resistance in buffered pH 7.5-8.5 liquor
+	// (HTU_SO2 ~ 1.45 * HTU_HCl -> ~95.8% SO2 removal on a 99% HCl packed bed).
 	hclInletPPM := quenchedGas.HCl * 1e6
 	hclOutletPPM := hclInletPPM * (1.0 - hclEff)
 	nHClIn := quenchedGas.MolarFlowMolPerSec * quenchedGas.HCl
 	nHClRemoved := nHClIn * hclEff
-	nahco3KgPerHr := nHClRemoved * nahco3ExcessFactor * nahco3MWKgPerMol * 3600.0
+
+	var so2InletPPM, so2OutletPPM, so2Eff, sulfurAcidDewF, nSO2Removed float64
+	nSO2In := quenchedGas.MolarFlowMolPerSec * quenchedGas.SO2
+	if quenchedGas.SO2 > 0 {
+		so2InletPPM = quenchedGas.SO2 * 1e6
+		ntuSO2 := ntuActual / 1.45
+		so2Eff = 1.0 - math.Exp(-ntuSO2)
+		if so2Eff > 0.995 {
+			so2Eff = 0.995
+		}
+		so2OutletPPM = so2InletPPM * (1.0 - so2Eff)
+		nSO2Removed = nSO2In * so2Eff
+
+		// Verhoff-Banchero (1974) sulfuric acid dew point [K] assuming 1.5% SO2->SO3 oxidation.
+		pTotalMmHg := float64(quenchedGas.Pressure) / 133.322368
+		pH2OMmHg := math.Max(1.0, quenchedGas.H2O*pTotalMmHg)
+		pSO3MmHg := math.Max(1e-5, 0.015*quenchedGas.SO2*pTotalMmHg)
+		lnH2O := math.Log(pH2OMmHg)
+		lnSO3 := math.Log(pSO3MmHg)
+		invT := 2.276 - 0.0294*lnH2O - 0.0858*lnSO3 + 0.0062*lnH2O*lnSO3
+		if invT > 1.5 && invT < 3.5 {
+			sulfurAcidDewF = model.Kelvin(1000.0 / invT).Fahrenheit()
+		} else {
+			sulfurAcidDewF = 285.0
+		}
+	}
+
+	nahco3KgPerHr := (nHClRemoved + 2.0*nSO2Removed) * nahco3ExcessFactor * nahco3MWKgPerMol * 3600.0
 
 	// Irrigated packing bed pressure drop using Sauter equivalent sphere diameter
 	// d_p,eq = 6*(1 - eps)/a_p (scaled from 207 m^2/m^3 for open PP Pall rings, or 185 m^2/m^3
@@ -234,6 +265,10 @@ func SizePackedBed(
 		HClInletPPM:              hclInletPPM,
 		HClOutletPPM:             hclOutletPPM,
 		HClRemovalEfficiency:     hclEff,
+		SO2InletPPM:              so2InletPPM,
+		SO2OutletPPM:             so2OutletPPM,
+		SO2RemovalEfficiency:     so2Eff,
+		SulfurAcidDewPointF:      sulfurAcidDewF,
 		NaHCO3ConsumptionKgPerHr: nahco3KgPerHr,
 		RecirculationFlow:        recircFlow,
 		RecirculationFlowGPM:     recircFlow.GPM(),
@@ -247,13 +282,14 @@ func SizePackedBed(
 		Material:                 packedBedMaterialSpec,
 	}
 
-	// Build outlet gas stream after HCl absorption (re-normalized mole fractions).
-	nOut := math.Max(quenchedGas.MolarFlowMolPerSec-nHClRemoved, 1e-12)
+	// Build outlet gas stream after HCl & SO2 absorption (re-normalized mole fractions).
+	nOut := math.Max(quenchedGas.MolarFlowMolPerSec-nHClRemoved-nSO2Removed, 1e-12)
 	nN2 := quenchedGas.MolarFlowMolPerSec * quenchedGas.N2
 	nCO2 := quenchedGas.MolarFlowMolPerSec * quenchedGas.CO2
 	nH2O := quenchedGas.MolarFlowMolPerSec * quenchedGas.H2O
 	nO2 := quenchedGas.MolarFlowMolPerSec * quenchedGas.O2
 	nHClOut := math.Max(0.0, nHClIn-nHClRemoved)
+	nSO2Out := math.Max(0.0, nSO2In-nSO2Removed)
 
 	outletGas := model.GasComposition{
 		N2:                 nN2 / nOut,
@@ -261,6 +297,7 @@ func SizePackedBed(
 		H2O:                nH2O / nOut,
 		O2:                 nO2 / nOut,
 		HCl:                nHClOut / nOut,
+		SO2:                nSO2Out / nOut,
 		MolarFlowMolPerSec: nOut,
 		Temperature:        quenchedGas.Temperature,
 		Pressure:           quenchedGas.Pressure,

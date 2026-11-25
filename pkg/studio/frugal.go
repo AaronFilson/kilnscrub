@@ -96,6 +96,18 @@ type FrugalAssessment struct {
 	SumpPoolSubmergenceIn float64 `json:"sump_pool_submergence_in,omitempty"`
 	SumpPoolDPInWC        float64 `json:"sump_pool_dp_inwc,omitempty"`
 	PumpEngineeringNote   string  `json:"pump_engineering_note,omitempty"`
+
+	// Phase 16 Global Urban Pottery Hubs, Coal/Peat/Ag-Biomass SO2 & Tar-Afterburner fields.
+	AmbientPressureKPa    float64 `json:"ambient_pressure_kpa,omitempty"`
+	ElevationNote         string  `json:"elevation_note,omitempty"`
+	FuelType              string  `json:"fuel_type,omitempty"`
+	SO2InletPPM           float64 `json:"so2_inlet_ppm,omitempty"`
+	SO2RemovalPct         float64 `json:"so2_removal_pct,omitempty"`
+	SulfurAcidDewPointF   float64 `json:"sulfur_acid_dew_point_f,omitempty"`
+	AfterburnerEnabled    bool    `json:"afterburner_enabled,omitempty"`
+	AfterburnerNote       string  `json:"afterburner_note,omitempty"`
+	TarMitigationNote     string  `json:"tar_mitigation_note,omitempty"`
+	RegionalMachineryNote string  `json:"regional_machinery_note,omitempty"`
 }
 
 func round3(v float64) float64 {
@@ -119,6 +131,8 @@ type localRegionProfile struct {
 	sodaAshUSDPerKg float64
 	limeUSDPerKg    float64
 	bakingUSDPerKg  float64
+	tronaUSDPerKg   float64
+	machineryNote   string
 }
 
 func resolveLocalRegionProfile(region string) localRegionProfile {
@@ -141,6 +155,155 @@ func resolveLocalRegionProfile(region string) localRegionProfile {
 			sodaAshUSDPerKg: 0.58,
 			limeUSDPerKg:    0.20,
 			bakingUSDPerKg:  0.85,
+			tronaUSDPerKg:   0.52,
+			machineryNote:   "Mumbai / Kumbharwada / Pune supply chain: Sintex HDPE tanks, IS 651 SWG vitrified pipes, Kirloskar monoblock pumps, Forbes Marshall PPCPs, and non-IBR (<=25 L) garment/catering baby boilers are manufactured domestically.",
+		}
+	case LocalRegionKathmandu:
+		return localRegionProfile{
+			id:              LocalRegionKathmandu,
+			label:           "Kathmandu / Bhaktapur Valley, Nepal (NPR)",
+			currencyCode:    "NPR",
+			fxPerUSD:        134.0,
+			ambientPa:       86200.0, // 1,350 m Himalayan valley bowl (~0.851 atm)
+			ambientTempK:    293.15,  // 20 C / 68 F valley ambient
+			elevationNote:   "1,350 m valley basin (86.2 kPa, 20 C / 68 F — winter PM2.5 inversion)",
+			tankBrand:       "Hilltake / Sintex Nepal HDPE Tank",
+			pumpBrand:       "Kirloskar / Local 0.5 HP Monoblock",
+			treadleLabel:    "Cast-Iron Semi-Rotary Wing Pump / Treadle Pump",
+			pipeLocalSpec:   "Local Bhaktapur Kiln Firebricks & Terracotta/SWG Flue Rings",
+			costScale:       0.86,
+			ringCostPerCuFt: 4.2,
+			sodaAshUSDPerKg: 0.62,
+			limeUSDPerKg:    0.22,
+			bakingUSDPerKg:  0.92,
+			tronaUSDPerKg:   0.58,
+			machineryNote:   "Kathmandu / Thimi / Bhaktapur pottery quarters: severe bowl-inversion PM2.5 makes smoke/tar abatement urgent during straw, rice-husk, wood & coal-dust firings. Hilltake HDPE tanks, brick masonry, catering momo/hotel steamers (6 psig), and cheap Chuna slaked lime are ubiquitous locally.",
+		}
+	case LocalRegionLagosAccra:
+		return localRegionProfile{
+			id:              LocalRegionLagosAccra,
+			label:           "Lagos / Abeokuta & Accra, West Africa (NGN)",
+			currencyCode:    "NGN",
+			fxPerUSD:        1550.0,
+			ambientPa:       101325.0,
+			ambientTempK:    304.15, // 31 C / 88 F humid tropical coastal ambient
+			elevationNote:   "sea level humid tropical (101.3 kPa, 31 C / 88 F)",
+			tankBrand:       "Geepee / Polytank HDPE Overhead Tank",
+			pumpBrand:       "Pedrollo / Local 0.5 HP & Solar DC Pump",
+			treadleLabel:    "Cast-Iron Semi-Rotary Wing / Foot Treadle Pump",
+			pipeLocalSpec:   "Local Laterite/Firebrick Masonry & Glazed Stoneware Flue Liners",
+			costScale:       0.94,
+			ringCostPerCuFt: 5.0,
+			sodaAshUSDPerKg: 0.68,
+			limeUSDPerKg:    0.30,
+			bakingUSDPerKg:  1.15,
+			tronaUSDPerKg:   0.38, // Abundant Lake Chad Kanwa / Trona!
+			machineryNote:   "Lagos / Abeokuta / Accra: chronic grid blackouts & high diesel generator cost make 0 W passive/steam-jet operation critical. Palm Kernel Shells (PKS) provide high-calorific fuel (~17 MJ/kg) with heavy stoking smoke; Lake Chad Trona/Kanwa (Na2CO3·NaHCO3·2H2O) is sold cheaply in every market as a zero-scaling local alkali, paired with Geepee/Polytank HDPE tanks.",
+		}
+	case LocalRegionTonalaPuebla:
+		return localRegionProfile{
+			id:              LocalRegionTonalaPuebla,
+			label:           "Tonalá (Guadalajara) & Puebla, Mexico (MXN)",
+			currencyCode:    "MXN",
+			fxPerUSD:        18.0,
+			ambientPa:       83000.0, // ~1,650 m highland plateau (~0.819 atm)
+			ambientTempK:    296.15,  // 23 C / 73 F plateau ambient
+			elevationNote:   "1,650 m highland plateau (83.0 kPa, 23 C / 73 F)",
+			tankBrand:       "Rotoplas HDPE Tinaco Overhead Tank",
+			pumpBrand:       "Truper / Evans 0.5 HP Domestic Pump",
+			treadleLabel:    "Manual Cast-Iron Wing / Pedal Pump",
+			pipeLocalSpec:   "Ladrillo Refractario Firebrick & Kusakabe Secondary-Air Masonry",
+			costScale:       1.04,
+			ringCostPerCuFt: 6.0,
+			sodaAshUSDPerKg: 0.72,
+			limeUSDPerKg:    0.24,
+			bakingUSDPerKg:  1.05,
+			tronaUSDPerKg:   0.42, // Natural Mexican Tequesquite / trona!
+			machineryNote:   "Tonalá & Puebla urban ceramics: strict SEMADET/municipal air-quality crackdowns target black smoke from wood, sawdust & waste-oil kilns. Rotoplas tinacos, ladrillo refractario, cheap cal hidratada / natural tequesquite trona, and Kusakabe secondary-air smoke-free masonry afterburner retrofits are widely available.",
+		}
+	case LocalRegionCuscoAndes:
+		return localRegionProfile{
+			id:              LocalRegionCuscoAndes,
+			label:           "Cusco / Altiplano, Peru & Bolivia (PEN)",
+			currencyCode:    "PEN",
+			fxPerUSD:        3.75,
+			ambientPa:       66800.0, // 3,400 m extreme high altitude (~0.659 atm — -34% air density!)
+			ambientTempK:    287.15,  // 14 C / 57 F highland ambient
+			elevationNote:   "3,400 m Andean Altiplano (66.8 kPa, 14 C / 57 F — -34% air density!)",
+			tankBrand:       "Rotoplas / Eternit Andes HDPE Tank",
+			pumpBrand:       "Pedrollo / Truper 0.5 HP Pump",
+			treadleLabel:    "Manual Cast-Iron Semi-Rotary / Pedal Pump",
+			pipeLocalSpec:   "Adobe-Jacketed Firebrick Masonry & Thrown Stoneware Flue Tiles",
+			costScale:       0.98,
+			ringCostPerCuFt: 5.2,
+			sodaAshUSDPerKg: 0.78,
+			limeUSDPerKg:    0.28,
+			bakingUSDPerKg:  1.10,
+			tronaUSDPerKg:   0.55,
+			machineryNote:   "Cusco / Raqch'i / Altiplano (3,400 m): thin 66.8 kPa air cuts natural chimney buoyancy by ~34% and expands flue volume by +52% (requiring a wider stoneware tower or 6-20 psig steam-jet ejector!). High-moisture Andean peat (turba) & dung (taquia) emit heavy phenolic tar & SO2, solved by the passive secondary-air masonry afterburner + cal hidratada.",
+		}
+	case LocalRegionKhurjaDhaka:
+		return localRegionProfile{
+			id:              LocalRegionKhurjaDhaka,
+			label:           "Khurja (Delhi NCR) & Dhaka Coal Pottery Hub (INR)",
+			currencyCode:    "INR",
+			fxPerUSD:        84.0,
+			ambientPa:       101325.0,
+			ambientTempK:    305.15, // 32 C / 90 F Indo-Gangetic plain ambient
+			elevationNote:   "sea level Indo-Gangetic plain (101.3 kPa, 32 C / 90 F)",
+			tankBrand:       "Sintex HDPE Overhead Tank",
+			pumpBrand:       "Kirloskar / Crompton / Forbes Marshall PPCP",
+			treadleLabel:    "Cast-Iron Semi-Rotary Wing Pump / Treadle Pump",
+			pipeLocalSpec:   "Refractory Alumina Firebrick, IS 651 SWG Pipes & Acid-Resistant Mortar",
+			costScale:       0.80,
+			ringCostPerCuFt: 4.0,
+			sodaAshUSDPerKg: 0.52,
+			limeUSDPerKg:    0.18,
+			bakingUSDPerKg:  0.80,
+			tronaUSDPerKg:   0.48,
+			machineryNote:   "Khurja (UP) & Dhaka stoneware clusters: dense coal-fired downdraft kilns burning 1.5-3.5% S Indian bituminous coal face strict NGT/CPCB smoke & SO2 mandates. Domestic non-IBR <=25 L baby boilers, Forbes Marshall steam PPCPs, Sintex tanks, IS 651 SWG pipes, and ultra-cheap Chuna lime ($0.18/kg) make 0 W coal-smoke + SO2/HCl scrubbing immediately buildable.",
+		}
+	case LocalRegionCairoFez:
+		return localRegionProfile{
+			id:              LocalRegionCairoFez,
+			label:           "Fustat (Old Cairo) & Fez (Ain Nokbi), MENA (EGP)",
+			currencyCode:    "EGP",
+			fxPerUSD:        49.0,
+			ambientPa:       101325.0,
+			ambientTempK:    305.15, // 32 C / 90 F arid urban ambient
+			elevationNote:   "sea level arid urban (101.3 kPa, 32 C / 90 F — water-scarce)",
+			tankBrand:       "Local UV-Stabilized HDPE Roof Tank",
+			pumpBrand:       "Calpeda / Local 0.5 HP Monoblock",
+			treadleLabel:    "Cast-Iron Semi-Rotary Wing Pump",
+			pipeLocalSpec:   "Local Kiln Firebrick & Hand-Thrown Glazed Terracotta SWG Flue Tiles",
+			costScale:       0.88,
+			ringCostPerCuFt: 4.5,
+			sodaAshUSDPerKg: 0.60,
+			limeUSDPerKg:    0.22,
+			bakingUSDPerKg:  0.90,
+			tronaUSDPerKg:   0.40, // Natural Wadi El Natrun natron/trona!
+			machineryNote:   "Fustat (Old Cairo) & Fez (Ain Nokbi): historic urban pottery quarters firing olive pomace (jift), sawdust & wood face neighborhood smoke bans under arid water-scarce conditions. Closed-loop baffled brick sumps, Wadi El Natrun natural natron/trona or cheap Gir slaked lime, and a passive secondary-air smoke-burner minimize both smoke and water use.",
+		}
+	case LocalRegionHighlandPeat:
+		return localRegionProfile{
+			id:              LocalRegionHighlandPeat,
+			label:           "Scottish Highlands / Rural Ireland / Boreal Peat (GBP)",
+			currencyCode:    "GBP",
+			fxPerUSD:        0.79,
+			ambientPa:       101325.0,
+			ambientTempK:    281.15, // 8 C / 46 F cool damp northern ambient
+			elevationNote:   "sea level cool maritime (101.3 kPa, 8 C / 46 F — strong chimney buoyancy)",
+			tankBrand:       "1,000 L Reclaimed Farm IBC Tote / Polypipe Tank",
+			pumpBrand:       "Manual Semi-Rotary Wing / 12V Solar Bilge Pump",
+			treadleLabel:    "Cast-Iron Semi-Rotary Wing Pump / Pedal Pump",
+			pipeLocalSpec:   "Firebrick Masonry & Vitrified Clay Salt-Glazed Flue Liners",
+			costScale:       1.28,
+			ringCostPerCuFt: 9.0,
+			sodaAshUSDPerKg: 0.95,
+			limeUSDPerKg:    0.42,
+			bakingUSDPerKg:  1.35,
+			tronaUSDPerKg:   0.85,
+			machineryNote:   "Scottish Highlands / West Ireland / Northern off-grid heritage kilns: air-dried peat/turf (~30% moisture, 0.5-1.5% S) & seaweed-salt firings emit dense phenolic/humic tar & SO2. Cool 8 C ambient air boosts natural chimney buoyancy dramatically; pair a hot refractory secondary-air tar afterburner with a tar-skimming weir, reclaimed farm IBC tote, and free wood-ash potash or agricultural lime.",
 		}
 	case LocalRegionGeneral:
 		return localRegionProfile{
@@ -160,6 +323,8 @@ func resolveLocalRegionProfile(region string) localRegionProfile {
 			sodaAshUSDPerKg: 0.80,
 			limeUSDPerKg:    0.35,
 			bakingUSDPerKg:  1.15,
+			tronaUSDPerKg:   0.65,
+			machineryNote:   "General off-grid / rural pottery build using local firebrick masonry, potter-extruded stoneware rings, HDPE gravity drum, semi-rotary hand pump, and commercial catering steamer or baby boiler.",
 		}
 	default: // LocalRegionNairobi
 		return localRegionProfile{
@@ -179,6 +344,8 @@ func resolveLocalRegionProfile(region string) localRegionProfile {
 			sodaAshUSDPerKg: 0.55,
 			limeUSDPerKg:    0.25,
 			bakingUSDPerKg:  1.10,
+			tronaUSDPerKg:   0.45, // Lake Magadi natural trona / soda ash!
+			machineryNote:   "Nairobi / East Africa supply chain: Kentank/Roto HDPE tanks, MoneyMaker treadle pumps, Davis & Shirtliff pumps, Lake Magadi soda ash/trona, and River Rd / Industrial Area catering steamers & KEBS baby boilers.",
 		}
 	}
 }
@@ -186,6 +353,10 @@ func resolveLocalRegionProfile(region string) localRegionProfile {
 func formatLocalCurrency(usd float64, prof localRegionProfile) string {
 	if prof.currencyCode == "USD" {
 		return fmt.Sprintf("~$%.0f USD", math.Round(usd))
+	}
+	if prof.fxPerUSD < 10.0 {
+		localAmt := math.Round((usd*prof.fxPerUSD)/10.0) * 10.0
+		return fmt.Sprintf("~%s %s (~$%.0f USD @ %.2f %s/USD)", prof.currencyCode, formatIntCommas(int(localAmt)), math.Round(usd), prof.fxPerUSD, prof.currencyCode)
 	}
 	localAmt := math.Round((usd*prof.fxPerUSD)/100.0) * 100.0
 	return fmt.Sprintf("~%s %s (~$%.0f USD @ %.0f %s/USD)", prof.currencyCode, formatIntCommas(int(localAmt)), math.Round(usd), prof.fxPerUSD, prof.currencyCode)
@@ -230,48 +401,89 @@ func computeLocalAlkali(p StudioProject, design model.ScrubberDesign, prof local
 	}
 
 	const (
-		mwNaClKgPerMol   = 0.0584428 // NaCl -> 1 mol HCl per mol NaCl
-		mwNa2CO3KgPerMol = 0.1059888 // 2 HCl + Na2CO3 -> 2 NaCl + H2O + CO2 (0.5 mol/mol HCl)
-		mwCaOH2KgPerMol  = 0.074093  // 2 HCl + Ca(OH)2 -> CaCl2 + 2 H2O (0.5 mol/mol HCl)
-		mwK2CO3KgPerMol  = 0.138205  // 2 HCl + K2CO3 -> 2 KCl + H2O + CO2 (0.5 mol/mol HCl)
-		mwNaHCO3KgPerMol = 0.0840066 // HCl + NaHCO3 -> NaCl + H2O + CO2 (1.0 mol/mol HCl)
+		mwNaClKgPerMol   = 0.0584428 // NaCl -> 1 mol HCl per mol NaCl (1 acid eq)
+		mwNa2CO3KgPerMol = 0.1059888 // 2 H+ + Na2CO3 -> 2 Na+ + H2O + CO2 (0.5 mol/eq; 1 mol/mol SO2)
+		mwCaOH2KgPerMol  = 0.074093  // 2 H+ + Ca(OH)2 -> Ca2+ + 2 H2O (0.5 mol/eq; 1 mol/mol SO2 = 1.16 kg/kg SO2)
+		mwK2CO3KgPerMol  = 0.138205  // 2 H+ + K2CO3 -> 2 K+ + H2O + CO2 (0.5 mol/eq; 1 mol/mol SO2)
+		mwNaHCO3KgPerMol = 0.0840066 // H+ + NaHCO3 -> Na+ + H2O + CO2 (1.0 mol/eq; 2 mol/mol SO2)
+		mwTronaKgPerMol  = 0.226026  // Na2CO3·NaHCO3·2H2O (Kanwa / Tequesquite / Natron: 3 H+ eq/mol -> 1/3 mol/eq; 2/3 mol/mol SO2!)
 		woodAshK2CO3Frac = 0.07      // ~7% extractable K2CO3 by mass from dry hardwood kiln ash
 	)
 
 	molHCl := saltKg / mwNaClKgPerMol
+	// Phase 16: Include SO2 acid equivalents across the full firing duration for coal, peat, and ag-biomass
+	// (0.85 firing-average load factor across ramp + soak; diprotic SO2 consumes 2 H+ equivalents per mol SO2).
+	molSO2 := 0.0
+	if design.InletGas.SO2 > 0 && design.InletGas.MolarFlowMolPerSec > 0 && p.FiringDurationHours > 0 {
+		molSO2 = design.InletGas.MolarFlowMolPerSec * design.InletGas.SO2 * 3600.0 * p.FiringDurationHours * 0.85
+	}
+	molAcidEq := molHCl + 2.0*molSO2
+	acidScope := fmt.Sprintf("%.1f-hr salting firing", saltingHrs)
+	if molSO2 > 0 && molHCl > 0 {
+		acidScope = fmt.Sprintf("combined HCl (%.1f-hr salting) + %.1f-hr fuel SO2 firing (%.0f ppm SO2)", saltingHrs, p.FiringDurationHours, design.PackedBed.SO2InletPPM)
+	} else if molSO2 > 0 {
+		acidScope = fmt.Sprintf("%.1f-hr coal/peat/biomass SO2 firing (%.0f ppm SO2, 0 salt)", p.FiringDurationHours, design.PackedBed.SO2InletPPM)
+	}
 
 	switch alkID {
 	case LocalAlkaliSlakedLime:
-		kg := round2(molHCl * 0.5 * mwCaOH2KgPerMol * 1.30)
+		kg := round2(molAcidEq * 0.5 * mwCaOH2KgPerMol * 1.30)
 		lbs := round1(kg / model.KgPerLb)
 		cost := round2(kg * prof.limeUSDPerKg)
-		note := fmt.Sprintf("Builder's slaked lime / Chuna (Ca(OH)2, 0.5 mol/mol HCl + 30%% margin): %.2f kg (%.1f lbs) per %.1f-hr salting firing. Lowest chemical cost in Mumbai & Nairobi hardware shops.", kg, lbs, saltingHrs)
-		if prof.id == LocalRegionMumbai {
-			note = fmt.Sprintf("Local Mumbai Chuna / hydrated lime (Ca(OH)2, 0.5 mol/mol HCl + 30%% margin): %.2f kg (%.1f lbs) per %.1f-hr salting firing (~INR %.0f/firing from any building-supply shop).", kg, lbs, saltingHrs, cost*prof.fxPerUSD)
+		note := fmt.Sprintf("Builder's slaked lime / Chuna / Cal hidratada (Ca(OH)2, 0.5 mol/HCl & 1.0 mol/SO2 + 30%% margin): %.2f kg (%.1f lbs) per %s. Lowest chemical cost locally.", kg, lbs, acidScope)
+		if prof.id == LocalRegionMumbai || prof.id == LocalRegionKhurjaDhaka {
+			note = fmt.Sprintf("Local Chuna / hydrated lime (Ca(OH)2, 0.5 mol/HCl & 1.0 mol/SO2 + 30%% margin): %.2f kg (%.1f lbs) per %s (~INR %.0f/firing from any building-supply shop).", kg, lbs, acidScope, cost*prof.fxPerUSD)
 		} else if prof.id == LocalRegionNairobi {
-			note = fmt.Sprintf("Nairobi builder's slaked lime / Chokaa (Ca(OH)2, 0.5 mol/mol HCl + 30%% margin): %.2f kg (%.1f lbs) per %.1f-hr salting firing (~KES %.0f/firing from local hardware yards).", kg, lbs, saltingHrs, cost*prof.fxPerUSD)
+			note = fmt.Sprintf("Nairobi builder's slaked lime / Chokaa (Ca(OH)2, 0.5 mol/HCl & 1.0 mol/SO2 + 30%% margin): %.2f kg (%.1f lbs) per %s (~KES %.0f/firing from local hardware yards).", kg, lbs, acidScope, cost*prof.fxPerUSD)
+		} else if prof.id == LocalRegionTonalaPuebla || prof.id == LocalRegionCuscoAndes {
+			note = fmt.Sprintf("Local Cal Hidratada (Ca(OH)2, 0.5 mol/HCl & 1.0 mol/SO2 + 30%% margin): %.2f kg (%.1f lbs) per %s (~%s %.0f/firing from any ferretería).", kg, lbs, acidScope, prof.currencyCode, cost*prof.fxPerUSD)
+		} else if prof.id == LocalRegionCairoFez {
+			note = fmt.Sprintf("Local Gir / hydrated lime (Ca(OH)2, 0.5 mol/HCl & 1.0 mol/SO2 + 30%% margin): %.2f kg (%.1f lbs) per %s (~EGP %.0f/firing).", kg, lbs, acidScope, cost*prof.fxPerUSD)
 		}
-		if molHCl <= 0 {
-			note = fmt.Sprintf("Zero HCl mode (%s): 0 kg slaked lime needed (optional 0.25 kg buffer keeps sump alkaline).", p.VaporGlazeMode)
+		if molAcidEq <= 0 {
+			note = fmt.Sprintf("Zero HCl/SO2 mode (%s): 0 kg slaked lime needed (optional 0.25 kg buffer keeps sump alkaline).", p.VaporGlazeMode)
+		}
+		scaleWarn := "CaCO3 SCALING & SLURRY WARNING: Slaked lime has low water solubility (~1.7 g/L) — stir the sump continuously as a milk-of-lime slurry so lime does not settle dead on the bottom, and expect chalky CaCO3 scale from flue CO2 on the spray rose and upper stoneware rings (brush/vinegar-flush every 3-5 firings)."
+		if molSO2 > 0 {
+			scaleWarn += " COAL/PEAT CaSO3/GYPSUM SLUDGE NOTE: Neutralizing SO2 with Ca(OH)2 precipitates insoluble calcium sulfite/gypsum (CaSO3/CaSO4·2H2O) mud — use coarse >=1.5\" stoneware rings or removable ceramic louver plates and shovel settled gypsum sludge from Pool #1 between firings!"
 		}
 		return localAlkaliResult{
 			id:             LocalAlkaliSlakedLime,
-			name:           "Slaked Lime / Chuna",
+			name:           "Slaked Lime / Chuna / Cal",
 			formula:        "Ca(OH)2",
 			kgPerFiring:    kg,
 			lbsPerFiring:   lbs,
 			costUSD:        cost,
 			localNote:      note,
-			scalingWarning: "CaCO3 SCALING & SLURRY WARNING: Slaked lime has low water solubility (~1.7 g/L) — stir the sump continuously as a milk-of-lime slurry so lime does not settle dead on the bottom, and expect chalky CaCO3 scale from flue CO2 on the spray rose and upper stoneware rings (brush/vinegar-flush every 3-5 firings).",
+			scalingWarning: scaleWarn,
+		}
+
+	case LocalAlkaliTronaKanwa:
+		kg := round2(molAcidEq * (1.0 / 3.0) * mwTronaKgPerMol * 1.25)
+		lbs := round1(kg / model.KgPerLb)
+		cost := round2(kg * prof.tronaUSDPerKg)
+		note := fmt.Sprintf("Natural Trona / Kanwa / Tequesquite / Natron (Na2CO3·NaHCO3·2H2O, 3 eq/mol -> 0.33 mol/HCl & 0.67 mol/SO2 + 25%% margin): %.2f kg (%.1f lbs) per %s (~%s %.0f/firing). Mined regionally across Lake Chad, East African Rift, Wadi El Natrun & Mexico — highly soluble with ZERO CaCO3 or CaSO3 gypsum scaling!", kg, lbs, acidScope, prof.currencyCode, cost*prof.fxPerUSD)
+		if molAcidEq <= 0 {
+			note = fmt.Sprintf("Zero HCl/SO2 mode (%s): 0 kg Trona/Kanwa needed (optional 0.25 kg keeps sump buffered at pH 8.5).", p.VaporGlazeMode)
+		}
+		return localAlkaliResult{
+			id:             LocalAlkaliTronaKanwa,
+			name:           "Trona / Kanwa / Tequesquite",
+			formula:        "Na2CO3·NaHCO3·2H2O",
+			kgPerFiring:    kg,
+			lbsPerFiring:   lbs,
+			costUSD:        cost,
+			localNote:      note,
+			scalingWarning: "IMPURITY SCREENING NOTE: Natural market trona/kanwa/tequesquite often contains 5-15% insoluble lake-bed silt/clay — dissolve in a settling bucket and decant clear alkaline liquor into the overhead tank/sump so sand never wears the pump or plugs spray holes.",
 		}
 
 	case LocalAlkaliWoodAshLye:
-		pureK2CO3Kg := molHCl * 0.5 * mwK2CO3KgPerMol * 1.25
+		pureK2CO3Kg := molAcidEq * 0.5 * mwK2CO3KgPerMol * 1.25
 		dryAshKg := round1(pureK2CO3Kg / woodAshK2CO3Frac)
 		dryAshLbs := round1(dryAshKg / model.KgPerLb)
-		note := fmt.Sprintf("Potter's own wood-kiln ash leached in a 200L barrel (~7%% extractable K2CO3 -> %.1f kg / %.1f lbs dry hardwood ash yields %.2f kg K2CO3 for %.1f-hr salting at $0.00 chemical cost!).", dryAshKg, dryAshLbs, pureK2CO3Kg, saltingHrs)
-		if molHCl <= 0 {
-			note = fmt.Sprintf("Zero HCl mode (%s): 0 kg wood ash required (potter's own free wood-kiln ash provides mild pH 8-9 rinse water if desired).", p.VaporGlazeMode)
+		note := fmt.Sprintf("Potter's own wood-kiln ash leached in a 200L barrel (~7%% extractable K2CO3 -> %.1f kg / %.1f lbs dry hardwood ash yields %.2f kg K2CO3 for %s at $0.00 chemical cost!).", dryAshKg, dryAshLbs, pureK2CO3Kg, acidScope)
+		if molAcidEq <= 0 {
+			note = fmt.Sprintf("Zero HCl/SO2 mode (%s): 0 kg wood ash required (potter's own free wood-kiln ash provides mild pH 8-9 rinse water if desired).", p.VaporGlazeMode)
 		}
 		return localAlkaliResult{
 			id:             LocalAlkaliWoodAshLye,
@@ -285,12 +497,12 @@ func computeLocalAlkali(p StudioProject, design model.ScrubberDesign, prof local
 		}
 
 	case LocalAlkaliBakingSoda:
-		kg := round2(molHCl * 1.0 * mwNaHCO3KgPerMol * 1.25)
+		kg := round2(molAcidEq * 1.0 * mwNaHCO3KgPerMol * 1.25)
 		lbs := round1(kg / model.KgPerLb)
 		cost := round2(kg * prof.bakingUSDPerKg)
-		note := fmt.Sprintf("Bulk sodium bicarbonate (NaHCO3, 1.0 mol/mol HCl + 25%% margin): %.2f kg (%.1f lbs) per %.1f-hr salting firing. Gentlest handling (self-buffers near pH 8.3) with zero scaling.", kg, lbs, saltingHrs)
-		if molHCl <= 0 {
-			note = fmt.Sprintf("Zero HCl mode (%s): 0 kg baking soda needed.", p.VaporGlazeMode)
+		note := fmt.Sprintf("Bulk sodium bicarbonate (NaHCO3, 1.0 mol/HCl & 2.0 mol/SO2 + 25%% margin): %.2f kg (%.1f lbs) per %s. Gentlest handling (self-buffers near pH 8.3) with zero scaling.", kg, lbs, acidScope)
+		if molAcidEq <= 0 {
+			note = fmt.Sprintf("Zero HCl/SO2 mode (%s): 0 kg baking soda needed.", p.VaporGlazeMode)
 		}
 		return localAlkaliResult{
 			id:             LocalAlkaliBakingSoda,
@@ -304,17 +516,17 @@ func computeLocalAlkali(p StudioProject, design model.ScrubberDesign, prof local
 		}
 
 	default: // LocalAlkaliSodaAsh
-		kg := round2(molHCl * 0.5 * mwNa2CO3KgPerMol * 1.25)
+		kg := round2(molAcidEq * 0.5 * mwNa2CO3KgPerMol * 1.25)
 		lbs := round1(kg / model.KgPerLb)
 		cost := round2(kg * prof.sodaAshUSDPerKg)
-		note := fmt.Sprintf("Magadi Soda Ash / bulk washing soda (Na2CO3, 0.5 mol/mol HCl + 25%% margin): %.2f kg (%.1f lbs) per %.1f-hr salting firing — 37%% lighter than baking soda, highly soluble, zero CaCO3 scaling.", kg, lbs, saltingHrs)
+		note := fmt.Sprintf("Magadi Soda Ash / bulk washing soda (Na2CO3, 0.5 mol/HCl & 1.0 mol/SO2 + 25%% margin): %.2f kg (%.1f lbs) per %s — 37%% lighter than baking soda, highly soluble, zero CaCO3/CaSO3 scaling.", kg, lbs, acidScope)
 		if prof.id == LocalRegionNairobi {
-			note = fmt.Sprintf("Lake Magadi Soda Ash (Na2CO3, 0.5 mol/mol HCl + 25%% margin): %.2f kg (%.1f lbs) per %.1f-hr salting firing (~KES %.0f/firing — mined in Kenya, abundant in Nairobi industrial/soap supply depots, zero CaCO3 scaling).", kg, lbs, saltingHrs, cost*prof.fxPerUSD)
-		} else if prof.id == LocalRegionMumbai {
-			note = fmt.Sprintf("Bulk Mumbai Washing Soda / Soda Ash (Na2CO3, 0.5 mol/mol HCl + 25%% margin): %.2f kg (%.1f lbs) per %.1f-hr salting firing (~INR %.0f/firing from Crawford Market / chemical depots, highly soluble, zero scaling).", kg, lbs, saltingHrs, cost*prof.fxPerUSD)
+			note = fmt.Sprintf("Lake Magadi Soda Ash (Na2CO3, 0.5 mol/HCl & 1.0 mol/SO2 + 25%% margin): %.2f kg (%.1f lbs) per %s (~KES %.0f/firing — mined in Kenya, abundant in Nairobi industrial/soap supply depots, zero scaling).", kg, lbs, acidScope, cost*prof.fxPerUSD)
+		} else if prof.id == LocalRegionMumbai || prof.id == LocalRegionKhurjaDhaka {
+			note = fmt.Sprintf("Bulk Indian Washing Soda / Soda Ash (Na2CO3, 0.5 mol/HCl & 1.0 mol/SO2 + 25%% margin): %.2f kg (%.1f lbs) per %s (~INR %.0f/firing from local chemical depots, highly soluble, zero gypsum/CaCO3 scaling).", kg, lbs, acidScope, cost*prof.fxPerUSD)
 		}
-		if molHCl <= 0 {
-			note = fmt.Sprintf("Zero HCl mode (%s): 0 kg soda ash needed (optional 0.25 kg keeps sump mildly buffered at pH 8.0-8.5).", p.VaporGlazeMode)
+		if molAcidEq <= 0 {
+			note = fmt.Sprintf("Zero HCl/SO2 mode (%s): 0 kg soda ash needed (optional 0.25 kg keeps sump mildly buffered at pH 8.0-8.5).", p.VaporGlazeMode)
 		}
 		return localAlkaliResult{
 			id:             LocalAlkaliSodaAsh,
@@ -330,6 +542,7 @@ func computeLocalAlkali(p StudioProject, design model.ScrubberDesign, prof local
 }
 
 type localCeramicBOMBreakdown struct {
+	afterburnerUSD   float64
 	quenchChamberUSD float64
 	baffleZoneUSD    float64
 	masonryTowerUSD  float64
@@ -653,6 +866,12 @@ func computeLocalCeramicCosts(
 	ringCuFt := math.Max(4.0, math.Ceil(model.CubicMeters(bedVolM3).CuFt()))
 
 	quenchChamber := round2(110.0 * volScale * s)
+	afterburnerUSD := 0.0
+	if p.LocalAfterburner {
+		// Passive Secondary-Air Refractory Checkerwork Smoke-Burner / Tar-Cracking Throat (>750 C, 0 W)
+		// + removable Pool #1 tar-skimming weir & washable coarse ceramic louver plates.
+		afterburnerUSD = round2(95.0 * volScale * s)
+	}
 	baffleZone := round2(42.0 * volScale * s)
 	masonryTower := round2((70.0 + 2.2*bedDiaIn) * s)
 	stonewareRings := round2(ringCuFt * prof.ringCostPerCuFt)
@@ -738,12 +957,13 @@ func computeLocalCeramicCosts(
 	alkaliCost := round2(alkali.costUSD)
 
 	total := round2(
-		quenchChamber + baffleZone + masonryTower + stonewareRings + terracottaDem +
+		afterburnerUSD + quenchChamber + baffleZone + masonryTower + stonewareRings + terracottaDem +
 			brickSump + gravityTank + standBracing + pumpUSD + fanUSD + steamSystemUSD +
 			plumbing + chimneyUSD + instruments + alkaliCost,
 	)
 
 	return localCeramicBOMBreakdown{
+		afterburnerUSD:   afterburnerUSD,
 		quenchChamberUSD: quenchChamber,
 		baffleZoneUSD:    baffleZone,
 		masonryTowerUSD:  masonryTower,
@@ -838,8 +1058,13 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 	const (
 		quenchBaffleDPInWC       = 0.030
 		terracottaDemisterDPInWC = 0.020
+		afterburnerDPInWC        = 0.015 // Hot open firebrick checkerwork + secondary-air slot throat
 	)
-	reqDraftInWC := round3(kilnDraftReq + bedDPInWC + quenchBaffleDPInWC + terracottaDemisterDPInWC)
+	extraAfterburnerDP := 0.0
+	if p.LocalAfterburner {
+		extraAfterburnerDP = afterburnerDPInWC
+	}
+	reqDraftInWC := round3(kilnDraftReq + bedDPInWC + quenchBaffleDPInWC + terracottaDemisterDPInWC + extraAfterburnerDP)
 
 	// 3. Draft mechanism:
 	//   - Phase 10B/10C Steam-Jet Ejector (6 psig Subsonic, 20 psig LP, or 60 psig HP): compact 4.5-5.5 m
@@ -884,22 +1109,28 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 
 	if steam.steamEnabled {
 		// Steam-jet ejector eliminates the tall 8.5-12 m reheat chimney & ember hearth.
-		// Condensing stoneware tower exits cooled below local dew point (75-78 C sea level / 72-75 C Nairobi)
-		// to drive hygroscopic NaCl condensation nucleation — never exceeding local water boiling point.
+		// Condensing stoneware tower exits cooled below local dew point (and well below local
+		// altitude boiling point — e.g. 202.4 F at Nairobi 83.5 kPa, 192.0 F at Cusco 66.8 kPa).
 		condExitF := 172.0 // 77.8 C optimal condensing exit at sea level
-		if prof.id == LocalRegionNairobi {
-			condExitF = 166.0 // 74.4 C condensing exit at Nairobi 83.5 kPa (water boils 202.4 F)
+		if pAmb < 75000.0 {
+			condExitF = 156.0 // 68.9 C condensing exit at Cusco/Altiplano 66.8 kPa (water boils 192.0 F)
+		} else if pAmb < 92000.0 {
+			condExitF = 166.0 // 74.4 C condensing exit at Nairobi/Kathmandu/Tonalá 83-86 kPa
 		}
 		if draftMode == LocalDraftSteamEjectorSubsonic {
-			chimneyM = 5.2 // 17.1 ft compact sea-level / Mumbai stack
-			if prof.id == LocalRegionNairobi {
-				chimneyM = 5.5 // 18.0 ft compact highland stack at Nairobi 83.5 kPa
+			chimneyM = 5.2 // 17.1 ft compact sea-level stack
+			if pAmb < 75000.0 {
+				chimneyM = 6.0 // 19.7 ft high-altitude clearance at Cusco 66.8 kPa
+			} else if pAmb < 92000.0 {
+				chimneyM = 5.5 // 18.0 ft compact highland stack at 83-86 kPa
 			}
 		} else {
 			chimneyM = 4.5
-			if prof.id == LocalRegionNairobi && draftMode == LocalDraftSteamEjectorLP {
-				chimneyM = 5.0 // 16.4 ft highland clearance at Nairobi 83.5 kPa
-			} else if prof.id == LocalRegionNairobi {
+			if pAmb < 75000.0 {
+				chimneyM = 5.5 // 18.0 ft extreme-altitude clearance at Cusco 66.8 kPa
+			} else if pAmb < 92000.0 && draftMode == LocalDraftSteamEjectorLP {
+				chimneyM = 5.0 // 16.4 ft highland clearance at 83-86 kPa
+			} else if pAmb < 92000.0 {
 				chimneyM = 4.8 // 15.7 ft highland clearance for HP Hydro-Sonic jet
 			}
 		}
@@ -1135,11 +1366,29 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 	// 5. Local alkali stoichiometry.
 	alkali := computeLocalAlkali(p, design, prof)
 
-	// 6. Honest capture performance & zero-meltdown thermal immunity.
+	// 6. Honest capture performance, SO2 removal, tar cracking & zero-meltdown thermal immunity.
 	// Wide irrigated stoneware bed has long gas residence time (~3 s) -> high HCl absorption (95.5-98.0%).
 	htuM := 0.34 * math.Pow(math.Max(vSup, 0.20)/0.38, 0.22)
 	ntu := bedDepthM / htuM
 	hclPct := round1(math.Max(95.5, math.Min(98.0, (1.0-math.Exp(-ntu))*100.0)))
+	so2InletPPM := round1(design.PackedBed.SO2InletPPM)
+	sulfurAcidDewF := round1(design.PackedBed.SulfurAcidDewPointF)
+	so2RemovalPct := 0.0
+	if so2InletPPM > 0 {
+		// Alkaline wide stoneware bed achieves ~86-92% SO2 absorption (HTU_SO2 ~ 1.45 * HTU_HCl).
+		so2RemovalPct = round1(math.Max(85.0, math.Min(94.5, (1.0-math.Exp(-ntu/1.45))*100.0)))
+		if draftMode == LocalDraftSteamEjectorHP {
+			so2RemovalPct = round1(math.Min(95.0, so2RemovalPct+3.5))
+		}
+	}
+	afterburnerNote := ""
+	tarMitigationNote := ""
+	if p.LocalAfterburner {
+		afterburnerNote = "PASSIVE SECONDARY-AIR MASONRY SMOKE-BURNER / TAR AFTERBURNER ACTIVE (0 W): Refractory firebrick checkerwork throat immediately downstream of the kiln bagwall/flue admits preheated passive secondary air (>750 C), thermally cracking 70-85% of heavy coal/peat/PKS tar vapors & black soot BEFORE wet quenching (adds only 0.015 inWC draft loss; inspired by Tonalá/Kusakabe smokeless kilns)."
+		tarMitigationNote = "ANTI-TAR FOULING PACKAGE ACTIVE: Secondary-air afterburner + Pool #1 floating tar-skimming weir + washable coarse ceramic louver plates prevent sticky coal/peat creosote from blinding stoneware Raschig rings. Skim floating tar scum from Pool #1 after every firing and hot-alkali wash rings every 5-8 firings."
+	} else if model.IsSolidDirtyFuel(design.Input.FuelType) {
+		tarMitigationNote = fmt.Sprintf("HEAVY TAR & SOOT WARNING (%s without Afterburner): Raw coal, peat/turf, or ag-biomass smoke will rapidly coat wet ceramic rings with sticky creosote/phenolic tar! Enable Local Secondary-Air Masonry Smoke-Burner / Afterburner (+$%.0f, 0 W) to crack 70-85%% of tar thermally before Stage 1.", design.Input.FuelType, 95.0*prof.costScale)
+	}
 	coarseAshPct := 90.5
 	if bedDepthM >= 1.30 {
 		coarseAshPct = 92.5
@@ -1237,6 +1486,9 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 	}
 	if !zeroElec && !steam.steamEnabled {
 		localMaterials = append(localMaterials, fmt.Sprintf("Local Low-dP Draft Fan: 12V solar / 230V 50Hz jua-kali centrifugal/radiator fan (~$%.0f, 1.8 inWC static)", costs.fanUSD))
+	}
+	if p.LocalAfterburner {
+		localMaterials = append(localMaterials, fmt.Sprintf("Stage 0 Passive Secondary-Air Smoke-Burner & Tar Weir (~$%.0f): Refractory firebrick checkerwork afterburner throat (>750 C, 0 W) + Pool #1 tar-skimming weir & washable coarse ceramic anti-tar plates", costs.afterburnerUSD))
 	}
 
 	var manualSteps []string
@@ -1346,6 +1598,15 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 	if pumpMode == LocalPumpSumpPoolNoPump && !draftFeasible {
 		warnings = append(warnings, fmt.Sprintf("SUMP-POOL SUBMERGENCE DRAFT SHORTFALL: Submerged S-vane + sieve trays (%.2f inWC) push required draft (%.3f inWC) above %.0f psig ejector draft (%.3f inWC) — step up to 60 psig HP Steam-Jet.", sumpPoolDPInWC, reqDraftInWC, steam.pressurePSIG, availDraftInWC))
 	}
+	if so2InletPPM > 10.0 {
+		warnings = append(warnings, fmt.Sprintf("COAL/PEAT SULFUR (%.0f ppm SO2 in, %.1f%% alkaline capture) & H2SO4 DEW POINT (~%.0f F): Keep pre-quench flue masonry dry and hot (>%.0f F) so sulfuric acid mist never condenses onto metallic dampers, and maintain sump pH 7.5-8.5 continuously across the full %.1f-hr firing (not just during salting!).", so2InletPPM, so2RemovalPct, sulfurAcidDewF, sulfurAcidDewF+25.0, p.FiringDurationHours))
+	}
+	if !p.LocalAfterburner && model.IsSolidDirtyFuel(design.Input.FuelType) {
+		warnings = append(warnings, tarMitigationNote)
+	}
+	if pAmb < 75000.0 && !steam.steamEnabled && zeroElec {
+		warnings = append(warnings, fmt.Sprintf("EXTREME ALTITUDE BUOYANCY PENALTY (%.1f kPa / %s): Thin mountain air reduces natural chimney buoyancy by ~34%% and expands flue volume by +52%% — if natural chimney margin is tight, switch to 6 psig Subsonic or 20 psig LP Steam-Jet Ejector draft!", pAmb/1000.0, prof.elevationNote))
+	}
 
 	modeTag := "Local-Grid / 12V Solar Hybrid Ceramic Mode"
 	if steam.steamEnabled && powerWatts == 0 {
@@ -1443,6 +1704,16 @@ func EvaluateFrugal(project StudioProject, design model.ScrubberDesign) *FrugalA
 		SumpPoolSubmergenceIn:   sumpPoolSubIn,
 		SumpPoolDPInWC:          sumpPoolDPInWC,
 		PumpEngineeringNote:     pumpEngNote,
+		AmbientPressureKPa:      round1(pAmb / 1000.0),
+		ElevationNote:           prof.elevationNote,
+		FuelType:                design.Input.FuelType,
+		SO2InletPPM:             so2InletPPM,
+		SO2RemovalPct:           so2RemovalPct,
+		SulfurAcidDewPointF:     sulfurAcidDewF,
+		AfterburnerEnabled:      p.LocalAfterburner,
+		AfterburnerNote:         afterburnerNote,
+		TarMitigationNote:       tarMitigationNote,
+		RegionalMachineryNote:   prof.machineryNote,
 	}
 }
 
@@ -1702,6 +1973,19 @@ func buildLocalCeramicCOTSSummary(project StudioProject, design model.ScrubberDe
 			UnitCostUSD: sensorPart.UnitCostUSD,
 			WeightKg:    sensorPart.WeightKg,
 		},
+	}
+
+	if costs.afterburnerUSD > 0 {
+		items = append(items, model.BOMItem{
+			Category:    "Stage 0: Passive Masonry Tar Afterburner & Weir",
+			Name:        "Passive Secondary-Air Refractory Checkerwork Smoke-Burner Throat + Pool #1 Tar-Skimming Weir",
+			Material:    "Dense Alumina Firebrick Checkerwork + Secondary-Air Damper Bricks + Washable Coarse Ceramic Anti-Tar Louver Plates",
+			Quantity:    1,
+			Unit:        "assy",
+			Spec:        "[LOCAL-TAR-AFTERBURNER] Thermal tar-cracking throat (>750 C, 0 W, +0.015 inWC dP) cracks 70-85% of coal/peat/PKS black smoke & phenolic tars before Stage 1; paired with removable Pool #1 tar-skimming baffle.",
+			UnitCostUSD: costs.afterburnerUSD,
+			WeightKg:    135.0,
+		})
 	}
 
 	if frugal.SteamEnabled {

@@ -21,15 +21,23 @@ const (
 	BuildPathCustomFabDeluxe = "custom_fab_deluxe"
 	BuildPathLocalCeramic    = "local_ceramic_masonry"
 
-	// Phase 10 regional sourcing & local alkali constants.
-	LocalRegionNairobi = "nairobi"
-	LocalRegionMumbai  = "mumbai"
-	LocalRegionGeneral = "general_local"
+	// Phase 10 & Phase 16 regional sourcing & local alkali constants.
+	LocalRegionNairobi      = "nairobi"
+	LocalRegionMumbai       = "mumbai"
+	LocalRegionGeneral      = "general_local"
+	LocalRegionKathmandu    = "kathmandu"
+	LocalRegionLagosAccra   = "lagos_accra"
+	LocalRegionTonalaPuebla = "tonala_puebla"
+	LocalRegionCuscoAndes   = "cusco_andes"
+	LocalRegionKhurjaDhaka  = "khurja_dhaka"
+	LocalRegionCairoFez     = "cairo_fez"
+	LocalRegionHighlandPeat = "highland_peat"
 
 	LocalAlkaliSodaAsh    = "soda_ash"
 	LocalAlkaliSlakedLime = "slaked_lime"
 	LocalAlkaliWoodAshLye = "wood_ash_lye"
 	LocalAlkaliBakingSoda = "baking_soda"
+	LocalAlkaliTronaKanwa = "trona_kanwa"
 
 	// Phase 10B/10C local ceramic draft / zero-electricity steam-jet ejector mode constants.
 	LocalDraftNaturalChimney       = "natural_chimney"
@@ -141,6 +149,7 @@ type StudioProject struct {
 	LocalDraftMode            string            `json:"local_draft_mode,omitempty"`
 	LocalBoilerSource         string            `json:"local_boiler_source,omitempty"`
 	LocalPumpMode             string            `json:"local_pump_mode,omitempty"`
+	LocalAfterburner          bool              `json:"local_afterburner,omitempty"`
 	DeluxeCondensingReclaimer bool              `json:"deluxe_condensing_reclaimer,omitempty"`
 	DeluxeVariableThroatVFD   bool              `json:"deluxe_variable_throat_vfd,omitempty"`
 	DeluxeStage1HeatRecovery  bool              `json:"deluxe_stage1_heat_recovery,omitempty"`
@@ -404,6 +413,46 @@ func OffGridCeramicProject(region string) StudioProject {
 		p.LocalRegion = LocalRegionMumbai
 		p.LocalAlkali = LocalAlkaliSodaAsh
 		p.AmbientWinterF = 75.0
+	case LocalRegionKathmandu:
+		p.StudioName = "Kathmandu / Bhaktapur Valley Off-Grid Ceramic Studio"
+		p.LocalRegion = LocalRegionKathmandu
+		p.LocalAlkali = LocalAlkaliSlakedLime
+		p.AmbientWinterF = 44.0
+	case LocalRegionLagosAccra:
+		p.StudioName = "Lagos / Accra Off-Grid PKS & Ceramic Studio"
+		p.LocalRegion = LocalRegionLagosAccra
+		p.LocalAlkali = LocalAlkaliTronaKanwa
+		p.AmbientWinterF = 78.0
+	case LocalRegionTonalaPuebla:
+		p.StudioName = "Tonalá / Puebla Smoke-Free Highland Ceramic Studio"
+		p.LocalRegion = LocalRegionTonalaPuebla
+		p.LocalAlkali = LocalAlkaliTronaKanwa
+		p.LocalAfterburner = true
+		p.AmbientWinterF = 48.0
+	case LocalRegionCuscoAndes:
+		p.StudioName = "Cusco / Altiplano 3,400 m Peat & Ceramic Studio"
+		p.LocalRegion = LocalRegionCuscoAndes
+		p.LocalAlkali = LocalAlkaliSlakedLime
+		p.LocalAfterburner = true
+		p.AmbientWinterF = 38.0
+	case LocalRegionKhurjaDhaka:
+		p.StudioName = "Khurja / Dhaka Coal-Fired Ceramic Cluster Studio"
+		p.LocalRegion = LocalRegionKhurjaDhaka
+		p.LocalAlkali = LocalAlkaliSlakedLime
+		p.LocalAfterburner = true
+		p.AmbientWinterF = 54.0
+	case LocalRegionCairoFez:
+		p.StudioName = "Fustat Cairo / Fez Olive-Pomace Ceramic Studio"
+		p.LocalRegion = LocalRegionCairoFez
+		p.LocalAlkali = LocalAlkaliSlakedLime
+		p.LocalAfterburner = true
+		p.AmbientWinterF = 58.0
+	case LocalRegionHighlandPeat:
+		p.StudioName = "Highland / Boreal Peat-Fired Heritage Pottery Studio"
+		p.LocalRegion = LocalRegionHighlandPeat
+		p.LocalAlkali = LocalAlkaliWoodAshLye
+		p.LocalAfterburner = true
+		p.AmbientWinterF = 36.0
 	case LocalRegionGeneral:
 		p.StudioName = "Local Pottery Off-Grid Ceramic Wood-Salt Studio"
 		p.LocalRegion = LocalRegionGeneral
@@ -414,6 +463,32 @@ func OffGridCeramicProject(region string) StudioProject {
 		p.LocalRegion = LocalRegionNairobi
 		p.LocalAlkali = LocalAlkaliSodaAsh
 		p.AmbientWinterF = 65.0
+	}
+	return p.Normalize()
+}
+
+// GlobalUrbanSolidFuelProject returns a ready-to-evaluate Phase 16 Local Ceramic
+// studio project configured for a specific global urban region and solid fuel
+// (coal_salt, coal, peat_salt, peat, biomass_ag_salt, biomass_ag, etc.) with the
+// passive secondary-air masonry tar afterburner enabled.
+func GlobalUrbanSolidFuelProject(region, fuelType, draftMode string) StudioProject {
+	p := OffGridSteamCeramicProject(region, draftMode)
+	p.LocalAfterburner = true
+	fuel := strings.ToLower(strings.TrimSpace(fuelType))
+	if fuel == "" {
+		fuel = model.FuelCoalSalt
+	}
+	p.Input.FuelType = fuel
+	switch fuel {
+	case model.FuelCoal, model.FuelPeat, model.FuelBiomassAg, model.FuelWood, model.FuelGas:
+		p.VaporGlazeMode = VaporGlazeNone
+		p.Input.SaltRateLbsPerHr = 0.0
+		p.SaltingHours = 0.0
+	default:
+		p.VaporGlazeMode = VaporGlazeSalt
+		if p.Input.SaltRateLbsPerHr <= 0 {
+			p.Input.SaltRateLbsPerHr = 2.0
+		}
 	}
 	return p.Normalize()
 }
@@ -492,11 +567,12 @@ func (p StudioProject) EffectiveLocalPumpMode() string {
 	}
 }
 
-// EffectiveLocalRegion returns the canonical regional sourcing key ("nairobi",
-// "mumbai", or "general_local"), defaulting to "nairobi".
+// EffectiveLocalRegion returns the canonical regional sourcing key, defaulting to "nairobi".
 func (p StudioProject) EffectiveLocalRegion() string {
 	switch p.LocalRegion {
-	case LocalRegionMumbai, LocalRegionGeneral, LocalRegionNairobi:
+	case LocalRegionMumbai, LocalRegionGeneral, LocalRegionNairobi,
+		LocalRegionKathmandu, LocalRegionLagosAccra, LocalRegionTonalaPuebla,
+		LocalRegionCuscoAndes, LocalRegionKhurjaDhaka, LocalRegionCairoFez, LocalRegionHighlandPeat:
 		return p.LocalRegion
 	default:
 		return LocalRegionNairobi
@@ -504,10 +580,10 @@ func (p StudioProject) EffectiveLocalRegion() string {
 }
 
 // EffectiveLocalAlkali returns the canonical local alkali key ("soda_ash",
-// "slaked_lime", "wood_ash_lye", or "baking_soda"), defaulting to "soda_ash".
+// "slaked_lime", "wood_ash_lye", "baking_soda", or "trona_kanwa"), defaulting to "soda_ash".
 func (p StudioProject) EffectiveLocalAlkali() string {
 	switch p.LocalAlkali {
-	case LocalAlkaliSlakedLime, LocalAlkaliWoodAshLye, LocalAlkaliBakingSoda, LocalAlkaliSodaAsh:
+	case LocalAlkaliSlakedLime, LocalAlkaliWoodAshLye, LocalAlkaliBakingSoda, LocalAlkaliTronaKanwa, LocalAlkaliSodaAsh:
 		return p.LocalAlkali
 	default:
 		return LocalAlkaliSodaAsh
@@ -607,6 +683,12 @@ func (p StudioProject) EffectiveDesignInput() model.DesignInput {
 			in.FuelType = model.FuelGas
 		case model.FuelWoodSalt:
 			in.FuelType = model.FuelWood
+		case model.FuelCoalSalt:
+			in.FuelType = model.FuelCoal
+		case model.FuelPeatSalt:
+			in.FuelType = model.FuelPeat
+		case model.FuelBiomassAgSalt:
+			in.FuelType = model.FuelBiomassAg
 		}
 	case VaporGlazeSalt:
 		switch in.FuelType {
@@ -616,6 +698,12 @@ func (p StudioProject) EffectiveDesignInput() model.DesignInput {
 			in.FuelType = model.FuelWoodSalt
 		case model.FuelGas:
 			in.FuelType = model.FuelGasSalt
+		case model.FuelCoal:
+			in.FuelType = model.FuelCoalSalt
+		case model.FuelPeat:
+			in.FuelType = model.FuelPeatSalt
+		case model.FuelBiomassAg:
+			in.FuelType = model.FuelBiomassAgSalt
 		}
 	}
 	// Phase 8: Twin-fluid air-atomizing venturi nozzle produces 25 um SMD droplets,
@@ -701,16 +789,20 @@ func (p StudioProject) Validate() error {
 		}
 	}
 	switch p.LocalRegion {
-	case "", LocalRegionNairobi, LocalRegionMumbai, LocalRegionGeneral:
+	case "", LocalRegionNairobi, LocalRegionMumbai, LocalRegionGeneral,
+		LocalRegionKathmandu, LocalRegionLagosAccra, LocalRegionTonalaPuebla,
+		LocalRegionCuscoAndes, LocalRegionKhurjaDhaka, LocalRegionCairoFez, LocalRegionHighlandPeat:
 	default:
-		return fmt.Errorf("local_region must be %q, %q, or %q, got %q",
-			LocalRegionNairobi, LocalRegionMumbai, LocalRegionGeneral, p.LocalRegion)
+		return fmt.Errorf("local_region must be one of %q, %q, %q, %q, %q, %q, %q, %q, %q, or %q, got %q",
+			LocalRegionNairobi, LocalRegionMumbai, LocalRegionGeneral,
+			LocalRegionKathmandu, LocalRegionLagosAccra, LocalRegionTonalaPuebla,
+			LocalRegionCuscoAndes, LocalRegionKhurjaDhaka, LocalRegionCairoFez, LocalRegionHighlandPeat, p.LocalRegion)
 	}
 	switch p.LocalAlkali {
-	case "", LocalAlkaliSodaAsh, LocalAlkaliSlakedLime, LocalAlkaliWoodAshLye, LocalAlkaliBakingSoda:
+	case "", LocalAlkaliSodaAsh, LocalAlkaliSlakedLime, LocalAlkaliWoodAshLye, LocalAlkaliBakingSoda, LocalAlkaliTronaKanwa:
 	default:
-		return fmt.Errorf("local_alkali must be %q, %q, %q, or %q, got %q",
-			LocalAlkaliSodaAsh, LocalAlkaliSlakedLime, LocalAlkaliWoodAshLye, LocalAlkaliBakingSoda, p.LocalAlkali)
+		return fmt.Errorf("local_alkali must be %q, %q, %q, %q, or %q, got %q",
+			LocalAlkaliSodaAsh, LocalAlkaliSlakedLime, LocalAlkaliWoodAshLye, LocalAlkaliBakingSoda, LocalAlkaliTronaKanwa, p.LocalAlkali)
 	}
 	switch p.LocalDraftMode {
 	case "", LocalDraftNaturalChimney, LocalDraftSteamEjectorSubsonic, LocalDraftSteamEjectorLP, LocalDraftSteamEjectorHP:

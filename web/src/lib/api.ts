@@ -144,11 +144,17 @@ export function reconcileProject(proj: StudioProject): StudioProject {
     }
     if (next.input.fuel_type === "wood") next.input.fuel_type = "wood_salt";
     if (next.input.fuel_type === "gas") next.input.fuel_type = "gas_salt";
+    if (next.input.fuel_type === "coal") next.input.fuel_type = "coal_salt";
+    if (next.input.fuel_type === "peat") next.input.fuel_type = "peat_salt";
+    if (next.input.fuel_type === "biomass_ag") next.input.fuel_type = "biomass_ag_salt";
   } else {
     next.salting_hours = 0;
     next.input.salt_rate_lbs_per_hr = 0;
     if (next.input.fuel_type === "wood_salt") next.input.fuel_type = "wood";
     if (next.input.fuel_type === "gas_salt") next.input.fuel_type = "gas";
+    if (next.input.fuel_type === "coal_salt") next.input.fuel_type = "coal";
+    if (next.input.fuel_type === "peat_salt") next.input.fuel_type = "peat";
+    if (next.input.fuel_type === "biomass_ag_salt") next.input.fuel_type = "biomass_ag";
   }
 
   return next;

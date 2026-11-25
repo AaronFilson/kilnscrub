@@ -9,11 +9,43 @@ import (
 
 // Allowed FuelType identifiers for DesignInput.FuelType.
 const (
-	FuelWoodSalt = "wood_salt"
-	FuelWood     = "wood"
-	FuelGasSalt  = "gas_salt"
-	FuelGas      = "gas"
+	FuelWoodSalt      = "wood_salt"
+	FuelWood          = "wood"
+	FuelGasSalt       = "gas_salt"
+	FuelGas           = "gas"
+	FuelCoalSalt      = "coal_salt"
+	FuelCoal          = "coal"
+	FuelPeatSalt      = "peat_salt"
+	FuelPeat          = "peat"
+	FuelBiomassAgSalt = "biomass_ag_salt"
+	FuelBiomassAg     = "biomass_ag"
 )
+
+// IsSolidDirtyFuel reports whether fuelType is a Phase 16 high-sulfur or heavy-tar/ash
+// solid fuel (coal, peat/turf, or agricultural waste biomass such as PKS, olive pomace, or rice husks).
+func IsSolidDirtyFuel(fuelType string) bool {
+	switch fuelType {
+	case FuelCoal, FuelCoalSalt, FuelPeat, FuelPeatSalt, FuelBiomassAg, FuelBiomassAgSalt:
+		return true
+	default:
+		return false
+	}
+}
+
+// DefaultFuelSulfurPct returns the representative as-fired sulfur mass percentage [% S]
+// for a fuel type when FuelSulfurPct is left at 0 (auto).
+func DefaultFuelSulfurPct(fuelType string) float64 {
+	switch fuelType {
+	case FuelCoal, FuelCoalSalt:
+		return 2.0 // Representative Indian/bituminous kiln coal (Khurja, Bát Tràng, UK/EU: 1.5-3.0% S)
+	case FuelPeat, FuelPeatSalt:
+		return 0.8 // Representative air-dried peat / turf / Andean turba (0.4-1.4% S)
+	case FuelBiomassAg, FuelBiomassAgSalt:
+		return 0.25 // Palm kernel shells (PKS), olive pomace (jift), rice husks (0.15-0.35% S)
+	default:
+		return 0.0
+	}
+}
 
 func isFinite(v float64) bool {
 	return !math.IsNaN(v) && !math.IsInf(v, 0)
@@ -27,8 +59,12 @@ type DesignInput struct {
 	SaltRateLbsPerHr  float64 `json:"salt_rate_lbs_per_hr"`
 	ExcessAirFraction float64 `json:"excess_air_fraction"`
 	// FuelType selects combustion stoichiometry: "wood_salt" (default when empty),
-	// "wood", "gas_salt", or "gas".
+	// "wood", "gas_salt", "gas", "coal_salt", "coal", "peat_salt", "peat",
+	// "biomass_ag_salt", or "biomass_ag".
 	FuelType string `json:"fuel_type"`
+	// FuelSulfurPct overrides fuel sulfur content [% mass as-fired] for sulfur-bearing
+	// fuels (coal, peat, biomass_ag). When 0, DefaultFuelSulfurPct(FuelType) is used.
+	FuelSulfurPct float64 `json:"fuel_sulfur_pct,omitempty"`
 	// VenturiThroatVelocity is the target throat gas velocity (typical studio range 50-90 m/s).
 	VenturiThroatVelocity MetersPerSec `json:"venturi_throat_velocity_m_s"`
 	VenturiLGRatio        float64      `json:"venturi_lg_ratio"`
@@ -103,10 +139,15 @@ func (d DesignInput) Validate() error {
 		return fmt.Errorf("excess_air_fraction must be finite and in [0, 5.0], got %v", d.ExcessAirFraction)
 	}
 	switch d.FuelType {
-	case "", FuelWoodSalt, FuelWood, FuelGasSalt, FuelGas:
+	case "", FuelWoodSalt, FuelWood, FuelGasSalt, FuelGas,
+		FuelCoalSalt, FuelCoal, FuelPeatSalt, FuelPeat, FuelBiomassAgSalt, FuelBiomassAg:
 	default:
-		return fmt.Errorf("fuel_type must be one of %q, %q, %q, %q (or empty), got %q",
-			FuelWoodSalt, FuelWood, FuelGasSalt, FuelGas, d.FuelType)
+		return fmt.Errorf("fuel_type must be one of %q, %q, %q, %q, %q, %q, %q, %q, %q, %q (or empty), got %q",
+			FuelWoodSalt, FuelWood, FuelGasSalt, FuelGas,
+			FuelCoalSalt, FuelCoal, FuelPeatSalt, FuelPeat, FuelBiomassAgSalt, FuelBiomassAg, d.FuelType)
+	}
+	if !isFinite(d.FuelSulfurPct) || d.FuelSulfurPct < 0 || d.FuelSulfurPct > 8.0 {
+		return fmt.Errorf("fuel_sulfur_pct must be finite and in [0, 8.0], got %v", d.FuelSulfurPct)
 	}
 	if !isFinite(float64(d.VenturiThroatVelocity)) || d.VenturiThroatVelocity <= 0 || d.VenturiThroatVelocity > 200.0 {
 		return fmt.Errorf("venturi_throat_velocity_m_s must be finite and in (0, 200], got %v", d.VenturiThroatVelocity)
@@ -154,6 +195,7 @@ type GasComposition struct {
 	H2O                float64           `json:"h2o"`
 	O2                 float64           `json:"o2"`
 	HCl                float64           `json:"hcl"`
+	SO2                float64           `json:"so2,omitempty"`
 	MolarFlowMolPerSec float64           `json:"molar_flow_mol_s"`
 	MassFlow           KgPerSec          `json:"mass_flow_kg_s"`
 	VolumetricFlow     CubicMetersPerSec `json:"volumetric_flow_m3_s"`
@@ -169,7 +211,7 @@ type GasComposition struct {
 
 // SumMoleFractions returns the sum of all tracked species mole fractions.
 func (g GasComposition) SumMoleFractions() float64 {
-	return g.N2 + g.CO2 + g.H2O + g.O2 + g.HCl
+	return g.N2 + g.CO2 + g.H2O + g.O2 + g.HCl + g.SO2
 }
 
 // QuenchResult captures Stage 1 (316L SS Adiabatic Spray Quench Tower) sizing and thermal performance.
@@ -256,6 +298,10 @@ type PackedBedResult struct {
 	HClOutletPPM    float64     `json:"hcl_outlet_ppm"`
 	// HClRemovalEfficiency is fractional HCl absorption efficiency on [0, 1] (target >= 0.98).
 	HClRemovalEfficiency     float64           `json:"hcl_removal_efficiency"`
+	SO2InletPPM              float64           `json:"so2_inlet_ppm,omitempty"`
+	SO2OutletPPM             float64           `json:"so2_outlet_ppm,omitempty"`
+	SO2RemovalEfficiency     float64           `json:"so2_removal_efficiency,omitempty"`
+	SulfurAcidDewPointF      float64           `json:"sulfur_acid_dew_point_f,omitempty"`
 	NaHCO3ConsumptionKgPerHr float64           `json:"nahco3_consumption_kg_hr"`
 	RecirculationFlow        CubicMetersPerSec `json:"recirculation_flow_m3_s"`
 	RecirculationFlowGPM     float64           `json:"recirculation_flow_gpm"`

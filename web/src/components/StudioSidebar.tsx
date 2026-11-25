@@ -315,12 +315,31 @@ export function StudioSidebar({
           <select
             id="in-fuel-type"
             value={project.input.fuel_type}
-            onChange={(e) => patchInput({ fuel_type: e.target.value })}
+            onChange={(e) => {
+              const ft = e.target.value;
+              const dirty =
+                ft.startsWith("coal") || ft.startsWith("peat") || ft.startsWith("biomass_ag");
+              const salted = ft.endsWith("_salt");
+              onChange(
+                reconcileProject({
+                  ...project,
+                  vapor_glaze_mode: salted ? "salt" : project.vapor_glaze_mode === "salt" ? "none" : project.vapor_glaze_mode,
+                  local_afterburner: dirty ? true : project.local_afterburner,
+                  input: { ...project.input, fuel_type: ft },
+                })
+              );
+            }}
           >
             <option value="wood_salt">Wood + Salt (wood_salt)</option>
             <option value="wood">Wood Only (wood)</option>
             <option value="gas_salt">Gas + Salt (gas_salt)</option>
             <option value="gas">Gas / Electric / Soda (gas)</option>
+            <option value="coal_salt">Bituminous Coal + Salt (~2.0% S · SO₂+HCl)</option>
+            <option value="coal">Bituminous Coal Only (~2.0% S · Khurja / Dhaka)</option>
+            <option value="peat_salt">Peat / Turf + Salt (~0.8% S · High Tar)</option>
+            <option value="peat">Peat / Turf / Andean Turba (~0.8% S · 30% H₂O)</option>
+            <option value="biomass_ag_salt">Ag-Biomass (PKS / Pomace / Husk) + Salt</option>
+            <option value="biomass_ag">Ag-Biomass Only (PKS / Olive Pomace / Rice Husk)</option>
           </select>
         </div>
       </div>
@@ -374,30 +393,148 @@ export function StudioSidebar({
             </label>
 
             <div className="control">
-              <label htmlFor="in-local-region">Local Region &amp; Altitude</label>
+              <label htmlFor="in-local-region">Global Urban Pottery Hub &amp; Altitude</label>
               <select
                 id="in-local-region"
                 value={project.local_region}
                 onChange={(e) => patch({ local_region: e.target.value })}
               >
-                <option value="nairobi">Nairobi / East Africa (KES · 1,660m)</option>
-                <option value="mumbai">Mumbai / India (INR · Sea Level)</option>
+                <option value="nairobi">Nairobi / East Africa (KES · 1,660m · 83.5 kPa)</option>
+                <option value="mumbai">Mumbai / Western India (INR · Sea Level)</option>
+                <option value="khurja_dhaka">Khurja NCR / Dhaka Coal Hub (INR · Sea Level)</option>
+                <option value="kathmandu">Kathmandu / Bhaktapur Valley (NPR · 1,350m · 86.2 kPa)</option>
+                <option value="lagos_accra">Lagos / Abeokuta &amp; Accra (NGN · PKS + Kanwa)</option>
+                <option value="tonala_puebla">Tonalá / Puebla, Mexico (MXN · 1,650m · 83.0 kPa)</option>
+                <option value="cusco_andes">Cusco / Altiplano Andes (PEN · 3,400m · 66.8 kPa!)</option>
+                <option value="cairo_fez">Fustat Cairo / Fez MENA (EGP · Olive Pomace)</option>
+                <option value="highland_peat">Scottish Highlands / Ireland Peat (GBP · 8°C)</option>
                 <option value="general_local">General Local Pottery (USD)</option>
               </select>
             </div>
 
             <div className="control">
-              <label htmlFor="in-local-alkali">Local Neutralizing Alkali</label>
+              <label htmlFor="in-local-alkali">Local Neutralizing Alkali (HCl + SO₂)</label>
               <select
                 id="in-local-alkali"
                 value={project.local_alkali}
                 onChange={(e) => patch({ local_alkali: e.target.value })}
               >
-                <option value="soda_ash">Magadi Soda Ash (Na₂CO₃)</option>
-                <option value="slaked_lime">Slaked Lime / Chuna (Ca(OH)₂)</option>
-                <option value="wood_ash_lye">Kiln Wood-Ash Lye (K₂CO₃ — Free)</option>
+                <option value="soda_ash">Magadi Soda Ash / Washing Soda (Na₂CO₃)</option>
+                <option value="slaked_lime">Slaked Lime / Chuna / Cal / Gir (Ca(OH)₂)</option>
+                <option value="trona_kanwa">Trona / Kanwa / Tequesquite (Na₂CO₃·NaHCO₃ · 0 Scale)</option>
+                <option value="wood_ash_lye">Kiln Wood-Ash Potash Lye (K₂CO₃ — Free)</option>
                 <option value="baking_soda">Bulk Baking Soda (NaHCO₃)</option>
               </select>
+            </div>
+
+            <label className="checkbox-row">
+              <input
+                id="in-local-afterburner"
+                type="checkbox"
+                checked={!!project.local_afterburner}
+                onChange={(e) => patch({ local_afterburner: e.target.checked })}
+              />
+              <span>Stage 0 Passive Secondary-Air Masonry Tar Afterburner &amp; Skim Weir (0 W · Coal/Peat/PKS)</span>
+            </label>
+
+            <div className="seg-grid-2x2" style={{ marginTop: 2 }}>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() =>
+                  onChange(
+                    reconcileProject({
+                      ...project,
+                      studio_name: "Khurja Coal-Salt Pottery Cluster",
+                      build_path: "local_ceramic_masonry",
+                      zero_electricity: true,
+                      available_voltage: 0,
+                      vapor_glaze_mode: "salt",
+                      local_region: "khurja_dhaka",
+                      local_alkali: "slaked_lime",
+                      local_draft_mode: "steam_ejector_hp",
+                      local_pump_mode: "sump_pool_no_pump",
+                      local_afterburner: true,
+                      input: { ...project.input, fuel_type: "coal_salt", salt_rate_lbs_per_hr: 2.0 },
+                    })
+                  )
+                }
+              >
+                Khurja Coal+Salt
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() =>
+                  onChange(
+                    reconcileProject({
+                      ...project,
+                      studio_name: "Cusco 3,400m Andean Peat Studio",
+                      build_path: "local_ceramic_masonry",
+                      zero_electricity: true,
+                      available_voltage: 0,
+                      vapor_glaze_mode: "none",
+                      local_region: "cusco_andes",
+                      local_alkali: "slaked_lime",
+                      local_draft_mode: "steam_ejector_lp",
+                      local_pump_mode: "manual_treadle",
+                      local_afterburner: true,
+                      input: { ...project.input, fuel_type: "peat", salt_rate_lbs_per_hr: 0.0 },
+                    })
+                  )
+                }
+              >
+                Cusco 3,400m Peat
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() =>
+                  onChange(
+                    reconcileProject({
+                      ...project,
+                      studio_name: "Lagos / Accra PKS + Kanwa Studio",
+                      build_path: "local_ceramic_masonry",
+                      zero_electricity: true,
+                      available_voltage: 0,
+                      vapor_glaze_mode: "salt",
+                      local_region: "lagos_accra",
+                      local_alkali: "trona_kanwa",
+                      local_draft_mode: "steam_ejector_subsonic",
+                      local_pump_mode: "manual_treadle",
+                      local_afterburner: true,
+                      input: { ...project.input, fuel_type: "biomass_ag_salt", salt_rate_lbs_per_hr: 1.5 },
+                    })
+                  )
+                }
+              >
+                Lagos PKS+Kanwa
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() =>
+                  onChange(
+                    reconcileProject({
+                      ...project,
+                      studio_name: "Highland Peat & Seaweed-Salt Kiln",
+                      build_path: "local_ceramic_masonry",
+                      zero_electricity: true,
+                      available_voltage: 0,
+                      vapor_glaze_mode: "salt",
+                      local_region: "highland_peat",
+                      local_alkali: "wood_ash_lye",
+                      local_draft_mode: "natural_chimney",
+                      local_pump_mode: "manual_treadle",
+                      local_afterburner: true,
+                      ambient_winter_f: 36,
+                      input: { ...project.input, fuel_type: "peat_salt", salt_rate_lbs_per_hr: 1.5 },
+                    })
+                  )
+                }
+              >
+                Highland Peat+Salt
+              </button>
             </div>
 
             <div className="control">

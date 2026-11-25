@@ -306,7 +306,7 @@ func TestDesignInputValidationErrors(t *testing.T) {
 		{"zero_volume", func(in *model.DesignInput) { in.KilnVolumeCuFt = 0 }},
 		{"nan_temp", func(in *model.DesignInput) { in.PeakExitTempF = math.NaN() }},
 		{"positive_draft", func(in *model.DesignInput) { in.TargetKilnDraftInWC = 0.05 }},
-		{"bad_fuel", func(in *model.DesignInput) { in.FuelType = "coal" }},
+		{"bad_fuel", func(in *model.DesignInput) { in.FuelType = "plutonium" }},
 		{"zero_packing_factor", func(in *model.DesignInput) { in.PackingFactor = 0 }},
 		{"invalid_hcl_target", func(in *model.DesignInput) { in.TargetHClRemoval = 1.0 }},
 	}

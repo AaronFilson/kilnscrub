@@ -124,19 +124,38 @@ export function DesignTab({ evaluation, units, active }: DesignTabProps) {
           <div style={{ fontSize: 12.5, color: "#fef3c7", marginBottom: 6 }}>
             {frugal.summary}
           </div>
-          {frugal.steam_enabled && (
+          {(frugal.steam_enabled || frugal.afterburner_enabled || (frugal.so2_inlet_ppm ?? 0) > 0 || (frugal.ambient_pressure_kpa ?? 101.3) < 95) && (
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-              <span className="pill info">
-                Boiler: {frugal.boiler_source_label || "Dedicated Firebox"}
-                {(frugal.boiler_water_saved_pct ?? 0) > 0
-                  ? ` (-${fmt(frugal.boiler_water_saved_pct, 0)}% Quench Water)`
-                  : ""}
-              </span>
-              <span className={`pill ${frugal.has_overhead_tank === false ? "ok" : "info"}`}>
-                Water Drive: {frugal.pump_mode_label || frugal.manual_pump_type}
-              </span>
-              {frugal.has_overhead_tank === false && (
-                <span className="pill ok">0 Pumps · 0 Water Tower (Ground Sump Pools Only)</span>
+              {frugal.elevation_note && (
+                <span className="pill info">
+                  Altitude: {frugal.elevation_note}
+                </span>
+              )}
+              {frugal.afterburner_enabled && (
+                <span className="pill ok">
+                  Stage 0 Secondary-Air Tar Afterburner + Weir (0 W · -70–85% Tar)
+                </span>
+              )}
+              {(frugal.so2_inlet_ppm ?? 0) > 0 && (
+                <span className="pill caution">
+                  SO₂: {fmt(frugal.so2_inlet_ppm, 0)} ppm in · {fmt(frugal.so2_removal_pct, 1)}% Scrubbed · H₂SO₄ Dew Pt ~{fmt(frugal.sulfur_acid_dew_point_f, 0)}°F
+                </span>
+              )}
+              {frugal.steam_enabled && (
+                <>
+                  <span className="pill info">
+                    Boiler: {frugal.boiler_source_label || "Dedicated Firebox"}
+                    {(frugal.boiler_water_saved_pct ?? 0) > 0
+                      ? ` (-${fmt(frugal.boiler_water_saved_pct, 0)}% Quench Water)`
+                      : ""}
+                  </span>
+                  <span className={`pill ${frugal.has_overhead_tank === false ? "ok" : "info"}`}>
+                    Water Drive: {frugal.pump_mode_label || frugal.manual_pump_type}
+                  </span>
+                  {frugal.has_overhead_tank === false && (
+                    <span className="pill ok">0 Pumps · 0 Water Tower (Ground Sump Pools Only)</span>
+                  )}
+                </>
               )}
             </div>
           )}

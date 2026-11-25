@@ -13,7 +13,7 @@ func TestScrubberBranchCoverageAndGuards(t *testing.T) {
 	if gas, _, err := computeInletFlueGas(in); err != nil || gas.MolarFlowMolPerSec <= 0 {
 		t.Fatalf("empty fuel computeInletFlueGas: %v", err)
 	}
-	in.FuelType = "coal"
+	in.FuelType = "plutonium"
 	if _, _, err := computeInletFlueGas(in); err == nil {
 		t.Error("expected unsupported fuel error")
 	}

@@ -98,7 +98,7 @@ func bindSizingFlags(fs *flag.FlagSet, defaults model.DesignInput) sizingFlags {
 		kilnVol:    fs.Float64("kiln-volume", defaults.KilnVolumeCuFt, "Kiln interior volume (cu.ft.)"),
 		peakTemp:   fs.Float64("peak-temp", defaults.PeakExitTempF, "Peak kiln exit gas temperature (F)"),
 		saltRate:   fs.Float64("salt-rate", defaults.SaltRateLbsPerHr, "NaCl salt introduction rate (lbs/hr)"),
-		fuel:       fs.String("fuel", defaults.FuelType, "Fuel stoichiometry: wood_salt, wood, gas_salt, gas"),
+		fuel:       fs.String("fuel", defaults.FuelType, "Fuel stoichiometry: wood_salt, wood, gas_salt, gas, coal_salt, coal, peat_salt, peat, biomass_ag_salt, biomass_ag"),
 		throatVel:  fs.Float64("throat-vel", float64(defaults.VenturiThroatVelocity), "Venturi throat gas velocity (m/s)"),
 		lgRatio:    fs.Float64("lg", defaults.VenturiLGRatio, "Venturi liquid-to-gas volumetric ratio (m3/m3)"),
 		hclRemoval: fs.Float64("hcl-removal", defaults.TargetHClRemoval, "Target fractional HCl removal efficiency in (0, 1)"),
@@ -442,6 +442,7 @@ type studioOptionFlags struct {
 	localDraftMode            *string
 	localBoilerSource         *string
 	localPumpMode             *string
+	localAfterburner          *bool
 	deluxeCondensingReclaimer *bool
 	deluxeVariableThroatVFD   *bool
 	deluxeStage1HeatRecovery  *bool
@@ -461,11 +462,12 @@ func bindStudioOptionFlags(fs *flag.FlagSet) studioOptionFlags {
 		packingMedia:              fs.String("packing-media", "", "Stage 3 packing media: pp_pall_rings, aquaculture_bioballs, or diy_ceramic_rings"),
 		compressorSCFM:            fs.Float64("compressor-scfm", 0, "Existing studio shop air compressor capacity (SCFM @ 90 PSI, default 15)"),
 		zeroElectricity:           fs.Bool("zero-electricity", false, "Zero electricity on site (passive thermal-reheat chimney draft + manual gravity tank; implies local_ceramic_masonry)"),
-		localRegion:               fs.String("local-region", "", "Local sourcing region: nairobi, mumbai, or general_local"),
-		localAlkali:               fs.String("local-alkali", "", "Local neutralizing alkali: soda_ash, slaked_lime, wood_ash_lye, or baking_soda"),
+		localRegion:               fs.String("local-region", "", "Local sourcing region: nairobi, mumbai, kathmandu, lagos_accra, tonala_puebla, cusco_andes, khurja_dhaka, cairo_fez, highland_peat, or general_local"),
+		localAlkali:               fs.String("local-alkali", "", "Local neutralizing alkali: soda_ash, slaked_lime, trona_kanwa, wood_ash_lye, or baking_soda"),
 		localDraftMode:            fs.String("local-draft-mode", "", "Passive velocity/draft driver for local_ceramic_masonry (natural_chimney|steam_ejector_subsonic|steam_ejector_lp|steam_ejector_hp)"),
 		localBoilerSource:         fs.String("local-boiler-source", "", "Steam boiler heat source (dedicated_hearth|kiln_exhaust_coil|stage1_feedwater_preheater|stage1_water_jacket)"),
 		localPumpMode:             fs.String("local-pump-mode", "", "Off-grid water pump / sump mode (manual_treadle|steam_ppcp|steam_jet_syphon|sump_pool_no_pump)"),
+		localAfterburner:          fs.Bool("local-afterburner", false, "Local ceramic Stage 0 passive secondary-air masonry smoke-burner / tar afterburner & Pool #1 tar-skimming weir (0 W; recommended for coal/peat/ag-biomass)"),
 		deluxeCondensingReclaimer: fs.Bool("deluxe-condensing-reclaimer", false, "Deluxe upgrade: ceramic-lined condensing plume abater & acid-condensate reclaimer"),
 		deluxeVariableThroatVFD:   fs.Bool("deluxe-variable-throat-vfd", false, "Deluxe upgrade: auto variable-throat venturi + VFD turndown"),
 		deluxeStage1HeatRecovery:  fs.Bool("deluxe-stage1-heat-recovery", false, "Deluxe upgrade: Stage 1 water-jacketed quench pre-cooler & heat reclaimer"),
@@ -532,6 +534,9 @@ func (f studioOptionFlags) applyExplicit(base studio.StudioProject, setFlags map
 	}
 	if setFlags["local-pump-mode"] {
 		proj.LocalPumpMode = strings.ToLower(strings.TrimSpace(*f.localPumpMode))
+	}
+	if setFlags["local-afterburner"] {
+		proj.LocalAfterburner = *f.localAfterburner
 	}
 	if setFlags["deluxe-condensing-reclaimer"] {
 		proj.DeluxeCondensingReclaimer = *f.deluxeCondensingReclaimer

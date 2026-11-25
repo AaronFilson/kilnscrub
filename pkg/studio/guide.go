@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"strings"
+
+	"github.com/AaronFilson/kilnscrub/pkg/model"
 )
 
 // GenerateBuildGuide produces a tailored, potter-friendly Markdown fabrication and
@@ -598,8 +600,12 @@ func GenerateOperationsChecklist(eval StudioEvaluation) string {
 		d.Quench.OutletTemp.Fahrenheit(), d.Quench.OutletTemp.Fahrenheit())
 	b.WriteString("- [ ] **Hourly Sump pH & Level Checks:** Dip a pH strip every hour (target **`pH 7.5 - 8.5`**). If pH dips below `7.0`, stir in another 2–3 lbs of bulk baking soda slurry.\n")
 
-	if d.Input.FuelType == "wood_salt" || d.Input.FuelType == "wood" {
-		b.WriteString("- [ ] **Wood-Stoking Surge & Cooled Blowdown Tips:** Heavy wood stokes create 20–60 second gas bursts (`1.5x-2.0x` average flow). Feed smaller, drier splits steadily so draft tracks smoothly, and route any hot sump bleed/blowdown (`~184 F`) into a **heat-rated cooling catch tank or cold-water tempering tee (`<= 140 F` per IPC 702.5)** — NEVER discharge hot `184 F` blowdown directly into PVC/ABS building drains!\n")
+	if d.Input.FuelType == "wood_salt" || d.Input.FuelType == "wood" || model.IsSolidDirtyFuel(d.Input.FuelType) {
+		b.WriteString("- [ ] **Solid-Fuel Stoking Surge & Cooled Blowdown Tips:** Heavy wood, coal, peat, or ag-biomass stokes create 20–60 second gas bursts (`1.5x-2.0x` average flow). Feed smaller, drier charges steadily so draft tracks smoothly, and route any hot sump bleed/blowdown (`~184 F`) into a **heat-rated cooling catch tank or cold-water tempering tee (`<= 140 F` per IPC 702.5)** — NEVER discharge hot `184 F` blowdown directly into PVC/ABS building drains!\n")
+	}
+	if d.PackedBed.SO2InletPPM > 10.0 {
+		fmt.Fprintf(&b, "- [ ] **Coal / Peat Sulfur (`%.0f ppm SO2` -> `%.0f ppm out`, `H2SO4` Dew Point `~%.0f F`):** Maintain alkaline sump `pH 7.5 - 8.5` across the ENTIRE firing (not only salting!) and skim floating tar/gypsum sludge from Sump Pool #1.\n",
+			d.PackedBed.SO2InletPPM, d.PackedBed.SO2OutletPPM, d.PackedBed.SulfurAcidDewPointF)
 	}
 	if p.VaporGlazeMode == VaporGlazeSalt {
 		fmt.Fprintf(&b, "- [ ] **Salt Introduction Pacing (`%.1f lbs/hr` over %.1f hrs):** Introduce damp rock salt in small, evenly spaced burritos/packets (every 10–15 min) while dosing the remaining bulk baking soda steadily so HCl stays within the absorber's 99%% capture envelope.\n",
@@ -687,7 +693,15 @@ func generateLocalCeramicOperationsChecklist(eval StudioEvaluation) string {
 		fmt.Fprintf(&b, "- [ ] **Manual Pumping Cadence (0 W Off-Grid):** Maintain `%.2f L/min` gravity spray via **`%.1f min/hr`** on the treadle/hand pump (or **`%d × 20L jerrycans/hr`**) during active salting.\n",
 			fr.SprayFlowLPM, fr.TreadleMinutesPerHr, fr.Jerrycans20LPerHr)
 	}
-	fmt.Fprintf(&b, "- [ ] **Hourly Sump pH & Alkali Checks:** Dip a litmus strip hourly (hold `pH 7.5 - 8.5` with `%s`); pace salt charges gently so outdoor chimney dispersion remains clean.\n\n", fr.AlkaliName)
+	fmt.Fprintf(&b, "- [ ] **Hourly Sump pH & Alkali Checks:** Dip a litmus strip hourly (hold `pH 7.5 - 8.5` with `%s`); pace salt charges gently so outdoor chimney dispersion remains clean.\n", fr.AlkaliName)
+	if fr.AfterburnerEnabled {
+		b.WriteString("- [ ] **Secondary-Air Tar Afterburner Check (`>750 C`):** Verify secondary-air intake ports behind the kiln flue throat glow cherry-red during heavy coal/peat/PKS stoking to crack black smoke & phenolic tar before Stage 1; skim floating tar scum from Pool #1 weir after cooldown.\n")
+	}
+	if fr.SO2InletPPM > 10.0 {
+		fmt.Fprintf(&b, "- [ ] **Continuous `SO2` Neutralization (`%.0f ppm in` -> `%.1f%%` capture):** Keep sump buffered (`pH 7.5 - 8.5`) from light-off to shutdown (coal/peat emit `SO2` continuously, not just during salting; sulfuric-acid dew point `~%.0f F`).\n",
+			fr.SO2InletPPM, fr.SO2RemovalPct, fr.SulfurAcidDewPointF)
+	}
+	b.WriteString("\n")
 
 	b.WriteString("## 3. Safety & Post-Firing Disposal\n\n")
 	if fr.SteamEnabled {

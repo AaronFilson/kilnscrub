@@ -35,6 +35,33 @@ const (
 	methaneLHVJPerMol     = 802300.0
 	methaneStoichO2PerMol = 2.0
 
+	// Phase 16 solid/dirty urban pottery fuels:
+	// 1. Bituminous kiln coal (Khurja/India, Bát Tràng/Vietnam, UK/EU: ~15% ash, 6% moisture, LHV ~25.5 MJ/kg,
+	//    dry-ash-free formula C1 H0.78 O0.09, ~68% C by mass as-fired -> 0.01765 kg coal / mol C).
+	coalKgPerMolC       = 0.01765
+	coalEnergyJPerMolC  = 25.5e6 * coalKgPerMolC // ~450,075 J/mol C
+	coalStoichO2PerMolC = 1.150                  // 1 + 0.78/4 - 0.09/2 (plus sulfur O2 added explicitly)
+	coalCombH2OPerMolC  = 0.39
+	coalMoistH2OPerMolC = 0.059
+
+	// 2. Air-dried peat / turf / Andean turba (~30% moisture, 5% ash, LHV ~13.5 MJ/kg as-fired,
+	//    ~36.6% C by mass as-fired -> 0.0328 kg peat / mol C; heavy phenolic tar & high H2O vapor).
+	peatKgPerMolC       = 0.0328
+	peatEnergyJPerMolC  = 13.5e6 * peatKgPerMolC // ~442,800 J/mol C
+	peatStoichO2PerMolC = 1.0675                 // 1 + 1.35/4 - 0.54/2
+	peatCombH2OPerMolC  = 0.675
+	peatMoistH2OPerMolC = 0.546 // 30% as-fired moisture
+
+	// 3. Agricultural waste biomass (Palm Kernel Shells / PKS, Olive Pomace / Jift, Rice Husks:
+	//    ~12% moisture, 8% silica ash, LHV ~16.5 MJ/kg as-fired -> 0.0272 kg fuel / mol C).
+	biomassAgKgPerMolC       = 0.0272
+	biomassAgEnergyJPerMolC  = 16.5e6 * biomassAgKgPerMolC // ~448,800 J/mol C
+	biomassAgStoichO2PerMolC = 1.05
+	biomassAgCombH2OPerMolC  = 0.68
+	biomassAgMoistH2OPerMolC = 0.181
+
+	sulfurMWKgPerMol = 0.032065
+
 	// Atmospheric air molar N2/O2 ratio (79% N2 / 21% O2).
 	airN2PerO2 = 0.79 / 0.21
 
@@ -67,7 +94,12 @@ func computeInletFlueGas(input model.DesignInput) (model.GasComposition, []strin
 	thermalWatts := input.KilnVolumeCuFt * refHeatLoadWattsPerCuFt * tempScale
 
 	e := input.ExcessAirFraction
-	var nN2, nCO2, nH2O, nO2 float64
+	var nN2, nCO2, nH2O, nO2, nSO2 float64
+
+	sulfurPct := input.FuelSulfurPct
+	if sulfurPct <= 0 {
+		sulfurPct = model.DefaultFuelSulfurPct(fuel)
+	}
 
 	switch fuel {
 	case model.FuelWoodSalt, model.FuelWood:
@@ -82,6 +114,33 @@ func computeInletFlueGas(input model.DesignInput) (model.GasComposition, []strin
 		nH2O = 2.0 * nCH4
 		nO2 = nCH4 * methaneStoichO2PerMol * e
 		nN2 = nCH4 * methaneStoichO2PerMol * (1.0 + e) * airN2PerO2
+	case model.FuelCoalSalt, model.FuelCoal:
+		nC := thermalWatts / coalEnergyJPerMolC
+		fuelMassKgS := nC * coalKgPerMolC
+		nSO2 = (fuelMassKgS * (sulfurPct / 100.0)) / sulfurMWKgPerMol
+		stoichO2 := nC*coalStoichO2PerMolC + nSO2
+		nCO2 = nC
+		nH2O = nC * (coalCombH2OPerMolC + coalMoistH2OPerMolC)
+		nO2 = stoichO2 * e
+		nN2 = stoichO2 * (1.0 + e) * airN2PerO2
+	case model.FuelPeatSalt, model.FuelPeat:
+		nC := thermalWatts / peatEnergyJPerMolC
+		fuelMassKgS := nC * peatKgPerMolC
+		nSO2 = (fuelMassKgS * (sulfurPct / 100.0)) / sulfurMWKgPerMol
+		stoichO2 := nC*peatStoichO2PerMolC + nSO2
+		nCO2 = nC
+		nH2O = nC * (peatCombH2OPerMolC + peatMoistH2OPerMolC)
+		nO2 = stoichO2 * e
+		nN2 = stoichO2 * (1.0 + e) * airN2PerO2
+	case model.FuelBiomassAgSalt, model.FuelBiomassAg:
+		nC := thermalWatts / biomassAgEnergyJPerMolC
+		fuelMassKgS := nC * biomassAgKgPerMolC
+		nSO2 = (fuelMassKgS * (sulfurPct / 100.0)) / sulfurMWKgPerMol
+		stoichO2 := nC*biomassAgStoichO2PerMolC + nSO2
+		nCO2 = nC
+		nH2O = nC * (biomassAgCombH2OPerMolC + biomassAgMoistH2OPerMolC)
+		nO2 = stoichO2 * e
+		nN2 = stoichO2 * (1.0 + e) * airN2PerO2
 	default:
 		return model.GasComposition{}, nil, fmt.Errorf("unsupported fuel type %q", fuel)
 	}
@@ -89,12 +148,12 @@ func computeInletFlueGas(input model.DesignInput) (model.GasComposition, []strin
 	var nHCl float64
 	if input.SaltRateLbsPerHr > 0 {
 		nHCl = float64(model.LbsPerHrToKgPerSec(input.SaltRateLbsPerHr)) / naclMWKgPerMol
-		if fuel == model.FuelWood || fuel == model.FuelGas {
+		if fuel == model.FuelWood || fuel == model.FuelGas || fuel == model.FuelCoal || fuel == model.FuelPeat || fuel == model.FuelBiomassAg {
 			warnings = append(warnings, fmt.Sprintf("Non-salt fuel %q specified with salt_rate=%.2f lbs/hr; HCl loading is conservatively included in absorber sizing.", fuel, input.SaltRateLbsPerHr))
 		}
 	}
 
-	nTotal := nN2 + nCO2 + nH2O + nO2 + nHCl
+	nTotal := nN2 + nCO2 + nH2O + nO2 + nHCl + nSO2
 	if nTotal <= 0 {
 		return model.GasComposition{}, nil, fmt.Errorf("computed flue gas molar flow must be > 0")
 	}
@@ -105,6 +164,7 @@ func computeInletFlueGas(input model.DesignInput) (model.GasComposition, []strin
 		H2O:                nH2O / nTotal,
 		O2:                 nO2 / nTotal,
 		HCl:                nHCl / nTotal,
+		SO2:                nSO2 / nTotal,
 		MolarFlowMolPerSec: nTotal,
 		Temperature:        peakK,
 		Pressure:           input.AmbientPressurePa,
@@ -187,6 +247,13 @@ func (d *Designer) Design(input model.DesignInput) (model.ScrubberDesign, error)
 	}
 	if quenchRes.TotalSprayWaterGPM < 0.50 {
 		warnings = append(warnings, fmt.Sprintf("Total quench spray water (%.2f GPM) is near the 0.25 GPM minimum-flow interlock threshold.", quenchRes.TotalSprayWaterGPM))
+	}
+	if packedRes.SO2InletPPM > 10.0 {
+		warnings = append(warnings, fmt.Sprintf("SULFUR / H2SO4 DEW POINT (%.0f ppm SO2 in -> %.0f ppm out, %.1f%% capture): ~1.5%% SO2->SO3 oxidation raises the sulfuric-acid dew point to ~%.0f F (vs 184 F water/HCl) — protect pre-quench flues with refractory masonry or ceramic coating and neutralize sulfite/bisulfite in an alkaline pH 7.5-8.5 sump.",
+			packedRes.SO2InletPPM, packedRes.SO2OutletPPM, packedRes.SO2RemovalEfficiency*100.0, packedRes.SulfurAcidDewPointF))
+	}
+	if model.IsSolidDirtyFuel(input.FuelType) {
+		warnings = append(warnings, fmt.Sprintf("TAR & HEAVY FLY-ASH FOULING GUARD (%s): Coal, peat/turf, and ag-biomass emit sticky phenolic/coal tars and 8-20%% fly ash that plug fine packing — install a hot (>750 C) secondary-air masonry smoke-burner/afterburner throat ahead of Stage 1 and skim tar/ash from Sump Pool #1.", input.FuelType))
 	}
 
 	notes := []string{

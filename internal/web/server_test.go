@@ -532,7 +532,7 @@ func TestSizeEndpoint(t *testing.T) {
 		{"wrong field type", `{"kiln_volume_cu_ft":"twenty"}`},
 		{"negative kiln volume", `{"kiln_volume_cu_ft":-10}`},
 		{"positive kiln draft", `{"target_kiln_draft_in_wc":0.15}`},
-		{"invalid fuel type", `{"fuel_type":"coal"}`},
+		{"invalid fuel type", `{"fuel_type":"plutonium"}`},
 		{"target hcl removal >= 1", `{"target_hcl_removal":1.0}`},
 		{"packing factor <= 0", `{"packing_factor_1_m":0}`},
 	}

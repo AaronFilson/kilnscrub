@@ -148,6 +148,32 @@ export function buildLocalCeramicAssembly(
   flueCollar.position.set(qX - qW * 0.5 - 0.03, qInY, qZ);
   assemblyGroup.add(flueCollar);
 
+  // Phase 16: Stage 0 Passive Secondary-Air Masonry Tar Afterburner & Checkerwork Throat (>750 C, 0 W)
+  if (project.local_afterburner || fr?.afterburner_enabled) {
+    const abX = qX - qW * 0.5 - flueLen * 0.48;
+    const abHousing = new THREE.Mesh(
+      new THREE.BoxGeometry(0.38, 0.46, 0.46),
+      mats.brickSolid
+    );
+    abHousing.position.set(abX, qInY, qZ);
+    assemblyGroup.add(abHousing);
+    // Glowing hot refractory checkerwork ribs & passive secondary-air draft ports
+    for (let s = -1; s <= 1; s += 2) {
+      const airPort = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.035, 0.035, 0.14, 12),
+        mats.iron
+      );
+      airPort.position.set(abX + s * 0.09, qInY - 0.25, qZ + 0.10);
+      assemblyGroup.add(airPort);
+      const glowSlot = new THREE.Mesh(
+        new THREE.BoxGeometry(0.06, 0.26, 0.48),
+        mats.hotCore
+      );
+      glowSlot.position.set(abX + s * 0.09, qInY, qZ);
+      assemblyGroup.add(glowSlot);
+    }
+  }
+
   // Brick quench walls (front wall opens when cutaway=true)
   const qBack = new THREE.Mesh(new THREE.BoxGeometry(qW, qH, wallT), mats.brickSolid);
   qBack.position.set(qX, plinthY + qH * 0.5, qZ - qD * 0.5 + wallT * 0.5);

@@ -14,10 +14,11 @@ const (
 	SpeciesH2O = "H2O"
 	SpeciesO2  = "O2"
 	SpeciesHCl = "HCl"
+	SpeciesSO2 = "SO2"
 )
 
-// AllSpecies lists the five flue gas species supported by the thermophysical engine.
-var AllSpecies = []string{SpeciesN2, SpeciesCO2, SpeciesH2O, SpeciesO2, SpeciesHCl}
+// AllSpecies lists the six flue gas species supported by the thermophysical engine.
+var AllSpecies = []string{SpeciesN2, SpeciesCO2, SpeciesH2O, SpeciesO2, SpeciesHCl, SpeciesSO2}
 
 // SpeciesConstants holds critical properties, molecular weight, and dipole moment
 // matching chemicals.viscosity.Lucas_gas and testdata/oracle_fixtures.json.
@@ -96,6 +97,15 @@ var speciesConstantsTable = map[string]SpeciesConstants{
 		MW:     36.46094,
 		Dipole: 1.08,
 	},
+	SpeciesSO2: {
+		Name:   SpeciesSO2,
+		CASRN:  "7446-09-5",
+		Tc:     430.8,
+		Pc:     7884000.0,
+		Zc:     0.269,
+		MW:     64.0638,
+		Dipole: 1.63,
+	},
 }
 
 // Official NIST Chemistry WebBook gas-phase 7-coefficient Shomate parameters.
@@ -123,6 +133,10 @@ var nistShomateTable = map[string][]ShomateRange{
 	SpeciesHCl: {
 		{298.0, 1200.0, 32.12392, -13.45805, 19.86852, -6.853936, -0.049672, -101.6206, 228.6866, -92.31201},
 		{1200.0, 6000.0, 31.91923, 3.203184, -0.541539, 0.035925, -3.438525, -108.0150, 218.2768, -92.31201},
+	},
+	SpeciesSO2: {
+		{298.0, 1200.0, 21.43049, 74.35094, -57.75217, 16.35534, 0.086731, -305.7688, 254.8872, -296.8422},
+		{1200.0, 6000.0, 57.48188, 1.009328, -0.076290, 0.005174, -4.045401, -324.4140, 302.7798, -296.8422},
 	},
 }
 
@@ -342,9 +356,9 @@ func LiquidWaterEnthalpyJPerMol(T model.Kelvin) float64 {
 	return -waterHfg298JPerMol + liquidWaterCpJPerMolK*(float64(T)-referenceTempK)
 }
 
-// moleFractions extracts the 5 species mole fractions in canonical order matching AllSpecies.
-func moleFractions(g model.GasComposition) [5]float64 {
-	return [5]float64{g.N2, g.CO2, g.H2O, g.O2, g.HCl}
+// moleFractions extracts the 6 species mole fractions in canonical order matching AllSpecies.
+func moleFractions(g model.GasComposition) [6]float64 {
+	return [6]float64{g.N2, g.CO2, g.H2O, g.O2, g.HCl, g.SO2}
 }
 
 // MixtureMolecularWeight returns the average molecular weight of a flue gas mixture in kg/mol.
@@ -395,8 +409,8 @@ func MixtureEnthalpy(g model.GasComposition, T model.Kelvin) (float64, error) {
 // using pure-component Lucas gas viscosities.
 func MixtureViscosity(g model.GasComposition, T model.Kelvin) (model.PaSec, error) {
 	y := moleFractions(g)
-	var mu [5]float64
-	var mw [5]float64
+	var mu [6]float64
+	var mw [6]float64
 	for i, sp := range AllSpecies {
 		c := speciesConstantsTable[sp]
 		mw[i] = c.MW

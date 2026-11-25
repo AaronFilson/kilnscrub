@@ -149,8 +149,9 @@ func SolveAdiabaticQuench(
 	nCO2 := nIn * inletGas.CO2
 	nO2 := nIn * inletGas.O2
 	nHCl := nIn * inletGas.HCl
+	nSO2 := nIn * inletGas.SO2
 	nWIn := nIn * inletGas.H2O
-	nDry := nN2 + nCO2 + nO2 + nHCl
+	nDry := nN2 + nCO2 + nO2 + nHCl + nSO2
 	if nDry <= 0 {
 		return model.GasComposition{}, model.QuenchResult{}, fmt.Errorf("inlet gas dry molar flow must be > 0")
 	}
@@ -195,10 +196,15 @@ func SolveAdiabaticQuench(
 		hH2O, e3 := SpeciesEnthalpy(SpeciesH2O, tK)
 		hO2, e4 := SpeciesEnthalpy(SpeciesO2, tK)
 		hHCl, e5 := SpeciesEnthalpy(SpeciesHCl, tK)
-		if e1 != nil || e2 != nil || e3 != nil || e4 != nil || e5 != nil {
+		hSO2 := 0.0
+		var e6 error
+		if nSO2 > 0 {
+			hSO2, e6 = SpeciesEnthalpy(SpeciesSO2, tK)
+		}
+		if e1 != nil || e2 != nil || e3 != nil || e4 != nil || e5 != nil || e6 != nil {
 			return math.NaN()
 		}
-		hSatTotal := nN2*hN2 + nCO2*hCO2 + nO2*hO2 + nHCl*hHCl + nWSat*hH2O
+		hSatTotal := nN2*hN2 + nCO2*hCO2 + nO2*hO2 + nHCl*hHCl + nSO2*hSO2 + nWSat*hH2O
 		return (hInTotal + nEvap*hLiq) - hSatTotal
 	}
 
@@ -223,6 +229,7 @@ func SolveAdiabaticQuench(
 		H2O:                nWSat / nSat,
 		O2:                 nO2 / nSat,
 		HCl:                nHCl / nSat,
+		SO2:                nSO2 / nSat,
 		MolarFlowMolPerSec: nSat,
 		Temperature:        tSat,
 		Pressure:           ambientPressure,
